@@ -34,35 +34,35 @@
 #include "MWAWTextListener.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MSKParser.hxx"
+#include "MsWksParser.hxx"
 
-MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MsWksParser::MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_input(input), m_asciiFile(input)
 {
 }
 
-MSKParser::MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
+MsWksParser::MsWksParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
   MWAWTextParser(parserState), m_input(input), m_asciiFile(input)
 {
 }
 
-MSKParser::~MSKParser()
+MsWksParser::~MsWksParser()
 {
 }
 
-void MSKParser::sendFrameText(MWAWEntry const &, std::string const &)
+void MsWksParser::sendFrameText(MWAWEntry const &, std::string const &)
 {
-  MWAW_DEBUG_MSG(("MSKParser::sendFrameText: must not be called\n"));
+  MWAW_DEBUG_MSG(("MsWksParser::sendFrameText: must not be called\n"));
   if (!getTextListener()) return;
   getTextListener()->insertChar(' ');
 }
 
-void MSKParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)
+void MsWksParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)
 {
-  MWAW_DEBUG_MSG(("MSKParser::sendOLE: must not be called\n"));
+  MWAW_DEBUG_MSG(("MsWksParser::sendOLE: must not be called\n"));
 }
 
-std::vector<MWAWColor> const &MSKParser::getPalette(int vers)
+std::vector<MWAWColor> const &MsWksParser::getPalette(int vers)
 {
   switch (vers) {
   case 2: {
@@ -154,12 +154,12 @@ std::vector<MWAWColor> const &MSKParser::getPalette(int vers)
   default:
     break;
   }
-  MWAW_DEBUG_MSG(("MSKParser::getPalette: can not find palette for version %d\n", vers));
+  MWAW_DEBUG_MSG(("MsWksParser::getPalette: can not find palette for version %d\n", vers));
   static std::vector<MWAWColor> emptyPalette;
   return emptyPalette;
 }
 
-bool MSKParser::getColor(int id, MWAWColor &col, int vers) const
+bool MsWksParser::getColor(int id, MWAWColor &col, int vers) const
 {
   if (vers <= 0) vers = version();
   std::vector<MWAWColor> const &palette = getPalette(vers);
@@ -167,7 +167,7 @@ bool MSKParser::getColor(int id, MWAWColor &col, int vers) const
       (version()==2 && id==0)) {
     static bool first = true;
     if (first) {
-      MWAW_DEBUG_MSG(("MSKParser::getColor: unknown color=%d\n", id));
+      MWAW_DEBUG_MSG(("MsWksParser::getColor: unknown color=%d\n", id));
       first = false;
     }
     return false;

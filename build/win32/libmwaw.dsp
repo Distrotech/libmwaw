@@ -259,35 +259,35 @@ SOURCE=..\..\src\lib\MRWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Parser.cxx
+SOURCE=..\..\src\lib\MsWks3Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Text.cxx
+SOURCE=..\..\src\lib\MsWks3Text.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Parser.cxx
+SOURCE=..\..\src\lib\MsWks4Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Text.cxx
+SOURCE=..\..\src\lib\MsWks4Text.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Zone.cxx
+SOURCE=..\..\src\lib\MsWks4Zone.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKGraph.cxx
+SOURCE=..\..\src\lib\MsWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKParser.cxx
+SOURCE=..\..\src\lib\MsWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKTable.cxx
+SOURCE=..\..\src\lib\MsWksTable.cxx
 # End Source File
 # Begin Source File
 
@@ -659,35 +659,35 @@ SOURCE=..\..\src\lib\MRWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Parser.hxx
+SOURCE=..\..\src\lib\MsWks3Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Text.hxx
+SOURCE=..\..\src\lib\MsWks3Text.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Parser.hxx
+SOURCE=..\..\src\lib\MsWks4Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Text.hxx
+SOURCE=..\..\src\lib\MsWks4Text.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Zone.hxx
+SOURCE=..\..\src\lib\MsWks4Zone.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKGraph.hxx
+SOURCE=..\..\src\lib\MsWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKParser.hxx
+SOURCE=..\..\src\lib\MsWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKTable.hxx
+SOURCE=..\..\src\lib\MsWksTable.hxx
 # End Source File
 # Begin Source File
 

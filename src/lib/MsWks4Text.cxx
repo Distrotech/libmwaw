@@ -55,14 +55,14 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
 
-#include "MSK4Zone.hxx"
+#include "MsWks4Zone.hxx"
 
-#include "MSK4Text.hxx"
+#include "MsWks4Text.hxx"
 
 //////////////////////////////////////////////////////////////////////////////
 // general enum
 //////////////////////////////////////////////////////////////////////////////
-namespace MSK4TextInternal
+namespace MsWks4TextInternal
 {
 /** different types
  *
@@ -77,13 +77,13 @@ enum PLCType { BTE=0, PGD, FTNT, TOKEN, EOBJ, Unknown};
 ////////////////////////////////////////////////////////////
 // Low level struct to read the plc
 ////////////////////////////////////////////////////////////
-/** Internal and low level: the structures of a MSK4Text used to parse PLC*/
-namespace MSK4PLCInternal
+/** Internal and low level: the structures of a MsWks4Text used to parse PLC*/
+namespace MsWks4PLCInternal
 {
 /** Internal and low level: the PLC different types and their structures */
 struct PLC {
   /** the PLC types */
-  typedef enum MSK4TextInternal::PLCType PLCType;
+  typedef enum MsWks4TextInternal::PLCType PLCType;
   /** the way to define the text positions
    *
    * - P_ABS: absolute position,
@@ -96,7 +96,7 @@ struct PLC {
    * - T_STRUCT: a structured type ( which unknown size) */
   typedef enum { T_CST=0, T_STRUCT, T_UNKNOWN} Type;
   //! constructor
-  PLC(PLCType w= MSK4TextInternal::Unknown, Position p=P_UNKNOWN, Type t=T_UNKNOWN) :
+  PLC(PLCType w= MsWks4TextInternal::Unknown, Position p=P_UNKNOWN, Type t=T_UNKNOWN) :
     m_type(w), m_pos(p), m_contentType(t) {}
   //! PLC type
   PLCType m_type;
@@ -128,17 +128,17 @@ protected:
   void createMapping()
   {
     m_knowns["BTEP"] =
-      PLC(MSK4TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
+      PLC(MsWks4TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
     m_knowns["BTEC"] =
-      PLC(MSK4TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
+      PLC(MsWks4TextInternal::BTE,PLC::P_ABS, PLC::T_CST);
     m_knowns["FTNT"] =
-      PLC(MSK4TextInternal::FTNT,PLC::P_REL, PLC::T_STRUCT);
+      PLC(MsWks4TextInternal::FTNT,PLC::P_REL, PLC::T_STRUCT);
     m_knowns["PGD "] =
-      PLC(MSK4TextInternal::PGD,PLC::P_REL, PLC::T_STRUCT);
+      PLC(MsWks4TextInternal::PGD,PLC::P_REL, PLC::T_STRUCT);
     m_knowns["TOKN"] =
-      PLC(MSK4TextInternal::TOKEN,PLC::P_REL,PLC:: T_STRUCT);
+      PLC(MsWks4TextInternal::TOKEN,PLC::P_REL,PLC:: T_STRUCT);
     m_knowns["EOBJ"] =
-      PLC(MSK4TextInternal::EOBJ,PLC::P_REL, PLC::T_STRUCT);
+      PLC(MsWks4TextInternal::EOBJ,PLC::P_REL, PLC::T_STRUCT);
   }
 
   //! map name -> known PLC
@@ -150,8 +150,8 @@ protected:
 // Internal structures to store/parse the Zone
 ////////////////////////////////////////////////////////////
 
-/** Internal: the structures of a MSK4Text */
-namespace MSK4TextInternal
+/** Internal: the structures of a MsWks4Text */
+namespace MsWks4TextInternal
 {
 /** Internal: class to store a font name: name with sysid */
 class FontName
@@ -376,7 +376,7 @@ std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
   return o;
 }
 
-/** Internal: the state of a MSK4Text
+/** Internal: the state of a MsWks4Text
  *
  * \note in order to diffenciate a note definition with
  * its main text position, we define a flag to indicate that we parse the MN0
@@ -427,7 +427,7 @@ struct State {
   std::vector<DataPLC> m_plcList;
 
   //! the known plc
-  MSK4PLCInternal::KnownPLC m_knownPLC;
+  MsWks4PLCInternal::KnownPLC m_knownPLC;
 protected:
   //! true if we parse the main block
   bool m_main;
@@ -444,20 +444,20 @@ protected:
 ////////////////////////////////////////////////////////////
 // constructor/destructor
 ////////////////////////////////////////////////////////////
-MSK4Text::MSK4Text(MSK4Zone &parser) :
+MsWks4Text::MsWks4Text(MsWks4Zone &parser) :
   m_parserState(parser.getParserState()), m_mainParser(&parser), m_textPositions(),
   m_state(), m_FODsList(), m_FDPCs(), m_FDPPs()
 {
-  m_state.reset(new MSK4TextInternal::State);
+  m_state.reset(new MsWks4TextInternal::State);
 }
 
-MSK4Text::~MSK4Text()
+MsWks4Text::~MsWks4Text()
 { }
 
 ////////////////////////////////////////////////////////////
 // number of page
 ////////////////////////////////////////////////////////////
-int MSK4Text::numPages() const
+int MsWks4Text::numPages() const
 {
   int res = 1;
   size_t nbFODS = m_FODsList.size();
@@ -480,7 +480,7 @@ int MSK4Text::numPages() const
 // find all the text structures
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
+bool MsWks4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
 {
   m_state->setParse(mainOle);
   // reset data
@@ -501,7 +501,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   /* the text limit */
   pos = entryMap.find("TEXT");
   if (entryMap.end() == pos) {
-    MWAW_DEBUG_MSG(("MSK4Text::readStructures: error: no TEXT in header index table\n"));
+    MWAW_DEBUG_MSG(("MsWks4Text::readStructures: error: no TEXT in header index table\n"));
     throw libmwaw::ParseException();
   }
   m_textPositions = pos->second;
@@ -509,7 +509,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   /* read fonts table */
   pos = entryMap.lower_bound("FONT");
   if (entryMap.end() == pos) {
-    MWAW_DEBUG_MSG(("MSK4Text::readStructures: error: no FONT in header index table\n"));
+    MWAW_DEBUG_MSG(("MsWks4Text::readStructures: error: no FONT in header index table\n"));
     throw libmwaw::ParseException();
   }
   readFontNames(input, pos->second);
@@ -527,13 +527,13 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   std::vector<DataFOD> fdps;
 
   for (size_t i = 0; i < numFDP; i++)
-    readFDP(input, *(m_FDPCs[i]), fdps, (FDPParser) &MSK4Text::readFont);
+    readFDP(input, *(m_FDPCs[i]), fdps, (FDPParser) &MsWks4Text::readFont);
   m_FODsList = mergeSortedLists(fdps, m_FODsList);
 
   fdps.resize(0);
   numFDP = m_FDPPs.size();
   for (size_t i = 0; i < numFDP; i++)
-    readFDP(input, *(m_FDPPs[i]), fdps, (FDPParser) &MSK4Text::readParagraph);
+    readFDP(input, *(m_FDPPs[i]), fdps, (FDPParser) &MsWks4Text::readParagraph);
   m_FODsList = mergeSortedLists(fdps, m_FODsList);
 
   //
@@ -546,7 +546,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
     if (!entry.hasType("PLC ")) continue;
 
     std::vector<long> textPtrs, listValues;
-    readPLC(input, entry, textPtrs, listValues,  &MSK4Text::ftntDataParser);
+    readPLC(input, entry, textPtrs, listValues,  &MsWks4Text::ftntDataParser);
   }
   pos = entryMap.lower_bound("TOKN");
   while (pos != entryMap.end()) {
@@ -555,7 +555,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
     if (!entry.hasType("PLC ")) continue;
 
     std::vector<long> textPtrs, listValues;
-    readPLC(input, entry, textPtrs, listValues, &MSK4Text::toknDataParser);
+    readPLC(input, entry, textPtrs, listValues, &MsWks4Text::toknDataParser);
   }
   /**
      eobj and RBIL seems linked ( and associate with a 0xc6 symbol in file)
@@ -568,7 +568,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
     if (!entry.hasType("PLC ")) continue;
 
     std::vector<long> textPtrs, listValues;
-    readPLC(input, entry, textPtrs, listValues, &MSK4Text::eobjDataParser);
+    readPLC(input, entry, textPtrs, listValues, &MsWks4Text::eobjDataParser);
   }
   pos = entryMap.lower_bound("PGD ");
   while (pos != entryMap.end()) {
@@ -577,7 +577,7 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
     if (!entry.hasType("PLC ")) continue;
 
     std::vector<long> listValues;
-    readPLC(input, entry, m_state->m_pgdList, listValues, &MSK4Text::pgdDataParser);
+    readPLC(input, entry, m_state->m_pgdList, listValues, &MsWks4Text::pgdDataParser);
   }
 
   return true;
@@ -589,20 +589,20 @@ bool MSK4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
 //  FIXME: keep a trace of what is read...
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
+bool MsWks4Text::readFootNote(MWAWInputStreamPtr input, int id)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_ftntList.size())) {
     if (id >= 0) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFootNote: can not find footnote: %d\n", id));
+      MWAW_DEBUG_MSG(("MsWks4Text::readFootNote: can not find footnote: %d\n", id));
     }
     listener->insertChar(' ');
     return false;
   }
-  MSK4TextInternal::Ftnt const &ft = m_state->m_ftntList[size_t(id)];
+  MsWks4TextInternal::Ftnt const &ft = m_state->m_ftntList[size_t(id)];
   if (ft.m_begin < m_textPositions.begin() || ft.m_end > m_textPositions.end()) {
-    MWAW_DEBUG_MSG(("MSK4Text::readFootNote: invalid zone\n"));
+    MWAW_DEBUG_MSG(("MsWks4Text::readFootNote: invalid zone\n"));
     listener->insertChar(' ');
     return false;
   }
@@ -624,12 +624,12 @@ bool MSK4Text::readFootNote(MWAWInputStreamPtr input, int id)
 //  formatting information.
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
-                        bool mainOle)
+bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
+                          bool mainOle)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (zone.begin() < m_textPositions.begin() || zone.end() > m_textPositions.end()) {
-    MWAW_DEBUG_MSG(("MSK4Text::readText: invalid zone\n"));
+    MWAW_DEBUG_MSG(("MsWks4Text::readText: invalid zone\n"));
     if (listener) listener->insertChar(' ');
     return false;
   }
@@ -655,10 +655,10 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     actFont.setId(3);
   if (listener) listener->setFont(actFont);
   if (prevPId != -1) setProperty(m_state->m_paragraphList[size_t(prevPId)]);
-  else setProperty(MSK4TextInternal::Paragraph());
+  else setProperty(MsWks4TextInternal::Paragraph());
 
   bool first = true;
-  MSK4TextInternal::Font::FieldType fType = MSK4TextInternal::Font::None;
+  MsWks4TextInternal::Font::FieldType fType = MsWks4TextInternal::Font::None;
   bool pageBreak = false;
   int page=1;
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -706,7 +706,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         setProperty(m_state->m_paragraphList[(size_t) fod.m_id]);
         if (m_state->m_paragraphList[(size_t) fod.m_id].m_pageBreak) pageBreak = true;
       }
-      else setProperty(MSK4TextInternal::Paragraph());
+      else setProperty(MsWks4TextInternal::Paragraph());
     }
     else {
 #if DEBUG_PLC_POS
@@ -715,12 +715,12 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       f << "]";
 #endif
       if (fod.m_id >= 0 && long(actPos) != zone.begin() && long(actPos) < zone.end()-1) {
-        if (m_state->m_plcList[(size_t) fod.m_id].m_type == MSK4TextInternal::PGD)
+        if (m_state->m_plcList[(size_t) fod.m_id].m_type == MsWks4TextInternal::PGD)
           pageBreak = true;
-        else if (m_state->m_plcList[(size_t) fod.m_id].m_type == MSK4TextInternal::EOBJ) {
-          std::map<long, MSK4TextInternal::Object>::const_iterator eobjIt=m_state->m_eobjMap.find(long(actPos));
+        else if (m_state->m_plcList[(size_t) fod.m_id].m_type == MsWks4TextInternal::EOBJ) {
+          std::map<long, MsWks4TextInternal::Object>::const_iterator eobjIt=m_state->m_eobjMap.find(long(actPos));
           if (eobjIt == m_state->m_eobjMap.end()) {
-            MWAW_DEBUG_MSG(("MSK4Text::readText: can not find object\n"));
+            MWAW_DEBUG_MSG(("MsWks4Text::readText: can not find object\n"));
           }
           else {
             m_mainParser->sendRBIL(eobjIt->second.m_id, eobjIt->second.m_dim);
@@ -734,9 +734,9 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     input->seek(long(actPos), librevenge::RVNG_SEEK_SET);
 
     std::string s;
-    if (fType == MSK4TextInternal::Font::Page && listener) {
+    if (fType == MsWks4TextInternal::Font::Page && listener) {
       listener->insertField(MWAWField(MWAWField::PageNumber));
-      fType = MSK4TextInternal::Font::None;
+      fType = MsWks4TextInternal::Font::None;
     }
     if (len) {
       if (pageBreak) {
@@ -752,19 +752,19 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         isObject = false;
         if (readVal != 0xc6) {
           s+='#';
-          MWAW_DEBUG_MSG(("MSK4Text::readText: warning: odd caracter for object\n"));
+          MWAW_DEBUG_MSG(("MsWks4Text::readText: warning: odd caracter for object\n"));
         }
         continue;
       }
 
       if (0x00 == readVal) continue;
 
-      if (fType == MSK4TextInternal::Font::Note && readVal == 0x5e) { // '^'
-        fType = MSK4TextInternal::Font::None;
+      if (fType == MsWks4TextInternal::Font::Note && readVal == 0x5e) { // '^'
+        fType = MsWks4TextInternal::Font::None;
         if (!m_state->parseMain()) continue;
 
         if (m_state->m_ftntMap.find(long(actPos)) == m_state->m_ftntMap.end()) {
-          MWAW_DEBUG_MSG(("MSK4Text::readText: warning: can not find footnote for entry at %x\n", actPos));
+          MWAW_DEBUG_MSG(("MsWks4Text::readText: warning: can not find footnote for entry at %x\n", actPos));
           mainParser()->sendFootNote(-1);
         }
         else
@@ -787,7 +787,7 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
         if (!listener) break;
         uint32_t extra = (uint32_t) listener->insertCharacter((unsigned char)readVal, input, input->tell()+long(i)-1);
         if (extra > i-1) {
-          MWAW_DEBUG_MSG(("MSK4Text::readText: warning: extra is too large\n"));
+          MWAW_DEBUG_MSG(("MsWks4Text::readText: warning: extra is too large\n"));
           input->seek(-long(extra+1-i), librevenge::RVNG_SEEK_CUR);
           i = 0;
         }
@@ -796,8 +796,8 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
       }
       }
     }
-    if (len && fType == MSK4TextInternal::Font::DTTUnk && listener)
-      fType = MSK4TextInternal::Font::None;
+    if (len && fType == MsWks4TextInternal::Font::DTTUnk && listener)
+      fType = MsWks4TextInternal::Font::None;
 
     f << ", '" << s << "'";
     ascFile.addPos(long(actPos));
@@ -816,14 +816,14 @@ bool MSK4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 // read a plc
 // CHECKME: how does this code differs with MWAW4Text
 ////////////////////////////////////////
-bool MSK4Text::readPLC(MWAWInputStreamPtr input,
-                       MWAWEntry const &entry,
-                       std::vector<long> &textPtrs,
-                       std::vector<long> &listValues,
-                       MSK4Text::DataParser parser)
+bool MsWks4Text::readPLC(MWAWInputStreamPtr input,
+                         MWAWEntry const &entry,
+                         std::vector<long> &textPtrs,
+                         std::vector<long> &listValues,
+                         MsWks4Text::DataParser parser)
 {
   if (!entry.hasType("PLC ")) {
-    MWAW_DEBUG_MSG(("MSK4Text::readPLC: warning: PLC name=%s, type=%s\n",
+    MWAW_DEBUG_MSG(("MsWks4Text::readPLC: warning: PLC name=%s, type=%s\n",
                     entry.name().c_str(), entry.type().c_str()));
     return false;
   }
@@ -835,7 +835,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
   uint16_t nPLC = (uint16_t) input->readULong(2); /* number of PLC */
   if (4*nPLC+10 > length) {
-    MWAW_DEBUG_MSG(("MSK4Text::readPLC: error: nPLC = %i, pSize=%ld\n",
+    MWAW_DEBUG_MSG(("MsWks4Text::readPLC: error: nPLC = %i, pSize=%ld\n",
                     nPLC, length));
     return false;
   }
@@ -845,15 +845,15 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f, f2;
 
-  MSK4PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
-  if (plcType.m_type == MSK4TextInternal::Unknown) {
-    MWAW_DEBUG_MSG(("MSK4Text::readPLC: unknown PLC name=%s, type=%s\n",
+  MsWks4PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
+  if (plcType.m_type == MsWks4TextInternal::Unknown) {
+    MWAW_DEBUG_MSG(("MsWks4Text::readPLC: unknown PLC name=%s, type=%s\n",
                     entry.name().c_str(), entry.type().c_str()));
   }
 
   long nPLC_ = static_cast<long>(static_cast<unsigned long>(nPLC));
   if (4*nPLC_+10 + dataSz *nPLC_ != length) {
-    MWAW_DEBUG_MSG(("MSK4Text::readPLC: error: odd dataSize: nPLC = %i, pSize=%ld\n",
+    MWAW_DEBUG_MSG(("MsWks4Text::readPLC: error: odd dataSize: nPLC = %i, pSize=%ld\n",
                     nPLC, length));
     dataSz=0;
     ok = false;
@@ -869,27 +869,27 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   for (int i = 0; i <= nPLC; i++) {
     long pos = (long) input->readULong(4);
     switch (plcType.m_pos) {
-    case MSK4PLCInternal::PLC::P_ABS:
+    case MsWks4PLCInternal::PLC::P_ABS:
       if (pos == 0) pos = m_textPositions.begin();
       break;
-    case MSK4PLCInternal::PLC::P_REL:
+    case MsWks4PLCInternal::PLC::P_REL:
       pos += m_textPositions.begin();
       break;
-    case MSK4PLCInternal::PLC::P_INCR: {
+    case MsWks4PLCInternal::PLC::P_INCR: {
       long newPos = lastPtr + pos;
       pos = lastPtr;
       lastPtr = newPos;
       break;
     }
-    case MSK4PLCInternal::PLC::P_UNKNOWN:
+    case MsWks4PLCInternal::PLC::P_UNKNOWN:
     default:
       if (pos < m_textPositions.begin() &&
           pos+m_textPositions.begin() <= m_textPositions.end()) {
-        plcType.m_pos = MSK4PLCInternal::PLC::P_REL;
+        plcType.m_pos = MsWks4PLCInternal::PLC::P_REL;
         pos += m_textPositions.begin();
       }
       else
-        plcType.m_pos = MSK4PLCInternal::PLC::P_ABS;
+        plcType.m_pos = MsWks4PLCInternal::PLC::P_ABS;
       break;
     }
     // this can happen for some token, ...
@@ -912,13 +912,13 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
   listValues.resize(0);
   long pos = input->tell();
   for (size_t i = 0; i < size_t(nPLC); i++) {
-    MSK4TextInternal::DataPLC plc;
+    MsWks4TextInternal::DataPLC plc;
     plc.m_type = plcType.m_type;
     plc.m_name = entry.name();
     bool printPLC = true;
 
     switch (plcType.m_contentType) {
-    case MSK4PLCInternal::PLC::T_CST : {
+    case MsWks4PLCInternal::PLC::T_CST : {
       if (dataSz == 0) {
         printPLC = false;
         break;
@@ -936,7 +936,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
 
       break;
     }
-    case MSK4PLCInternal::PLC::T_STRUCT : {
+    case MsWks4PLCInternal::PLC::T_STRUCT : {
       if (dataSz == 0) {
         printPLC = false;
         break;
@@ -956,7 +956,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
       }
       break;
     }
-    case MSK4PLCInternal::PLC::T_UNKNOWN:
+    case MsWks4PLCInternal::PLC::T_UNKNOWN:
     default:
       ok = false;
       break;
@@ -976,7 +976,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     pos += dataSz;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-    if (!ok) plcType.m_contentType = MSK4PLCInternal::PLC::T_UNKNOWN;
+    if (!ok) plcType.m_contentType = MsWks4PLCInternal::PLC::T_UNKNOWN;
   }
 
   if (fods.size())
@@ -987,7 +987,7 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
     static bool first = false;
     if (!first) {
       first = true;
-      MWAW_DEBUG_MSG(("MSK4Text::readPLC: problem reading end plc"));
+      MWAW_DEBUG_MSG(("MsWks4Text::readPLC: problem reading end plc"));
     }
     f.str("");
     f << "###" << entry.name() << "/PLC";
@@ -999,8 +999,8 @@ bool MSK4Text::readPLC(MWAWInputStreamPtr input,
 }
 
 // default
-bool MSK4Text::defDataParser(MWAWInputStreamPtr input, long endPos,
-                             long , long , int , std::string &mess)
+bool MsWks4Text::defDataParser(MWAWInputStreamPtr input, long endPos,
+                               long , long , int , std::string &mess)
 {
   mess = "";
   libmwaw::DebugStream f;
@@ -1023,7 +1023,7 @@ bool MSK4Text::defDataParser(MWAWInputStreamPtr input, long endPos,
 // the font name list
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
+bool MsWks4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   long debPos = entry.begin();
   long endPos = entry.end();
@@ -1057,7 +1057,7 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
     std::string s;
     for (; string_size>0; string_size--) s.append(1, (char)input->readULong(1));
 
-    MSK4TextInternal::FontName ft;
+    MsWks4TextInternal::FontName ft;
     ft.m_name = s;
     ft.m_id = (int) input->readULong(2);
     ft.m_unknown = (int) input->readULong(2);
@@ -1076,7 +1076,7 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
   }
 
   if (m_state->m_fontNames.size() != n_fonts) {
-    MWAW_DEBUG_MSG(("MSK4Text::readFontNames: warning: expected %i fonts but only found %i\n",
+    MWAW_DEBUG_MSG(("MsWks4Text::readFontNames: warning: expected %i fonts but only found %i\n",
                     n_fonts, int(m_state->m_fontNames.size())));
     return false;
   }
@@ -1088,18 +1088,18 @@ bool MSK4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
 // the font:
 //
 ////////////////////////////////////////////////////////////
-void MSK4Text::setDefault(MWAWFont &font)
+void MsWks4Text::setDefault(MWAWFont &font)
 {
   m_state->m_defFont = font;
 }
 
 // read
-bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
-                        int &id, std::string &mess)
+bool MsWks4Text::readFont(MWAWInputStreamPtr &input, long endPos,
+                          int &id, std::string &mess)
 {
   libmwaw::DebugStream f;
 
-  MSK4TextInternal::Font font(-1,-1);
+  MsWks4TextInternal::Font font(-1,-1);
 
   // 4[c] : gras, 5[c] : italic, 6[c] : souligne, 7[c] : ombre,
   // c[c] : normal ?, e[i]:font ?, f[i]: size?, 18[c] : supper, 19[c] : subs
@@ -1118,13 +1118,13 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
       int v = (int) input->readLong(1);
       switch (v) {
       case 1:
-        font.m_fieldType = MSK4TextInternal::Font::Page;
+        font.m_fieldType = MsWks4TextInternal::Font::Page;
         break;
       case 2:
-        font.m_fieldType = MSK4TextInternal::Font::Eobj;
+        font.m_fieldType = MsWks4TextInternal::Font::Eobj;
         break;
       case 3: // this one is the indication to add a note (with char ^)
-        font.m_fieldType = MSK4TextInternal::Font::Note;
+        font.m_fieldType = MsWks4TextInternal::Font::Note;
         break;
       default:
         f << "#3=" << v;
@@ -1133,10 +1133,10 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
       break;
     }
     case 0x12: { // date or title
-      font.m_fieldType = MSK4TextInternal::Font::DTT;
+      font.m_fieldType = MsWks4TextInternal::Font::DTT;
       int unkn = (int) input->readLong(1);
       if (unkn) {
-        font.m_fieldType = MSK4TextInternal::Font::DTTUnk;
+        font.m_fieldType = MsWks4TextInternal::Font::DTTUnk;
         f << "#DTT=" << unkn;
       }
       break;
@@ -1280,7 +1280,7 @@ bool MSK4Text::readFont(MWAWInputStreamPtr &input, long endPos,
 // the paragraph properties:
 //
 ////////////////////////////////////////////////////////////
-void MSK4Text::setProperty(MSK4TextInternal::Paragraph const &p)
+void MsWks4Text::setProperty(MsWks4TextInternal::Paragraph const &p)
 {
   if (!m_parserState->m_textListener) return;
   m_parserState->m_textListener->setParagraph(p);
@@ -1288,10 +1288,10 @@ void MSK4Text::setProperty(MSK4TextInternal::Paragraph const &p)
 }
 
 // read
-bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
-                             int &id, std::string &mess)
+bool MsWks4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
+                               int &id, std::string &mess)
 {
-  MSK4TextInternal::Paragraph parag;
+  MsWks4TextInternal::Paragraph parag;
 
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
@@ -1358,7 +1358,7 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
         m_parserState->m_listManager->getNewList(shared_ptr<MWAWList>(), 1, level);
       if (!list) {
         f << "#bullet,";
-        MWAW_DEBUG_MSG(("MSK4Text::readParagraph: can not create bullet list\n"));
+        MWAW_DEBUG_MSG(("MsWks4Text::readParagraph: can not create bullet list\n"));
         break;
       }
       parag.m_listId = list->getId();
@@ -1502,8 +1502,8 @@ bool MSK4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
 // the object ( data stored in RBIL ? )
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::eobjDataParser(MWAWInputStreamPtr input, long endPos,
-                              long bot, long , int id, std::string &mess)
+bool MsWks4Text::eobjDataParser(MWAWInputStreamPtr input, long endPos,
+                                long bot, long , int id, std::string &mess)
 {
   mess = "";
   libmwaw::DebugStream f;
@@ -1514,7 +1514,7 @@ bool MSK4Text::eobjDataParser(MWAWInputStreamPtr input, long endPos,
     mess = "###";
     return true;
   }
-  MSK4TextInternal::Object obj;
+  MsWks4TextInternal::Object obj;
   obj.m_id = id;
   obj.m_type = (int) input->readLong(2);
   for (int i = 0; i < 2; i++) obj.m_dim[i] = (int) input->readLong(2);
@@ -1534,8 +1534,8 @@ bool MSK4Text::eobjDataParser(MWAWInputStreamPtr input, long endPos,
 // the ftnt ( footnote )
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::ftntDataParser(MWAWInputStreamPtr input, long endPos,
-                              long bot, long eot, int id, std::string &mess)
+bool MsWks4Text::ftntDataParser(MWAWInputStreamPtr input, long endPos,
+                                long bot, long eot, int id, std::string &mess)
 {
   mess = "";
   libmwaw::DebugStream f;
@@ -1546,10 +1546,10 @@ bool MSK4Text::ftntDataParser(MWAWInputStreamPtr input, long endPos,
     mess = "###";
     return true;
   }
-  MSK4TextInternal::Ftnt ftnt;
+  MsWks4TextInternal::Ftnt ftnt;
   ftnt.m_type = (int) input->readULong(2); // always 1=footnote, endnote=?
   if (ftnt.m_type != 1) {
-    MWAW_DEBUG_MSG(("MSK4Text::ftntDataParser: unknown type=%d\n",ftnt.m_type));
+    MWAW_DEBUG_MSG(("MsWks4Text::ftntDataParser: unknown type=%d\n",ftnt.m_type));
   }
   ftnt.m_id = id;
   if (!m_state->parseMain()) {
@@ -1577,8 +1577,8 @@ bool MSK4Text::ftntDataParser(MWAWInputStreamPtr input, long endPos,
 // the pgd (page break )
 // Fixme: only parsed.....
 ////////////////////////////////////////////////////////////
-bool MSK4Text::pgdDataParser(MWAWInputStreamPtr input, long endPos,
-                             long , long, int , std::string &mess)
+bool MsWks4Text::pgdDataParser(MWAWInputStreamPtr input, long endPos,
+                               long , long, int , std::string &mess)
 {
   mess = "";
   libmwaw::DebugStream f;
@@ -1603,8 +1603,8 @@ bool MSK4Text::pgdDataParser(MWAWInputStreamPtr input, long endPos,
 // Fixme: only parsed.....
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
-                              long bot, long, int id, std::string &mess)
+bool MsWks4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
+                                long bot, long, int id, std::string &mess)
 {
   mess = "";
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
@@ -1617,7 +1617,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
     mess = "###";
     return true;
   }
-  MSK4TextInternal::Token tok;
+  MsWks4TextInternal::Token tok;
   int type = (int) input->readLong(2);
   int beginType = 0;
   switch (type) {
@@ -1644,7 +1644,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
     beginType = 2;
     break;
   default:
-    MWAW_DEBUG_MSG(("MSK4Text::toknDataParser: unknown type=%d\n",type));
+    MWAW_DEBUG_MSG(("MsWks4Text::toknDataParser: unknown type=%d\n",type));
     f << "###type=" << type <<",";
     break;
   }
@@ -1679,7 +1679,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
   int debDataPos = (int) input->readLong(2);
   if (m_textPositions.begin()+debDataPos == bot);
   else {
-    MWAW_DEBUG_MSG(("MSK4Text::toknDataParser: odd token\n"));
+    MWAW_DEBUG_MSG(("MsWks4Text::toknDataParser: odd token\n"));
     f << std::hex << "###deb=" << debDataPos << "," << std::dec;
   }
   f << tok;
@@ -1700,7 +1700,7 @@ bool MSK4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
 ////////////////////////////////////////////////////////////
 // find data
 ////////////////////////////////////////////////////////////
-bool MSK4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
+bool MsWks4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
 {
   std::vector<MWAWEntry const *> &zones = which ? m_FDPCs : m_FDPPs;
   zones.resize(0);
@@ -1773,10 +1773,10 @@ bool MSK4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
   return true;
 }
 
-bool MSK4Text::findFDPStructuresByHand(MWAWInputStreamPtr &/*input*/, int which)
+bool MsWks4Text::findFDPStructuresByHand(MWAWInputStreamPtr &/*input*/, int which)
 {
   char const *indexName = which ? "FDPC" : "FDPP";
-  MWAW_DEBUG_MSG(("MSK4Text::findFDPStructuresByHand: error: need to create %s list by hand \n", indexName));
+  MWAW_DEBUG_MSG(("MsWks4Text::findFDPStructuresByHand: error: need to create %s list by hand \n", indexName));
 
   std::vector<MWAWEntry const *> &zones = which ? m_FDPCs : m_FDPPs;
   zones.resize(0);
@@ -1795,12 +1795,12 @@ bool MSK4Text::findFDPStructuresByHand(MWAWInputStreamPtr &/*input*/, int which)
 ////////////////////////////////////////////////////////////
 // read data
 ////////////////////////////////////////////////////////////
-bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
-                       std::vector<DataFOD> &fods,
-                       MSK4Text::FDPParser parser)
+bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
+                         std::vector<DataFOD> &fods,
+                         MsWks4Text::FDPParser parser)
 {
   if (entry.length() <= 0 || entry.begin() <= 0) {
-    MWAW_DEBUG_MSG(("MSK4Text::readFDP warning: FDP entry unintialized"));
+    MWAW_DEBUG_MSG(("MsWks4Text::readFDP warning: FDP entry unintialized"));
     return false;
   }
 
@@ -1813,7 +1813,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   int const headerSize = 8;
 
   if (length < headerSize) {
-    MWAW_DEBUG_MSG(("MSK4Text::readFDP: warning: FDP offset=0x%X, length=0x%lx\n",
+    MWAW_DEBUG_MSG(("MsWks4Text::readFDP: warning: FDP offset=0x%X, length=0x%lx\n",
                     page_offset, length));
     return false;
   }
@@ -1827,7 +1827,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   f << ", unk=" << input->readLong(2);
 
   if (headerSize+(4+deplSize)*cfod > length) {
-    MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: cfod = %i (0x%X)\n", cfod, cfod));
+    MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: cfod = %i (0x%X)\n", cfod, cfod));
     return false;
   }
 
@@ -1840,7 +1840,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   if (entry.hasType("FDPC")) type = DataFOD::ATTR_TEXT;
   else if (entry.hasType("FDPP")) type = DataFOD::ATTR_PARAG;
   else {
-    MWAW_DEBUG_MSG(("MSK4Text::readFDP: FDP error: unknown type = '%s'\n", entry.type().c_str()));
+    MWAW_DEBUG_MSG(("MsWks4Text::readFDP: FDP error: unknown type = '%s'\n", entry.type().c_str()));
   }
 
   /* Read array of fcLim of FODs.  The fcLim refers to the offset of the
@@ -1853,14 +1853,14 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
 
     /* check that fcLim is not too large */
     if (fod.m_pos > m_textPositions.end()) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: length of 'text selection' %ld > "
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: length of 'text selection' %ld > "
                       "total text length %ld\n", fod.m_pos, m_textPositions.end()));
       return false;
     }
 
     /* check that pos is monotonic */
     if (lastLimit > fod.m_pos) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: character position list must "
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: character position list must "
                       "be monotonic, but found %ld, %ld\n", lastLimit, fod.m_pos));
       return false;
     }
@@ -1882,7 +1882,7 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     /* check size of bfprop  */
     if ((depl < headerSize+(4+deplSize)*cfod && depl > 0) ||
         long(page_offset)+depl  > endPage) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: pos of bfprop is bad "
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: pos of bfprop is bad "
                       "%i (0x%X)\n", depl, depl));
       return false;
     }
@@ -1915,12 +1915,12 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     int szProp = (int) input->readULong(1);
     szProp++;
     if (szProp == 0) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: 0 == szProp at file offset 0x%lx\n", (input->tell())-1));
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: 0 == szProp at file offset 0x%lx\n", (input->tell())-1));
       return false;
     }
     long endPos = pos+szProp;
     if (endPos > endPage) {
-      MWAW_DEBUG_MSG(("MSK4Text::readFDP: error: cch = %d, too large\n", szProp));
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: cch = %d, too large\n", szProp));
       return false;
     }
 
@@ -1950,11 +1950,11 @@ bool MSK4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   return m_textPositions.end() > lastReadPos;
 }
 
-std::vector<MSK4Text::DataFOD> MSK4Text::mergeSortedLists
-(std::vector<MSK4Text::DataFOD> const &lst1,
- std::vector<MSK4Text::DataFOD> const &lst2) const
+std::vector<MsWks4Text::DataFOD> MsWks4Text::mergeSortedLists
+(std::vector<MsWks4Text::DataFOD> const &lst1,
+ std::vector<MsWks4Text::DataFOD> const &lst2) const
 {
-  std::vector<MSK4Text::DataFOD> res;
+  std::vector<MsWks4Text::DataFOD> res;
   // we regroup these two lists in one list
   size_t num1 = lst1.size(), i1 = 0;
   size_t num2 = lst2.size(), i2 = 0;

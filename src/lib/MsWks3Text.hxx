@@ -35,8 +35,8 @@
  * Parser to Microsoft Works text document
  *
  */
-#ifndef MSK3_TEXT
-#  define MSK3_TEXT
+#ifndef MS_WKS3_TEXT
+#  define MS_WKS3_TEXT
 
 #include <list>
 #include <string>
@@ -46,7 +46,7 @@
 
 #include "MWAWEntry.hxx"
 
-namespace MSK3TextInternal
+namespace MsWks3TextInternal
 {
 struct Font;
 struct LineZone;
@@ -54,21 +54,21 @@ struct TextZone;
 struct State;
 }
 
-class MSK3Parser;
+class MsWks3Parser;
 
 /** \brief the main class to read the text part of Microsoft Works file
  *
  *
  *
  */
-class MSK3Text
+class MsWks3Text
 {
-  friend class MSK3Parser;
+  friend class MsWks3Parser;
 public:
   //! constructor
-  MSK3Text(MSK3Parser &parser);
+  MsWks3Text(MsWks3Parser &parser);
   //! destructor
-  virtual ~MSK3Text();
+  virtual ~MsWks3Text();
 
   /** returns the file version */
   int version() const;
@@ -108,33 +108,33 @@ protected:
   //
 
   //! try to read a zone header
-  bool readZoneHeader(MSK3TextInternal::LineZone &zone) const;
+  bool readZoneHeader(MsWks3TextInternal::LineZone &zone) const;
 
   //! prepare a zone
-  void update(MSK3TextInternal::TextZone &zone);
+  void update(MsWks3TextInternal::TextZone &zone);
 
   //! prepare the note zones given a zone and the position of the first note
-  void updateNotes(MSK3TextInternal::TextZone &zone, int firstNote);
+  void updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote);
 
   /** sends the zone data to the listener. You can set limit to send
       a subzone data ( like note ) */
-  void send(MSK3TextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
+  void send(MsWks3TextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
 
   //! tries to read a font
-  bool readFont(MSK3TextInternal::Font &font, long endPos);
+  bool readFont(MsWks3TextInternal::Font &font, long endPos);
 
   //! tries to read a paragraph
-  bool readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &parag);
+  bool readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph &parag);
 
   //! tries to send a text zone
-  bool sendText(MSK3TextInternal::LineZone &zone, int zoneId);
+  bool sendText(MsWks3TextInternal::LineZone &zone, int zoneId);
 
   //! tries to send a string (for v1-2, header/footer zone)
   bool sendString(std::string &str);
 
 private:
-  MSK3Text(MSK3Text const &orig);
-  MSK3Text &operator=(MSK3Text const &orig);
+  MsWks3Text(MsWks3Text const &orig);
+  MsWks3Text &operator=(MsWks3Text const &orig);
 
 protected:
   //
@@ -144,10 +144,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MSK3TextInternal::State> m_state;
+  shared_ptr<MsWks3TextInternal::State> m_state;
 
   //! the main parser;
-  MSK3Parser *m_mainParser;
+  MsWks3Parser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

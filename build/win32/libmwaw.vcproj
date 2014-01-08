@@ -344,35 +344,35 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Parser.cxx"
+				RelativePath="..\..\src\lib\MsWks3Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Text.cxx"
+				RelativePath="..\..\src\lib\MsWks3Text.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Parser.cxx"
+				RelativePath="..\..\src\lib\MsWks4Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Text.cxx"
+				RelativePath="..\..\src\lib\MsWks4Text.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Zone.cxx"
+				RelativePath="..\..\src\lib\MsWks4Zone.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKGraph.cxx"
+				RelativePath="..\..\src\lib\MsWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKParser.cxx"
+				RelativePath="..\..\src\lib\MsWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKTable.cxx"
+				RelativePath="..\..\src\lib\MsWksTable.cxx"
 				>
 			</File>
 			<File
@@ -745,35 +745,35 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Parser.hxx"
+				RelativePath="..\..\src\lib\MsWks3Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Text.hxx"
+				RelativePath="..\..\src\lib\MsWks3Text.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Parser.hxx"
+				RelativePath="..\..\src\lib\MsWks4Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Text.hxx"
+				RelativePath="..\..\src\lib\MsWks4Text.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Zone.hxx"
+				RelativePath="..\..\src\lib\MsWks4Zone.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKGraph.hxx"
+				RelativePath="..\..\src\lib\MsWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKParser.hxx"
+				RelativePath="..\..\src\lib\MsWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKTable.hxx"
+				RelativePath="..\..\src\lib\MsWksTable.hxx"
 				>
 			</File>
 			<File

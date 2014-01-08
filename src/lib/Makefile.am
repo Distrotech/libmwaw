@@ -88,6 +88,22 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LWParser.hxx			\
 	LWText.cxx			\
 	LWText.hxx			\
+	MsWksGraph.cxx			\
+	MsWksGraph.hxx			\
+	MsWksParser.cxx			\
+	MsWksParser.hxx			\
+	MsWksTable.cxx			\
+	MsWksTable.hxx			\
+	MsWks3Parser.cxx		\
+	MsWks3Parser.hxx		\
+	MsWks3Text.cxx			\
+	MsWks3Text.hxx			\
+	MsWks4Parser.cxx		\
+	MsWks4Parser.hxx		\
+	MsWks4Text.cxx			\
+	MsWks4Text.hxx			\
+	MsWks4Zone.cxx			\
+	MsWks4Zone.hxx			\
 	MCDParser.cxx			\
 	MCDParser.hxx			\
 	MDWParser.cxx			\
@@ -102,22 +118,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MRWParser.hxx			\
 	MRWText.cxx			\
 	MRWText.hxx			\
-	MSKGraph.cxx			\
-	MSKGraph.hxx			\
-	MSKParser.cxx			\
-	MSKParser.hxx			\
-	MSKTable.cxx			\
-	MSKTable.hxx			\
-	MSK3Parser.cxx			\
-	MSK3Parser.hxx			\
-	MSK3Text.cxx			\
-	MSK3Text.hxx			\
-	MSK4Parser.cxx			\
-	MSK4Parser.hxx			\
-	MSK4Text.cxx			\
-	MSK4Text.hxx			\
-	MSK4Zone.cxx			\
-	MSK4Zone.hxx			\
 	MSW1Parser.cxx			\
 	MSW1Parser.hxx			\
 	MSWParser.cxx			\

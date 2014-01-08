@@ -45,15 +45,15 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MSK4Parser.hxx"
-#include "MSKGraph.hxx"
-#include "MSK4Text.hxx"
+#include "MsWks4Parser.hxx"
+#include "MsWksGraph.hxx"
+#include "MsWks4Text.hxx"
 
-#include "MSK4Zone.hxx"
+#include "MsWks4Zone.hxx"
 
 
-/** Internal: the structures of a MSK4Zone */
-namespace MSK4ZoneInternal
+/** Internal: the structures of a MsWks4Zone */
+namespace MsWks4ZoneInternal
 {
 /**Internal: some data are dupplicated, an enum to know which picture to ignored.
  *
@@ -131,7 +131,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &ft)
   return o;
 }
 
-//!Internal: the state of a MSK4Zone
+//!Internal: the state of a MsWks4Zone
 struct State {
   //! constructor
   State() : m_mainOle(false), m_numColumns(1), m_hasColumnSep(false), m_parsed(false),
@@ -163,61 +163,61 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK4Zone::MSK4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
-                   MSK4Parser &parser, std::string const &oleName) :
-  MSKParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser()
+MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
+                       MsWks4Parser &parser, std::string const &oleName) :
+  MsWksParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser()
 {
   setAscii(oleName);
   setVersion(4);
   init();
 }
 
-MSK4Zone::~MSK4Zone()
+MsWks4Zone::~MsWks4Zone()
 {
 }
 
 ////////////////////////////////////////////////////////////
 // small helper to manage interaction between parent and child, ...
 ////////////////////////////////////////////////////////////
-void MSK4Zone::init()
+void MsWks4Zone::init()
 {
-  m_state.reset(new MSK4ZoneInternal::State);
-  m_textParser.reset(new MSK4Text(*this));
+  m_state.reset(new MsWks4ZoneInternal::State);
+  m_textParser.reset(new MsWks4Text(*this));
   m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser.reset(new MSKGraph(*this));
+  m_graphParser.reset(new MsWksGraph(*this));
 }
 
-void  MSK4Zone::setAscii(std::string const &oleName)
+void  MsWks4Zone::setAscii(std::string const &oleName)
 {
   std::string fName = libmwaw::Debug::flattenFileName(oleName);
   ascii().open(fName);
 }
 
-void MSK4Zone::sendFootNote(int id)
+void MsWks4Zone::sendFootNote(int id)
 {
   m_mainParser->sendFootNote(id);
 }
-void MSK4Zone::readFootNote(int id)
+void MsWks4Zone::readFootNote(int id)
 {
   m_textParser->readFootNote(getInput(), id);
 }
 
-void MSK4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
+void MsWks4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 {
   return m_mainParser->sendFrameText(entry, frame);
 }
 
-void MSK4Zone::sendRBIL(int id, Vec2i const &sz)
+void MsWks4Zone::sendRBIL(int id, Vec2i const &sz)
 {
-  MSKGraph::SendData sendData;
-  sendData.m_type = MSKGraph::SendData::RBIL;
+  MsWksGraph::SendData sendData;
+  sendData.m_type = MsWksGraph::SendData::RBIL;
   sendData.m_id = id;
   sendData.m_anchor =  MWAWPosition::Char;
   sendData.m_size = sz;
   m_graphParser->sendObjects(sendData);
 }
 
-void MSK4Zone::sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras)
+void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras)
 {
   m_mainParser->sendOLE(id, pos, frameExtras);
 }
@@ -225,12 +225,12 @@ void MSK4Zone::sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGProperty
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-double MSK4Zone::getTextHeight() const
+double MsWks4Zone::getTextHeight() const
 {
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
-Vec2f MSK4Zone::getPageLeftTop() const
+Vec2f MsWks4Zone::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -239,7 +239,7 @@ Vec2f MSK4Zone::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // new page/text positions
 ////////////////////////////////////////////////////////////
-void MSK4Zone::newPage(int number)
+void MsWks4Zone::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -253,8 +253,8 @@ void MSK4Zone::newPage(int number)
     //    ie. graphParser must add a space to force it :-~
     if (m_state->m_mainOle) getTextListener()->insertBreak(MWAWTextListener::PageBreak);
 
-    MSKGraph::SendData sendData;
-    sendData.m_type = MSKGraph::SendData::RBDR;
+    MsWksGraph::SendData sendData;
+    sendData.m_type = MsWksGraph::SendData::RBDR;
     sendData.m_anchor =  MWAWPosition::Page;
     sendData.m_page = m_state->m_actPage;
     m_graphParser->sendObjects(sendData);
@@ -262,7 +262,7 @@ void MSK4Zone::newPage(int number)
   getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
-MWAWEntry MSK4Zone::getTextPosition() const
+MWAWEntry MsWks4Zone::getTextPosition() const
 {
   return m_textParser->m_textPositions;
 }
@@ -270,7 +270,7 @@ MWAWEntry MSK4Zone::getTextPosition() const
 ////////////////////////////////////////////////////////////
 // create the main listener ( given a header and a footer document)
 ////////////////////////////////////////////////////////////
-MWAWTextListenerPtr MSK4Zone::createListener
+MWAWTextListenerPtr MsWks4Zone::createListener
 (librevenge::RVNGTextInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
   MWAWPageSpan ps(getPageSpan());
@@ -308,7 +308,7 @@ MWAWTextListenerPtr MSK4Zone::createListener
 // entry management
 //
 ////////////////////////////////////////////////////////////
-bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
+bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 {
   long pos = input->tell();
   ascii().addPos(pos);
@@ -320,7 +320,7 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   // check if the entry can be read
   input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
   if (input->tell() != pos+cch) {
-    MWAW_DEBUG_MSG(("MSK4Zone:parseHeaderIndexEntry error: incomplete entry\n"));
+    MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry error: incomplete entry\n"));
     ascii().addNote("###IndexEntry incomplete (ignored)");
     return false;
   }
@@ -329,7 +329,7 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   if (0x18 != cch) {
     if (cch < 0x18) {
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
-      ascii().addNote("MSK4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
+      ascii().addNote("MsWks4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
       if (cch < 10) throw libmwaw::ParseException();
       return true;
     }
@@ -343,7 +343,7 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 
     if (name[i] != 0 && name[i] != 0x20 &&
         (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90)) {
-      MWAW_DEBUG_MSG(("MSK4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
+      MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
                       (uint8_t)name[i], (uint8_t)name[i]));
       ascii().addNote("###IndexEntry bad name(ignored)");
 
@@ -408,7 +408,7 @@ bool MSK4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   return true;
 }
 
-bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
+bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 {
   m_entryMap.clear();
   input->seek(0x08, librevenge::RVNG_SEEK_SET);
@@ -443,14 +443,14 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
     f << "Header("<<std::hex << unknown1<<"): N=" << std::dec << n_entries_local;
 
     if (n_entries_local > 0x20) {
-      MWAW_DEBUG_MSG(("MSK4Zone::parseHeaderIndex: error: n_entries_local=%i\n", n_entries_local));
+      MWAW_DEBUG_MSG(("MsWks4Zone::parseHeaderIndex: error: n_entries_local=%i\n", n_entries_local));
       return readSome;
     }
 
     uint32_t next_index_table = (uint32_t) input->readULong(4);
     f << std::hex << ", nextHeader=" << next_index_table;
     if (next_index_table != 0xFFFFFFFF && long(next_index_table) < pos) {
-      MWAW_DEBUG_MSG(("MSK4Zone::parseHeaderIndex: error: next_index_table=%x decreasing !!!\n", next_index_table));
+      MWAW_DEBUG_MSG(("MsWks4Zone::parseHeaderIndex: error: next_index_table=%x decreasing !!!\n", next_index_table));
       return readSome;
     }
 
@@ -467,7 +467,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
     while (n_entries > 0 && n_entries_local);
 
     if (0xFFFFFFFF == next_index_table && n_entries > 0) {
-      MWAW_DEBUG_MSG(("MSK4Zone::parseHeaderIndex: error: expected more header index entries\n"));
+      MWAW_DEBUG_MSG(("MsWks4Zone::parseHeaderIndex: error: expected more header index entries\n"));
       return n_entries > 0;
     }
 
@@ -483,7 +483,7 @@ bool MSK4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 ////////////////////////////////////////////////////////////
 // parse the ole part and create the main part
 ////////////////////////////////////////////////////////////
-bool MSK4Zone::createZones(bool mainOle)
+bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
 
@@ -575,14 +575,14 @@ bool MSK4Zone::createZones(bool mainOle)
 ////////////////////////////////////////////////////////////
 // send all the data corresponding to a zone
 ////////////////////////////////////////////////////////////
-void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
+void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 {
   MWAWInputStreamPtr input = getInput();
   bool oldMain = m_state->m_mainOle;
   m_state->m_mainOle = mainOle;
 
-  MSKGraph::SendData sendData;
-  sendData.m_type = MSKGraph::SendData::RBDR;
+  MsWksGraph::SendData sendData;
+  sendData.m_type = MsWksGraph::SendData::RBDR;
   sendData.m_anchor = mainOle ? MWAWPosition::Page : MWAWPosition::Paragraph;
   sendData.m_page = 0;
   m_graphParser->sendObjects(sendData);
@@ -611,7 +611,7 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   newPage(m_state->m_numPages);
   m_textParser->flushExtra(input);
 
-  sendData.m_type = MSKGraph::SendData::ALL;
+  sendData.m_type = MsWksGraph::SendData::ALL;
   sendData.m_anchor = MWAWPosition::Char;
   m_graphParser->sendObjects(sendData);
 #endif
@@ -625,10 +625,10 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   while (m_entryMap.end() != pos) {
     MWAWEntry const &zone = pos++->second;
     if (zone.isParsed() ||
-        zone.hasName("TEXT") || // TEXT entries are managed directly by MSK4Text
+        zone.hasName("TEXT") || // TEXT entries are managed directly by MsWks4Text
         zone.hasName("INK ")) // INK Zone are ignored: always = 2*99
       continue;
-    MWAW_DEBUG_MSG(("MSK4Zone::readContentZones: WARNING zone %s ignored\n",
+    MWAW_DEBUG_MSG(("MsWks4Zone::readContentZones: WARNING zone %s ignored\n",
                     zone.name().c_str()));
   }
 #endif
@@ -643,7 +643,7 @@ void MSK4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 ////////////////////////////////////////////////////////////
 // the printer definition
 ////////////////////////////////////////////////////////////
-bool MSK4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPageSpan &page)
+bool MsWks4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPageSpan &page)
 {
   page = MWAWPageSpan();
   if (!entry.hasType("PRR ")) {
@@ -688,7 +688,7 @@ bool MSK4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPa
 ////////////////////////////////////////////////////////////
 // document
 ////////////////////////////////////////////////////////////
-bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPageSpan &page)
+bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPageSpan &page)
 {
   if (!entry.hasType("DOP ")) {
     MWAW_DEBUG_MSG(("Works: unknown DOP type='%s'\n", entry.type().c_str()));
@@ -886,7 +886,7 @@ bool MSK4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWPag
 // the position in the page ? Constant size 0x28c ?
 // link to the graphic entry RBDR ?
 // does this means RL -> RB while RBDR means RB->DRawing
-bool MSK4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
+bool MsWks4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   if (entry.length() < 13+32) return false;
   entry.setParsed(true);
@@ -940,7 +940,7 @@ bool MSK4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 }
 
 // the frame position
-bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
+bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   libmwaw::DebugStream f;
 
@@ -968,7 +968,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
     long endPos = debPos+1+size;
     if (endPos > endPage) break;
 
-    MSK4ZoneInternal::Frame frame;
+    MsWks4ZoneInternal::Frame frame;
     Vec2f fOrig, fSiz;
     while (input->tell() < endPos) {
       int val = (int) input->readULong(1);
@@ -1004,13 +1004,13 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
         int value = (int) input->readLong(2);
         switch (value) {
         case 1:
-          frame.m_type = MSK4ZoneInternal::Frame::Textbox;
+          frame.m_type = MsWks4ZoneInternal::Frame::Textbox;
           break;
         case 2:
-          frame.m_type = MSK4ZoneInternal::Frame::Header;
+          frame.m_type = MsWks4ZoneInternal::Frame::Header;
           break;
         case 4:
-          frame.m_type = MSK4ZoneInternal::Frame::Footer;
+          frame.m_type = MsWks4ZoneInternal::Frame::Footer;
           break;
         default:
           f << "###type=" << value << ",";
@@ -1117,7 +1117,7 @@ bool MSK4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
 }
 
 // the selection
-bool MSK4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
+bool MsWks4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   libmwaw::DebugStream f;
 
@@ -1126,7 +1126,7 @@ bool MSK4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
   input->seek(debPage, librevenge::RVNG_SEEK_SET);
   if (endPage-debPage <= 12) {
-    MWAW_DEBUG_MSG(("MSK4Zone::readSELN: SELN size=%ld too short\n", endPage-debPage));
+    MWAW_DEBUG_MSG(("MsWks4Zone::readSELN: SELN size=%ld too short\n", endPage-debPage));
     return false;
   }
   entry.setParsed(true);

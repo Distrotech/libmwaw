@@ -48,19 +48,19 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "MSKGraph.hxx"
-#include "MSKParser.hxx"
+#include "MsWksGraph.hxx"
+#include "MsWksParser.hxx"
 
-#include "MSKTable.hxx"
+#include "MsWksTable.hxx"
 
-/** Internal: the structures of a MSKTable */
-namespace MSKTableInternal
+/** Internal: the structures of a MsWksTable */
+namespace MsWksTableInternal
 {
 ////////////////////////////////////////
-//! Internal: the chart of a MSKTable
+//! Internal: the chart of a MsWksTable
 struct Chart {
   //! constructor
-  Chart(MSKGraph::Style const &style) : m_style(style), m_backgroundEntry(), m_zoneId(-1)
+  Chart(MsWksGraph::Style const &style) : m_style(style), m_backgroundEntry(), m_zoneId(-1)
   {
     for (int i=0; i < 3; i++)
       m_textZonesId[i]=-1;
@@ -84,7 +84,7 @@ struct Chart {
 
 
 ////////////////////////////////////////
-//! Internal: the table of a MSKTable
+//! Internal: the table of a MsWksTable
 struct Table {
   //! the cell content
   struct Cell {
@@ -97,7 +97,7 @@ struct Table {
     std::string m_text;
   };
   //! constructor
-  Table(MSKGraph::Style const &style) : m_style(style), m_numRows(0), m_numCols(0),
+  Table(MsWksGraph::Style const &style) : m_style(style), m_numRows(0), m_numCols(0),
     m_rowsDim(), m_colsDim(), m_font(), m_cellsList()
   {
     m_style.m_surfaceColor = style.m_baseSurfaceColor;
@@ -127,7 +127,7 @@ struct Table {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MSKTable
+//! Internal: the state of a MsWksTable
 struct State {
   //! constructor
   State() : m_version(-1), m_idChartMap(), m_idTableMap() { }
@@ -146,16 +146,16 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSKTable::MSKTable(MSKParser &parser, MSKGraph &graph) :
-  m_parserState(parser.getParserState()), m_state(new MSKTableInternal::State),
+MsWksTable::MsWksTable(MsWksParser &parser, MsWksGraph &graph) :
+  m_parserState(parser.getParserState()), m_state(new MsWksTableInternal::State),
   m_mainParser(&parser), m_graphParser(&graph)
 {
 }
 
-MSKTable::~MSKTable()
+MsWksTable::~MsWksTable()
 { }
 
-int MSKTable::version() const
+int MsWksTable::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
@@ -165,22 +165,22 @@ int MSKTable::version() const
 ////////////////////////////////////////////////////////////
 // table
 ////////////////////////////////////////////////////////////
-bool MSKTable::sendTable(int zoneId)
+bool MsWksTable::sendTable(int zoneId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return false;
 
   if (m_state->m_idTableMap.find(zoneId)==m_state->m_idTableMap.end()) {
-    MWAW_DEBUG_MSG(("MSKTable::sendTable: can not find textbox %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWksTable::sendTable: can not find textbox %d\n", zoneId));
     return false;
   }
-  MSKTableInternal::Table &table = m_state->m_idTableMap.find(zoneId)->second;
+  MsWksTableInternal::Table &table = m_state->m_idTableMap.find(zoneId)->second;
 
   // open the table
   size_t nCols = table.m_colsDim.size();
   size_t nRows = table.m_rowsDim.size();
   if (!nCols || !nRows) {
-    MWAW_DEBUG_MSG(("MSKTable::sendTable: problem with dimensions\n"));
+    MWAW_DEBUG_MSG(("MsWksTable::sendTable: problem with dimensions\n"));
     return false;
   }
   std::vector<float> colsDims(nCols);
@@ -215,7 +215,7 @@ bool MSKTable::sendTable(int zoneId)
       listener->setParagraph(para);
       listener->openTableCell(cell);
 
-      MSKTableInternal::Table::Cell const *tCell=table.getCell(cellPosition);
+      MsWksTableInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {
         listener->setFont(tCell->m_font);
         size_t nChar = tCell->m_text.size();
@@ -223,7 +223,7 @@ bool MSKTable::sendTable(int zoneId)
           unsigned char c = (unsigned char) tCell->m_text[ch];
           switch (c) {
           case 0x9:
-            MWAW_DEBUG_MSG(("MSKTable::sendTable: find a tab\n"));
+            MWAW_DEBUG_MSG(("MsWksTable::sendTable: find a tab\n"));
             listener->insertChar(' ');
             break;
           case 0xd:
@@ -246,7 +246,7 @@ bool MSKTable::sendTable(int zoneId)
   return true;
 }
 
-bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style const &style)
+bool MsWksTable::readTable(int numCol, int numRow, int zoneId, MsWksGraph::Style const &style)
 {
   int vers=version();
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -255,7 +255,7 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
   libmwaw::DebugStream f, f2;
   f << "Entries(Table): ";
 
-  MSKTableInternal::Table table(style);
+  MsWksTableInternal::Table table(style);
   table.m_numRows=numRow;
   table.m_numCols=numCol;
   // first we read the dim
@@ -291,7 +291,7 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
   while (input->tell() != endPos) {
     f.str("");
     actPos = input->tell();
-    MSKTableInternal::Table::Cell cell;
+    MsWksTableInternal::Table::Cell cell;
     int y = (int) input->readLong(2);
     int x = (int) input->readLong(2);
     cell.m_pos = Vec2i(x,y);
@@ -367,7 +367,7 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
     ascFile.addNote(f.str().c_str());
   }
   if (m_state->m_idTableMap.find(zoneId)!=m_state->m_idTableMap.end()) {
-    MWAW_DEBUG_MSG(("MSKTable::readTable: oops a table with id=%d already exists\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWksTable::readTable: oops a table with id=%d already exists\n", zoneId));
   }
   else
     m_state->m_idTableMap[zoneId]=table;
@@ -378,33 +378,33 @@ bool MSKTable::readTable(int numCol, int numRow, int zoneId, MSKGraph::Style con
 // chart
 ////////////////////////////////////////////////////////////
 
-void MSKTable::setChartZoneId(int chartId, int zoneId)
+void MsWksTable::setChartZoneId(int chartId, int zoneId)
 {
   if (m_state->m_idChartMap.find(chartId)==m_state->m_idChartMap.end()) {
-    MWAW_DEBUG_MSG(("MSKTable::setChartZoneId: can not find chart %d\n", chartId));
+    MWAW_DEBUG_MSG(("MsWksTable::setChartZoneId: can not find chart %d\n", chartId));
     return;
   }
-  MSKTableInternal::Chart &chart = m_state->m_idChartMap.find(chartId)->second;
+  MsWksTableInternal::Chart &chart = m_state->m_idChartMap.find(chartId)->second;
   chart.m_zoneId = zoneId;
 }
 
-bool MSKTable::sendChart(int chartId)
+bool MsWksTable::sendChart(int chartId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("MsWksTable::sendChart: can not find a listener\n"));
     return false;
   }
   if (m_state->m_idChartMap.find(chartId)==m_state->m_idChartMap.end()) {
-    MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find chart %d\n", chartId));
+    MWAW_DEBUG_MSG(("MsWksTable::sendChart: can not find chart %d\n", chartId));
     return false;
   }
-  MSKTableInternal::Chart &chart = m_state->m_idChartMap.find(chartId)->second;
+  MsWksTableInternal::Chart &chart = m_state->m_idChartMap.find(chartId)->second;
 
   MWAWInputStreamPtr input=m_mainParser->getInput();
   MWAWPosition chartPos;
   if (chart.m_zoneId < 0 || !m_graphParser->getZonePosition(chart.m_zoneId, MWAWPosition::Frame, chartPos)) {
-    MWAW_DEBUG_MSG(("MSKTable::sendChart: oops can not find chart bdbox %d[%d]\n", chartId, chart.m_zoneId));
+    MWAW_DEBUG_MSG(("MsWksTable::sendChart: oops can not find chart bdbox %d[%d]\n", chartId, chart.m_zoneId));
     return false;
   }
   MWAWPosition pictPos(Vec2f(0,0), chartPos.size(),librevenge::RVNG_POINT);
@@ -427,7 +427,7 @@ bool MSKTable::sendChart(int chartId)
     Box2f naturalBox;
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)chart.m_backgroundEntry.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
-      MWAW_DEBUG_MSG(("MSKTable::sendChart: can not find the picture\n"));
+      MWAW_DEBUG_MSG(("MsWksTable::sendChart: can not find the picture\n"));
     }
     else {
       input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
@@ -444,7 +444,7 @@ bool MSKTable::sendChart(int chartId)
     int cId=chart.m_textZonesId[i];
     MWAWPosition childPos;
     if (!m_graphParser->getZonePosition(cId, MWAWPosition::Frame, childPos)) {
-      MWAW_DEBUG_MSG(("MSKTable::sendChart: oops can not find chart bdbox for child %d[%d]\n", i, cId));
+      MWAW_DEBUG_MSG(("MsWksTable::sendChart: oops can not find chart bdbox for child %d[%d]\n", i, cId));
       continue;
     }
     MWAWPosition textPos(pictPos);
@@ -456,7 +456,7 @@ bool MSKTable::sendChart(int chartId)
   return true;
 }
 
-bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
+bool MsWksTable::readChart(int chartId, MsWksGraph::Style const &style)
 {
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
@@ -467,7 +467,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   libmwaw::DebugStream f;
   f << "Entries(Chart):";
 
-  MSKTableInternal::Chart chart(style);
+  MsWksTableInternal::Chart chart(style);
   int val = (int) input->readLong(2);
   switch (val) {
   case 1:
@@ -510,7 +510,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   std::string name("");
   int sz = (int) input->readULong(1);
   if (sz > 31) {
-    MWAW_DEBUG_MSG(("MSKTable::readChart: string size is too long\n"));
+    MWAW_DEBUG_MSG(("MsWksTable::readChart: string size is too long\n"));
     return false;
   }
   for (int i = 0; i < sz; i++) {
@@ -538,7 +538,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     MWAWEntry childZone;
     chart.m_textZonesId[i] = m_graphParser->getEntryPicture(-9999, childZone, false, i+2);
     if (chart.m_textZonesId[i]<0) {
-      MWAW_DEBUG_MSG(("MSKTable::readChart: can not find textbox\n"));
+      MWAW_DEBUG_MSG(("MsWksTable::readChart: can not find textbox\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -548,7 +548,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
   long dataSz = (long) input->readULong(4);
   long smDataSz = (long) input->readULong(2);
   if (!dataSz || (dataSz&0xFFFF) != smDataSz || !input->checkPosition(pos+4+dataSz)) {
-    MWAW_DEBUG_MSG(("MSKTable::readChart: last pict size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWksTable::readChart: last pict size seems odd\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -567,7 +567,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     pos = input->tell();
     dataSz = (long) input->readULong(4);
     if (dataSz%0x10) {
-      MWAW_DEBUG_MSG(("MSKTable::readChart: can not read end last zone\n"));
+      MWAW_DEBUG_MSG(("MsWksTable::readChart: can not read end last zone\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -585,7 +585,7 @@ bool MSKTable::readChart(int chartId, MSKGraph::Style const &style)
     input->seek(pos+4+dataSz, librevenge::RVNG_SEEK_SET);
   }
   if (m_state->m_idChartMap.find(chartId)!=m_state->m_idChartMap.end()) {
-    MWAW_DEBUG_MSG(("MSKTable::readChart: oops a chart with id=%d already exists\n", chartId));
+    MWAW_DEBUG_MSG(("MsWksTable::readChart: oops a chart with id=%d already exists\n", chartId));
   }
   else
     m_state->m_idChartMap[chartId]=chart;

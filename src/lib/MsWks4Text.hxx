@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSK4_TEXT
-#  define MSK4_TEXT
+#ifndef MS_WKS4_TEXT
+#  define MS_WKS4_TEXT
 
 #include <vector>
 
@@ -40,18 +40,18 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-namespace MSK4TextInternal
+namespace MsWks4TextInternal
 {
 struct Font;
 struct Paragraph;
 struct State;
 }
 
-class MSK4Zone;
+class MsWks4Zone;
 
 /** The class which parses text zones in a mac MS Works document v4
  *
- * This class must be associated with a MSK4Zone. It reads the entries:
+ * This class must be associated with a MsWks4Zone. It reads the entries:
  * - TEXT : the text strings
  * - FONT : the fonts name
  * - FDPC, BTEC : the fonts properties
@@ -60,9 +60,9 @@ class MSK4Zone;
  * - PGD : the page break (only parsed)
  * - TOKN : the field properties (pagenumber, date, ...)
  */
-class MSK4Text
+class MsWks4Text
 {
-  friend class MSK4Zone;
+  friend class MsWks4Zone;
 protected:
   struct DataFOD;
   /** callback when a new attribute is found in an FDPP/FDPC entry
@@ -70,14 +70,14 @@ protected:
    * \param input, endPos: defined the zone in the file
    * \return true and filled id if this attribute can be parsed
    * \note mess can be filled to add a message in debugFile */
-  typedef bool (MSK4Text::* FDPParser)(MWAWInputStreamPtr &input, long endPos,
-                                       int &id, std::string &mess);
+  typedef bool (MsWks4Text::* FDPParser)(MWAWInputStreamPtr &input, long endPos,
+                                         int &id, std::string &mess);
 public:
   //! constructor
-  MSK4Text(MSK4Zone &parser);
+  MsWks4Text(MsWks4Zone &parser);
 
   //! destructor
-  ~MSK4Text();
+  ~MsWks4Text();
 
   //! sets the default font
   void setDefault(MWAWFont &font);
@@ -109,7 +109,7 @@ protected:
    * \param bot, eot defined the text zone corresponding to these properties
    * \param id the number of this properties
    * \param mess a string which can be filled to indicate unparsed data */
-  typedef bool (MSK4Text::* DataParser)
+  typedef bool (MsWks4Text::* DataParser)
   (MWAWInputStreamPtr input, long endPos,  long bot, long eot, int id, std::string &mess);
 
   /** reads a PLC (Pointer List Composant ?) in zone entry
@@ -121,7 +121,7 @@ protected:
    * \param parser the parser to use to read the values */
   bool readPLC(MWAWInputStreamPtr input, MWAWEntry const &entry,
                std::vector<long> &textPtrs, std::vector<long> &listValues,
-               DataParser parser = &MSK4Text::defDataParser);
+               DataParser parser = &MsWks4Text::defDataParser);
   /** reads a PLC (Pointer List Composant ?) in zone entry
    *
    * \param input the file's input
@@ -148,7 +148,7 @@ protected:
                 int &id, std::string &mess);
 
   /** sends a paragraph properties to the listener */
-  void setProperty(MSK4TextInternal::Paragraph const &tabs);
+  void setProperty(MsWks4TextInternal::Paragraph const &tabs);
   //! reads a paragraph properties
   bool readParagraph(MWAWInputStreamPtr &input, long endPos,
                      int &id, std::string &mess);
@@ -178,12 +178,12 @@ protected:
 
 protected:
   //! returns the main parser
-  MSK4Zone const *mainParser() const
+  MsWks4Zone const *mainParser() const
   {
     return m_mainParser;
   }
   //! returns the main parser
-  MSK4Zone *mainParser()
+  MsWks4Zone *mainParser()
   {
     return m_mainParser;
   }
@@ -241,20 +241,20 @@ protected:
   };
 
 private:
-  MSK4Text(MSK4Text const &orig);
-  MSK4Text &operator=(MSK4Text const &orig);
+  MsWks4Text(MsWks4Text const &orig);
+  MsWks4Text &operator=(MsWks4Text const &orig);
 protected:
   //! the parser state
   MWAWParserStatePtr m_parserState;
 
   //! the main parser
-  MSK4Zone *m_mainParser;
+  MsWks4Zone *m_mainParser;
 
   //! an entry which corresponds to the complete text zone
   MWAWEntry m_textPositions;
 
   //! the internal state
-  mutable shared_ptr<MSK4TextInternal::State> m_state;
+  mutable shared_ptr<MsWks4TextInternal::State> m_state;
 
   //! the list of a FOD
   std::vector<DataFOD> m_FODsList;

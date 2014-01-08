@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSK4_PARSER
-#  define MSK4_PARSER
+#ifndef MS_WKS4_PARSER
+#  define MS_WKS4_PARSER
 
 #include <list>
 #include <vector>
@@ -44,31 +44,31 @@
 
 #include "MWAWParser.hxx"
 
-namespace MSK4ParserInternal
+namespace MsWks4ParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class MSK4Zone;
+class MsWks4Zone;
 
 /** \brief the main class to read a MS Works document v4
  *
- * This class is associated with a MSK4Parser which reads:
+ * This class is associated with a MsWks4Parser which reads:
  * the main Ole zones MN0, MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes
  * and which parses MacWorks/QFrm\<number\>.
  * It also uses an MWAWOleParser in order to find  pictures
  * in the other Ole zones.
  */
-class MSK4Parser : public MWAWTextParser
+class MsWks4Parser : public MWAWTextParser
 {
-  friend class MSK4ParserInternal::SubDocument;
-  friend class MSK4Zone;
+  friend class MsWks4ParserInternal::SubDocument;
+  friend class MsWks4Zone;
 public:
   //! construtor
-  MSK4Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWks4Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MSK4Parser();
+  virtual ~MsWks4Parser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -100,12 +100,12 @@ protected:
   void sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras);
 
 private:
-  MSK4Parser(MSK4Parser const &orig);
-  MSK4Parser &operator=(MSK4Parser const &orig);
+  MsWks4Parser(MsWks4Parser const &orig);
+  MsWks4Parser &operator=(MsWks4Parser const &orig);
 
 protected:
   //! the state
-  shared_ptr<MSK4ParserInternal::State> m_state;
+  shared_ptr<MsWks4ParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

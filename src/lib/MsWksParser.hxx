@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSK_PARSER
-#  define MSK_PARSER
+#ifndef MS_WKS_PARSER
+#  define MS_WKS_PARSER
 
 #include <string>
 
@@ -40,26 +40,26 @@
 
 #include "MWAWParser.hxx"
 
-class MSKGraph;
-class MSKTable;
+class MsWksGraph;
+class MsWksTable;
 
 /** \brief generic parser for Microsoft Works file
  *
  *
  *
  */
-class MSKParser : public MWAWTextParser
+class MsWksParser : public MWAWTextParser
 {
-  friend class MSKGraph;
-  friend class MSKTable;
+  friend class MsWksGraph;
+  friend class MsWksTable;
 public:
   //! constructor
-  MSKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! constructor using the parser state
-  MSKParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState);
+  MsWksParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState);
 
   //! destructor
-  virtual ~MSKParser();
+  virtual ~MsWksParser();
 
   //! returns the actual input
   MWAWInputStreamPtr &getInput()

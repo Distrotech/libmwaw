@@ -34,8 +34,8 @@
 /*
  * Parser to Microsoft Works text document ( table and chart )
  */
-#ifndef MSK_MWAW_TABLE
-#  define MSK_MWAW_TABLE
+#ifndef MS_WKS_MWAW_TABLE
+#  define MS_WKS_MWAW_TABLE
 
 #include <list>
 #include <string>
@@ -44,44 +44,44 @@
 #include "MWAWEntry.hxx"
 #include "MWAWParser.hxx"
 
-#include "MSKGraph.hxx"
+#include "MsWksGraph.hxx"
 
-namespace MSKTableInternal
+namespace MsWksTableInternal
 {
 struct Table;
 struct State;
 }
 
-class MSKParser;
+class MsWksParser;
 
 /** \brief the main class to read the table ( or a chart ) of a Microsoft Works file */
-class MSKTable
+class MsWksTable
 {
-  friend class MSKGraph;
+  friend class MsWksGraph;
 public:
   //! constructor
-  MSKTable(MSKParser &parser, MSKGraph &graph);
+  MsWksTable(MsWksParser &parser, MsWksGraph &graph);
   //! destructor
-  virtual ~MSKTable();
+  virtual ~MsWksTable();
 
   /** returns the file version */
   int version() const;
 
   //! try to read a table zone
-  bool readTable(int numCol, int numRow, int zoneId, MSKGraph::Style const &style);
+  bool readTable(int numCol, int numRow, int zoneId, MsWksGraph::Style const &style);
   //! try to  a table zone
   bool sendTable(int zoneId);
 
   //! try to read a chart zone
-  bool readChart(int chartId, MSKGraph::Style const &style);
+  bool readChart(int chartId, MsWksGraph::Style const &style);
   //! fix the correspondance between a chart and the zone id
   void setChartZoneId(int chartId, int zoneId);
   //! try to  a chart zone
   bool sendChart(int chartId);
 
 private:
-  MSKTable(MSKTable const &orig);
-  MSKTable &operator=(MSKTable const &orig);
+  MsWksTable(MsWksTable const &orig);
+  MsWksTable &operator=(MsWksTable const &orig);
 
 protected:
   //
@@ -91,12 +91,12 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MSKTableInternal::State> m_state;
+  shared_ptr<MsWksTableInternal::State> m_state;
 
   //! the main parser;
-  MSKParser *m_mainParser;
+  MsWksParser *m_mainParser;
   //! the graph parser;
-  MSKGraph *m_graphParser;
+  MsWksGraph *m_graphParser;
 };
 
 #endif

@@ -61,8 +61,8 @@
 #include "MRWParser.hxx"
 #include "MWParser.hxx"
 #include "MWProParser.hxx"
-#include "MSK3Parser.hxx"
-#include "MSK4Parser.hxx"
+#include "MsWks3Parser.hxx"
+#include "MsWks4Parser.hxx"
 #include "MSW1Parser.hxx"
 #include "MSWParser.hxx"
 #include "NSParser.hxx"
@@ -448,9 +448,9 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getMajorVersion() < 100)
-        parser.reset(new MSK3Parser(input, rsrcParser, header));
+        parser.reset(new MsWks3Parser(input, rsrcParser, header));
       else
-        parser.reset(new MSK4Parser(input, rsrcParser, header));
+        parser.reset(new MsWks4Parser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_NISUSWRITER:
       parser.reset(new NSParser(input, rsrcParser, header));

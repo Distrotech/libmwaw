@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSK3_PARSER
-#  define MSK3_PARSER
+#ifndef MS_WKS3_PARSER
+#  define MS_WKS3_PARSER
 
 #include <list>
 #include <string>
@@ -42,33 +42,33 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MSKParser.hxx"
+#include "MsWksParser.hxx"
 
-namespace MSK3ParserInternal
+namespace MsWks3ParserInternal
 {
 struct State;
 struct Zone;
 class SubDocument;
 }
 
-class MSKGraph;
-class MSK3Text;
+class MsWksGraph;
+class MsWks3Text;
 
 /** \brief the main class to read a Microsoft Works file
  *
  *
  *
  */
-class MSK3Parser : public MSKParser
+class MsWks3Parser : public MsWksParser
 {
-  friend class MSK3ParserInternal::SubDocument;
-  friend class MSKGraph;
-  friend class MSK3Text;
+  friend class MsWks3ParserInternal::SubDocument;
+  friend class MsWksGraph;
+  friend class MsWks3Text;
 public:
   //! constructor
-  MSK3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MSK3Parser();
+  virtual ~MsWks3Parser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -100,11 +100,11 @@ protected:
   //
 
   //! try to read a generic zone
-  bool readZone(MSK3ParserInternal::Zone &zone);
+  bool readZone(MsWks3ParserInternal::Zone &zone);
   //! try to read the documentinfo ( zone2)
   bool readDocumentInfo();
   //! try to read a group zone (zone3)
-  bool readGroup(MSK3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
+  bool readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
   //! try to read a zone information (zone0)
   bool readGroupHeaderInfo(bool header, int check);
   /** try to send a note */
@@ -128,16 +128,16 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MSK3ParserInternal::State> m_state;
+  shared_ptr<MsWks3ParserInternal::State> m_state;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;
 
   //! the graph parser
-  shared_ptr<MSKGraph> m_graphParser;
+  shared_ptr<MsWksGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<MSK3Text> m_textParser;
+  shared_ptr<MsWks3Text> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

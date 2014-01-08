@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSK4_ZONE
-#  define MSK4_ZONE
+#ifndef MS_WKS4_ZONE
+#  define MS_WKS4_ZONE
 
 #include <map>
 #include <string>
@@ -41,51 +41,51 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MSKParser.hxx"
+#include "MsWksParser.hxx"
 
-class MSK4Parser;
-class MSK4Text;
-class MSKGraph;
+class MsWks4Parser;
+class MsWks4Text;
+class MsWksGraph;
 
-namespace MSK4ZoneInternal
+namespace MsWks4ZoneInternal
 {
 struct State;
 }
-namespace MSK4ParserInternal
+namespace MsWks4ParserInternal
 {
 class SubDocument;
 }
 
 /** The class which parses the main zones of a mac MS Works document v4
  *
- * This class must be associated with a MSK4Parser, which gives it the oles to parse.
+ * This class must be associated with a MsWks4Parser, which gives it the oles to parse.
  * This oles can be MN0, MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes
  * and  MacWorks/QFrm\<number\> .
  *
- * It creates a MSKGraph, a MSK4Text to parse the
+ * It creates a MsWksGraph, a MsWks4Text to parse the
  *   the graphic and the text parts.
  *
  * It reads the entries:
  * - DOP : main document properties: dimension, ... (only parsed)
  * - FRAM : a zone which contains dimensions of objects (textbox, picture, ...) : only parsed
  * - PRNT : the printer information which contains page dimensions, margins, ...
- * - RLRB : an unknown zone which seems to contain some dimension ( only parsed) : maybe related to RBDR ( see MSK4Graph)
+ * - RLRB : an unknown zone which seems to contain some dimension ( only parsed) : maybe related to RBDR ( see MsWks4Graph)
  * - SELN : the actual text/... selection
  *
  */
-class MSK4Zone : public MSKParser
+class MsWks4Zone : public MsWksParser
 {
-  friend class MSK4ParserInternal::SubDocument;
-  friend class MSK4Parser;
-  friend class MSKGraph;
-  friend class MSK4Text;
+  friend class MsWks4ParserInternal::SubDocument;
+  friend class MsWks4Parser;
+  friend class MsWksGraph;
+  friend class MsWks4Text;
 
 public:
   //! constructor
-  MSK4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
-           MSK4Parser &parser, std::string const &oleName);
+  MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
+             MsWks4Parser &parser, std::string const &oleName);
   //! destructor
-  ~MSK4Zone();
+  ~MsWks4Zone();
 
 protected:
   //! inits all internal variables
@@ -122,11 +122,11 @@ protected:
   //! adds a new page
   void newPage(int number);
 
-  /** creates a document for a footnote which some id (via MSK4Parser )
+  /** creates a document for a footnote which some id (via MsWks4Parser )
    *
    * \note if id==-1, the footnote will be empty */
   void sendFootNote(int id);
-  //! sends text corresponding to the footnote id to the listener (via MSK4Text)
+  //! sends text corresponding to the footnote id to the listener (via MsWks4Text)
   void readFootNote(int id);
 
   /** send the frame text */
@@ -144,12 +144,12 @@ protected:
   //! empty implementation of the parse function ( to make the class not virtual)
   void parse(librevenge::RVNGTextInterface *)
   {
-    MWAW_DEBUG_MSG(("MSK4Zone::parse: must not be called\n"));
+    MWAW_DEBUG_MSG(("MsWks4Zone::parse: must not be called\n"));
   }
   //! empty implementation of the checkHeader function ( to make the class not virtual)
   bool checkHeader(MWAWHeader *, bool)
   {
-    MWAW_DEBUG_MSG(("MSK4Zone::checkHeader: must not be called\n"));
+    MWAW_DEBUG_MSG(("MsWks4Zone::checkHeader: must not be called\n"));
     return false;
   }
 
@@ -172,7 +172,7 @@ protected:
 
   /** parses the RLRB zone which seems to contain some position in the page ?
    *
-   * \note this zone is only parsed, maybe MSK4Graph must parse this zone ? */
+   * \note this zone is only parsed, maybe MsWks4Graph must parse this zone ? */
   bool readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
   /** parses the SELN zone which seems to contain some information about the actual
@@ -184,27 +184,27 @@ protected:
   void setAscii(std::string const &oleName);
 
 private:
-  MSK4Zone(MSK4Zone const &orig);
-  MSK4Zone &operator=(MSK4Zone const &orig);
+  MsWks4Zone(MsWks4Zone const &orig);
+  MsWks4Zone &operator=(MsWks4Zone const &orig);
 protected:
   //
   // data
   //
 
   //! the main parser
-  MSK4Parser *m_mainParser;
+  MsWks4Parser *m_mainParser;
 
   //! the internal state
-  shared_ptr<MSK4ZoneInternal::State> m_state;
+  shared_ptr<MsWks4ZoneInternal::State> m_state;
 
   //! the list of entries, name->entry
   std::multimap<std::string, MWAWEntry> m_entryMap;
 
   //! the text parser
-  shared_ptr<MSK4Text> m_textParser;
+  shared_ptr<MsWks4Text> m_textParser;
 
   //! the graph parser
-  shared_ptr<MSKGraph> m_graphParser;
+  shared_ptr<MsWksGraph> m_graphParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

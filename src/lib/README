@@ -17,7 +17,7 @@
 - MDW* : parser of MindWrite documents
 - MOR* : parser of More documents (organization part)
 - MRW* : parser of Mariner Write documents
-- MSK* : parser of Microsoft Works documents
+- MsWks* : parser of Microsoft Works documents
 - MSW* : parser of Microsoft Word documents
 - MW* : parser of MacWrite documents
 - MWPro* : parser of MacWrite II, MacWrite Pro documents
@@ -106,8 +106,8 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----           AC/BeagleWks/CW/DM/ED/FW/GW/LW/MCD         ---
----           MDW/MOR/MRW/MSK/MSW/MW/NS/TT/WN/WP/ZW      ---
+---           AC/BeagleWks/CW/DM/ED/FW/GW/LW/MsWks/MCD   ---
+---           MDW/MOR/MRW/MSW/MW/NS/TT/WN/WP/ZW          ---
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -158,6 +158,15 @@ LWParser : parser of LightWay Text v4.5
 -   LWGraph : class which reads the picture/graph/frame
 -   LWText : class which reads the text
 
+MsWksParser: generic parser of Microsoft Works parser
+- MsWksGraph : class which reads the picture/graph 
+- MsWksTable : class which reads a table
+- MsWks3Parser : parser of Microsoft Works document : v1.0-3.0
+-   MsWks3Text : class which reads the text
+- MsWks4Parser : parser of Microsoft Works document : v4.0
+-   MsWks4Zone : parser of the text ole 
+-   MsWks4Text : class which reads the text
+
 MCDParser : parser of MacDoc document: v1.3
 
 MDWParser : parser of MindWrite document: v2.1
@@ -168,15 +177,6 @@ MORParser: parser of More document : v2.0 v3.0 ( organization part )
 MRWParser : parser of Mariner Write 1.6
 -   MRWGraph : class which reads the picture/graph/token
 -   MRWText : class which reads the text
-
-MSKParser: generic parser of Microsoft Works parser
-- MSKGraph : class which reads the picture/graph 
-- MSKTable : class which reads a table
-- MSK3Parser : parser of Microsoft Works document : v1.0-3.0
--   MSK3Text : class which reads the text
-- MSK4Parser : parser of Microsoft Works document : v4.0
--   MSK4Zone : parser of the text ole 
--   MSK4Text : class which reads the text
 
 MSW1Parser : parser of Microsoft Word document : v1.0 
 

@@ -35,8 +35,8 @@
  * Parser to Microsoft Works text document ( graphic part )
  *
  */
-#ifndef MSK_MWAW_GRAPH
-#  define MSK_MWAW_GRAPH
+#ifndef MS_WKS_MWAW_GRAPH
+#  define MS_WKS_MWAW_GRAPH
 
 #include <list>
 #include <string>
@@ -48,7 +48,7 @@
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWParser.hxx"
 
-namespace MSKGraphInternal
+namespace MsWksGraphInternal
 {
 struct GroupZone;
 struct TextBox;
@@ -59,24 +59,24 @@ struct State;
 class SubDocument;
 }
 
-class MSKParser;
-class MSK3Parser;
-class MSK4Zone;
-class MSKTable;
+class MsWksParser;
+class MsWks3Parser;
+class MsWks4Zone;
+class MsWksTable;
 
 /** \brief the main class to read the graphic of a Microsoft Works file */
-class MSKGraph
+class MsWksGraph
 {
-  friend class MSK3Parser;
-  friend class MSK4Zone;
-  friend class MSKTable;
-  friend class MSKGraphInternal::SubDocument;
+  friend class MsWks3Parser;
+  friend class MsWks4Zone;
+  friend class MsWksTable;
+  friend class MsWksGraphInternal::SubDocument;
 public:
   struct Style;
   //! constructor
-  MSKGraph(MSKParser &parser);
+  MsWksGraph(MsWksParser &parser);
   //! destructor
-  virtual ~MSKGraph();
+  virtual ~MsWksGraph();
 
   /** returns the file version */
   int version() const;
@@ -125,7 +125,7 @@ protected:
   //
 
   //! read the picture header
-  bool readPictHeader(MSKGraphInternal::Zone &pict);
+  bool readPictHeader(MsWksGraphInternal::Zone &pict);
   //! read the gradient structure ( v4)
   bool readGradient(Style &style);
   /** checks if the next zone is a v1 picture and returns a zone id ( or -1).*/
@@ -144,7 +144,7 @@ protected:
   bool readPictureV4(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
   //! try to read a text zone
-  bool readText(MSKGraphInternal::TextBox &textBox);
+  bool readText(MsWksGraphInternal::TextBox &textBox);
   //! try to send a text box zone v1-3
   void sendTextBox(int zId);
   /** check the text box link v4 */
@@ -170,20 +170,20 @@ protected:
   // low level
   //
   /** try to read the group data*/
-  shared_ptr<MSKGraphInternal::GroupZone> readGroup(MSKGraphInternal::Zone &group);
+  shared_ptr<MsWksGraphInternal::GroupZone> readGroup(MsWksGraphInternal::Zone &group);
   /** try to send a group */
   void sendGroup(int zoneId, MWAWPosition const &pos);
   /** try to send a group elements by elemenys*/
   void sendGroupChild(int zoneId, MWAWPosition const &pos);
   /** returns true if we can create a graphic for the whole group */
-  bool canCreateGraphic(MSKGraphInternal::GroupZone const &group) const;
+  bool canCreateGraphic(MsWksGraphInternal::GroupZone const &group) const;
   /** send the group as a graphic zone */
-  void sendGroup(MSKGraphInternal::GroupZone const &group, MWAWGraphicListenerPtr &listener) const;
+  void sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraphicListenerPtr &listener) const;
   //! reads the textbox font
   bool readFont(MWAWFont &font);
 
 public:
-  //! Internal: the graphic style of MSKGraph
+  //! Internal: the graphic style of MsWksGraph
   struct Style : public MWAWGraphicStyle {
     //! constructor
     Style() : MWAWGraphicStyle(), m_baseLineColor(MWAWColor::black()), m_baseSurfaceColor(MWAWColor::white())
@@ -209,8 +209,8 @@ public:
   };
 
 private:
-  MSKGraph(MSKGraph const &orig);
-  MSKGraph &operator=(MSKGraph const &orig);
+  MsWksGraph(MsWksGraph const &orig);
+  MsWksGraph &operator=(MsWksGraph const &orig);
 
 protected:
   //
@@ -220,13 +220,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MSKGraphInternal::State> m_state;
+  shared_ptr<MsWksGraphInternal::State> m_state;
 
   //! the main parser;
-  MSKParser *m_mainParser;
+  MsWksParser *m_mainParser;
 
   //! the table manager
-  shared_ptr<MSKTable> m_tableParser;
+  shared_ptr<MsWksTable> m_tableParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

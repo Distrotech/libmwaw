@@ -270,35 +270,35 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK3Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks3Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK3Text.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks3Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Text.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Zone.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Zone.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKGraph.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKParser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKTable.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksTable.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -540,14 +540,14 @@
     <ClInclude Include="..\..\src\lib\MRWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\MRWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MRWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK3Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK3Text.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Text.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Zone.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKTable.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks3Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks3Text.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Text.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Zone.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksTable.hxx" />
     <ClInclude Include="..\..\src\lib\MSW1Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MSWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MSWStruct.hxx" />

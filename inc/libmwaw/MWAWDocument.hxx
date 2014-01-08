@@ -106,7 +106,7 @@ public:
     MWAW_T_HANMACWORDK /** HanMac Word-K (v2.0.5-2.0.6) */,
     MWAW_T_LIGHTWAYTEXT /** LightWayText (only v4 Mac format) */,
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
-    MWAW_T_MACDRAFT /** MacDraw: TODO*/,
+    MWAW_T_MACDRAFT /** MacDraft: TODO*/,
     MWAW_T_MACDRAW /** MacDraw: TODO*/,
     MWAW_T_MACPAINT /** MacPaint: TODO*/,
     MWAW_T_MARINERWRITE /** Mariner Write (only v1.6-v3.5 Mac Classic) */,

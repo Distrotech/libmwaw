@@ -44,12 +44,12 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
 
-#include "MSK3Parser.hxx"
+#include "MsWks3Parser.hxx"
 
-#include "MSK3Text.hxx"
+#include "MsWks3Text.hxx"
 
-/** Internal: the structures of a MSK3Text */
-namespace MSK3TextInternal
+/** Internal: the structures of a MsWks3Text */
+namespace MsWks3TextInternal
 {
 ////////////////////////////////////////
 //! Internal: header zone
@@ -171,7 +171,7 @@ struct TextZone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MSK3Text
+//! Internal: the state of a MsWks3Text
 struct State {
   //! constructor
   State() : m_version(-1), m_zones(), m_numPages(1), m_actualPage(1)
@@ -191,47 +191,47 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSK3Text::MSK3Text(MSK3Parser &parser) :
-  m_parserState(parser.getParserState()), m_state(new MSK3TextInternal::State),
+MsWks3Text::MsWks3Text(MsWks3Parser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MsWks3TextInternal::State),
   m_mainParser(&parser)
 {
 }
 
-MSK3Text::~MSK3Text()
+MsWks3Text::~MsWks3Text()
 { }
 
-int MSK3Text::version() const
+int MsWks3Text::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int MSK3Text::numPages(int zoneId) const
+int MsWks3Text::numPages(int zoneId) const
 {
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
-    MWAW_DEBUG_MSG(("MSK3Text::numPages: unknown zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWks3Text::numPages: unknown zone %d\n", zoneId));
     return 0;
   }
-  MSK3TextInternal::TextZone const &zone = m_state->m_zones[(size_t) zoneId];
+  MsWks3TextInternal::TextZone const &zone = m_state->m_zones[(size_t) zoneId];
   int nPages = 1 + int(zone.m_pagesPosition.size());
   if (zone.isMain()) {
     m_state->m_actualPage = 1;
     m_state->m_numPages = nPages;
   }
   else {
-    MWAW_DEBUG_MSG(("MSK3Text::numPages: called on no main zone: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWks3Text::numPages: called on no main zone: %d\n", zoneId));
   }
   return nPages;
 }
 
-bool MSK3Text::getLinesPagesHeight
+bool MsWks3Text::getLinesPagesHeight
 (int zoneId, std::vector<int> &lines, std::vector<int> &pages)
 {
   lines.resize(0);
   pages.resize(0);
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
-    MWAW_DEBUG_MSG(("MSK3Text::getLinesPagesHeight: unknown zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWks3Text::getLinesPagesHeight: unknown zone %d\n", zoneId));
     return false;
   }
   lines = m_state->m_zones[(size_t)zoneId].m_linesHeight;
@@ -242,18 +242,18 @@ bool MSK3Text::getLinesPagesHeight
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-int MSK3Text::getHeader() const
+int MsWks3Text::getHeader() const
 {
   for (size_t i = 0; i < m_state->m_zones.size(); i++)
-    if (m_state->m_zones[i].m_type == MSK3TextInternal::TextZone::Header)
+    if (m_state->m_zones[i].m_type == MsWks3TextInternal::TextZone::Header)
       return int(i);
   return -1;
 }
 
-int MSK3Text::getFooter() const
+int MsWks3Text::getFooter() const
 {
   for (size_t i = 0; i < m_state->m_zones.size(); i++)
-    if (m_state->m_zones[i].m_type == MSK3TextInternal::TextZone::Footer)
+    if (m_state->m_zones[i].m_type == MsWks3TextInternal::TextZone::Footer)
       return int(i);
   return -1;
 }
@@ -261,15 +261,15 @@ int MSK3Text::getFooter() const
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-int MSK3Text::createZones(int numLines, bool mainZone)
+int MsWks3Text::createZones(int numLines, bool mainZone)
 {
-  MSK3TextInternal::LineZone zone;
+  MsWks3TextInternal::LineZone zone;
   int zoneId = int(m_state->m_zones.size());
-  m_state->m_zones.push_back(MSK3TextInternal::TextZone());
-  MSK3TextInternal::TextZone &actualZone = m_state->m_zones.back();
+  m_state->m_zones.push_back(MsWks3TextInternal::TextZone());
+  MsWks3TextInternal::TextZone &actualZone = m_state->m_zones.back();
   actualZone.m_id = zoneId;
   if (mainZone)
-    actualZone.m_type = MSK3TextInternal::TextZone::Main;
+    actualZone.m_type = MsWks3TextInternal::TextZone::Main;
   bool hasNote=false;
   int firstNote=0;
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -300,7 +300,7 @@ int MSK3Text::createZones(int numLines, bool mainZone)
   return zoneId;
 }
 
-void MSK3Text::update(MSK3TextInternal::TextZone &zone)
+void MsWks3Text::update(MsWks3TextInternal::TextZone &zone)
 {
   size_t numLineZones = zone.m_zonesList.size();
   if (numLineZones == 0) return;
@@ -310,7 +310,7 @@ void MSK3Text::update(MSK3TextInternal::TextZone &zone)
   int actH = 0, actualPH = 0;
   zone.m_linesHeight.push_back(0);
   for (size_t i = 0; i < numLineZones; i++) {
-    MSK3TextInternal::LineZone &z = zone.m_zonesList[i];
+    MsWks3TextInternal::LineZone &z = zone.m_zonesList[i];
     if (z.isNote()) continue; // a note
     actH += z.m_height;
     zone.m_linesHeight.push_back(actH);
@@ -324,25 +324,25 @@ void MSK3Text::update(MSK3TextInternal::TextZone &zone)
   }
 }
 
-void MSK3Text::updateNotes(MSK3TextInternal::TextZone &zone, int firstNote)
+void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
 {
   int numLineZones = int(zone.m_zonesList.size());
   if (firstNote < 0 || firstNote >= numLineZones) {
-    MWAW_DEBUG_MSG(("MSK3Text::updateNotes: can not find first note position\n"));
+    MWAW_DEBUG_MSG(("MsWks3Text::updateNotes: can not find first note position\n"));
     return;
   }
 
   MWAWInputStreamPtr input=m_mainParser->getInput();
-  MSK3TextInternal::Font font;
+  MsWks3TextInternal::Font font;
   int noteId = -1;
   long lastIndentPos = -1;
   Vec2i notePos;
 
   for (int n = firstNote; n < numLineZones; n++) {
-    MSK3TextInternal::LineZone const &z = zone.m_zonesList[(size_t) n];
+    MsWks3TextInternal::LineZone const &z = zone.m_zonesList[(size_t) n];
     if (!z.isNote()) {
       noteId=-1;
-      MWAW_DEBUG_MSG(("MSK3Text::updateNotes: find extra data in notes, stop recording note\n"));
+      MWAW_DEBUG_MSG(("MsWks3Text::updateNotes: find extra data in notes, stop recording note\n"));
       break;
     }
     if (z.isRuler()) {
@@ -370,7 +370,7 @@ void MSK3Text::updateNotes(MSK3TextInternal::TextZone &zone, int firstNote)
       if (zone.m_footnoteMap.find(noteId)==zone.m_footnoteMap.end())
         zone.m_footnoteMap[noteId] = notePos;
       else {
-        MWAW_DEBUG_MSG(("MSK3Text::updateNotes: note %d is already defined, ignored\n", noteId));
+        MWAW_DEBUG_MSG(("MsWks3Text::updateNotes: note %d is already defined, ignored\n", noteId));
       }
     }
     noteId = (int) input->readULong(2);
@@ -382,14 +382,14 @@ void MSK3Text::updateNotes(MSK3TextInternal::TextZone &zone, int firstNote)
     if (zone.m_footnoteMap.find(noteId)==zone.m_footnoteMap.end())
       zone.m_footnoteMap[noteId] = notePos;
     else {
-      MWAW_DEBUG_MSG(("MSK3Text::updateNotes: note %d is already defined, ignored\n", noteId));
+      MWAW_DEBUG_MSG(("MsWks3Text::updateNotes: note %d is already defined, ignored\n", noteId));
     }
   }
 }
 
-bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
+bool MsWks3Text::readZoneHeader(MsWks3TextInternal::LineZone &zone) const
 {
-  zone = MSK3TextInternal::LineZone();
+  zone = MsWks3TextInternal::LineZone();
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos = input->tell();
   if (!input->checkPosition(pos+6)) return false;
@@ -407,11 +407,11 @@ bool MSK3Text::readZoneHeader(MSK3TextInternal::LineZone &zone) const
 ////////////////////////////////////////////////////////////
 // the text:
 ////////////////////////////////////////////////////////////
-bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
+bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MSK3Text::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MsWks3Text::sendText: can not find the listener\n"));
     return true;
   }
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -420,7 +420,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   libmwaw::DebugFile &ascFile = m_mainParser->ascii();
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
-  MSK3TextInternal::Font font;
+  MsWks3TextInternal::Font font;
   if (listener && zone.m_height > 0) {
     MWAWParagraph para=listener->getParagraph();
     para.setInterline(zone.m_height, librevenge::RVNG_POINT);
@@ -469,7 +469,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
           listener->insertField(MWAWField(MWAWField::Date));
           break;
         case 0x15:
-          MWAW_DEBUG_MSG(("MSK3Text::sendText: find unknown field type 0x15\n"));
+          MWAW_DEBUG_MSG(("MsWks3Text::sendText: find unknown field type 0x15\n"));
           break;
         case 0x14:
           if (!zone.isNote() || !firstChar)
@@ -482,7 +482,7 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
       else if (c <= 0x1f) {
         f << "#" << std::hex << c << std::dec << "]";
         ascFile.addDelimiter(pos,'#');
-        MWAW_DEBUG_MSG(("MSK3Text::sendText: find char=%x\n",int(c)));
+        MWAW_DEBUG_MSG(("MsWks3Text::sendText: find char=%x\n",int(c)));
       }
       else
         listener->insertCharacter((unsigned char)c, input, zone.m_pos.end());
@@ -497,12 +497,12 @@ bool MSK3Text::sendText(MSK3TextInternal::LineZone &zone, int zoneId)
   return true;
 }
 
-bool MSK3Text::sendString(std::string &str)
+bool MsWks3Text::sendString(std::string &str)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener)
     return true;
-  MSK3TextInternal::Font defFont;
+  MsWks3TextInternal::Font defFont;
   defFont.m_font = MWAWFont(20,12);
   listener->setFont(defFont.m_font);
 
@@ -528,10 +528,10 @@ bool MSK3Text::sendString(std::string &str)
       listener->insertField(MWAWField(MWAWField::Date));
       break;
     case 0x15:
-      MWAW_DEBUG_MSG(("MSK3Text::sendString: find unknown field type 0x15\n"));
+      MWAW_DEBUG_MSG(("MsWks3Text::sendString: find unknown field type 0x15\n"));
       break;
     case 0x14: // fixme
-      MWAW_DEBUG_MSG(("MSK3Text::sendString: footnote are not implemented\n"));
+      MWAW_DEBUG_MSG(("MsWks3Text::sendString: footnote are not implemented\n"));
       break;
     default:
       listener->insertCharacter((unsigned char)c);
@@ -544,10 +544,10 @@ bool MSK3Text::sendString(std::string &str)
 ////////////////////////////////////////////////////////////
 // the font:
 ////////////////////////////////////////////////////////////
-bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
+bool MsWks3Text::readFont(MsWks3TextInternal::Font &font, long endPos)
 {
   int vers = version();
-  font = MSK3TextInternal::Font();
+  font = MsWks3TextInternal::Font();
   MWAWInputStreamPtr input=m_mainParser->getInput();
   long pos  = input->tell();
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
@@ -607,7 +607,7 @@ bool MSK3Text::readFont(MSK3TextInternal::Font &font, long endPos)
 ////////////////////////////////////////////////////////////
 // the tabulations:
 ////////////////////////////////////////////////////////////
-bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &parag)
+bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph &parag)
 {
   int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
@@ -635,7 +635,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
     break;
   default:
     f << "#align=" << std::hex << fl[0] << ",";
-    MWAW_DEBUG_MSG(("MSK3Text::readParagraph: unknown alignment %x\n", fl[0]));
+    MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: unknown alignment %x\n", fl[0]));
     break;
   }
   fl[1] = (int) input->readULong(1);
@@ -652,7 +652,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
     if (dim[i] > 3000) ok = false;
   }
   if (!ok) {
-    MWAW_DEBUG_MSG(("MSK3Text::readParagraph: size is very odd\n"));
+    MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: size is very odd\n"));
     f << "##";
   }
   if (dim[0] || dim[1] || dim[2]) {
@@ -672,7 +672,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
     int flag = (val & 0xc000) >> 14;
     val = (val & 0x3fff);
     if (val > 8000 || flag) {
-      MWAW_DEBUG_MSG(("MSK3Text::readParagraph: find odd margin %d\n", i));
+      MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: find odd margin %d\n", i));
       f << "#margin" << i << "=" << val  << "(" << flag << "),";
     }
     if (val > 8000) continue;
@@ -713,7 +713,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
     if (val > maxWidth) {
       static bool first = true;
       if (first) {
-        MWAW_DEBUG_MSG(("MSK3Text::readParagraph: finds some odd tabs (ignored)\n"));
+        MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: finds some odd tabs (ignored)\n"));
         first = false;
       }
       f << "#tabs" << i << "=" << val << ",";
@@ -736,7 +736,7 @@ bool MSK3Text::readParagraph(MSK3TextInternal::LineZone &zone, MWAWParagraph &pa
 ////////////////////////////////////////////////////////////
 // read v1-v2 header/footer string
 ////////////////////////////////////////////////////////////
-std::string MSK3Text::readHeaderFooterString(bool header)
+std::string MsWks3Text::readHeaderFooterString(bool header)
 {
   std::string res("");
   MWAWInputStreamPtr input=m_mainParser->getInput();
@@ -773,11 +773,11 @@ std::string MSK3Text::readHeaderFooterString(bool header)
     res += (char) c;
   }
   if (res.length()) {
-    m_state->m_zones.push_back(MSK3TextInternal::TextZone());
-    MSK3TextInternal::TextZone &zone = m_state->m_zones.back();
+    m_state->m_zones.push_back(MsWks3TextInternal::TextZone());
+    MsWks3TextInternal::TextZone &zone = m_state->m_zones.back();
     zone.m_id = int(m_state->m_zones.size())-1;
-    zone.m_type = header ? MSK3TextInternal::TextZone::Header :
-                  MSK3TextInternal::TextZone::Footer;
+    zone.m_type = header ? MsWks3TextInternal::TextZone::Header :
+                  MsWks3TextInternal::TextZone::Footer;
     zone.m_text = res;
   }
   return res;
@@ -788,7 +788,7 @@ std::string MSK3Text::readHeaderFooterString(bool header)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
+void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
 {
   int numZones = int(zone.m_zonesList.size());
   // set the default font
@@ -825,7 +825,7 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
     }
     if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end())
       m_mainParser->newPage(++m_state->m_actualPage, zone.m_pagesPosition[i]);
-    MSK3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
+    MsWks3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
       MWAWParagraph parag;
       if (readParagraph(z, parag) && m_parserState->m_textListener)
@@ -837,35 +837,35 @@ void MSK3Text::send(MSK3TextInternal::TextZone &zone, Vec2i limit)
   zone.m_isSent = true;
 }
 
-void MSK3Text::sendNote(int zoneId, int noteId)
+void MsWks3Text::sendNote(int zoneId, int noteId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
     if (listener) listener->insertChar(' ');
-    MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWks3Text::sendNote: unknown zone %d\n", zoneId));
     return;
   }
-  MSK3TextInternal::TextZone &zone=m_state->m_zones[(size_t)zoneId];
+  MsWks3TextInternal::TextZone &zone=m_state->m_zones[(size_t)zoneId];
   std::map<int, Vec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
   if (noteIt==zone.m_footnoteMap.end()) {
-    MWAW_DEBUG_MSG(("MSK3Text::sendNote: unknown note %d-%d\n", zoneId, noteId));
+    MWAW_DEBUG_MSG(("MsWks3Text::sendNote: unknown note %d-%d\n", zoneId, noteId));
     if (listener) listener->insertChar(' ');
   }
   else
     send(zone, noteIt->second);
 }
 
-void MSK3Text::sendZone(int zoneId)
+void MsWks3Text::sendZone(int zoneId)
 {
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
-    MWAW_DEBUG_MSG(("MSK3Text::sendZone: unknown zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MsWks3Text::sendZone: unknown zone %d\n", zoneId));
     return;
   }
   send(m_state->m_zones[(size_t)zoneId]);
 }
 
 
-void MSK3Text::flushExtra()
+void MsWks3Text::flushExtra()
 {
   for (size_t i = 0; i < m_state->m_zones.size(); i++) {
     if (m_state->m_zones[i].m_isSent)
