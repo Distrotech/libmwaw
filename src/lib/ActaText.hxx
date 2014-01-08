@@ -41,27 +41,27 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace ACTextInternal
+namespace ActaTextInternal
 {
 struct Topic;
 struct State;
 }
 
-class ACParser;
+class ActaParser;
 
 /** \brief the main class to read the text part of Acta Text file
  *
  *
  *
  */
-class ACText
+class ActaText
 {
-  friend class ACParser;
+  friend class ActaParser;
 public:
   //! constructor
-  ACText(ACParser &parser);
+  ActaText(ActaParser &parser);
   //! destructor
-  virtual ~ACText();
+  virtual ~ActaText();
 
   /** returns the file version */
   int version() const;
@@ -86,20 +86,20 @@ protected:
   bool readTopic();
 
   //! try to send a topic
-  bool sendTopic(ACTextInternal::Topic const &topic);
+  bool sendTopic(ActaTextInternal::Topic const &topic);
 
   //! try to read a text entry
-  bool sendText(ACTextInternal::Topic const &topic);
+  bool sendText(ActaTextInternal::Topic const &topic);
 
   //! try to read a graphic
-  bool sendGraphic(ACTextInternal::Topic const &topic);
+  bool sendGraphic(ActaTextInternal::Topic const &topic);
 
   //! try to read a font
   bool readFont(MWAWFont &font, bool inPLC);
 
 private:
-  ACText(ACText const &orig);
-  ACText &operator=(ACText const &orig);
+  ActaText(ActaText const &orig);
+  ActaText &operator=(ActaText const &orig);
 
 protected:
   //
@@ -109,10 +109,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<ACTextInternal::State> m_state;
+  shared_ptr<ActaTextInternal::State> m_state;
 
   //! the main parser
-  ACParser *m_mainParser;
+  ActaParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

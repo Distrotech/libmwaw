@@ -46,7 +46,7 @@
 #include "MWAWEntry.hxx"
 
 /** a namespace use to define common structure in a FullWrite file */
-namespace FWStruct
+namespace FullWrtStruct
 {
 
 // basic
@@ -75,7 +75,7 @@ struct Border {
     return m_shadowDepl[0]||m_shadowDepl[1];
   }
   //! try to read a border definiton
-  bool read(shared_ptr<FWStruct::Entry> zone, int fSz);
+  bool read(shared_ptr<FullWrtStruct::Entry> zone, int fSz);
   //! returns the list of border order MWAWBorder::Pos
   std::vector<Variable<MWAWBorder> > getParagraphBorders() const;
   //! operator<<
@@ -153,7 +153,7 @@ struct ZoneHeader {
   //! destructor
   virtual ~ZoneHeader() { }
   //! try to read the data header of a classical zone
-  bool read(shared_ptr<FWStruct::Entry> zone);
+  bool read(shared_ptr<FullWrtStruct::Entry> zone);
   //! the operator<<
   friend std::ostream &operator<<(std::ostream &o, ZoneHeader const &dt);
   //! the zone type

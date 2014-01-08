@@ -3,12 +3,12 @@
 ------------------------------------------------------------
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
-- AC* : parser of Acta documents
+- Acta* : parser of Acta documents
 - BeagleWks* : parser of BeagleWorks and WordPerfect Works documents
 - CW* : parser of ClarisWorks and AppleWorks documents
 - DM* : parser of DOCMaker documents
 - ED* : parser of eDOC documents
-- FW* : parser of FullWrite documents
+- FullWrt* : parser of FullWrite documents
 - GW* : parser of GreatWorks documents
 - HMWJ* : parser of HanMac Word-J documents
 - HMWK* : parser of HanMac Word-K documents
@@ -106,7 +106,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------
----           AC/BeagleWks/CW/DM/ED/FW/GW/LW/MsWks/MCD   ---
+---    Acta/BeagleWks/CW/DM/ED/FullWrt/GW/LW/MsWks/MCD   ---
 ---           MDW/MOR/MRW/MSW/MW/NS/TT/WN/WP/ZW          ---
 ------------------------------------------------------------
 
@@ -114,8 +114,8 @@ Specific files which depends on the type of file which is converted
 
 ############# 
 
-ACParser: parser of Acta : v2 and Classic v1
--   ACText : class which reads the text
+ActaParser: parser of Acta : v2 and Classic v1
+-   ActaText : class which reads the text
 
 BeagleWksParser: word document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
@@ -137,10 +137,10 @@ DMParser: parser of DOCMaker : v4
 
 EDParser: parser of eDOC : v2
 
-FWParser: parser of FullWrite : v1.0 v2.0
--   FWGraph : class which reads the graph/sidebar
--   FWStruct : class which the shared structures
--   FWText : class which reads the text
+FullWrtParser: parser of FullWrite : v1.0 v2.0
+-   FullWrtGraph : class which reads the graph/sidebar
+-   FullWrtStruct : class which the shared structures
+-   FullWrtText : class which reads the text
 
 GWParser : parser of GreatWorks : v1-v2
 -   GWGraph : class which reads the picture/graph/frame

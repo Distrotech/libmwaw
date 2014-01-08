@@ -49,15 +49,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "ACText.hxx"
+#include "ActaText.hxx"
 
-#include "ACParser.hxx"
+#include "ActaParser.hxx"
 
-/** Internal: the structures of a ACParser */
-namespace ACParserInternal
+/** Internal: the structures of a ActaParser */
+namespace ActaParserInternal
 {
 ////////////////////////////////////////
-//! Internal: class used to store a list type in ACParser
+//! Internal: class used to store a list type in ActaParser
 struct Label {
   //! constructor
   Label(int type=-1) : m_type(type) { }
@@ -101,7 +101,7 @@ struct Label {
 };
 
 ////////////////////////////////////////
-//! Internal: class used to store the printing preferences in ACParser
+//! Internal: class used to store the printing preferences in ActaParser
 struct Printing {
   //! constructor
   Printing() : m_font()
@@ -156,7 +156,7 @@ struct Printing {
 };
 
 ////////////////////////////////////////
-//! Internal: class used to store the optional preferences in ACParser
+//! Internal: class used to store the optional preferences in ActaParser
 struct Option {
   //! constructor
   Option(int flags=0) : m_flags(flags) { }
@@ -188,7 +188,7 @@ struct Option {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a ACParser
+//! Internal: the state of a ActaParser
 struct State {
   //! constructor
   State() : m_printerPreferences(), m_title(""), m_label(), m_stringLabel(""), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
@@ -210,11 +210,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a ACParser
+//! Internal: the subdocument of a ActaParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ACParser &pars, MWAWInputStreamPtr input) :
+  SubDocument(ActaParser &pars, MWAWInputStreamPtr input) :
     MWAWSubDocument(&pars, input, MWAWEntry()) {}
 
   //! destructor
@@ -244,11 +244,11 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("ACParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ActaParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_parser);
-  static_cast<ACParser *>(m_parser)->sendHeaderFooter();
+  static_cast<ActaParser *>(m_parser)->sendHeaderFooter();
 }
 }
 
@@ -256,35 +256,35 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ACParser::ACParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+ActaParser::ActaParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
 
-ACParser::~ACParser()
+ActaParser::~ActaParser()
 {
 }
 
-void ACParser::init()
+void ActaParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new ACParserInternal::State);
+  m_state.reset(new ActaParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_textParser.reset(new ACText(*this));
+  m_textParser.reset(new ActaText(*this));
 }
 
-MWAWInputStreamPtr ACParser::rsrcInput()
+MWAWInputStreamPtr ActaParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &ACParser::rsrcAscii()
+libmwaw::DebugFile &ActaParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -292,7 +292,7 @@ libmwaw::DebugFile &ACParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f ACParser::getPageLeftTop() const
+Vec2f ActaParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -302,7 +302,7 @@ Vec2f ACParser::getPageLeftTop() const
 // interface with the text parser
 ////////////////////////////////////////////////////////////
 
-shared_ptr<MWAWList> ACParser::getMainList()
+shared_ptr<MWAWList> ActaParser::getMainList()
 {
   MWAWListLevel level;
   level.m_labelAfterSpace=0.05;
@@ -352,7 +352,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
     libmwaw::appendUnicode(0x2022, level.m_bullet);
     MWAWFontConverterPtr fontConvert=getFontConverter();
     if (!fontConvert) {
-      MWAW_DEBUG_MSG(("ACParser::getMainList: can not find the listener\n"));
+      MWAW_DEBUG_MSG(("ActaParser::getMainList: can not find the listener\n"));
     }
     else {
       for (size_t c= 0; c < m_state->m_stringLabel.size(); c++) {
@@ -370,7 +370,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
   shared_ptr<MWAWList> list;
   MWAWListManagerPtr listManager=getParserState()->m_listManager;
   if (!listManager) {
-    MWAW_DEBUG_MSG(("ACParser::getMainList: can not find the list manager\n"));
+    MWAW_DEBUG_MSG(("ActaParser::getMainList: can not find the list manager\n"));
     return list;
   }
 
@@ -383,7 +383,7 @@ shared_ptr<MWAWList> ACParser::getMainList()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void ACParser::newPage(int number)
+void ActaParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -399,7 +399,7 @@ void ACParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
+void ActaParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -418,7 +418,7 @@ void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("ACParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("ActaParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -429,11 +429,11 @@ void ACParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void ACParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void ActaParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("ACParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("ActaParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -452,7 +452,7 @@ void ACParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     MWAWHeaderFooter hF(m_state->m_printerPreferences.m_flags[0]!=1 ?
                         MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
                         MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new ACParserInternal::SubDocument(*this, getInput()));
+    hF.m_subDocument.reset(new ActaParserInternal::SubDocument(*this, getInput()));
     ps.setHeaderFooter(hF);
   }
   std::vector<MWAWPageSpan> pageList(1,ps);
@@ -461,14 +461,14 @@ void ACParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   listen->startDocument();
 }
 
-void ACParser::sendHeaderFooter()
+void ActaParser::sendHeaderFooter()
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("ACParser::sendHeaderFooter: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("ActaParser::sendHeaderFooter: can not find the listener\n"));
     return;
   }
-  ACParserInternal::Printing const &print=m_state->m_printerPreferences;
+  ActaParserInternal::Printing const &print=m_state->m_printerPreferences;
   MWAWParagraph para;
   para.m_justify=MWAWParagraph::JustificationCenter;
   listener->setParagraph(para);
@@ -498,7 +498,7 @@ void ACParser::sendHeaderFooter()
       listener->insertField(MWAWField::PageNumber);
       break;
     default:
-      MWAW_DEBUG_MSG(("ACParser::sendHeaderFooter: unexpected step\n"));
+      MWAW_DEBUG_MSG(("ActaParser::sendHeaderFooter: unexpected step\n"));
       break;
     }
     printDone=true;
@@ -512,7 +512,7 @@ void ACParser::sendHeaderFooter()
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool ACParser::createZones()
+bool ActaParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   readRSRCZones();
@@ -527,13 +527,13 @@ bool ACParser::createZones()
   return m_textParser->createZones();
 }
 
-bool ACParser::readRSRCZones()
+bool ActaParser::readRSRCZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser)
     return true;
   if (version() < 3) { // never seens so, better ignore
-    MWAW_DEBUG_MSG(("ACParser::readRSRCZones: find a resource fork in v1-v2!!!\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readRSRCZones: find a resource fork in v1-v2!!!\n"));
     return false;
   }
 
@@ -559,7 +559,7 @@ bool ACParser::readRSRCZones()
       m_state->m_stringLabel=str;
       break;
     default:
-      MWAW_DEBUG_MSG(("ACParser::readRSRCZones: find unexpected STR:%d\n", entry.id()));
+      MWAW_DEBUG_MSG(("ActaParser::readRSRCZones: find unexpected STR:%d\n", entry.id()));
       break;
     }
   }
@@ -595,7 +595,7 @@ bool ACParser::readRSRCZones()
   return true;
 }
 
-bool ACParser::readEndDataV3()
+bool ActaParser::readEndDataV3()
 {
   if (version()<3)
     return true;
@@ -605,7 +605,7 @@ bool ACParser::readEndDataV3()
   ascii().addPos(input->tell());
   long pos=(long) input->readULong(4);
   if (pos < 18 || !input->checkPosition(pos)) {
-    MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops begin of ressource is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readEndDataV3: oops begin of ressource is bad\n"));
     ascii().addNote("###");
     return false;
   }
@@ -614,11 +614,11 @@ bool ACParser::readEndDataV3()
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   f << "Entries(QOpt):";
-  ACParserInternal::Label lbl((int) input->readLong(1));
+  ActaParserInternal::Label lbl((int) input->readLong(1));
   f << lbl << ",";
   if (m_state->m_label!=lbl) {
     if (m_state->m_label.m_type) {
-      MWAW_DEBUG_MSG(("ACParser::readEndDataV3: oops the label seems set and different\n"));
+      MWAW_DEBUG_MSG(("ActaParser::readEndDataV3: oops the label seems set and different\n"));
     }
     else
       m_state->m_label = lbl;
@@ -626,14 +626,14 @@ bool ACParser::readEndDataV3()
   int val=(int) input->readLong(1);
   if (val != 1) // always 1
     f << "f0=" << val << ",";
-  ACParserInternal::Option opt((int) input->readULong(2));
+  ActaParserInternal::Option opt((int) input->readULong(2));
   f << opt;
   // string: name, followed by abbreviation
   for (int i = 0; i < 2; i++) {
     long fPos=input->tell();
     int fSz = (int) input->readULong(1);
     if (!input->checkPosition(fPos+fSz+1)) {
-      MWAW_DEBUG_MSG(("ACText::readEndDataV3: can not read following string\n"));
+      MWAW_DEBUG_MSG(("ActaText::readEndDataV3: can not read following string\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -649,7 +649,7 @@ bool ACParser::readEndDataV3()
     std::string &which=(i==0) ? m_state->m_title : m_state->m_stringLabel;
     if (which.length()) {
       if (which != str) {
-        MWAW_DEBUG_MSG(("ACText::readEndDataV3: find a different string\n"));
+        MWAW_DEBUG_MSG(("ActaText::readEndDataV3: find a different string\n"));
         f << "###";
       }
       continue;
@@ -718,10 +718,10 @@ bool ACParser::readEndDataV3()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool ACParser::readPrintInfo(MWAWEntry const &entry)
+bool ActaParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 120) {
-    MWAW_DEBUG_MSG(("ACParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
 
@@ -772,10 +772,10 @@ bool ACParser::readPrintInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the windows positon info
 ////////////////////////////////////////////////////////////
-bool ACParser::readWindowPos(MWAWEntry const &entry)
+bool ActaParser::readWindowPos(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 8) {
-    MWAW_DEBUG_MSG(("ACParser::readWindowPos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readWindowPos: the entry is bad\n"));
     return false;
   }
 
@@ -801,10 +801,10 @@ bool ACParser::readWindowPos(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // label kind
-bool ACParser::readLabel(MWAWEntry const &entry)
+bool ActaParser::readLabel(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 2) {
-    MWAW_DEBUG_MSG(("ACParser::readLabel: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readLabel: the entry is bad\n"));
     return false;
   }
 
@@ -824,10 +824,10 @@ bool ACParser::readLabel(MWAWEntry const &entry)
 }
 
 // header/footer properties
-bool ACParser::readHFProperties(MWAWEntry const &entry)
+bool ActaParser::readHFProperties(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 20) {
-    MWAW_DEBUG_MSG(("ACParser::readHFProperties: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readHFProperties: the entry is bad\n"));
     return false;
   }
 
@@ -844,7 +844,7 @@ bool ACParser::readHFProperties(MWAWEntry const &entry)
       f << "headerFooter=[";
     else
       f << "unknown=[";
-    ACParserInternal::Printing print;
+    ActaParserInternal::Printing print;
     print.m_font.setId((int) input->readLong(2));
     print.m_font.setSize((float) input->readLong(2));
     int flag=(int) input->readLong(2);
@@ -874,10 +874,10 @@ bool ACParser::readHFProperties(MWAWEntry const &entry)
 }
 
 // Option : small modificator change
-bool ACParser::readOption(MWAWEntry const &entry)
+bool ActaParser::readOption(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 2) {
-    MWAW_DEBUG_MSG(("ACParser::readOption: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ActaParser::readOption: the entry is bad\n"));
     return false;
   }
 
@@ -889,7 +889,7 @@ bool ACParser::readOption(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   f << "Entries(Option):";
   entry.setParsed(true);
-  ACParserInternal::Option opt((int) input->readULong(2));
+  ActaParserInternal::Option opt((int) input->readULong(2));
   f << opt;
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
@@ -904,9 +904,9 @@ bool ACParser::readOption(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool ACParser::checkHeader(MWAWHeader *header, bool strict)
+bool ActaParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = ACParserInternal::State();
+  *m_state = ActaParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(22))
     return false;
@@ -938,7 +938,7 @@ bool ACParser::checkHeader(MWAWHeader *header, bool strict)
       if (val < 1 || val > 4)
         return false;
       f << "#vers=" << val << ",";
-      MWAW_DEBUG_MSG(("ACParser::checkHeader: find unexpected version: %d\n", val));
+      MWAW_DEBUG_MSG(("ActaParser::checkHeader: find unexpected version: %d\n", val));
     }
   }
   val = (int) input->readULong(2); // depth ( first topic must have depth=1)

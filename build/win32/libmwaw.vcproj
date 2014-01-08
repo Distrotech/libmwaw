@@ -173,11 +173,11 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\..\src\lib\ACParser.cxx"
+				RelativePath="..\..\src\lib\ActaParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ACText.cxx"
+				RelativePath="..\..\src\lib\ActaText.cxx"
 				>
 			<File
 				RelativePath="..\..\src\lib\BeagleWksParser.cxx"
@@ -248,19 +248,19 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWGraph.cxx"
+				RelativePath="..\..\src\lib\FullWrtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWParser.cxx"
+				RelativePath="..\..\src\lib\FullWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWStruct.cxx"
+				RelativePath="..\..\src\lib\FullWrtStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWText.cxx"
+				RelativePath="..\..\src\lib\FullWrtText.cxx"
 				>
 			</File>
 			<File
@@ -569,11 +569,11 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\src\lib\ACParser.hxx"
+				RelativePath="..\..\src\lib\ActaParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ACText.hxx"
+				RelativePath="..\..\src\lib\ActaText.hxx"
 				>
 			</File>
 			<File
@@ -645,19 +645,19 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWGraph.hxx"
+				RelativePath="..\..\src\lib\FullWrtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWParser.hxx"
+				RelativePath="..\..\src\lib\FullWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWStruct.hxx"
+				RelativePath="..\..\src\lib\FullWrtStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWText.hxx"
+				RelativePath="..\..\src\lib\FullWrtText.hxx"
 				>
 			</File>
 			<File

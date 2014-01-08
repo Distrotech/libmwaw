@@ -45,19 +45,19 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "FWParser.hxx"
-#include "FWStruct.hxx"
+#include "FullWrtParser.hxx"
+#include "FullWrtStruct.hxx"
 
-#include "FWGraph.hxx"
+#include "FullWrtGraph.hxx"
 
-/** Internal: the structures of a FWGraph */
-namespace FWGraphInternal
+/** Internal: the structures of a FullWrtGraph */
+namespace FullWrtGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the sidebar of a FWGraph
-struct SideBar : public FWStruct::ZoneHeader {
+//! Internal: the sidebar of a FullWrtGraph
+struct SideBar : public FullWrtStruct::ZoneHeader {
   //! constructor
-  SideBar(FWStruct::ZoneHeader const &header): FWStruct::ZoneHeader(header), m_box(), m_page(0), m_borderId(0), m_parsed(false)
+  SideBar(FullWrtStruct::ZoneHeader const &header): FullWrtStruct::ZoneHeader(header), m_box(), m_page(0), m_borderId(0), m_parsed(false)
   {
   }
   //! the position (in point)
@@ -71,7 +71,7 @@ struct SideBar : public FWStruct::ZoneHeader {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a FWGraph
+//! Internal: the state of a FullWrtGraph
 struct State {
   //! constructor
   State() : m_version(-1), m_sidebarList(), m_graphicMap(), m_borderList(), m_numPages(-1) { }
@@ -81,19 +81,19 @@ struct State {
   //! the sidebar list
   std::vector<shared_ptr<SideBar> > m_sidebarList;
   //! zoneId -> graphic entry
-  std::multimap<int, FWStruct::EntryPtr > m_graphicMap;
+  std::multimap<int, FullWrtStruct::EntryPtr > m_graphicMap;
   //! a list of border
-  std::vector<FWStruct::Border> m_borderList;
+  std::vector<FullWrtStruct::Border> m_borderList;
   int m_numPages /* the number of pages */;
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a FWGraph
+//! Internal: the subdocument of a FullWrtGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(FWGraph &pars, int id, MWAWColor fontColor) :
+  SubDocument(FullWrtGraph &pars, int id, MWAWColor fontColor) :
     MWAWSubDocument(pars.m_mainParser, MWAWInputStreamPtr(), MWAWEntry()), m_graphParser(&pars), m_id(id), m_fontColor(fontColor) {}
 
   //! destructor
@@ -112,7 +112,7 @@ public:
 
 protected:
   /** the graph parser */
-  FWGraph *m_graphParser;
+  FullWrtGraph *m_graphParser;
   //! the zone file id
   int m_id;
   //! the default font color
@@ -126,7 +126,7 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("FWGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -148,24 +148,24 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-FWGraph::FWGraph(FWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new FWGraphInternal::State),
+FullWrtGraph::FullWrtGraph(FullWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new FullWrtGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-FWGraph::~FWGraph()
+FullWrtGraph::~FullWrtGraph()
 {
 }
 
-int FWGraph::version() const
+int FullWrtGraph::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int FWGraph::numPages() const
+int FullWrtGraph::numPages() const
 {
   if (m_state->m_numPages > 0)
     return m_state->m_numPages;
@@ -179,18 +179,18 @@ int FWGraph::numPages() const
   return (m_state->m_numPages=nPage);
 }
 
-bool FWGraph::getBorder(int bId, FWStruct::Border &border) const
+bool FullWrtGraph::getBorder(int bId, FullWrtStruct::Border &border) const
 {
   if (bId < 0 || bId>= int(m_state->m_borderList.size())) {
-    MWAW_DEBUG_MSG(("FWGraph::getBorder: can not find border %d\n", bId));
-    border=FWStruct::Border();
+    MWAW_DEBUG_MSG(("FullWrtGraph::getBorder: can not find border %d\n", bId));
+    border=FullWrtStruct::Border();
     return false;
   }
   border=m_state->m_borderList[size_t(bId)];
   return true;
 }
 
-bool FWGraph::send(int fileId, MWAWColor const &fontColor)
+bool FullWrtGraph::send(int fileId, MWAWColor const &fontColor)
 {
   return m_mainParser->send(fileId, fontColor);
 }
@@ -207,7 +207,7 @@ bool FWGraph::send(int fileId, MWAWColor const &fontColor)
 
 ////////////////////////////////////////////////////////////
 // border
-bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
+bool FullWrtGraph::readBorderDocInfo(FullWrtStruct::EntryPtr zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
@@ -224,7 +224,7 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
   int const fSz = 26;
   f << "Entries(Border):N=" << num << ",";
   if (blckSz < 2 || blckSz != 2 + num*fSz || endData > zone->end()) {
-    MWAW_DEBUG_MSG(("FWGraph::readBorderDocInfo: problem reading the data block or the number of data\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readBorderDocInfo: problem reading the data block or the number of data\n"));
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -239,10 +239,10 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  m_state->m_borderList.push_back(FWStruct::Border());
+  m_state->m_borderList.push_back(FullWrtStruct::Border());
   for (int i = 0; i < num; i++) {
     pos = input->tell();
-    FWStruct::Border mod;
+    FullWrtStruct::Border mod;
     f.str("");
     f << "Border-B" << i << ":";
     if (!mod.read(zone, fSz))
@@ -259,16 +259,16 @@ bool FWGraph::readBorderDocInfo(FWStruct::EntryPtr zone)
 
 ////////////////////////////////////////////////////////////
 // side bar
-shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, FWStruct::ZoneHeader const &doc)
+shared_ptr<FullWrtStruct::ZoneHeader> FullWrtGraph::readSideBar(FullWrtStruct::EntryPtr zone, FullWrtStruct::ZoneHeader const &doc)
 {
-  shared_ptr<FWGraphInternal::SideBar> sidebar;
+  shared_ptr<FullWrtGraphInternal::SideBar> sidebar;
   if (doc.m_type != 0x13 && doc.m_type != 0x14) {
-    MWAW_DEBUG_MSG(("FWGraph::readSideBar: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBar: find unexpected type\n"));
     return sidebar;
   }
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
-  sidebar.reset(new FWGraphInternal::SideBar(doc));
+  sidebar.reset(new FullWrtGraphInternal::SideBar(doc));
   if (!sidebar->read(zone)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     sidebar.reset();
@@ -305,7 +305,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
       break;
     }
     if (ok) continue;
-    MWAW_DEBUG_MSG(("FWGraph::readSideBar: pb reading the zone %d\n", i));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBar: pb reading the zone %d\n", i));
     f.str("");
     static char const *(wh[])= {"position","format","unknown"};
     f << "SideBar[" << wh[i] << ":###";
@@ -329,18 +329,18 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readSideBar(FWStruct::EntryPtr zone, F
       input->seek(sz, librevenge::RVNG_SEEK_CUR);
     }
     else {
-      MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data\n"));
+      MWAW_DEBUG_MSG(("FullWrtGraph::readSideBar: find bad end data\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   }
   else if (val) {
-    MWAW_DEBUG_MSG(("FWGraph::readSideBar: find bad end data(II)\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBar: find bad end data(II)\n"));
   }
   m_state->m_sidebarList.push_back(sidebar);
   return sidebar;
 }
 
-bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &frame)
+bool FullWrtGraph::readSideBarPosition(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &frame)
 {
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
@@ -353,7 +353,7 @@ bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::Side
   f << "SideBar[pos]:";
 
   if (sz < 28) {
-    MWAW_DEBUG_MSG(("FWGraph::readSideBarPosition: the size seems bad\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBarPosition: the size seems bad\n"));
     f << "###";
     input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
@@ -408,7 +408,7 @@ bool FWGraph::readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::Side
   return true;
 }
 
-bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &frame)
+bool FullWrtGraph::readSideBarFormat(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &frame)
 {
   int const vers=version();
   MWAWInputStreamPtr input = zone->m_input;
@@ -421,7 +421,7 @@ bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBa
     return false;
   f << "SideBar[format]:";
   if ((vers==1&&sz!=0x3a)||(vers==2&&sz!=0x38)) {
-    MWAW_DEBUG_MSG(("FWGraph::readSideBarFormat: the size seems bad\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBarFormat: the size seems bad\n"));
     f << "###";
     input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
@@ -469,7 +469,7 @@ bool FWGraph::readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBa
   return true;
 }
 
-bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &/*frame*/)
+bool FullWrtGraph::readSideBarUnknown(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &/*frame*/)
 {
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
@@ -481,7 +481,7 @@ bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideB
     return false;
   f << "SideBar[unknown]:";
   if (sz!=0x30) {
-    MWAW_DEBUG_MSG(("FWGraph::readSideBarUnknown: the size seems bad\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readSideBarUnknown: the size seems bad\n"));
     f << "###";
     input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
     asciiFile.addPos(pos);
@@ -516,11 +516,11 @@ bool FWGraph::readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideB
   return true;
 }
 
-bool FWGraph::sendSideBar(FWGraphInternal::SideBar const &frame)
+bool FullWrtGraph::sendSideBar(FullWrtGraphInternal::SideBar const &frame)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("FWGraph::sendSideBar can not find the listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::sendSideBar can not find the listener\n"));
     return true;
   }
 
@@ -531,22 +531,22 @@ bool FWGraph::sendSideBar(FWGraphInternal::SideBar const &frame)
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping=(frame.m_wrapping==3) ?
                  MWAWPosition::WBackground : MWAWPosition::WDynamic;
-  FWStruct::Border border;
+  FullWrtStruct::Border border;
   librevenge::RVNGPropertyList pList;
   if (frame.m_borderId && getBorder(frame.m_borderId, border))
     border.addToFrame(pList);
-  MWAWSubDocumentPtr doc(new FWGraphInternal::SubDocument(*this,frame.m_fileId,border.m_frontColor));
+  MWAWSubDocumentPtr doc(new FullWrtGraphInternal::SubDocument(*this,frame.m_fileId,border.m_frontColor));
   listener->insertTextBox(pos, doc, pList);
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // graphic: data +
-shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader &doc)
+shared_ptr<FullWrtStruct::ZoneHeader> FullWrtGraph::readGraphicData(FullWrtStruct::EntryPtr zone, FullWrtStruct::ZoneHeader &doc)
 {
-  shared_ptr<FWStruct::ZoneHeader> graphData;
+  shared_ptr<FullWrtStruct::ZoneHeader> graphData;
   if (doc.m_type != 0x15) {
-    MWAW_DEBUG_MSG(("FWGraph::readGraphicData: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readGraphicData: find unexpected type\n"));
     return graphData;
   }
   MWAWInputStreamPtr input = zone->m_input;
@@ -565,7 +565,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
     return graphData;
   }
 
-  graphData.reset(new FWStruct::ZoneHeader(doc));
+  graphData.reset(new FullWrtStruct::ZoneHeader(doc));
   f.str("");
   f << "Entries(GraphData):" << doc;
   asciiFile.addPos(pos);
@@ -622,7 +622,7 @@ shared_ptr<FWStruct::ZoneHeader> FWGraph::readGraphicData(FWStruct::EntryPtr zon
   return graphData;
 }
 
-bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
+bool FullWrtGraph::readGraphic(FullWrtStruct::EntryPtr zone)
 {
   int vers = version();
 
@@ -646,7 +646,7 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
   pos = input->tell();
   sz = (long) input->readULong(4);
   if (!sz || pos+4+sz > zone->end()) {
-    MWAW_DEBUG_MSG(("FWGraph::readGraphic: can not read graphic size\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readGraphic: can not read graphic size\n"));
     return false;
   }
   f.str("");
@@ -657,7 +657,7 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
   input->seek(sz, librevenge::RVNG_SEEK_CUR);
 
   m_state->m_graphicMap.insert
-  (std::multimap<int, FWStruct::EntryPtr >::value_type(zone->id(), zone));
+  (std::multimap<int, FullWrtStruct::EntryPtr >::value_type(zone->id(), zone));
 
   pos = input->tell();
   if (pos == zone->end())
@@ -667,7 +667,7 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
   if (sz)
     input->seek(sz, librevenge::RVNG_SEEK_CUR);
   if (pos+4+sz!=zone->end()) {
-    MWAW_DEBUG_MSG(("FWGraph::readGraphic: end graphic seems odds\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::readGraphic: end graphic seems odds\n"));
   }
   asciiFile.addPos(pos);
   asciiFile.addNote("Graphic-A");
@@ -681,16 +681,16 @@ bool FWGraph::readGraphic(FWStruct::EntryPtr zone)
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool FWGraph::sendGraphic(int fId)
+bool FullWrtGraph::sendGraphic(int fId)
 {
-  std::multimap<int, FWStruct::EntryPtr >::iterator it =
+  std::multimap<int, FullWrtStruct::EntryPtr >::iterator it =
     m_state->m_graphicMap.find(fId);
 
   if (it == m_state->m_graphicMap.end() || !it->second) {
-    MWAW_DEBUG_MSG(("FWGraph::sendGraphic: can not find graphic %d\n", fId));
+    MWAW_DEBUG_MSG(("FullWrtGraph::sendGraphic: can not find graphic %d\n", fId));
     return false;
   }
-  FWStruct::EntryPtr zone = it->second;
+  FullWrtStruct::EntryPtr zone = it->second;
   MWAWInputStreamPtr input = zone->m_input;
   long pos = input->tell();
   bool ok=sendGraphic(zone);
@@ -698,11 +698,11 @@ bool FWGraph::sendGraphic(int fId)
   return ok;
 }
 
-bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
+bool FullWrtGraph::sendGraphic(FullWrtStruct::EntryPtr zone)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("FWGraph::sendGraphic can not find the listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::sendGraphic can not find the listener\n"));
     return true;
   }
   zone->setParsed(true);
@@ -735,7 +735,7 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
   MWAWPict::ReadResult res =
     MWAWPictData::check(input, sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("FWGraph::sendGraphic: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::sendGraphic: can not find the picture\n"));
     return false;
   }
 
@@ -744,7 +744,7 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
     actualSize = naturalSize = box.size();
   }
   else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
-    MWAW_DEBUG_MSG(("FWGraph::sendGraphic: can not find the picture size\n"));
+    MWAW_DEBUG_MSG(("FullWrtGraph::sendGraphic: can not find the picture size\n"));
     actualSize = naturalSize = Vec2f(100,100);
   }
   MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, librevenge::RVNG_POINT);
@@ -766,23 +766,23 @@ bool FWGraph::sendGraphic(FWStruct::EntryPtr zone)
   return true;
 }
 
-bool FWGraph::sendPageGraphics()
+bool FullWrtGraph::sendPageGraphics()
 {
   for (size_t i=0; i<m_state->m_sidebarList.size(); ++i) {
     if (!m_state->m_sidebarList[i])
       continue;
-    FWGraphInternal::SideBar const &frame=*m_state->m_sidebarList[i];
+    FullWrtGraphInternal::SideBar const &frame=*m_state->m_sidebarList[i];
     if (!frame.m_parsed)
       sendSideBar(frame);
   }
   return true;
 }
 
-void FWGraph::flushExtra()
+void FullWrtGraph::flushExtra()
 {
-  std::multimap<int, FWStruct::EntryPtr >::iterator it;
+  std::multimap<int, FullWrtStruct::EntryPtr >::iterator it;
   for (it = m_state->m_graphicMap.begin(); it != m_state->m_graphicMap.end(); ++it) {
-    FWStruct::EntryPtr &zone = it->second;
+    FullWrtStruct::EntryPtr &zone = it->second;
     if (!zone || zone->isParsed())
       continue;
     sendGraphic(zone);

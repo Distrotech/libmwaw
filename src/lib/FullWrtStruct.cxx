@@ -37,9 +37,9 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "FWStruct.hxx"
+#include "FullWrtStruct.hxx"
 
-namespace FWStruct
+namespace FullWrtStruct
 {
 bool getColor(int color, MWAWColor &col)
 {
@@ -140,11 +140,11 @@ void Border::addToFrame(librevenge::RVNGPropertyList &pList) const
   bord.addTo(pList,"");
 }
 
-bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
+bool Border::read(shared_ptr<FullWrtStruct::Entry> zone, int fSz)
 {
-  *this=FWStruct::Border();
+  *this=FullWrtStruct::Border();
   if (fSz < 26) {
-    MWAW_DEBUG_MSG(("FWStruct::Border::read: find unexpected size\n"));
+    MWAW_DEBUG_MSG(("FullWrtStruct::Border::read: find unexpected size\n"));
     return false;
   }
   MWAWInputStreamPtr input = zone->m_input;
@@ -167,7 +167,7 @@ bool Border::read(shared_ptr<FWStruct::Entry> zone, int fSz)
     m_frameBorder.m_width=0.5*double(totalW);
   }
   else if (totalW) {
-    MWAW_DEBUG_MSG(("FWStruct::Border::read: frame border width seems odd\n"));
+    MWAW_DEBUG_MSG(("FullWrtStruct::Border::read: frame border width seems odd\n"));
     f << "###frame[w]=[";
     for (int i=0; i < 3; ++i) f << width[i] << ",";
     f << "],";
@@ -407,7 +407,7 @@ bool Entry::operator==(const Entry &a) const
 
 ////////////////////////////////////////////////////////////
 // read the zone data header
-bool ZoneHeader::read(shared_ptr<FWStruct::Entry> zone)
+bool ZoneHeader::read(shared_ptr<FullWrtStruct::Entry> zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
@@ -513,7 +513,7 @@ bool ZoneHeader::read(shared_ptr<FWStruct::Entry> zone)
 
 std::ostream &operator<<(std::ostream &o, ZoneHeader const &dt)
 {
-  if (dt.m_type >= 0) o << FWStruct::getTypeName(dt.m_type);
+  if (dt.m_type >= 0) o << FullWrtStruct::getTypeName(dt.m_type);
   if (dt.m_fileId >= 0) o << "fileId=" << dt.m_fileId << ",";
   if (dt.m_docId >= 0) o << "docId=" << dt.m_docId << ",";
   switch (dt.m_wrapping) {

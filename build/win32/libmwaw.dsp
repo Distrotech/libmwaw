@@ -87,11 +87,11 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACParser.cxx
+SOURCE=..\..\src\lib\ActaParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACText.cxx
+SOURCE=..\..\src\lib\ActaText.cxx
 # End Source File
 # Begin Source File
 
@@ -163,19 +163,19 @@ SOURCE=..\..\src\lib\EDParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWGraph.cxx
+SOURCE=..\..\src\lib\FullWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWParser.cxx
+SOURCE=..\..\src\lib\FullWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWStruct.cxx
+SOURCE=..\..\src\lib\FullWrtStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWText.cxx
+SOURCE=..\..\src\lib\FullWrtText.cxx
 # End Source File
 # Begin Source File
 
@@ -483,11 +483,11 @@ SOURCE=..\..\src\lib\ZWText.cxx
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACParser.hxx
+SOURCE=..\..\src\lib\ActaParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACText.hxx
+SOURCE=..\..\src\lib\ActaText.hxx
 # End Source File
 # Begin Source File
 
@@ -559,19 +559,19 @@ SOURCE=..\..\src\lib\EDParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWGraph.hxx
+SOURCE=..\..\src\lib\FullWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWParser.hxx
+SOURCE=..\..\src\lib\FullWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWStruct.hxx
+SOURCE=..\..\src\lib\FullWrtStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWText.hxx
+SOURCE=..\..\src\lib\FullWrtText.hxx
 # End Source File
 # Begin Source File
 

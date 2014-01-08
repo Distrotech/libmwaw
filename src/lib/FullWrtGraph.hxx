@@ -35,8 +35,8 @@
  * Parser to FullWrite Text document ( graphic part )
  *
  */
-#ifndef FW_GRAPH
-#  define FW_GRAPH
+#ifndef FullWrt_GRAPH
+#  define FullWrt_GRAPH
 
 #include <string>
 #include <vector>
@@ -48,32 +48,32 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "FWStruct.hxx"
+#include "FullWrtStruct.hxx"
 
-namespace FWGraphInternal
+namespace FullWrtGraphInternal
 {
 struct SideBar;
 struct State;
 class SubDocument;
 }
 
-class FWParser;
+class FullWrtParser;
 
 /** \brief the main class to read the graphic part of a FullWrite Text file
  *
  *
  *
  */
-class FWGraph
+class FullWrtGraph
 {
-  friend class FWParser;
-  friend class FWGraphInternal::SubDocument;
+  friend class FullWrtParser;
+  friend class FullWrtGraphInternal::SubDocument;
 
 public:
   //! constructor
-  FWGraph(FWParser &parser);
+  FullWrtGraph(FullWrtParser &parser);
   //! destructor
-  virtual ~FWGraph();
+  virtual ~FullWrtGraph();
 
   /** returns the file version */
   int version() const;
@@ -89,7 +89,7 @@ protected:
   bool sendPageGraphics();
 
   //! try to return a border corresponding to an id
-  bool getBorder(int bId, FWStruct::Border &border) const;
+  bool getBorder(int bId, FullWrtStruct::Border &border) const;
 
   //
   // Intermediate level
@@ -105,32 +105,32 @@ protected:
   //
 
   //! try to read the border definiton (at the end of doc info)
-  bool readBorderDocInfo(FWStruct::EntryPtr zone);
+  bool readBorderDocInfo(FullWrtStruct::EntryPtr zone);
 
   //! try to read a sidebar data (zone 13 or zone 14)
-  shared_ptr<FWStruct::ZoneHeader> readSideBar
-  (FWStruct::EntryPtr zone, FWStruct::ZoneHeader const &doc);
+  shared_ptr<FullWrtStruct::ZoneHeader> readSideBar
+  (FullWrtStruct::EntryPtr zone, FullWrtStruct::ZoneHeader const &doc);
   //! try to read the sidebar position zone
-  bool readSideBarPosition(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &frame);
+  bool readSideBarPosition(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &frame);
   //! try to read the sidebar second zone
-  bool readSideBarFormat(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &frame);
+  bool readSideBarFormat(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &frame);
   //! try to read the sidebar third zone
-  bool readSideBarUnknown(FWStruct::EntryPtr zone, FWGraphInternal::SideBar &frame);
+  bool readSideBarUnknown(FullWrtStruct::EntryPtr zone, FullWrtGraphInternal::SideBar &frame);
   //! try to send a sidebar
-  bool sendSideBar(FWGraphInternal::SideBar const &frame);
+  bool sendSideBar(FullWrtGraphInternal::SideBar const &frame);
   //! check if a zone is a graphic zone
-  bool readGraphic(FWStruct::EntryPtr zone);
+  bool readGraphic(FullWrtStruct::EntryPtr zone);
   //! send a graphic knowing the graphic fileId
   bool sendGraphic(int fId);
   //! send a graphic to a listener (if it exists)
-  bool sendGraphic(FWStruct::EntryPtr zone);
+  bool sendGraphic(FullWrtStruct::EntryPtr zone);
 
   //! try to read the graphic data
-  shared_ptr<FWStruct::ZoneHeader> readGraphicData
-  (FWStruct::EntryPtr zone, FWStruct::ZoneHeader &doc);
+  shared_ptr<FullWrtStruct::ZoneHeader> readGraphicData
+  (FullWrtStruct::EntryPtr zone, FullWrtStruct::ZoneHeader &doc);
 private:
-  FWGraph(FWGraph const &orig);
-  FWGraph &operator=(FWGraph const &orig);
+  FullWrtGraph(FullWrtGraph const &orig);
+  FullWrtGraph &operator=(FullWrtGraph const &orig);
 
 protected:
   //
@@ -140,10 +140,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<FWGraphInternal::State> m_state;
+  shared_ptr<FullWrtGraphInternal::State> m_state;
 
   //! the main parser;
-  FWParser *m_mainParser;
+  FullWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

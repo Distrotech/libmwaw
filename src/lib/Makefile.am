@@ -18,10 +18,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_internal.cxx		\
 	libmwaw_internal.hxx		\
-	ACParser.cxx			\
-	ACParser.hxx			\
-	ACText.cxx			\
-	ACText.hxx			\
+	ActaParser.cxx			\
+	ActaParser.hxx			\
+	ActaText.cxx			\
+	ActaText.hxx			\
 	BeagleWksParser.cxx		\
 	BeagleWksParser.hxx		\
 	BeagleWksSSParser.cxx		\
@@ -56,14 +56,14 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	DMText.hxx			\
 	EDParser.cxx			\
 	EDParser.hxx			\
-	FWGraph.cxx			\
-	FWGraph.hxx			\
-	FWParser.cxx			\
-	FWParser.hxx			\
-	FWStruct.cxx			\
-	FWStruct.hxx			\
-	FWText.cxx			\
-	FWText.hxx			\
+	FullWrtGraph.cxx		\
+	FullWrtGraph.hxx		\
+	FullWrtParser.cxx		\
+	FullWrtParser.hxx		\
+	FullWrtStruct.cxx		\
+	FullWrtStruct.hxx		\
+	FullWrtText.cxx			\
+	FullWrtText.hxx			\
 	GWGraph.cxx			\
 	GWGraph.hxx			\
 	GWParser.cxx			\

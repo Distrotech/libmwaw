@@ -44,25 +44,25 @@
 
 #include "MWAWParser.hxx"
 
-namespace ACParserInternal
+namespace ActaParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class ACText;
+class ActaText;
 
 /** \brief the main class to read a Acta file
  */
-class ACParser : public MWAWTextParser
+class ActaParser : public MWAWTextParser
 {
-  friend class ACParserInternal::SubDocument;
-  friend class ACText;
+  friend class ActaParserInternal::SubDocument;
+  friend class ActaText;
 public:
   //! constructor
-  ACParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  ActaParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~ACParser();
+  virtual ~ActaParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -130,10 +130,10 @@ protected:
   //
 
   //! the state
-  shared_ptr<ACParserInternal::State> m_state;
+  shared_ptr<ActaParserInternal::State> m_state;
 
   //! the text parser
-  shared_ptr<ACText> m_textParser;
+  shared_ptr<ActaText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

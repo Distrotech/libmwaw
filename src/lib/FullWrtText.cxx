@@ -48,13 +48,13 @@
 #include "MWAWSection.hxx"
 #include "MWAWTable.hxx"
 
-#include "FWParser.hxx"
-#include "FWStruct.hxx"
+#include "FullWrtParser.hxx"
+#include "FullWrtStruct.hxx"
 
-#include "FWText.hxx"
+#include "FullWrtText.hxx"
 
-/** Internal: the structures of a FWText */
-namespace FWTextInternal
+/** Internal: the structures of a FullWrtText */
+namespace FullWrtTextInternal
 {
 /** Internal: class to store a para modifier with appear in docInfo */
 struct ParaModifier {
@@ -405,7 +405,7 @@ struct Zone {
       for (size_t c = 0; c < page.m_columns.size(); c++) {
         int pos = page.m_columns[c].m_beginPos;
         if (pos < prevPos) {
-          MWAW_DEBUG_MSG(("FWTextInternal::Zone::getBreaksPosition pos go back\n"));
+          MWAW_DEBUG_MSG(("FullWrtTextInternal::Zone::getBreaksPosition pos go back\n"));
           p = numPages;
           break;
         }
@@ -416,7 +416,7 @@ struct Zone {
     return res;
   }
   //! the main zone
-  FWStruct::EntryPtr m_zone;
+  FullWrtStruct::EntryPtr m_zone;
   //! the bdbox
   Box2f m_box;
 
@@ -482,7 +482,7 @@ struct Paragraph : public MWAWParagraph {
     m_isSent = false;
   }
   //! set the border type
-  void setBorder(FWStruct::Border border)
+  void setBorder(FullWrtStruct::Border border)
   {
     m_border = border;
     m_isSent = false;
@@ -503,18 +503,18 @@ struct Paragraph : public MWAWParagraph {
   {
     size_t numTabs = m_tabs->size();
     if ((numTabs%2) != 1 || numTabs != m_tableFlags.size()) {
-      MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: unexpected number of tabs\n"));
+      MWAW_DEBUG_MSG(("FullWrtTextInternal::Paragraph:getTableDimensions: unexpected number of tabs\n"));
       return false;
     }
     if (m_dim[0] <= 0) {
-      MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: can not determine line width\n"));
+      MWAW_DEBUG_MSG(("FullWrtTextInternal::Paragraph:getTableDimensions: can not determine line width\n"));
       return false;
     }
     std::vector<double> limits;
     limits.push_back(*m_margins[1]);
     for (size_t i=1; i < numTabs; i+=2) {
       if (m_tableFlags[i] != 4) {
-        MWAW_DEBUG_MSG(("FWTextInternal::Paragraph:getTableDimensions: find unexpected tables flags\n"));
+        MWAW_DEBUG_MSG(("FullWrtTextInternal::Paragraph:getTableDimensions: find unexpected tables flags\n"));
         return false;
       }
       limits.push_back((*m_tabs)[i].m_position);
@@ -599,7 +599,7 @@ struct Paragraph : public MWAWParagraph {
   //! the zone dimension
   Vec2f m_dim;
   //! the actual border
-  FWStruct::Border m_border;
+  FullWrtStruct::Border m_border;
   //! a flag to know if this is a table
   bool m_isTable;
   //! the table border id
@@ -613,7 +613,7 @@ struct Paragraph : public MWAWParagraph {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a FWText
+//! Internal: the state of a FullWrtText
 struct State {
   //! constructor
   State() : m_version(-1), m_entryMap(), m_paragraphMap(), m_itemMap(), m_dataModMap(),
@@ -645,23 +645,23 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-FWText::FWText(FWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new FWTextInternal::State),
+FullWrtText::FullWrtText(FullWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new FullWrtTextInternal::State),
   m_mainParser(&parser)
 {
 }
 
-FWText::~FWText()
+FullWrtText::~FullWrtText()
 { }
 
-int FWText::version() const
+int FullWrtText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int FWText::numPages() const
+int FullWrtText::numPages() const
 {
   return m_state->m_numPages;
 }
@@ -669,9 +669,9 @@ int FWText::numPages() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-                  FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
-                  std::string &str)
+void FullWrtText::send(shared_ptr<FullWrtTextInternal::Zone> zone, int numChar,
+                       FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler,
+                       std::string &str)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
@@ -836,7 +836,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xb2:
         if (actPos+1 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find font size!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find font size!!!!\n"));
           f << "[##fSz]";
           break;
         }
@@ -849,7 +849,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xc1:
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find font id!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find font id!!!!\n"));
           f << "[##fId]";
           break;
         }
@@ -859,15 +859,15 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xc7: // item id
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find item id!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find item id!!!!\n"));
           f << "[##item]";
           break;
         }
         if (font.m_item.m_collapsed && font.m_item.m_childList.size()) {
           if (!lastEOL)
             listener->insertEOL(false);
-          FWTextInternal::Font hFont = font;
-          FWTextInternal::Paragraph hRuler = ruler;
+          FullWrtTextInternal::Font hFont = font;
+          FullWrtTextInternal::Paragraph hRuler = ruler;
           for (size_t c=0; c < font.m_item.m_childList.size(); c++)
             sendHiddenItem(font.m_item.m_childList[c], hFont, hRuler);
           fontSet = false;
@@ -876,8 +876,8 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         }
         id = (int)input->readULong(2);
         if (m_state->m_itemMap.find(id) == m_state->m_itemMap.end()) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find item id!!!!\n"));
-          font.m_item = FWTextInternal::Item();
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find item id!!!!\n"));
+          font.m_item = FullWrtTextInternal::Item();
           f << "[#itemId=" << id << "]";
         }
         else {
@@ -887,13 +887,13 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xcb: { // space/and or color
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not read data modifier!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not read data modifier!!!!\n"));
           f << "[##dMod]";
           break;
         }
         id = (int)input->readULong(2);
         if (m_state->m_dataModMap.find(id) == m_state->m_dataModMap.end()) {
-          font.m_modifier=FWTextInternal::DataModifier();
+          font.m_modifier=FullWrtTextInternal::DataModifier();
           font.m_defModifier=true;
           f << "[#modifier=" << id << "]";
         }
@@ -907,15 +907,15 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         if (fCharSent) break;
         int pId = font.m_modifier.getDocParaId();
         if (pId >= 0 && pId < int(m_state->m_paragraphModList.size())) {
-          FWTextInternal::ParaModifier const &paraMod =
+          FullWrtTextInternal::ParaModifier const &paraMod =
             m_state->m_paragraphModList[size_t(pId)];
           ruler.setSpacings(paraMod.m_beforeSpacing, true);
           ruler.setSpacings(paraMod.m_afterSpacing, false);
-          ruler.setBorder(FWStruct::Border());
+          ruler.setBorder(FullWrtStruct::Border());
           checkModifier = true;
         }
         int bId = font.m_modifier.getBorderId();
-        FWStruct::Border border;
+        FullWrtStruct::Border border;
         if (m_mainParser->getBorder(bId, border)) {
           ruler.setBorder(border);
           checkModifier = true;
@@ -930,7 +930,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0xe2:
       case 0xe4:
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not an id for %x!!!!\n", val));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not an id for %x!!!!\n", val));
           f << "[#" << std::hex << val << std::dec << "]";
           break;
         }
@@ -1002,17 +1002,17 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xc6: { // ruler id
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can find rulerId!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can find rulerId!!!!\n"));
           f << "[##rulerId]";
           break;
         }
         id = int(input->readULong(2));
         f << "[P" << id << "]";
 
-        std::map<int,FWTextInternal::Paragraph>::iterator it=
+        std::map<int,FullWrtTextInternal::Paragraph>::iterator it=
           m_state->m_paragraphMap.find(id);
         if (it==m_state->m_paragraphMap.end()) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find paragraph with id=%d\n", id));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find paragraph with id=%d\n", id));
           break;
         }
         ruler.updateFromRuler(it->second);
@@ -1023,7 +1023,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       }
       case 0xe8: // justification
         if (actPos+4 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find justify!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find justify!!!!\n"));
           f << "[#justWithType]";
         }
         else {
@@ -1053,7 +1053,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
       case 0xda:
       case 0xe5: // contents/index data
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can find id for %x data!!!!\n", val));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can find id for %x data!!!!\n", val));
           f << "[##" << std::hex << val << std::dec << "]";
           break;
         }
@@ -1064,7 +1064,7 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
         break;
       case 0xe9:
         if (actPos+4 > endPos) {
-          MWAW_DEBUG_MSG(("FWText::send: can not find id/val for fe9!!!!\n"));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not find id/val for fe9!!!!\n"));
           f << "[#e9]";
           break;
         }
@@ -1151,15 +1151,15 @@ void FWText::send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
   str=f.str();
 }
 
-bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader const &lHeader,
-                       FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler, std::string &str)
+bool FullWrtText::sendTable(shared_ptr<FullWrtTextInternal::Zone> zone, FullWrtTextInternal::LineHeader const &lHeader,
+                            FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler, std::string &str)
 {
   std::vector<float> dim;
   if (!ruler.getTableDimensions(dim))
     return false;
   float height=lHeader.height();
   if (height <= 0) {
-    MWAW_DEBUG_MSG(("FWText::sendTable: can not find table height\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::sendTable: can not find table height\n"));
     return false;
   }
 
@@ -1193,11 +1193,11 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   if (numCols < numFind) {
     if (numCols+1==numFind) {
       // happens one type at the end of file: bug or normal end table?
-      MWAW_DEBUG_MSG(("FWText::sendTable: find a spurious column break in last line position\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::sendTable: find a spurious column break in last line position\n"));
       cellPos.resize(2*numCols);
     }
     else {
-      MWAW_DEBUG_MSG(("FWText::sendTable: find too many columns\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::sendTable: find too many columns\n"));
       return false;
     }
   }
@@ -1210,14 +1210,14 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   listener->openTableRow(-height, librevenge::RVNG_POINT);
 
   MWAWBorder outBorder, vBorder;
-  FWStruct::Border border;
+  FullWrtStruct::Border border;
   if (m_mainParser->getBorder(ruler.m_tableBorderId, border)) {
-    outBorder=FWStruct::Border::getBorder(border.m_type[0]);
-    vBorder=FWStruct::Border::getBorder(border.m_type[2]);
+    outBorder=FullWrtStruct::Border::getBorder(border.m_type[0]);
+    vBorder=FullWrtStruct::Border::getBorder(border.m_type[2]);
     outBorder.m_color=vBorder.m_color=border.m_color[0];
   }
   else {
-    MWAW_DEBUG_MSG(("FWText::sendTable: can not find border=%d\n",ruler.m_tableBorderId));
+    MWAW_DEBUG_MSG(("FullWrtText::sendTable: can not find border=%d\n",ruler.m_tableBorderId));
     outBorder.m_width=vBorder.m_width=0;
   }
   for (size_t col = 0; col < numCols; col++) {
@@ -1254,9 +1254,9 @@ bool FWText::sendTable(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::Li
   return true;
 }
 
-bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader)
+bool FullWrtText::readLineHeader(shared_ptr<FullWrtTextInternal::Zone> zone, FullWrtTextInternal::LineHeader &lHeader)
 {
-  lHeader = FWTextInternal::LineHeader();
+  lHeader = FullWrtTextInternal::LineHeader();
 
   MWAWInputStreamPtr input = zone->m_zone->m_input;
   libmwaw::DebugStream f;
@@ -1354,7 +1354,7 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
     f << "fa=" << std::hex << val << std::dec << ",";
   }
   if (type & 0x4) {
-    MWAW_DEBUG_MSG(("FWText::readLineHeader: find unknown size flags!!!!\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readLineHeader: find unknown size flags!!!!\n"));
     f << "[#fl&4]";
     // we do not know the size of this field, let try with 2
     input->seek(2, librevenge::RVNG_SEEK_CUR);
@@ -1371,11 +1371,11 @@ bool FWText::readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInterna
   return true;
 }
 
-bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
+bool FullWrtText::send(shared_ptr<FullWrtTextInternal::Zone> zone, MWAWColor fontColor)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("FWText::send can not find the listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::send can not find the listener\n"));
     return false;
   }
   MWAWInputStreamPtr input = zone->m_zone->m_input;
@@ -1387,10 +1387,10 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
   long pos = zone->m_begin;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int num=1;
-  FWTextInternal::Font font;
+  FullWrtTextInternal::Font font;
   font.m_font=MWAWFont(3,12);
   font.m_font.setColor(fontColor);
-  FWTextInternal::Paragraph ruler;
+  FullWrtTextInternal::Paragraph ruler;
   if (zone->m_zone->m_type==0x11 || zone->m_zone->m_type==0x12)
     ruler.setAlign(1);
 
@@ -1417,12 +1417,12 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
         actCol++;
       }
       else if (actPage >= nPages) {
-        MWAW_DEBUG_MSG(("FWText::send can not find the page information\n"));
+        MWAW_DEBUG_MSG(("FullWrtText::send can not find the page information\n"));
       }
       else {
-        FWTextInternal::PageInfo const &page = zone->m_pagesInfo[size_t(actPage)];
+        FullWrtTextInternal::PageInfo const &page = zone->m_pagesInfo[size_t(actPage)];
         if (sendData) {
-          if (zone->m_zoneType == FWTextInternal::Zone::Main)
+          if (zone->m_zoneType == FullWrtTextInternal::Zone::Main)
             m_mainParser->newPage(++m_state->m_actualPage);
           else if (numCol > 1)
             listener->insertBreak(MWAWTextListener::ColumnBreak);
@@ -1457,7 +1457,7 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
         actBreakPos = -1;
     }
     num++;
-    FWTextInternal::LineHeader lHeader;
+    FullWrtTextInternal::LineHeader lHeader;
     if (!readLineHeader(zone, lHeader)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
@@ -1495,29 +1495,29 @@ bool FWText::send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor)
   return true;
 }
 
-bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler)
+bool FullWrtText::sendHiddenItem(int id, FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("FWText::sendHiddenItem can not find the listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::sendHiddenItem can not find the listener\n"));
     return false;
   }
   if (m_state->m_itemMap.find(id)==m_state->m_itemMap.end()) {
-    MWAW_DEBUG_MSG(("FWText::sendHiddenItem: can not find item %d\n", id));
+    MWAW_DEBUG_MSG(("FullWrtText::sendHiddenItem: can not find item %d\n", id));
     return false;
   }
-  FWTextInternal::Item &item = m_state->m_itemMap.find(id)->second;
+  FullWrtTextInternal::Item &item = m_state->m_itemMap.find(id)->second;
   if (!item.m_hidden) {
-    MWAW_DEBUG_MSG(("FWText::sendHiddenItem: item %d is not hidden\n", id));
+    MWAW_DEBUG_MSG(("FullWrtText::sendHiddenItem: item %d is not hidden\n", id));
     return false;
   }
   // avoid loop if pb
-  font.m_item=FWTextInternal::Item(); // no previous item
+  font.m_item=FullWrtTextInternal::Item(); // no previous item
   item.m_hidden = false; // item is send
 
-  shared_ptr<FWTextInternal::Zone> zone=item.m_hiddenZone;
+  shared_ptr<FullWrtTextInternal::Zone> zone=item.m_hiddenZone;
   if (!zone) {
-    MWAW_DEBUG_MSG(("FWText::sendHiddenItem can not find the hidden zone\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::sendHiddenItem can not find the hidden zone\n"));
     return false;
   }
   MWAWInputStreamPtr input = zone->m_zone->m_input;
@@ -1557,7 +1557,7 @@ bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::
   for (int i = 0; i < 5; i++) {
     val = (int) input->readULong(2);
     MWAWColor col;
-    if (FWStruct::getColor(val, col)) f << "col" << i << "=" << col << ",";
+    if (FullWrtStruct::getColor(val, col)) f << "col" << i << "=" << col << ",";
   }
   for (int i = 0; i < 2; i++) { // h3=id?, h4=id?
     val = (int) input->readLong(2);
@@ -1582,7 +1582,7 @@ bool FWText::sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::
 
 ////////////////////////////////////////////////////////////
 // read the text data
-bool FWText::readTextData(FWStruct::EntryPtr zone)
+bool FullWrtText::readTextData(FullWrtStruct::EntryPtr zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -1597,9 +1597,9 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
   bool hasHeader = false;
   if (!knownZone && (header&0xFC00)) return false;
 
-  shared_ptr<FWTextInternal::Zone> text(new FWTextInternal::Zone);
+  shared_ptr<FullWrtTextInternal::Zone> text(new FullWrtTextInternal::Zone);
   text->m_zoneType = (zone->m_type==0xa) ?
-                     FWTextInternal::Zone::Main : FWTextInternal::Zone::Normal;
+                     FullWrtTextInternal::Zone::Main : FullWrtTextInternal::Zone::Normal;
   text->m_zone = zone;
 
   int val;
@@ -1626,7 +1626,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
     }
     else if (!knownZone)
-      text->m_zoneType = FWTextInternal::Zone::Main;
+      text->m_zoneType = FullWrtTextInternal::Zone::Main;
   }
   if (header) { // attachement
     hasHeader = true;
@@ -1642,7 +1642,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
       if (val) return false;
     }
     if (!knownZone)
-      text->m_zoneType = FWTextInternal::Zone::Main;
+      text->m_zoneType = FullWrtTextInternal::Zone::Main;
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
@@ -1726,7 +1726,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (pos+2 >= zone->end()) break;
     int type = (int)input->readULong(2);
     if (input->isEnd()) {
-      MWAW_DEBUG_MSG(("FWText::readTextData: internal problem, unexpected EOS!!!\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::readTextData: internal problem, unexpected EOS!!!\n"));
       return false;
     }
     int lengthSz = 1;
@@ -1755,7 +1755,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
     if (type & 0x10) sz+=8;
     if (type & 0x8) sz+=2;
     if (type & 0x4) {
-      MWAW_DEBUG_MSG(("FWText::readTextData: find unknown size flags!!!!\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::readTextData: find unknown size flags!!!!\n"));
       sz+=2;
     }
     if (type & 0x2) sz+=2;
@@ -1768,13 +1768,13 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
 #endif
   pos = text->m_end = input->tell();
   // ok, we can insert the data
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it =
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it =
     m_state->m_entryMap.find(zone->id());
   if (it != m_state->m_entryMap.end()) {
-    MWAW_DEBUG_MSG(("FWText::readTextData: entry %d already exists\n", zone->id()));
+    MWAW_DEBUG_MSG(("FullWrtText::readTextData: entry %d already exists\n", zone->id()));
   }
   m_state->m_entryMap.insert
-  (std::multimap<int, shared_ptr<FWTextInternal::Zone> >::value_type(zone->id(), text));
+  (std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::value_type(zone->id(), text));
 
   f.str("");
   f << "TextData-b:";
@@ -1806,7 +1806,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
         break;
       }
 
-      FWTextInternal::PageInfo page;
+      FullWrtTextInternal::PageInfo page;
       page.m_page = actPage++;
 
       ascii.addPos(pos);
@@ -1818,7 +1818,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
         pos = input->tell();
         f.str("");
         f << "TextData-c[ColDef]:";
-        FWTextInternal::ColumnInfo col;
+        FullWrtTextInternal::ColumnInfo col;
         col.m_column = i;
         col.m_beginPos = (int)input->readLong(2);
         for (int j = 0; j < 4; j++) dim[j] = (int)input->readLong(2);
@@ -1877,7 +1877,7 @@ bool FWText::readTextData(FWStruct::EntryPtr zone)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
+bool FullWrtText::readItem(FullWrtStruct::EntryPtr zone, int id, bool hidden)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -1886,7 +1886,7 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   if (pos+25 > zone->end())
     return false;
 
-  FWTextInternal::Item item;
+  FullWrtTextInternal::Item item;
   item.m_hidden = hidden;
   int val;
   int numOk = 0, numBad = 0;
@@ -1932,8 +1932,8 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   val = (int)input->readULong(1); // always 0
   if (val)
     f << "fl1=" << val << ",";
-  item.m_structId[FWTextInternal::Item::Main] = (int)input->readLong(2);
-  if (id > 0 && id != item.m_structId[FWTextInternal::Item::Main]) {
+  item.m_structId[FullWrtTextInternal::Item::Main] = (int)input->readLong(2);
+  if (id > 0 && id != item.m_structId[FullWrtTextInternal::Item::Main]) {
     numBad+=3;
     f << "###id,";
   }
@@ -1964,11 +1964,11 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
   if (id < 0) ;
   else if (m_state->m_itemMap.find(id) == m_state->m_itemMap.end()) {
     m_state->m_itemMap.insert
-    (std::map<int,FWTextInternal::Item>::value_type(id,item));
+    (std::map<int,FullWrtTextInternal::Item>::value_type(id,item));
     set=true;
   }
   else {
-    MWAW_DEBUG_MSG(("FWText::readItem: id %d already exists\n", id));
+    MWAW_DEBUG_MSG(("FullWrtText::readItem: id %d already exists\n", id));
   }
 
   if (!hidden)
@@ -1976,23 +1976,23 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
 
   pos = input->tell();
   if (pos+44 > zone->end() || input->readULong(1)!=0x40) {
-    MWAW_DEBUG_MSG(("FWText::readItem: can not find hidden data\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readItem: can not find hidden data\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
   input->seek(pos+42, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   if (pos+44+sz > zone->end()) {
-    MWAW_DEBUG_MSG(("FWText::readItem: find bad data size\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readItem: find bad data size\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
 
   if (set && m_state->m_itemMap.find(id) != m_state->m_itemMap.end()) {
-    FWTextInternal::Item &theItem = m_state->m_itemMap.find(id)->second;
-    theItem.m_hiddenZone.reset(new FWTextInternal::Zone);
+    FullWrtTextInternal::Item &theItem = m_state->m_itemMap.find(id)->second;
+    theItem.m_hiddenZone.reset(new FullWrtTextInternal::Zone);
     theItem.m_hiddenZone->m_zone = zone;
-    theItem.m_hiddenZone->m_zoneType = FWTextInternal::Zone::CollapsedItem;
+    theItem.m_hiddenZone->m_zoneType = FullWrtTextInternal::Zone::CollapsedItem;
     theItem.m_hiddenZone->m_begin = pos;
     theItem.m_hiddenZone->m_end = pos+44+sz;
   }
@@ -2004,7 +2004,7 @@ bool FWText::readItem(FWStruct::EntryPtr zone, int id, bool hidden)
 
 ////////////////////////////////////////////////////////////
 // read a style
-bool FWText::readStyle(FWStruct::EntryPtr zone)
+bool FullWrtText::readStyle(FullWrtStruct::EntryPtr zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -2027,7 +2027,7 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
   }
   if (sz!=0x46) {
     f << "###";
-    MWAW_DEBUG_MSG(("FWText::readStyle: style length seems odd\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readStyle: style length seems odd\n"));
     input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
@@ -2036,7 +2036,7 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
   int nSz=(int) input->readULong(1);
   if (!nSz || nSz>0x1f) {
     f << "###";
-    MWAW_DEBUG_MSG(("FWText::readStyle: style name length seems odd\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readStyle: style name length seems odd\n"));
     input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
     ascii.addPos(pos);
     ascii.addNote(f.str().c_str());
@@ -2056,7 +2056,7 @@ bool FWText::readStyle(FWStruct::EntryPtr zone)
 
 ////////////////////////////////////////////////////////////
 // read the paragraph data
-bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
+bool FullWrtText::readParagraphTabs(FullWrtStruct::EntryPtr zone, int id)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -2084,7 +2084,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
     val = (int)input->readULong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
-  FWTextInternal::Paragraph para;
+  FullWrtTextInternal::Paragraph para;
   float dim[2];
   for (int i = 0; i < 2; i++) // dim0: height?, dim1:width
     dim[i] = (float)(input->readULong(2))/72.f;
@@ -2211,7 +2211,7 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
       input->seek(pos+4+0x24, librevenge::RVNG_SEEK_SET);
     }
     else {
-      MWAW_DEBUG_MSG(("FWText::readParagraphTabs: can not find table data\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::readParagraphTabs: can not find table data\n"));
       f << "###";
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
@@ -2221,15 +2221,15 @@ bool FWText::readParagraphTabs(FWStruct::EntryPtr zone, int id)
   if (id < 0) ;
   else if (m_state->m_paragraphMap.find(id) == m_state->m_paragraphMap.end())
     m_state->m_paragraphMap.insert
-    (std::map<int,FWTextInternal::Paragraph>::value_type(id,para));
+    (std::map<int,FullWrtTextInternal::Paragraph>::value_type(id,para));
   else {
-    MWAW_DEBUG_MSG(("FWText::readParagraphTabs: id %d already exists\n", id));
+    MWAW_DEBUG_MSG(("FullWrtText::readParagraphTabs: id %d already exists\n", id));
   }
   return true;
 }
 
 /* read font/para modifier in text */
-bool FWText::readDataMod(FWStruct::EntryPtr zone, int id)
+bool FullWrtText::readDataMod(FullWrtStruct::EntryPtr zone, int id)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -2241,10 +2241,10 @@ bool FWText::readDataMod(FWStruct::EntryPtr zone, int id)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  FWTextInternal::DataModifier mod;
+  FullWrtTextInternal::DataModifier mod;
   int val = int(input->readULong(2));
   MWAWColor col;
-  if (FWStruct::getColor(val, col))
+  if (FullWrtStruct::getColor(val, col))
     mod.m_color = col;
   else if (val != 0xFFFF)
     f << "#col=" << std::hex << val << std::dec << ",";
@@ -2255,9 +2255,9 @@ bool FWText::readDataMod(FWStruct::EntryPtr zone, int id)
   f << "Entries(DataMod):" << mod;
   if (m_state->m_dataModMap.find(id) == m_state->m_dataModMap.end())
     m_state->m_dataModMap.insert
-    (std::map<int, FWTextInternal::DataModifier>::value_type(id, mod));
+    (std::map<int, FullWrtTextInternal::DataModifier>::value_type(id, mod));
   else {
-    MWAW_DEBUG_MSG(("FWText::readDataMod: Oops id %d already find\n", id));
+    MWAW_DEBUG_MSG(("FullWrtText::readDataMod: Oops id %d already find\n", id));
   }
   ascii.addPos(pos);
   ascii.addNote(f.str().c_str());
@@ -2265,7 +2265,7 @@ bool FWText::readDataMod(FWStruct::EntryPtr zone, int id)
 }
 
 /* read para modifier in doc info */
-bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
+bool FullWrtText::readParaModDocInfo(FullWrtStruct::EntryPtr zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &asciiFile = zone->getAsciiFile();
@@ -2282,7 +2282,7 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
   int const fSz = 18;
   f << "Entries(ParaMod):N=" << num << ",";
   if (blckSz < 2 || blckSz != 2 + num*fSz || endData > zone->end()) {
-    MWAW_DEBUG_MSG(("FWText::readParaModDocInfo::readCitationDocInfo: problem reading the data block or the number of data\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::readParaModDocInfo::readCitationDocInfo: problem reading the data block or the number of data\n"));
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -2297,11 +2297,11 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
 
-  m_state->m_paragraphModList.push_back(FWTextInternal::ParaModifier());
+  m_state->m_paragraphModList.push_back(FullWrtTextInternal::ParaModifier());
   for (int i = 0; i < num; i++) {
     f.str("");
     pos = input->tell();
-    FWTextInternal::ParaModifier mod;
+    FullWrtTextInternal::ParaModifier mod;
     for (int j = 0; j < 2; j++) {
       val = int(input->readLong(2));
       if (val==-1)
@@ -2334,7 +2334,7 @@ bool FWText::readParaModDocInfo(FWStruct::EntryPtr zone)
 
 ////////////////////////////////////////////////////////////
 // read the column data
-bool FWText::readColumns(FWStruct::EntryPtr zone)
+bool FullWrtText::readColumns(FullWrtStruct::EntryPtr zone)
 {
   MWAWInputStreamPtr input = zone->m_input;
   libmwaw::DebugFile &ascii = zone->getAsciiFile();
@@ -2381,19 +2381,19 @@ bool FWText::readColumns(FWStruct::EntryPtr zone)
 
 ////////////////////////////////////////////////////////////
 //! send data to the listener
-bool FWText::sendMainText()
+bool FullWrtText::sendMainText()
 {
   size_t numZones = m_state->m_mainZones.size();
   if (!numZones) {
-    MWAW_DEBUG_MSG(("FWText::sendMainText: can not find main zone\n"));
+    MWAW_DEBUG_MSG(("FullWrtText::sendMainText: can not find main zone\n"));
     return false;
   }
   if (!m_parserState->m_textListener) return true;
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it;
   for (size_t i = 0; i < numZones; i++) {
     it = m_state->m_entryMap.find(m_state->m_mainZones[i]);
     if (it == m_state->m_entryMap.end() || !it->second) {
-      MWAW_DEBUG_MSG(("FWText::sendMainText: can not find main zone: internal problem\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::sendMainText: can not find main zone: internal problem\n"));
       continue;
     }
     m_mainParser->newPage(++m_state->m_actualPage);
@@ -2402,7 +2402,7 @@ bool FWText::sendMainText()
   return true;
 }
 
-int FWText::getHeaderFooterId(bool header, int page, int &numSimilar) const
+int FullWrtText::getHeaderFooterId(bool header, int page, int &numSimilar) const
 {
   int type=header ? 0x11 : 0x12;
   size_t numZones = m_state->m_mainZones.size();
@@ -2412,13 +2412,13 @@ int FWText::getHeaderFooterId(bool header, int page, int &numSimilar) const
       numSimilar=m_state->m_numPages-page+1;
     return -1;
   }
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it =
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it =
     m_state->m_entryMap.begin();
   int nextPage=-1;
   int res=-1;
   while (it!=m_state->m_entryMap.end()) {
     int id=it->first;
-    shared_ptr<FWTextInternal::Zone> zone=it++->second;
+    shared_ptr<FullWrtTextInternal::Zone> zone=it++->second;
     if (!zone || !zone->m_zone || zone->m_zone->m_type!=type ||
         zone->m_pages[0]<page)
       continue;
@@ -2433,41 +2433,41 @@ int FWText::getHeaderFooterId(bool header, int page, int &numSimilar) const
   return res;
 }
 
-bool FWText::send(int zId, MWAWColor fontColor)
+bool FullWrtText::send(int zId, MWAWColor fontColor)
 {
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it;
   it = m_state->m_entryMap.find(zId);
   if (it == m_state->m_entryMap.end() || !it->second) {
-    MWAW_DEBUG_MSG(("FWText::send: can not find zone: %d\n", zId));
+    MWAW_DEBUG_MSG(("FullWrtText::send: can not find zone: %d\n", zId));
     return false;
   }
   send(it->second, fontColor);
   return true;
 }
 
-void FWText::flushExtra()
+void FullWrtText::flushExtra()
 {
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it;
   for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
-    shared_ptr<FWTextInternal::Zone> zone = it->second;
+    shared_ptr<FullWrtTextInternal::Zone> zone = it->second;
     if (!zone || !zone->m_zone || zone->m_zone->isParsed())
       continue;
     send(zone);
   }
 }
 
-void FWText::sortZones()
+void FullWrtText::sortZones()
 {
-  std::multimap<int, shared_ptr<FWTextInternal::Zone> >::iterator it;
+  std::multimap<int, shared_ptr<FullWrtTextInternal::Zone> >::iterator it;
   int numZones = 0, totalNumPages = 0;
   std::vector<int> pagesLimits;
   for (it = m_state->m_entryMap.begin(); it != m_state->m_entryMap.end(); ++it) {
-    shared_ptr<FWTextInternal::Zone> zone = it->second;
-    if (!zone || !zone->m_zone || zone->m_zoneType != FWTextInternal::Zone::Main)
+    shared_ptr<FullWrtTextInternal::Zone> zone = it->second;
+    if (!zone || !zone->m_zone || zone->m_zoneType != FullWrtTextInternal::Zone::Main)
       continue;
     int fPage = zone->m_pages[0], lPage = zone->m_pages[1];
     if (lPage < fPage) {
-      MWAW_DEBUG_MSG(("FWText::sortZones: last page is inferior to firstPage\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::sortZones: last page is inferior to firstPage\n"));
       lPage = fPage;
     }
     int pos = 0;
@@ -2491,7 +2491,7 @@ void FWText::sortZones()
     numZones++;
     int nPages = (lPage-fPage)+1;
     if (nPages < int(zone->m_pagesInfo.size())) {
-      MWAW_DEBUG_MSG(("FWText::sortZones: pages limit seems odd!!!\n"));
+      MWAW_DEBUG_MSG(("FullWrtText::sortZones: pages limit seems odd!!!\n"));
       nPages = int(zone->m_pagesInfo.size());
     }
     totalNumPages += nPages;
@@ -2499,38 +2499,38 @@ void FWText::sortZones()
   m_state->m_numPages = totalNumPages;
 }
 
-void FWText::createItemStructures()
+void FullWrtText::createItemStructures()
 {
-  std::map<int, FWTextInternal::Item>::iterator it=m_state->m_itemMap.begin(), it2;
+  std::map<int, FullWrtTextInternal::Item>::iterator it=m_state->m_itemMap.begin(), it2;
   for (; it != m_state->m_itemMap.end(); ++it) {
-    FWTextInternal::Item &item = it->second;
-    int childId=item.m_structId[FWTextInternal::Item::Child];
-    int id=item.m_structId[FWTextInternal::Item::Main];
+    FullWrtTextInternal::Item &item = it->second;
+    int childId=item.m_structId[FullWrtTextInternal::Item::Child];
+    int id=item.m_structId[FullWrtTextInternal::Item::Main];
     if (childId<=0)
       continue;
     int prevId=0;
     std::set<int> seens;
     while (childId>0) {
       if (seens.find(childId)!=seens.end()) {
-        MWAW_DEBUG_MSG(("FWText::createItemStructures:find loop\n"));
+        MWAW_DEBUG_MSG(("FullWrtText::createItemStructures:find loop\n"));
         break;
       }
       seens.insert(childId);
       it2=m_state->m_itemMap.find(childId);
       if (it2==m_state->m_itemMap.end()) {
-        MWAW_DEBUG_MSG(("FWText::createItemStructures: can not find child: %d\n", childId));
+        MWAW_DEBUG_MSG(("FullWrtText::createItemStructures: can not find child: %d\n", childId));
         break;
       }
-      FWTextInternal::Item &child = it2->second;
-      if (child.m_structId[FWTextInternal::Item::Father] != id ||
-          child.m_structId[FWTextInternal::Item::Prev] != prevId) {
-        MWAW_DEBUG_MSG(("FWText::createItemStructures: find unexpected child %d\n", childId));
+      FullWrtTextInternal::Item &child = it2->second;
+      if (child.m_structId[FullWrtTextInternal::Item::Father] != id ||
+          child.m_structId[FullWrtTextInternal::Item::Prev] != prevId) {
+        MWAW_DEBUG_MSG(("FullWrtText::createItemStructures: find unexpected child %d\n", childId));
         break;
       }
       item.m_childList.push_back(childId);
       if (child.m_hidden) item.m_collapsed=true;
       prevId=childId;
-      childId=child.m_structId[FWTextInternal::Item::Next];
+      childId=child.m_structId[FullWrtTextInternal::Item::Next];
     }
   }
 }

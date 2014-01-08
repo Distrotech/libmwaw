@@ -44,13 +44,13 @@
 
 #include <libmwaw/libmwaw.hxx>
 
-#include "ACParser.hxx"
+#include "ActaParser.hxx"
 #include "BeagleWksParser.hxx"
 #include "BeagleWksSSParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
 #include "EDParser.hxx"
-#include "FWParser.hxx"
+#include "FullWrtParser.hxx"
 #include "GWParser.hxx"
 #include "HMWJParser.hxx"
 #include "HMWKParser.hxx"
@@ -393,7 +393,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
   try {
     switch (header->getType()) {
     case MWAWDocument::MWAW_T_ACTA:
-      parser.reset(new ACParser(input, rsrcParser, header));
+      parser.reset(new ActaParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       parser.reset(new BeagleWksParser(input, rsrcParser, header));
@@ -408,7 +408,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new EDParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_FULLWRITE:
-      parser.reset(new FWParser(input, rsrcParser, header));
+      parser.reset(new FullWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_GREATWORKS:
       parser.reset(new GWParser(input, rsrcParser, header));

@@ -35,17 +35,17 @@
  * Parser to FullWrite text document
  *
  */
-#ifndef FW_TEXT
-#  define FW_TEXT
+#ifndef FullWrt_TEXT
+#  define FullWrt_TEXT
 
 #include "libmwaw_internal.hxx"
 
 
 #include "MWAWDebug.hxx"
 
-#include "FWStruct.hxx"
+#include "FullWrtStruct.hxx"
 
-namespace FWTextInternal
+namespace FullWrtTextInternal
 {
 struct Font;
 struct Paragraph;
@@ -56,21 +56,21 @@ struct Zone;
 struct State;
 }
 
-class FWParser;
+class FullWrtParser;
 
 /** \brief the main class to read the text part of writenow file
  *
  *
  *
  */
-class FWText
+class FullWrtText
 {
-  friend class FWParser;
+  friend class FullWrtParser;
 public:
   //! constructor
-  FWText(FWParser &parser);
+  FullWrtText(FullWrtParser &parser);
   //! destructor
-  virtual ~FWText();
+  virtual ~FullWrtText();
 
   /** returns the file version */
   int version() const;
@@ -96,23 +96,23 @@ protected:
   //
 
   //! check if a zone is a text zone, if so read it...
-  bool readTextData(FWStruct::EntryPtr zone);
+  bool readTextData(FullWrtStruct::EntryPtr zone);
 
   //! send the text
-  bool send(shared_ptr<FWTextInternal::Zone> zone, MWAWColor fontColor=MWAWColor::black());
+  bool send(shared_ptr<FullWrtTextInternal::Zone> zone, MWAWColor fontColor=MWAWColor::black());
 
   //! send a simple line
-  void send(shared_ptr<FWTextInternal::Zone> zone, int numChar,
-            FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
+  void send(shared_ptr<FullWrtTextInternal::Zone> zone, int numChar,
+            FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler,
             std::string &str);
 
   //! try send a table row
-  bool sendTable(shared_ptr<FWTextInternal::Zone> zone,
-                 FWTextInternal::LineHeader const &lHeader,
-                 FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler,
+  bool sendTable(shared_ptr<FullWrtTextInternal::Zone> zone,
+                 FullWrtTextInternal::LineHeader const &lHeader,
+                 FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler,
                  std::string &str);
   //! send a hidden item
-  bool sendHiddenItem(int id, FWTextInternal::Font &font, FWTextInternal::Paragraph &ruler);
+  bool sendHiddenItem(int id, FullWrtTextInternal::Font &font, FullWrtTextInternal::Paragraph &ruler);
 
   //! prepare the different data (called sortZones and createItemStructures)
   void prepareData()
@@ -131,28 +131,28 @@ protected:
   //
 
   //! try to read the header of a line
-  bool readLineHeader(shared_ptr<FWTextInternal::Zone> zone, FWTextInternal::LineHeader &lHeader);
+  bool readLineHeader(shared_ptr<FullWrtTextInternal::Zone> zone, FullWrtTextInternal::LineHeader &lHeader);
 
   //! check if the input of the zone points to a item zone in DataStruct Zone
-  bool readItem(FWStruct::EntryPtr zone, int id=-1, bool hidden=false);
+  bool readItem(FullWrtStruct::EntryPtr zone, int id=-1, bool hidden=false);
 
   //! check if the input of the zone points to a paragraph zone in DataStruct Zone
-  bool readParagraphTabs(FWStruct::EntryPtr zone, int id=-1);
+  bool readParagraphTabs(FullWrtStruct::EntryPtr zone, int id=-1);
   //! try to read the paragraph modifier (at the end of doc info)
-  bool readParaModDocInfo(FWStruct::EntryPtr zone);
+  bool readParaModDocInfo(FullWrtStruct::EntryPtr zone);
 
   //! try to read a style
-  bool readStyle(FWStruct::EntryPtr zone);
+  bool readStyle(FullWrtStruct::EntryPtr zone);
 
   //! try to read the font/paragraph modifier zone (Zone1f)
-  bool readDataMod(FWStruct::EntryPtr zone, int id);
+  bool readDataMod(FullWrtStruct::EntryPtr zone, int id);
 
   //! check if the input of the zone points to the columns definition, ...
-  bool readColumns(FWStruct::EntryPtr zone);
+  bool readColumns(FullWrtStruct::EntryPtr zone);
 
 private:
-  FWText(FWText const &orig);
-  FWText &operator=(FWText const &orig);
+  FullWrtText(FullWrtText const &orig);
+  FullWrtText &operator=(FullWrtText const &orig);
 
 protected:
   //
@@ -162,10 +162,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<FWTextInternal::State> m_state;
+  shared_ptr<FullWrtTextInternal::State> m_state;
 
   //! the main parser;
-  FWParser *m_mainParser;
+  FullWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

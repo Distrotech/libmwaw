@@ -50,15 +50,15 @@
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
 
-#include "ACParser.hxx"
+#include "ActaParser.hxx"
 
-#include "ACText.hxx"
+#include "ActaText.hxx"
 
-/** Internal: the structures of a ACText */
-namespace ACTextInternal
+/** Internal: the structures of a ActaText */
+namespace ActaTextInternal
 {
 ////////////////////////////////////////
-//! Internal: a topic of a ACText
+//! Internal: a topic of a ActaText
 struct Topic {
   //! constructor
   Topic() : m_depth(0), m_type(0), m_hidden(0), m_pageBreak(false), m_font(), m_labelColor(MWAWColor::black()),
@@ -116,7 +116,7 @@ struct Topic {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a ACText
+//! Internal: the state of a ActaText
 struct State {
   //! constructor
   State() : m_topicList(), m_listId(-1), m_colorList(), m_version(-1), m_numPages(-1), m_actualPage(1)
@@ -156,22 +156,22 @@ void State::setDefaultColorList(int version)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ACText::ACText(ACParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ACTextInternal::State), m_mainParser(&parser)
+ActaText::ActaText(ActaParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ActaTextInternal::State), m_mainParser(&parser)
 {
 }
 
-ACText::~ACText()
+ActaText::~ActaText()
 { }
 
-int ACText::version() const
+int ActaText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int ACText::numPages() const
+int ActaText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
@@ -185,7 +185,7 @@ int ACText::numPages() const
   return m_state->m_numPages = nPages;
 }
 
-bool ACText::getColor(int id, MWAWColor &col) const
+bool ActaText::getColor(int id, MWAWColor &col) const
 {
   int numColor = (int) m_state->m_colorList.size();
   if (!numColor) {
@@ -205,7 +205,7 @@ bool ACText::getColor(int id, MWAWColor &col) const
 //
 // find/send the different zones
 //
-bool ACText::createZones()
+bool ActaText::createZones()
 {
   int vers=version();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -219,7 +219,7 @@ bool ACText::createZones()
   long pos = input->tell();
   int val=(int) input->readLong(2);
   if (val || (vers<3 && !input->isEnd())) {
-    MWAW_DEBUG_MSG(("ACText::createZones: find unexpected end data\n"));
+    MWAW_DEBUG_MSG(("ActaText::createZones: find unexpected end data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(Loose):###");
   }
@@ -230,12 +230,12 @@ bool ACText::createZones()
   return m_state->m_topicList.size();
 }
 
-bool ACText::sendMainText()
+bool ActaText::sendMainText()
 {
   // create the main list
   shared_ptr<MWAWList> list = m_mainParser->getMainList();
   if (!list) {
-    MWAW_DEBUG_MSG(("ACText::sendMainText: can retrieve the main list\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendMainText: can retrieve the main list\n"));
   }
   else
     m_state->m_listId = list->getId();
@@ -248,7 +248,7 @@ bool ACText::sendMainText()
 //
 // read/send a topic
 //
-bool ACText::readTopic()
+bool ActaText::readTopic()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -258,7 +258,7 @@ bool ACText::readTopic()
   long pos = input->tell();
   if (!input->checkPosition(pos+18+4+((vers>=3) ? 4 : 0)))
     return false;
-  ACTextInternal::Topic topic;
+  ActaTextInternal::Topic topic;
   topic.m_depth=(int) input->readLong(2); // checkme
   topic.m_type=(int) input->readLong(2);
   if (!topic.valid()) {
@@ -284,7 +284,7 @@ bool ACText::readTopic()
       f << "#col="  << color << ",";
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("ACText::readTopic: sending color label is not implemented\n"));
+      MWAW_DEBUG_MSG(("ActaText::readTopic: sending color label is not implemented\n"));
       first = false;
     }
   }
@@ -311,7 +311,7 @@ bool ACText::readTopic()
     pos = input->tell();
     long sz=long(input->readULong(4));
     if (sz < 0 || !input->checkPosition(pos+4+sz)) {
-      MWAW_DEBUG_MSG(("ACText::readTopic: can not read a topic zone\n"));
+      MWAW_DEBUG_MSG(("ActaText::readTopic: can not read a topic zone\n"));
       ascFile.addPos(pos);
       ascFile.addNote("###");
 
@@ -333,11 +333,11 @@ bool ACText::readTopic()
   return true;
 }
 
-bool ACText::sendTopic(ACTextInternal::Topic const &topic)
+bool ActaText::sendTopic(ActaTextInternal::Topic const &topic)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("ACText::sendTopic: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendTopic: can not find a listener\n"));
     return false;
   }
   if (topic.m_pageBreak)
@@ -352,7 +352,7 @@ bool ACText::sendTopic(ACTextInternal::Topic const &topic)
     f.str("");
     f << "Entries(Data1):";
     if (topic.m_auxi.length()!=6) {
-      MWAW_DEBUG_MSG(("ACText::readTopic: find unexpected size for data1\n"));
+      MWAW_DEBUG_MSG(("ActaText::readTopic: find unexpected size for data1\n"));
       f << "###";
     }
     else {
@@ -389,15 +389,15 @@ bool ACText::sendTopic(ACTextInternal::Topic const &topic)
 //
 // send the text
 //
-bool ACText::sendText(ACTextInternal::Topic const &topic)
+bool ActaText::sendText(ActaTextInternal::Topic const &topic)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("ACText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendText: can not find a listener\n"));
     return false;
   }
   if (!topic.m_data.valid()) {
-    MWAW_DEBUG_MSG(("ACText::sendText: can not find my data\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendText: can not find my data\n"));
     listener->insertEOL();
     return false;
   }
@@ -414,7 +414,7 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
     f.str("");
     f << "Entries(CharPLC):n=" << n << ",";
     if (2+20*n!=long(topic.m_fonts.length())) {
-      MWAW_DEBUG_MSG(("ACText::sendText: find unexpected number of font\n"));
+      MWAW_DEBUG_MSG(("ActaText::sendText: find unexpected number of font\n"));
       f << "###";
       ascFile.addPos(topic.m_fonts.begin()-4);
       ascFile.addNote(f.str().c_str());
@@ -488,15 +488,15 @@ bool ACText::sendText(ACTextInternal::Topic const &topic)
 //
 // send a graphic
 //
-bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
+bool ActaText::sendGraphic(ActaTextInternal::Topic const &topic)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendGraphic: can not find a listener\n"));
     return false;
   }
   if (!topic.m_data.valid()) {
-    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find my data\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendGraphic: can not find my data\n"));
     listener->insertEOL();
     return false;
   }
@@ -513,7 +513,7 @@ bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)dataSz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("ACText::sendGraphic: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("ActaText::sendGraphic: can not find the picture\n"));
     ascFile.addPos(pos);
     ascFile.addNote("###");
 
@@ -541,7 +541,7 @@ bool ACText::sendGraphic(ACTextInternal::Topic const &topic)
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool ACText::readFont(MWAWFont &font, bool inPLC)
+bool ActaText::readFont(MWAWFont &font, bool inPLC)
 {
   font = MWAWFont();
 

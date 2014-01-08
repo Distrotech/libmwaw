@@ -46,34 +46,34 @@
 
 #include "MWAWInputStream.hxx"
 
-#include "FWStruct.hxx"
+#include "FullWrtStruct.hxx"
 #include "MWAWParser.hxx"
 
-namespace FWParserInternal
+namespace FullWrtParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class FWGraph;
-class FWText;
+class FullWrtGraph;
+class FullWrtText;
 
 /** \brief the main class to read a FullWrite file
  *
  *
  *
  */
-class FWParser : public MWAWTextParser
+class FullWrtParser : public MWAWTextParser
 {
-  friend class FWGraph;
-  friend class FWText;
-  friend class FWParserInternal::SubDocument;
+  friend class FullWrtGraph;
+  friend class FullWrtText;
+  friend class FullWrtParserInternal::SubDocument;
 
 public:
   //! constructor
-  FWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  FullWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~FWParser();
+  virtual ~FullWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -101,28 +101,28 @@ protected:
   bool readDocPosition();
 
   //! try to read the file zones main flags
-  bool readFileZoneFlags(FWStruct::EntryPtr zone);
+  bool readFileZoneFlags(FullWrtStruct::EntryPtr zone);
 
   //! try to read the file zones position
-  bool readFileZonePos(FWStruct::EntryPtr zone);
+  bool readFileZonePos(FullWrtStruct::EntryPtr zone);
 
   //! try to read the zone containing the data of each doc zone (ie. Zone0)
-  bool readDocZoneData(FWStruct::EntryPtr zone);
+  bool readDocZoneData(FullWrtStruct::EntryPtr zone);
 
   //! try to read the zone which stores the structure of zone0, ...  (ie. Zone1)
-  bool readDocZoneStruct(FWStruct::EntryPtr zone);
+  bool readDocZoneStruct(FullWrtStruct::EntryPtr zone);
 
   //! try to read zone2, a zone which stores the document information zone, ...
-  bool readDocInfo(FWStruct::EntryPtr zone);
+  bool readDocInfo(FullWrtStruct::EntryPtr zone);
 
   //! try to read the end of zone2 (only v2) ?
-  bool readEndDocInfo(FWStruct::EntryPtr zone);
+  bool readEndDocInfo(FullWrtStruct::EntryPtr zone);
 
   //! try to read the list of citation (at the end of doc info)
-  bool readCitationDocInfo(FWStruct::EntryPtr zone);
+  bool readCitationDocInfo(FullWrtStruct::EntryPtr zone);
 
   //! try read the print info zone
-  bool readPrintInfo(FWStruct::EntryPtr zone);
+  bool readPrintInfo(FullWrtStruct::EntryPtr zone);
 
   //
   // interface to the graph parser
@@ -131,7 +131,7 @@ protected:
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! try to return a border corresponding to an id
-  bool getBorder(int bId, FWStruct::Border &border) const;
+  bool getBorder(int bId, FullWrtStruct::Border &border) const;
 
   //
   // interface to the text parser
@@ -162,21 +162,21 @@ protected:
   //
 
   //! try to read the reference data
-  bool readReferenceData(FWStruct::EntryPtr zone);
+  bool readReferenceData(FullWrtStruct::EntryPtr zone);
   //! try to read the data of a zone which begins with a generic header
-  bool readGenericDocData(FWStruct::EntryPtr zone, FWStruct::ZoneHeader &doc);
+  bool readGenericDocData(FullWrtStruct::EntryPtr zone, FullWrtStruct::ZoneHeader &doc);
 
 protected:
   //
   // data
   //
   //! the state
-  shared_ptr<FWParserInternal::State> m_state;
+  shared_ptr<FullWrtParserInternal::State> m_state;
 
   //! the graph parser
-  shared_ptr<FWGraph> m_graphParser;
+  shared_ptr<FullWrtGraph> m_graphParser;
   //! the text parser
-  shared_ptr<FWText> m_textParser;
+  shared_ptr<FullWrtText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
