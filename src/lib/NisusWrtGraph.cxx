@@ -48,13 +48,13 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "NSParser.hxx"
-#include "NSStruct.hxx"
+#include "NisusWrtParser.hxx"
+#include "NisusWrtStruct.hxx"
 
-#include "NSGraph.hxx"
+#include "NisusWrtGraph.hxx"
 
-/** Internal: the structures of a NSGraph */
-namespace NSGraphInternal
+/** Internal: the structures of a NisusWrtGraph */
+namespace NisusWrtGraphInternal
 {
 //! a RSSO entry in a pict file
 struct RSSOEntry {
@@ -73,7 +73,7 @@ struct RSSOEntry {
   Box2f m_position;
 };
 ////////////////////////////////////////
-//! Internal: the state of a NSGraph
+//! Internal: the state of a NisusWrtGraph
 struct State {
   //! constructor
   State() : m_numPages(0), m_maxPageGraphic(0), m_idPictMap(), m_idRssoMap() { }
@@ -88,11 +88,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a NSGraph
+//! Internal: the subdocument of a NisusWrtGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(NSGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, librevenge::RVNGPropertyList const &extras) :
+  SubDocument(NisusWrtGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, librevenge::RVNGPropertyList const &extras) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos), m_extras(extras) {}
 
   //! destructor
@@ -111,7 +111,7 @@ public:
 
 protected:
   /** the graph parser */
-  NSGraph *m_graphParser;
+  NisusWrtGraph *m_graphParser;
   //! the pict id
   int m_id;
   //! the pict position
@@ -151,21 +151,21 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSGraph::NSGraph(NSParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new NSGraphInternal::State),
+NisusWrtGraph::NisusWrtGraph(NisusWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new NisusWrtGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-NSGraph::~NSGraph()
+NisusWrtGraph::~NisusWrtGraph()
 { }
 
-int NSGraph::version() const
+int NisusWrtGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-int NSGraph::numPages() const
+int NisusWrtGraph::numPages() const
 {
   return m_state->m_maxPageGraphic;
 }
@@ -175,11 +175,11 @@ int NSGraph::numPages() const
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool NSGraph::createZones()
+bool NisusWrtGraph::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("NSGraph::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -224,7 +224,7 @@ bool NSGraph::createZones()
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("PLDT");
-    NSStruct::RecursifData data(NSStruct::Z_Main);
+    NisusWrtStruct::RecursifData data(NisusWrtStruct::Z_Main);
     data.read(*m_mainParser, entry);
     readPLDT(data);
   }
@@ -233,10 +233,10 @@ bool NSGraph::createZones()
 }
 
 // read the PLAC zone ( a list of picture placement ? )
-bool NSGraph::readPLAC(MWAWEntry const &entry)
+bool NisusWrtGraph::readPLAC(MWAWEntry const &entry)
 {
   if ((!entry.valid()&&entry.length()) || (entry.length()%202)) {
-    MWAW_DEBUG_MSG(("NSGraph::readPLAC: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPLAC: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -266,10 +266,10 @@ bool NSGraph::readPLAC(MWAWEntry const &entry)
 }
 
 // read PLDT zone: a unknown zone (a type, an id/anchor type? and a bdbox )
-bool NSGraph::readPLDT(NSStruct::RecursifData const &data)
+bool NisusWrtGraph::readPLDT(NisusWrtStruct::RecursifData const &data)
 {
   if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSGraph::readPLDT: find unexpected zoneType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: find unexpected zoneType\n"));
     return false;
   }
 
@@ -277,15 +277,15 @@ bool NSGraph::readPLDT(NSStruct::RecursifData const &data)
     return true;
 
   if (data.m_childList.size() > 1) {
-    MWAW_DEBUG_MSG(("NSGraph::readPLDT: level 0 node contains more than 1 node\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: level 0 node contains more than 1 node\n"));
   }
   if (data.m_childList[0].isLeaf()) {
-    MWAW_DEBUG_MSG(("NSGraph::readPLDT: level 1 node is a leaf\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: level 1 node is a leaf\n"));
     return false;
   }
-  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  NisusWrtStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
   size_t numData = mainData.m_childList.size();
-  //  NSGraphInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
+  //  NisusWrtGraphInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   libmwaw::DebugStream f;
@@ -293,18 +293,18 @@ bool NSGraph::readPLDT(NSStruct::RecursifData const &data)
   long val;
   for (size_t n = 0 ; n < numData; n++) {
     if (mainData.m_childList[n].isLeaf()) {
-      MWAW_DEBUG_MSG(("NSGraph::readPLDT: oops some level 2 node are leaf\n"));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: oops some level 2 node are leaf\n"));
       continue;
     }
-    NSStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
+    NisusWrtStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
     /* type == 7fffffff and wh = 2 */
     if (dt.m_childList.size() != 1) {
-      MWAW_DEBUG_MSG(("NSGraph::readPLDT: find an odd number of 3 leavers\n"));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: find an odd number of 3 leavers\n"));
       continue;
     }
-    NSStruct::RecursifData::Node const &child= dt.m_childList[0];
+    NisusWrtStruct::RecursifData::Node const &child= dt.m_childList[0];
     if (!child.isLeaf() || child.m_entry.length() < 14) {
-      MWAW_DEBUG_MSG(("NSGraph::readPLDT: find an odd level 3 leaf\n"));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::readPLDT: find an odd level 3 leaf\n"));
       continue;
     }
 
@@ -328,14 +328,14 @@ bool NSGraph::readPLDT(NSStruct::RecursifData const &data)
 }
 
 //! read the PGRA resource: the number of page graphic ? (id 20000)
-bool NSGraph::readPGRA(MWAWEntry const &entry)
+bool NisusWrtGraph::readPGRA(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
-    MWAW_DEBUG_MSG(("NSGraph::readPGRA: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPGRA: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 20000) {
-    MWAW_DEBUG_MSG(("NSGraph::readPGRA: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::readPGRA: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -363,11 +363,11 @@ bool NSGraph::readPGRA(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPtr input) const
+std::vector<NisusWrtGraphInternal::RSSOEntry> NisusWrtGraph::findRSSOEntry(MWAWInputStreamPtr input) const
 {
-  std::vector<NSGraphInternal::RSSOEntry> listRSSO;
+  std::vector<NisusWrtGraphInternal::RSSOEntry> listRSSO;
   if (!input) {
-    MWAW_DEBUG_MSG(("NSGraph::findRSSOEntry: can not find the input\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::findRSSOEntry: can not find the input\n"));
     return listRSSO;
   }
 
@@ -403,14 +403,14 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
     float dim[4];
     for (int i=0; i < 4; i++) dim[i] = float(input->readLong(2));
     if (input->isEnd()) break;
-    NSGraphInternal::RSSOEntry rsso;
+    NisusWrtGraphInternal::RSSOEntry rsso;
     rsso.m_id = (int) input->readLong(2);
     if (input->isEnd()) break;
     rsso.m_position=Box2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
     if (rsso.m_id > 0)
       listRSSO.push_back(rsso);
     else if (version() > 3) {
-      MWAW_DEBUG_MSG(("NSGraph::findRSSOEntry: find odd rsso id%d\n", rsso.m_id));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::findRSSOEntry: find odd rsso id%d\n", rsso.m_id));
     }
   }
 
@@ -420,13 +420,13 @@ std::vector<NSGraphInternal::RSSOEntry> NSGraph::findRSSOEntry(MWAWInputStreamPt
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                          librevenge::RVNGPropertyList extras)
+bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
+                                librevenge::RVNGPropertyList extras)
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: can not find the listener\n"));
     return true;
   }
   std::map<int, MWAWEntry> &pictMap = inPictRsrc ?
@@ -434,19 +434,19 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
   if (pictMap.find(pictId) == pictMap.end()) {
     if (version() <= 3 && !inPictRsrc)
       return true;
-    MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: can not find the picture\n"));
     return false;
   }
   MWAWEntry &entry = pictMap.find(pictId)->second;
   librevenge::RVNGBinaryData data;
   bool ok = rsrcParser->parsePICT(entry, data) && data.size();
   if (!ok) {
-    MWAW_DEBUG_MSG(("NSGraph::sendPicture: can not read the picture\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: can not read the picture\n"));
   }
   entry.setParsed(true);
   if (!ok) return true;
 
-  std::vector<NSGraphInternal::RSSOEntry> listRSSO;
+  std::vector<NisusWrtGraphInternal::RSSOEntry> listRSSO;
   if (inPictRsrc) {
     // we must first look for RSSO entry
     MWAWInputStreamPtr dataInput=MWAWInputStream::get(data,false);
@@ -464,7 +464,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
     pictPos.setRelativePosition(MWAWPosition::Frame);
     pictPos.setOrigin(Vec2f(0,0));
     MWAWSubDocumentPtr subdoc
-    (new NSGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos, extras));
+    (new NisusWrtGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos, extras));
     listener->insertTextBox(framePos, subdoc);
     return true;
   }
@@ -473,7 +473,7 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
   // then the author possible picture
   pictPos.setClippingPosition(Vec2f(), Vec2f());
   for (size_t i=0; i < listRSSO.size(); i++) {
-    NSGraphInternal::RSSOEntry const &rssoEntry = listRSSO[i];
+    NisusWrtGraphInternal::RSSOEntry const &rssoEntry = listRSSO[i];
     MWAWPosition rssoPos(pictPos);
     rssoPos.setOrigin(pictPos.origin()+rssoEntry.m_position.min());
     rssoPos.setSize(rssoEntry.m_position.size());
@@ -482,11 +482,11 @@ bool NSGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
   return true;
 }
 
-bool NSGraph::sendPageGraphics()
+bool NisusWrtGraph::sendPageGraphics()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPageGraphics: can not find the listener\n"));
     return true;
   }
   Vec2f LT = 72.f*m_mainParser->getPageLeftTop();
@@ -496,7 +496,7 @@ bool NSGraph::sendPageGraphics()
     MWAWEntry &entry = m_state->m_idPictMap.find(20000+i)->second;
     librevenge::RVNGBinaryData data;
     if (!rsrcParser->parsePICT(entry, data) || !data.size()) {
-      MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not read the file picture\n"));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::sendPageGraphics: can not read the file picture\n"));
       continue;
     }
     MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
@@ -504,7 +504,7 @@ bool NSGraph::sendPageGraphics()
     dataInput->seek(0, librevenge::RVNG_SEEK_SET);
     Box2f box;
     if (MWAWPictData::check(dataInput, (int)data.size(), box) == MWAWPict::MWAW_R_BAD) {
-      MWAW_DEBUG_MSG(("NSGraph::sendPageGraphics: can not determine the picture type\n"));
+      MWAW_DEBUG_MSG(("NisusWrtGraph::sendPageGraphics: can not determine the picture type\n"));
       continue;
     }
     MWAWPosition pictPos(box.min()+LT, box.size(), librevenge::RVNG_POINT);
@@ -516,13 +516,13 @@ bool NSGraph::sendPageGraphics()
   return true;
 }
 
-void NSGraph::flushExtra()
+void NisusWrtGraph::flushExtra()
 {
   for (std::map<int, MWAWEntry>::iterator it = m_state->m_idPictMap.begin();
        it != m_state->m_idPictMap.end(); ++it) {
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
-    MWAW_DEBUG_MSG(("NSGraph::sendPicture: picture unparsed: %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), true, pictPos);
@@ -531,7 +531,7 @@ void NSGraph::flushExtra()
        it != m_state->m_idRssoMap.end(); ++it) {
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
-    MWAW_DEBUG_MSG(("NSGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), false, pictPos, librevenge::RVNGPropertyList());

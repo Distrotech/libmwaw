@@ -34,11 +34,11 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "NSParser.hxx"
+#include "NisusWrtParser.hxx"
 
-#include "NSStruct.hxx"
+#include "NisusWrtStruct.hxx"
 
-namespace NSStruct
+namespace NisusWrtStruct
 {
 std::ostream &operator<< (std::ostream &o, Position const &pos)
 {
@@ -74,18 +74,18 @@ std::ostream &operator<< (std::ostream &o, FootnoteInfo const &fnote)
 ////////////////////////////////////////////////////////////
 // read a recursive zone
 ////////////////////////////////////////////////////////////
-bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
+bool RecursifData::read(NisusWrtParser &parser, MWAWEntry const &entry)
 {
   if (!m_info || m_info->m_zoneType < 0 || m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: find unexpected zoneType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: find unexpected zoneType\n"));
     return false;
   }
   if (m_level < 0 || m_level >= 3) {
-    MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: find unexpected level: %d\n", m_level));
+    MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: find unexpected level: %d\n", m_level));
     return false;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: the entry is bad\n"));
     return false;
   }
 
@@ -107,12 +107,12 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
     pos = input->tell();
     bool ok = true;
     if (pos+12 > entry.end()) {
-      MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: can not read entry %d\n", num-1));
+      MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: can not read entry %d\n", num-1));
       ok = false;
     }
     int level = (int) input->readLong(2);
     if (level != m_level && level != m_level+1) {
-      MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: find unexpected level for entry %d\n", num-1));
+      MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: find unexpected level for entry %d\n", num-1));
       ok = false;
     }
     f.str("");
@@ -137,7 +137,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
     }
     long endPos = pos+totalSz;
     if (totalSz < minSize || endPos > entry.end()) {
-      MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: can not read entry %d\n", num-1));
+      MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: can not read entry %d\n", num-1));
       f << "###";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -178,7 +178,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
 
     if (child.m_entry.length()==0) {
       if (level != 1) {
-        MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: Oops find 0 length child\n"));
+        MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: Oops find 0 length child\n"));
         asciiFile.addPos(pos);
         asciiFile.addNote("###");
       }
@@ -190,7 +190,7 @@ bool RecursifData::read(NSParser &parser, MWAWEntry const &entry)
     child.m_data = childData;
 
     if (!childData->read(parser, child.m_entry)) {
-      MWAW_DEBUG_MSG(("NSStruct::RecursifData::Read: can not read child entry\n"));
+      MWAW_DEBUG_MSG(("NisusWrtStruct::RecursifData::Read: can not read child entry\n"));
       asciiFile.addPos(pos);
       asciiFile.addNote("###");
     }

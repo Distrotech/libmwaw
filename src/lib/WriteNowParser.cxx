@@ -47,16 +47,16 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 
-#include "WNEntry.hxx"
-#include "WNText.hxx"
+#include "WriteNowEntry.hxx"
+#include "WriteNowText.hxx"
 
-#include "WNParser.hxx"
+#include "WriteNowParser.hxx"
 
-/** Internal: the structures of a WNParser */
-namespace WNParserInternal
+/** Internal: the structures of a WriteNowParser */
+namespace WriteNowParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a WNParser
+//! Internal: the state of a WriteNowParser
 struct State {
   //! constructor
   State() : m_endPos(-1), m_colorMap(), m_picturesList(),
@@ -70,7 +70,7 @@ struct State {
   //! the color map
   std::vector<MWAWColor> m_colorMap;
   //! the list of picture entries
-  std::vector<WNEntry> m_picturesList;
+  std::vector<WriteNowEntry> m_picturesList;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
@@ -81,11 +81,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a WNParser
+//! Internal: the subdocument of a WriteNowParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(WNParser &pars, MWAWInputStreamPtr input, WNEntry pos) :
+  SubDocument(WriteNowParser &pars, MWAWInputStreamPtr input, WriteNowEntry pos) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_pos(pos) {}
 
   //! destructor
@@ -104,7 +104,7 @@ public:
 
 protected:
   //! the subdocument file position
-  WNEntry m_pos;
+  WriteNowEntry m_pos;
 };
 
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -116,7 +116,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<WNParser *>(m_parser)->send(m_pos);
+  reinterpret_cast<WriteNowParser *>(m_parser)->send(m_pos);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -134,34 +134,34 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-WNParser::WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+WriteNowParser::WriteNowParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_entryManager(), m_textParser()
 {
   init();
 }
 
-WNParser::~WNParser()
+WriteNowParser::~WriteNowParser()
 {
 }
 
-void WNParser::init()
+void WriteNowParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new WNParserInternal::State);
-  m_entryManager.reset(new WNEntryManager);
+  m_state.reset(new WriteNowParserInternal::State);
+  m_entryManager.reset(new WriteNowEntryManager);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_textParser.reset(new WNText(*this));
+  m_textParser.reset(new WriteNowText(*this));
 }
 
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-void WNParser::getColumnInfo(int &numColumns, int &width) const
+void WriteNowParser::getColumnInfo(int &numColumns, int &width) const
 {
   numColumns = m_state->m_numColumns;
   width = m_state->m_columnWidth;
@@ -170,7 +170,7 @@ void WNParser::getColumnInfo(int &numColumns, int &width) const
 ////////////////////////////////////////////////////////////
 // new page and color
 ////////////////////////////////////////////////////////////
-void WNParser::newPage(int number)
+void WriteNowParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -183,7 +183,7 @@ void WNParser::newPage(int number)
   }
 }
 
-bool WNParser::getColor(int colId, MWAWColor &col) const
+bool WriteNowParser::getColor(int colId, MWAWColor &col) const
 {
   if (colId >= 0 && colId < int(m_state->m_colorMap.size())) {
     col = m_state->m_colorMap[(size_t)colId];
@@ -192,27 +192,27 @@ bool WNParser::getColor(int colId, MWAWColor &col) const
   return false;
 }
 
-void WNParser::sendFootnote(WNEntry const &entry)
+void WriteNowParser::sendFootnote(WriteNowEntry const &entry)
 {
   if (!getTextListener()) return;
 
-  MWAWSubDocumentPtr subdoc(new WNParserInternal::SubDocument(*this, getInput(), entry));
+  MWAWSubDocumentPtr subdoc(new WriteNowParserInternal::SubDocument(*this, getInput(), entry));
   getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
-void WNParser::send(WNEntry const &entry)
+void WriteNowParser::send(WriteNowEntry const &entry)
 {
   m_textParser->send(entry);
 }
 
-bool WNParser::sendGraphic(int gId, Box2i const &bdbox)
+bool WriteNowParser::sendGraphic(int gId, Box2i const &bdbox)
 {
   if (gId < 8 || (gId-8) >= int(m_state->m_picturesList.size())) {
-    MWAW_DEBUG_MSG(("WNParser::sendGraphic: called with bad id=%d\n", gId));
+    MWAW_DEBUG_MSG(("WriteNowParser::sendGraphic: called with bad id=%d\n", gId));
     return false;
   }
   if (!m_state->m_picturesList[(size_t)gId-8].isZone()) {
-    MWAW_DEBUG_MSG(("WNParser::sendGraphic: called with a no zone id=%d\n", gId));
+    MWAW_DEBUG_MSG(("WriteNowParser::sendGraphic: called with a no zone id=%d\n", gId));
     return false;
   }
 
@@ -224,7 +224,7 @@ bool WNParser::sendGraphic(int gId, Box2i const &bdbox)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
+void WriteNowParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -258,7 +258,7 @@ void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("WNParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -269,11 +269,11 @@ void WNParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void WNParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void WriteNowParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("WNParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -283,17 +283,17 @@ void WNParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   // create the page list
   MWAWPageSpan ps(getPageSpan());
 
-  WNEntry entry = m_textParser->getHeader();
+  WriteNowEntry entry = m_textParser->getHeader();
   if (entry.valid()) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    header.m_subDocument.reset(new WriteNowParserInternal::SubDocument(*this, getInput(), entry));
     ps.setHeaderFooter(header);
   }
 
   entry = m_textParser->getFooter();
   if (entry.valid()) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset(new WNParserInternal::SubDocument(*this, getInput(), entry));
+    footer.m_subDocument.reset(new WriteNowParserInternal::SubDocument(*this, getInput(), entry));
     ps.setHeaderFooter(footer);
   }
 
@@ -317,7 +317,7 @@ void WNParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-bool WNParser::createZones()
+bool WriteNowParser::createZones()
 {
   if (version() < 3) {
     if (!readDocEntriesV2())
@@ -326,7 +326,7 @@ bool WNParser::createZones()
   else if (!readDocEntries())
     return false;
 
-  std::multimap<std::string, WNEntry const *>::const_iterator iter;
+  std::multimap<std::string, WriteNowEntry const *>::const_iterator iter;
 
   // the Color map zone
   iter = m_entryManager->m_typeMap.find("ColMap");
@@ -358,7 +358,7 @@ bool WNParser::createZones()
   libmwaw::DebugStream f;
   iter = m_entryManager->m_typeMap.begin();
   for (; iter != m_entryManager->m_typeMap.end(); ++iter) {
-    WNEntry ent = *iter->second;
+    WriteNowEntry ent = *iter->second;
     if (ent.isParsed()) continue;
     ascii().addPos(ent.begin());
     f.str("");
@@ -380,26 +380,26 @@ bool WNParser::createZones()
 ////////////////////////////////////////////////////////////
 // try to read the document main zone
 ////////////////////////////////////////////////////////////
-bool WNParser::readDocEntries()
+bool WriteNowParser::readDocEntries()
 {
   MWAWInputStreamPtr input = getInput();
 
-  std::multimap<std::string, WNEntry const *>::iterator it =
+  std::multimap<std::string, WriteNowEntry const *>::iterator it =
     m_entryManager->m_typeMap.find("DocEntries");
   if (it == m_entryManager->m_typeMap.end()) {
-    MWAW_DEBUG_MSG(("WNParser::readDocEntries: can not find last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readDocEntries: can not find last zone\n"));
     return false;
   }
-  WNEntry const &entry = *(it->second);
+  WriteNowEntry const &entry = *(it->second);
   if (!entry.valid() || entry.length() < 148) {
-    MWAW_DEBUG_MSG(("WNParser::readDocEntries: last entry is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readDocEntries: last entry is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   bool ok = input->readLong(4) == entry.length();
   if (!ok || input->readLong(4) != entry.begin()) {
-    MWAW_DEBUG_MSG(("WNParser::readDocEntries: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readDocEntries: bad begin of last zone\n"));
     return false;
   }
   entry.setParsed(true);
@@ -420,7 +420,7 @@ bool WNParser::readDocEntries()
   }
   if (freePos) { // checkme
     if (freePos > m_state->m_endPos) {
-      MWAW_DEBUG_MSG(("WNParser::readDocEntries: find odd freePos\n"));
+      MWAW_DEBUG_MSG(("WriteNowParser::readDocEntries: find odd freePos\n"));
     }
     else {
       f << "freeZone?=" << std::hex << freePos << std::dec << ",";
@@ -433,7 +433,7 @@ bool WNParser::readDocEntries()
                                 "UnknZone1", "UnknZone2"
                               };
   for (int i = 0; i < 10; i++) {
-    WNEntry zone = readEntry();
+    WriteNowEntry zone = readEntry();
     zone.setType(entryName[i]);
     if (i < 3) zone.setId(i);
     if (zone.isZone())
@@ -470,7 +470,7 @@ bool WNParser::readDocEntries()
 ////////////////////////////////////////////////////////////
 // try to read the document main zone : v2
 ////////////////////////////////////////////////////////////
-bool WNParser::readDocEntriesV2()
+bool WriteNowParser::readDocEntriesV2()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell(), debPos=pos;
@@ -480,16 +480,16 @@ bool WNParser::readDocEntriesV2()
   for (int i = 0; i < 5; i++) {
     int val=(int) input->readLong(1);
     if (val != 4 && val != 0x44) {
-      MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2: can not find entries header:%d\n",i));
+      MWAW_DEBUG_MSG(("WriteNowParser::readDocEntriesV2: can not find entries header:%d\n",i));
       return false;
     }
     long dataPos = (long) input->readULong(1);
     dataPos = (dataPos<<16)+(long) input->readULong(2);
     if (!checkIfPositionValid(dataPos)) {
-      MWAW_DEBUG_MSG(("WNParser::readDocEntriesV2:  find an invalid position for entry:%d\n",i));
+      MWAW_DEBUG_MSG(("WriteNowParser::readDocEntriesV2:  find an invalid position for entry:%d\n",i));
       continue;
     }
-    WNEntry entry;
+    WriteNowEntry entry;
     entry.setBegin(dataPos);
     switch (i) {
     case 0:
@@ -547,18 +547,18 @@ bool WNParser::readDocEntriesV2()
 ////////////////////////////////////////////////////////////
 // try to read a graphic list zone
 ////////////////////////////////////////////////////////////
-bool WNParser::parseGraphicZone(WNEntry const &entry)
+bool WriteNowParser::parseGraphicZone(WriteNowEntry const &entry)
 {
   MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 24) {
-    MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::parseGraphicZone: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::parseGraphicZone: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -580,12 +580,12 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
   ascii().addNote(f.str().c_str());
 
   if (entry.length() != 24+12*N) {
-    MWAW_DEBUG_MSG(("WNParser::parseGraphicZone: zone size is invalid(II)\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::parseGraphicZone: zone size is invalid(II)\n"));
     return false;
   }
   for (int i = 0; i < N; i++) {
     long pos = input->tell();
-    WNEntry zone = readEntry();
+    WriteNowEntry zone = readEntry();
     f.str("");
     if (i < 8)
       f << "GraphicZoneA-" << i << ":";
@@ -627,18 +627,18 @@ bool WNParser::parseGraphicZone(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // try to read a graphic zone
 ////////////////////////////////////////////////////////////
-bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
+bool WriteNowParser::sendPicture(WriteNowEntry const &entry, Box2i const &bdbox)
 {
   MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 24) {
-    MWAW_DEBUG_MSG(("WNParser::sendPicture: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::sendPicture: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNParser::sendPicture: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::sendPicture: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -669,7 +669,7 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
     long pos = input->tell();
     shared_ptr<MWAWPict> pict(MWAWPictData::get(input, sz));
     if (!pict) {
-      MWAW_DEBUG_MSG(("WNParser::sendPicture: can not read the picture\n"));
+      MWAW_DEBUG_MSG(("WriteNowParser::sendPicture: can not read the picture\n"));
       ascii().addDelimiter(pos, '|');
     }
     else {
@@ -715,20 +715,20 @@ bool WNParser::sendPicture(WNEntry const &entry, Box2i const &bdbox)
 ////////////////////////////////////////////////////////////
 // try to read the color map zone
 ////////////////////////////////////////////////////////////
-bool WNParser::readColorMap(WNEntry const &entry)
+bool WriteNowParser::readColorMap(WriteNowEntry const &entry)
 {
   m_state->m_colorMap.resize(0);
 
   MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("WNParser::readColorMap: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNParser::readColorMap: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -747,7 +747,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (long(input->tell())+N*8 > entry.end()) {
-    MWAW_DEBUG_MSG(("WNParser::readColorMap: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: the zone is too short\n"));
     return false;
   }
   ascii().addPos(entry.begin());
@@ -769,7 +769,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
       f << "unamed(RGB),";
       break;
     default:
-      MWAW_DEBUG_MSG(("WNParser::readColorMap: find unknown type %d\n", type));
+      MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: find unknown type %d\n", type));
       f << "#type=" << type << ",";
       break;
     }
@@ -788,7 +788,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
   for (int n = 0; n < N; n++) {
     pos = defPos[(size_t) n];
     if (pos+12 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNParser::readColorMap: can not read entry : %d\n", n));
+      MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: can not read entry : %d\n", n));
       return false;
     }
 
@@ -802,7 +802,7 @@ bool WNParser::readColorMap(WNEntry const &entry)
 
     int sz = (int) input->readULong(1);
     if (pos+8+1+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("WNParser::readColorMap: can not read end of entry : %d\n", n));
+      MWAW_DEBUG_MSG(("WriteNowParser::readColorMap: can not read end of entry : %d\n", n));
       return false;
     }
     std::string name("");
@@ -822,19 +822,19 @@ bool WNParser::readColorMap(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // try to read the print info zone
 ////////////////////////////////////////////////////////////
-bool WNParser::readPrintInfo(WNEntry const &entry)
+bool WriteNowParser::readPrintInfo(WriteNowEntry const &entry)
 {
   MWAWInputStreamPtr input = getInput();
   int expectedLength = version() <= 2 ? 0x78+2 : 0x88;
   if (!entry.valid() || entry.length() < expectedLength) {
-    MWAW_DEBUG_MSG(("WNParser::readPrintInfo: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readPrintInfo: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   long sz = version() <= 2 ? 2+(long) input->readULong(2) : (long) input->readULong(4);
   if (sz != entry.length()) {
-    MWAW_DEBUG_MSG(("WNParser::readPrintInfo: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readPrintInfo: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -854,7 +854,7 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
   }
   libmwaw::PrinterInfo info;
   if (!info.read(input)) {
-    MWAW_DEBUG_MSG(("WNParser::readPrintInfo: can not read print info\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readPrintInfo: can not read print info\n"));
     return false;
   }
   f << info;
@@ -898,18 +898,18 @@ bool WNParser::readPrintInfo(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // try to read the last generic zone ( always find N=0 :-~)
 ////////////////////////////////////////////////////////////
-bool WNParser::readGenericUnkn(WNEntry const &entry)
+bool WriteNowParser::readGenericUnkn(WriteNowEntry const &entry)
 {
   MWAWInputStreamPtr input = getInput();
 
   if (!entry.valid() || entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readGenericUnkn: zone size is invalid\n"));
     return false;
   }
 
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readGenericUnkn: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -928,7 +928,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (long(input->tell())+N*8 > entry.end()) {
-    MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readGenericUnkn: the zone is too short\n"));
     return false;
   }
   ascii().addPos(entry.begin());
@@ -944,7 +944,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
       f << "def,";
       break;
     default:
-      MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: find unknown type %d\n", type));
+      MWAW_DEBUG_MSG(("WriteNowParser::readGenericUnkn: find unknown type %d\n", type));
       f << "#type=" << type << ",";
       break;
     }
@@ -964,7 +964,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
     pos = defPos[(size_t) n];
     if (pos == entry.end()) continue;
     if (pos+12 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNParser::readGenericUnkn: can not read entry : %d\n", n));
+      MWAW_DEBUG_MSG(("WriteNowParser::readGenericUnkn: can not read entry : %d\n", n));
       return false;
     }
 
@@ -982,7 +982,7 @@ bool WNParser::readGenericUnkn(WNEntry const &entry)
   return true;
 }
 
-bool WNParser::checkIfPositionValid(long pos)
+bool WriteNowParser::checkIfPositionValid(long pos)
 {
   if (pos <= m_state->m_endPos)
     return true;
@@ -996,9 +996,9 @@ bool WNParser::checkIfPositionValid(long pos)
   return ok;
 }
 
-WNEntry WNParser::readEntry()
+WriteNowEntry WriteNowParser::readEntry()
 {
-  WNEntry res;
+  WriteNowEntry res;
   MWAWInputStreamPtr input = getInput();
   int val = (int) input->readULong(2);
   res.m_fileType = (val >> 12);
@@ -1008,7 +1008,7 @@ WNEntry WNParser::readEntry()
     res.setBegin((long) input->readULong(4));
     res.setLength((long) input->readULong(4));
     if (!checkIfPositionValid(res.end())) {
-      MWAW_DEBUG_MSG(("WNParser::readEntry: find an invalid entry\n"));
+      MWAW_DEBUG_MSG(("WriteNowParser::readEntry: find an invalid entry\n"));
       res.setLength(0);
     }
   }
@@ -1022,9 +1022,9 @@ WNEntry WNParser::readEntry()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WNParser::checkHeader(MWAWHeader *header, bool strict)
+bool WriteNowParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = WNParserInternal::State();
+  *m_state = WriteNowParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -1034,7 +1034,7 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   int headerSize=28;
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
-    MWAW_DEBUG_MSG(("WNParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0, librevenge::RVNG_SEEK_SET);
@@ -1095,13 +1095,13 @@ bool WNParser::checkHeader(MWAWHeader *header, bool strict)
   if (val) f << "f4=" << val << ",";
 
   // last entry
-  WNEntry entry;
+  WriteNowEntry entry;
   entry.setBegin((long) input->readULong(4));
   entry.setLength((long) input->readULong(4));
   entry.m_fileType = 4;
 
   if (!checkIfPositionValid(entry.end())) {
-    MWAW_DEBUG_MSG(("WNParser::checkHeader: can not find final zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::checkHeader: can not find final zone\n"));
     return false;
   }
   entry.setType("DocEntries");

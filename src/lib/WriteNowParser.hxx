@@ -35,8 +35,8 @@
  *
  * Note: WriteNow 2.0 seems very different
  */
-#ifndef WN_PARSER
-#  define WN_PARSER
+#ifndef WRITE_NOW_PARSER
+#  define WRITE_NOW_PARSER
 
 #include <list>
 #include <string>
@@ -49,32 +49,32 @@
 
 #include "MWAWParser.hxx"
 
-namespace WNParserInternal
+namespace WriteNowParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-struct WNEntry;
-struct WNEntryManager;
+struct WriteNowEntry;
+struct WriteNowEntryManager;
 
-class WNText;
+class WriteNowText;
 
 /** \brief the main class to read a WriteNow file
  *
  *
  *
  */
-class WNParser : public MWAWTextParser
+class WriteNowParser : public MWAWTextParser
 {
-  friend class WNText;
-  friend class WNParserInternal::SubDocument;
+  friend class WriteNowText;
+  friend class WriteNowParserInternal::SubDocument;
 
 public:
   //! constructor
-  WNParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  WriteNowParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~WNParser();
+  virtual ~WriteNowParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -99,13 +99,13 @@ protected:
   void newPage(int number);
 
   /*
-   * interface with WNText
+   * interface with WriteNowText
    */
   //! returns the color which corresponds to colId
   bool getColor(int colId, MWAWColor &col) const;
 
   //! try to send a footnote entry
-  void sendFootnote(WNEntry const &entry);
+  void sendFootnote(WriteNowEntry const &entry);
 
   //! try to send the graphic zone
   bool sendGraphic(int gId, Box2i const &bdbox);
@@ -115,7 +115,7 @@ protected:
    */
 
   //! try to send an entry
-  void send(WNEntry const &entry);
+  void send(WriteNowEntry const &entry);
 
   //
   // low level
@@ -130,22 +130,22 @@ protected:
   /** try to read the graphic zone (unknown + list of entries )
       and to create the graphic data zone
    */
-  bool parseGraphicZone(WNEntry const &entry);
+  bool parseGraphicZone(WriteNowEntry const &entry);
 
   //! try to read the colormap zone
-  bool readColorMap(WNEntry const &entry);
+  bool readColorMap(WriteNowEntry const &entry);
 
   //! try to read the print info zone
-  bool readPrintInfo(WNEntry const &entry);
+  bool readPrintInfo(WriteNowEntry const &entry);
 
   //! try to read the last generic zones
-  bool readGenericUnkn(WNEntry const &entry);
+  bool readGenericUnkn(WriteNowEntry const &entry);
 
   //! try to send a picture to the listener
-  bool sendPicture(WNEntry const &entry, Box2i const &bdbox);
+  bool sendPicture(WriteNowEntry const &entry, Box2i const &bdbox);
 
   //! read a file entry
-  WNEntry readEntry();
+  WriteNowEntry readEntry();
 
   //! check if a position is inside the file
   bool checkIfPositionValid(long pos);
@@ -155,13 +155,13 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<WNParserInternal::State> m_state;
+  shared_ptr<WriteNowParserInternal::State> m_state;
 
   //! the list of entry
-  shared_ptr<WNEntryManager> m_entryManager;
+  shared_ptr<WriteNowEntryManager> m_entryManager;
 
   //! the text parser
-  shared_ptr<WNText> m_textParser;
+  shared_ptr<WriteNowText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

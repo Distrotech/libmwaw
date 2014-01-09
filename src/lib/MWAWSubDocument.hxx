@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MWAW_SUBDOCUMENT_HXX
-#define MWAW_SUBDOCUMENT_HXX
+#ifndef MWAW_SUB_DOCUMENT_HXX
+#define MWAW_SUB_DOCUMENT_HXX
 
 #include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"

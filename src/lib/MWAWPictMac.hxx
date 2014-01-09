@@ -35,8 +35,8 @@
  * see http://developer.apple.com/legacy/mac/library/documentation/mac/QuickDraw/QuickDraw-458.html
  */
 
-#ifndef MWAW_PICT_MWAW
-#  define MWAW_PICT_MWAW
+#ifndef MWAW_PICT_MAC
+#  define MWAW_PICT_MAC
 
 #  include <assert.h>
 #  include <ostream>

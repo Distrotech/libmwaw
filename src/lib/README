@@ -21,9 +21,9 @@
 - More*         : parser of More documents (retrieving the organization part)
 - MsWks*        : parser of Microsoft Works documents
 - MsWrd*        : parser of Microsoft Word documents
-- NS* : parser of Nisus Writer documents,
+- NisusWrt*     : parser of Nisus Writer documents,
 - TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
-- WN* : parser of WriteNow documents
+- WriteNow*     : parser of WriteNow documents
 - WriterPls*    : parser of WriterPlus documents
 - ZWrt*         : parser of Z-Write documents
 
@@ -105,11 +105,11 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWCell.hxx, MWAWTable.hxx
 	a helper to reconstruct a table structure from a list of cell
 
--------------------------------------------------------------------
----  Acta/BeagleWks/CW/DM/EDoc/FullWrt                          ---
----  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt    ---
----  MindWrt/More/MsWks/MsWrd/NS/TeachTxt/WN/WriterPls/ZWrt     ---
--------------------------------------------------------------------
+------------------------------------------------------------------------
+---  Acta/BeagleWks/CW/DM/EDoc/FullWrt                               ---
+---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt/MindWrt ---
+---  More/MsWks/MsWrd/NisusWrt/TeachTxt/WriteNow/WriterPls/ZWrt      ---
+------------------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
 
@@ -191,16 +191,16 @@ MsWrdParser : parser of Microsoft Word document : v3.0-5.0
 -   MsWrdText : class which reads the text and its structures
 -   MsWrdTextStyles : class which reads the styles
 
-NSParser : parser of a Nisus Writer document : v4.0
--   NSGraph : class which reads the picture/graph
--   NSStruct : class which defines the different structures used by the parsed
--   NSText : class which reads the text
+NisusWrtParser : parser of a Nisus Writer document : v4.0
+-   NisusWrtGraph : class which reads the picture/graph
+-   NisusWrtStruct : class which defines the different structures used by the parsed
+-   NisusWrtText : class which reads the text
 
 TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
 
-WNParser : parser of WriteNow document : v1.0-4.0
--   WNText : class which reads the text and its structures
--   WNEntry : class to store the entry found in the document
+WriteNowParser : parser of WriteNow document : v1.0-4.0
+-   WriteNowText : class which reads the text and its structures
+-   WriteNowEntry : class to store the entry found in the document
 
 WriterPlsParser : parser of WriterPlus document
 

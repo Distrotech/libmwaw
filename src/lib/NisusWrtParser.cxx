@@ -47,19 +47,19 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "NSGraph.hxx"
-#include "NSStruct.hxx"
-#include "NSText.hxx"
+#include "NisusWrtGraph.hxx"
+#include "NisusWrtStruct.hxx"
+#include "NisusWrtText.hxx"
 
-#include "NSParser.hxx"
+#include "NisusWrtParser.hxx"
 
-/** Internal: the structures of a NSParser */
-namespace NSParserInternal
+/** Internal: the structures of a NisusWrtParser */
+namespace NisusWrtParserInternal
 {
 /** Internal structure: use to store a numbering, a variable or a version */
 struct Variable {
   //! Constructor
-  Variable(NSStruct::VariableType type = NSStruct::V_None) :
+  Variable(NisusWrtStruct::VariableType type = NisusWrtStruct::V_None) :
     m_type(0), m_containerType(type), m_fieldType(-1), m_refId(-1),
     m_numberingType(libmwaw::NONE), m_startNumber(1), m_increment(1),
     m_prefix(""), m_suffix(""), m_dateFormat(0), m_sample(""), m_extra("")
@@ -106,7 +106,7 @@ struct Variable {
   //! the main type
   int m_type;
   //! the container type
-  NSStruct::VariableType m_containerType;
+  NisusWrtStruct::VariableType m_containerType;
   //! the variable type
   long m_fieldType;
   //! the reference id
@@ -155,16 +155,16 @@ std::ostream &operator<<(std::ostream &o, Variable const &num)
     break;
   }
   switch (num.m_containerType) {
-  case NSStruct::V_Numbering:
+  case NisusWrtStruct::V_Numbering:
     o << "number,";
     break;
-  case NSStruct::V_Variable:
+  case NisusWrtStruct::V_Variable:
     o << "variable,";
     break;
-  case NSStruct::V_Version:
+  case NisusWrtStruct::V_Version:
     o << "version,";
     break;
-  case NSStruct::V_None:
+  case NisusWrtStruct::V_None:
     break;
   default:
     o << "#type[container]=" << int(num.m_containerType) << ",";
@@ -283,7 +283,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a NSParser
+//! Internal: the state of a NisusWrtParser
 struct State {
   //! constructor
   State() : m_numberingList(),
@@ -303,7 +303,7 @@ struct State {
   int m_numColumns /** the number of columns */;
   float m_columnSep /** the columns separator */;
   /** the footnote placement */
-  NSStruct::FootnoteInfo m_footnoteInfo;
+  NisusWrtStruct::FootnoteInfo m_footnoteInfo;
   /** a bool to know if we examine a text document or another thing glossary ... */
   bool m_isTextDocument;
 };
@@ -313,36 +313,36 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSParser::NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+NisusWrtParser::NisusWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
 
-NSParser::~NSParser()
+NisusWrtParser::~NisusWrtParser()
 {
 }
 
-void NSParser::init()
+void NisusWrtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new NSParserInternal::State);
+  m_state.reset(new NisusWrtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_graphParser.reset(new NSGraph(*this));
-  m_textParser.reset(new NSText(*this));
+  m_graphParser.reset(new NisusWrtGraph(*this));
+  m_textParser.reset(new NisusWrtText(*this));
 }
 
-MWAWInputStreamPtr NSParser::rsrcInput()
+MWAWInputStreamPtr NisusWrtParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &NSParser::rsrcAscii()
+libmwaw::DebugFile &NisusWrtParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -350,19 +350,19 @@ libmwaw::DebugFile &NSParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f NSParser::getPageLeftTop() const
+Vec2f NisusWrtParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-void NSParser::getColumnInfo(int &numColumns, float &colSep) const
+void NisusWrtParser::getColumnInfo(int &numColumns, float &colSep) const
 {
   numColumns = m_state->m_numColumns;
   colSep = m_state->m_columnSep;
 }
 
-void NSParser::getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const
+void NisusWrtParser::getFootnoteInfo(NisusWrtStruct::FootnoteInfo &fInfo) const
 {
   fInfo = m_state->m_footnoteInfo;
 }
@@ -370,7 +370,7 @@ void NSParser::getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-bool NSParser::sendPicture(int pictId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
+bool NisusWrtParser::sendPicture(int pictId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
 {
   if (!rsrcInput()) return false;
   long pos = rsrcInput()->tell();
@@ -382,42 +382,42 @@ bool NSParser::sendPicture(int pictId, MWAWPosition const &pictPos, librevenge::
 ////////////////////////////////////////////////////////////
 // access to variable date
 ////////////////////////////////////////////////////////////
-std::string NSParser::getDateFormat(NSStruct::ZoneType zoneId, int vId) const
+std::string NisusWrtParser::getDateFormat(NisusWrtStruct::ZoneType zoneId, int vId) const
 {
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::getDateFormat: bad zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getDateFormat: bad zone %d\n", zoneId));
     return "";
   }
-  NSParserInternal::Zone const &zone = m_state->m_zones[zoneId];
+  NisusWrtParserInternal::Zone const &zone = m_state->m_zones[zoneId];
   if (vId < 0 || vId >= int(zone.m_variableList.size()) ||
       !zone.m_variableList[size_t(vId)].isDate()) {
     // some version 3 files do not contain any variables, so returns the default value...
     if (version()==3 && zone.m_variableList.size()==0)
       return "%m/%d/%Y";
-    MWAW_DEBUG_MSG(("NSParser::getDateFormat: can not find the variable %d\n", vId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getDateFormat: can not find the variable %d\n", vId));
     return "";
   }
   return zone.m_variableList[size_t(vId)].getDateFormat();
 }
 
-bool NSParser::getReferenceData
-(NSStruct::ZoneType zoneId, int vId,
+bool NisusWrtParser::getReferenceData
+(NisusWrtStruct::ZoneType zoneId, int vId,
  MWAWField::Type &fType, std::string &content, std::vector<int> &values) const
 {
   fType = MWAWField::None;
   content = "";
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::getReferenceData: bad zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getReferenceData: bad zone %d\n", zoneId));
     return false;
   }
-  NSParserInternal::Zone const &zone = m_state->m_zones[zoneId];
+  NisusWrtParserInternal::Zone const &zone = m_state->m_zones[zoneId];
   if (vId < 0 || vId >= int(zone.m_variableList.size())) {
-    MWAW_DEBUG_MSG(("NSParser::getReferenceData: can not find the variable %d\n", vId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getReferenceData: can not find the variable %d\n", vId));
     return false;
   }
-  NSParserInternal::Variable const &var=zone.m_variableList[size_t(vId)];
+  NisusWrtParserInternal::Variable const &var=zone.m_variableList[size_t(vId)];
   if ((var.m_type != 1 && var.m_type != 2) || var.m_refId<=0) {
-    MWAW_DEBUG_MSG(("NSParser::getReferenceData: find a variable with bad type %d\n", vId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getReferenceData: find a variable with bad type %d\n", vId));
     return false;
   }
   // first special case
@@ -431,14 +431,14 @@ bool NSParser::getReferenceData
   }
   size_t numVar = m_state->m_numberingList.size();
   if (var.m_refId-1 >= int(numVar)) {
-    MWAW_DEBUG_MSG(("NSParser::getReferenceData: can not find numbering variable for %d\n", vId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::getReferenceData: can not find numbering variable for %d\n", vId));
     return false;
   }
   // resize values if needed
   for (size_t p = values.size(); p < numVar; p++)
     values.push_back(m_state->m_numberingList[p].m_startNumber
                      -m_state->m_numberingList[p].m_increment);
-  NSParserInternal::Variable const &ref=m_state->m_numberingList[size_t(var.m_refId-1)];
+  NisusWrtParserInternal::Variable const &ref=m_state->m_numberingList[size_t(var.m_refId-1)];
   values[size_t(var.m_refId-1)] += ref.m_increment;
 
   size_t numReset = zone.m_numberingResetList.size();
@@ -469,7 +469,7 @@ bool NSParser::getReferenceData
   for (size_t p = 0; p < str.length(); p++) {
     unsigned char c = (unsigned char) str[p];
     if (c==0 || (c < 0x20 && c > numVar)) {
-      MWAW_DEBUG_MSG(("NSParser::getReferenceData: find unknown variable\n"));
+      MWAW_DEBUG_MSG(("NisusWrtParser::getReferenceData: find unknown variable\n"));
 #ifdef DEBUG
       s << "###[" << int(c) << "]";
 #endif
@@ -487,7 +487,7 @@ bool NSParser::getReferenceData
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void NSParser::newPage(int number)
+void NisusWrtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -503,7 +503,7 @@ void NSParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
+void NisusWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -527,7 +527,7 @@ void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("NSParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -538,11 +538,11 @@ void NSParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void NisusWrtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("NSParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -593,7 +593,7 @@ void NSParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool NSParser::createZones()
+bool NisusWrtParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   std::string type, creator;
@@ -680,7 +680,7 @@ bool NSParser::createZones()
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("NumberingDef");
-    NSStruct::RecursifData data(NSStruct::Z_Main, NSStruct::V_Numbering);
+    NisusWrtStruct::RecursifData data(NisusWrtStruct::Z_Main, NisusWrtStruct::V_Numbering);
     data.read(*this, entry);
     readVariable(data);
   }
@@ -692,7 +692,7 @@ bool NSParser::createZones()
         break;
       MWAWEntry &entry = it++->second;
       entry.setName("Variable");
-      NSStruct::RecursifData data(NSStruct::ZoneType(z), NSStruct::V_Variable);
+      NisusWrtStruct::RecursifData data(NisusWrtStruct::ZoneType(z), NisusWrtStruct::V_Variable);
       data.read(*this, entry);
       readVariable(data);
     }
@@ -705,7 +705,7 @@ bool NSParser::createZones()
       if (it->first != cntrNames[z])
         break;
       MWAWEntry &entry = it++->second;
-      readCNTR(entry, NSStruct::ZoneType(z));
+      readCNTR(entry, NisusWrtStruct::ZoneType(z));
     }
   }
   char const *(numbResetNames[]) = { "DPND", "FDPN", "HDPN" };
@@ -715,7 +715,7 @@ bool NSParser::createZones()
       if (it->first != numbResetNames[z])
         break;
       MWAWEntry &entry = it++->second;
-      readNumberingReset(entry, NSStruct::ZoneType(z));
+      readNumberingReset(entry, NisusWrtStruct::ZoneType(z));
     }
   }
   char const *(versionNames[]) = { "VRS ", "FVRS", "HVRS" };
@@ -726,7 +726,7 @@ bool NSParser::createZones()
         break;
       MWAWEntry &entry = it++->second;
       entry.setName("VariabS");
-      NSStruct::RecursifData data(NSStruct::ZoneType(z), NSStruct::V_Version);
+      NisusWrtStruct::RecursifData data(NisusWrtStruct::ZoneType(z), NisusWrtStruct::V_Version);
       data.read(*this, entry);
       readVariable(data);
     }
@@ -740,7 +740,7 @@ bool NSParser::createZones()
         break;
       MWAWEntry &entry = it++->second;
       entry.setName("Reference");
-      NSStruct::RecursifData data = NSStruct::RecursifData(NSStruct::ZoneType(z));
+      NisusWrtStruct::RecursifData data = NisusWrtStruct::RecursifData(NisusWrtStruct::ZoneType(z));
       data.read(*this, entry);
       readReference(data);
     }
@@ -751,7 +751,7 @@ bool NSParser::createZones()
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("XMRK");
-    NSStruct::RecursifData data(NSStruct::Z_Main);
+    NisusWrtStruct::RecursifData data(NisusWrtStruct::Z_Main);
     data.read(*this, entry);
   }
   // unknown ?
@@ -761,7 +761,7 @@ bool NSParser::createZones()
       break;
     MWAWEntry &entry = it++->second;
     entry.setName("SGP1");
-    NSStruct::RecursifData data(NSStruct::Z_Main);
+    NisusWrtStruct::RecursifData data(NisusWrtStruct::Z_Main);
     data.read(*this, entry);
     readSGP1(data);
   }
@@ -777,9 +777,9 @@ bool NSParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
+bool NisusWrtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  *m_state = NSParserInternal::State();
+  *m_state = NisusWrtParserInternal::State();
   /** no data fork, may be ok, but this means
       that the file contains no text and no picture, so... */
   MWAWInputStreamPtr input = getInput();
@@ -793,22 +793,22 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (entry.valid() && getRSRCParser()->parseVers(entry, vers))
     nisusVersion = vers.m_majorVersion;
   else if (nisusVersion==-1) {
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the Nisus version\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: can not find the Nisus version\n"));
   }
 
   // read the file format version
   entry = getRSRCParser()->getEntry("vers", 1);
   if (!entry.valid() || !getRSRCParser()->parseVers(entry, vers)) {
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: can not find the Nisus file format version\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: can not find the Nisus file format version\n"));
     return false;
   }
   switch (vers.m_majorVersion) {
   case 3:
   case 4:
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus %d file with file format version %d\n", nisusVersion, vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with file format version %d\n", nisusVersion, vers.m_majorVersion));
     break;
   default:
-    MWAW_DEBUG_MSG(("NSParser::checkHeader: find Nisus %d file with unknown file format version %d\n", nisusVersion, vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with unknown file format version %d\n", nisusVersion, vers.m_majorVersion));
     return false;
   }
 
@@ -822,11 +822,11 @@ bool NSParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 ////////////////////////////////////////////////////////////
 // read a list of string
 ////////////////////////////////////////////////////////////
-bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> &list, bool simpleList)
+bool NisusWrtParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> &list, bool simpleList)
 {
   list.resize(0);
   if (!entry.valid() && entry.length()!=0) {
-    MWAW_DEBUG_MSG(("NSParser::readStringsList: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readStringsList: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -852,7 +852,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
         rsrcAscii().addPos(pos);
         rsrcAscii().addNote(f.str().c_str());
 
-        MWAW_DEBUG_MSG(("NSParser::readStringsList: can not read strings\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readStringsList: can not read strings\n"));
         return false;
       }
       int sz = (int)input->readULong(2);
@@ -863,13 +863,13 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
         rsrcAscii().addPos(pos);
         rsrcAscii().addNote(f.str().c_str());
 
-        MWAW_DEBUG_MSG(("NSParser::readStringsList: zone size is bad\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readStringsList: zone size is bad\n"));
         return false;
       }
     }
 
     /* checkme: in STNM we can have a list of string, it is general or
-       do we need to create a new function NSParser::readStringsListList
+       do we need to create a new function NisusWrtParser::readStringsListList
      */
     std::string str("");
     while (input->tell() < endPos-1) {
@@ -882,7 +882,7 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
         f << "###";
         rsrcAscii().addPos(pos);
         rsrcAscii().addNote(f.str().c_str());
-        MWAW_DEBUG_MSG(("NSParser::readStringsList: string size is too big\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readStringsList: string size is too big\n"));
         return false;
       }
       std::string str1("");
@@ -904,60 +904,60 @@ bool NSParser::readStringsList(MWAWEntry const &entry, std::vector<std::string> 
 ////////////////////////////////////////////////////////////
 // read DSPL or the VRS zone: numbering definition or version
 ////////////////////////////////////////////////////////////
-bool NSParser::readVariable(NSStruct::RecursifData const &data)
+bool NisusWrtParser::readVariable(NisusWrtStruct::RecursifData const &data)
 {
   if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected zoneType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: find unexpected zoneType\n"));
     return false;
   }
   if (!data.m_childList.size())
     return true;
 
   if (data.m_childList.size() > 1) {
-    MWAW_DEBUG_MSG(("NSParser::readVariable: level 0 node contains more than 1 node\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: level 0 node contains more than 1 node\n"));
   }
   if (data.m_childList[0].isLeaf()) {
-    MWAW_DEBUG_MSG(("NSParser::readVariable: level 1 node is a leaf\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: level 1 node is a leaf\n"));
     return false;
   }
-  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  NisusWrtStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
   size_t numData = mainData.m_childList.size();
-  NSParserInternal::Zone &zone = m_state->m_zones[int(data.m_info->m_zoneType)];
+  NisusWrtParserInternal::Zone &zone = m_state->m_zones[int(data.m_info->m_zoneType)];
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugStream f;
   long val;
 
-  std::vector<NSParserInternal::Variable> *result = 0;
+  std::vector<NisusWrtParserInternal::Variable> *result = 0;
   int lastMaxId = 0;
   switch (data.m_info->m_variableType) {
-  case NSStruct::V_Numbering:
+  case NisusWrtStruct::V_Numbering:
     lastMaxId = 11;
     result = &m_state->m_numberingList;
     break;
-  case NSStruct::V_Version:
+  case NisusWrtStruct::V_Version:
     lastMaxId = 8;
     result = &zone.m_versionList;
     break;
-  case NSStruct::V_Variable:
+  case NisusWrtStruct::V_Variable:
     lastMaxId = 12;
     result = &zone.m_variableList;
     break;
-  case NSStruct::V_None:
+  case NisusWrtStruct::V_None:
   default:
-    MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected dataType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: find unexpected dataType\n"));
     return false;
   }
   for (size_t n = 0; n < numData; n++) {
     static int const minExpectedSz[] = { 1, 4, 1, 2, 2, 2, 4, 4, 1, 4, 1 };
-    NSStruct::RecursifData::Node const &node = mainData.m_childList[n];
-    NSParserInternal::Variable num(data.m_info->m_variableType);
+    NisusWrtStruct::RecursifData::Node const &node = mainData.m_childList[n];
+    NisusWrtParserInternal::Variable num(data.m_info->m_variableType);
     num.m_type = node.m_type;
 
     if (node.isLeaf()) {
-      MWAW_DEBUG_MSG(("NSParser::readVariable: level 2 node is a leaf\n"));
+      MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: level 2 node is a leaf\n"));
       continue;
     }
-    NSStruct::RecursifData const &dt = *node.m_data;
+    NisusWrtStruct::RecursifData const &dt = *node.m_data;
     f.str("");
     int lastId = lastMaxId;
     switch (num.m_type) {
@@ -994,7 +994,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
 
     for (size_t nDt = 0; nDt < dt.m_childList.size(); nDt++) {
       if (!dt.m_childList[nDt].isLeaf()) {
-        MWAW_DEBUG_MSG(("NSParser::readVariable: level 3 node is not a leaf\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: level 3 node is not a leaf\n"));
         continue;
       }
       MWAWEntry const &entry = dt.m_childList[nDt].m_entry;
@@ -1012,7 +1012,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
       }
 
       if (!checkId && (id < 2 || id > lastId || entry.length() < minExpectedSz[id-2])) {
-        MWAW_DEBUG_MSG(("NSParser::readVariable: find unexpected size for data %d\n", int(nDt)));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: find unexpected size for data %d\n", int(nDt)));
         f << "###";
         rsrcAscii().addPos(entry.begin()-12);
         rsrcAscii().addNote(f.str().c_str());
@@ -1025,7 +1025,7 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
       case 12: { // postfix : list of fields
         int mSz = (int) input->readULong(1);
         if (mSz+1 > entry.length()) {
-          MWAW_DEBUG_MSG(("NSParser::readVariable: the dpsl seems to short\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readVariable: the dpsl seems to short\n"));
           f << "###Text";
           break;
         }
@@ -1184,25 +1184,25 @@ bool NSParser::readVariable(NSStruct::RecursifData const &data)
 ////////////////////////////////////////////////////////////
 // read the DPND zone ( the numbering reset zone )
 ////////////////////////////////////////////////////////////
-bool NSParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
+bool NisusWrtParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
 {
   // find to 2 times with entry.length()=0x22
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("NSParser::readNumberingReset: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readNumberingReset: the entry is bad\n"));
     return false;
   }
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readNumberingReset: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readNumberingReset: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
+  NisusWrtParserInternal::Zone &zone = m_state->m_zones[zoneId];
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readULong(2);
   if (sz+2 != entry.length() || sz%2) {
-    MWAW_DEBUG_MSG(("NSParser::readNumberingReset: entry size seems odd\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readNumberingReset: entry size seems odd\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -1222,10 +1222,10 @@ bool NSParser::readNumberingReset(MWAWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 // read mark zone ( ie the reference structure )
 ////////////////////////////////////////////////////////////
-bool NSParser::readReference(NSStruct::RecursifData const &data)
+bool NisusWrtParser::readReference(NisusWrtStruct::RecursifData const &data)
 {
   if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readReference: find unexpected zoneType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readReference: find unexpected zoneType\n"));
     return false;
   }
 
@@ -1233,15 +1233,15 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
     return true;
 
   if (data.m_childList.size() > 1) {
-    MWAW_DEBUG_MSG(("NSParser::readReference: level 0 node contains more than 1 node\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readReference: level 0 node contains more than 1 node\n"));
   }
   if (data.m_childList[0].isLeaf()) {
-    MWAW_DEBUG_MSG(("NSParser::readReference: level 1 node is a leaf\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readReference: level 1 node is a leaf\n"));
     return false;
   }
-  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  NisusWrtStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
   size_t numData = mainData.m_childList.size();
-  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
+  NisusWrtParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugStream f, f2;
 
@@ -1249,24 +1249,24 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
   bool pbFound = false;
   while (n < numData) {
     if (n+1 >= numData) {
-      MWAW_DEBUG_MSG(("NSParser::readReference: find an odd number of data\n"));
+      MWAW_DEBUG_MSG(("NisusWrtParser::readReference: find an odd number of data\n"));
       break;
     }
 
     // ----- First the position -----
-    NSStruct::RecursifData::Node const &nd=mainData.m_childList[n++];
+    NisusWrtStruct::RecursifData::Node const &nd=mainData.m_childList[n++];
     if (nd.isLeaf() || nd.m_type != 0x7FFFFFFF) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readReference: oops find bad type for the filePos node\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readReference: oops find bad type for the filePos node\n"));
         pbFound = true;
       }
       continue;
     }
-    NSParserInternal::Reference ref;
-    NSStruct::RecursifData const &dt=*nd.m_data;
+    NisusWrtParserInternal::Reference ref;
+    NisusWrtStruct::RecursifData const &dt=*nd.m_data;
     if (dt.m_childList.size() != 1 || !dt.m_childList[0].isLeaf()) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readReference: the filePos node contain unexpected data\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readReference: the filePos node contain unexpected data\n"));
         pbFound = true;
       }
       zone.m_referenceList.push_back(ref);
@@ -1275,7 +1275,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
     MWAWEntry entry = dt.m_childList[0].m_entry;
     if (entry.length() < 8) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readReference: the filePos size seem bad\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readReference: the filePos size seem bad\n"));
         pbFound = true;
       }
       zone.m_referenceList.push_back(ref);
@@ -1297,11 +1297,11 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
     rsrcAscii().addNote(f.str().c_str());
 
     // ----- Second the data node -----
-    NSStruct::RecursifData::Node const &nd1=mainData.m_childList[n++];
+    NisusWrtStruct::RecursifData::Node const &nd1=mainData.m_childList[n++];
 
     if (nd1.isLeaf() || nd1.m_type == 0x7FFFFFFF) {
       if (!pbFound) {
-        MWAW_DEBUG_MSG(("NSParser::readReference: the date node contain unexpected data\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readReference: the date node contain unexpected data\n"));
         pbFound = true;
       }
       zone.m_referenceList.push_back(ref);
@@ -1325,16 +1325,16 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
       rsrcAscii().addNote(f.str().c_str());
     }
     long val;
-    NSStruct::RecursifData const &dt1=*nd1.m_data;
+    NisusWrtStruct::RecursifData const &dt1=*nd1.m_data;
     for (size_t c=0; c < dt1.m_childList.size(); c++) {
       if (!dt1.m_childList[c].isLeaf()) {
         if (!pbFound) {
-          MWAW_DEBUG_MSG(("NSParser::readReference: find some level 2 data array nodes\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readReference: find some level 2 data array nodes\n"));
           pbFound = true;
         }
         continue;
       }
-      NSStruct::RecursifData::Node const &childNode = dt1.m_childList[c];
+      NisusWrtStruct::RecursifData::Node const &childNode = dt1.m_childList[c];
       entry = childNode.m_entry;
       pos = entry.begin();
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1379,7 +1379,7 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
       case 220: {
         if (entry.length()==0) break;
         if (entry.length()%12) {
-          MWAW_DEBUG_MSG(("NSParser::readReference: unexpected length for type 220\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readReference: unexpected length for type 220\n"));
           f << "###sz";
           break;
         }
@@ -1418,10 +1418,10 @@ bool NSParser::readReference(NSStruct::RecursifData const &data)
 ////////////////////////////////////////////////////////////
 // read SGP1 zone: a unknown zone (a type, an id/anchor type? and a bdbox )
 ////////////////////////////////////////////////////////////
-bool NSParser::readSGP1(NSStruct::RecursifData const &data)
+bool NisusWrtParser::readSGP1(NisusWrtStruct::RecursifData const &data)
 {
   if (!data.m_info || data.m_info->m_zoneType < 0 || data.m_info->m_zoneType >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readSGP1: find unexpected zoneType\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: find unexpected zoneType\n"));
     return false;
   }
 
@@ -1429,29 +1429,29 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
     return true;
 
   if (data.m_childList.size() > 1) {
-    MWAW_DEBUG_MSG(("NSParser::readSGP1: level 0 node contains more than 1 node\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: level 0 node contains more than 1 node\n"));
   }
   if (data.m_childList[0].isLeaf()) {
-    MWAW_DEBUG_MSG(("NSParser::readSGP1: level 1 node is a leaf\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: level 1 node is a leaf\n"));
     return false;
   }
-  NSStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
+  NisusWrtStruct::RecursifData const &mainData = *data.m_childList[0].m_data;
   size_t numData = mainData.m_childList.size();
-  //  NSParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
+  //  NisusWrtParserInternal::Zone &zone = m_state->m_zones[(int) data.m_info->m_zoneType];
   MWAWInputStreamPtr input = rsrcInput();
   libmwaw::DebugStream f;
 
   long val;
   for (size_t n = 0 ; n < numData; n++) {
     if (mainData.m_childList[n].isLeaf()) {
-      MWAW_DEBUG_MSG(("NSParser::readSGP1: oops some level 2 node are leaf\n"));
+      MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: oops some level 2 node are leaf\n"));
       continue;
     }
-    NSStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
+    NisusWrtStruct::RecursifData const &dt=*mainData.m_childList[n].m_data;
     for (size_t i = 0; i < dt.m_childList.size(); i++) {
-      NSStruct::RecursifData::Node const &child= dt.m_childList[i];
+      NisusWrtStruct::RecursifData::Node const &child= dt.m_childList[i];
       if (!child.isLeaf()) {
-        MWAW_DEBUG_MSG(("NSParser::readSGP1: find an odd level 3 leaf\n"));
+        MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: find an odd level 3 leaf\n"));
         continue;
       }
 
@@ -1462,7 +1462,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       case 110: {
         if (child.m_entry.length()==0) break;
         if (child.m_entry.length()%4) {
-          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 110\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: unexpected length for type 110\n"));
           f << "###sz";
           break;
         }
@@ -1479,13 +1479,13 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       case 120:
       case 200: { /* checkme: always find mSz=0 here */
         if (child.m_entry.length()==0) {
-          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type %d\n", child.m_type));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: unexpected length for type %d\n", child.m_type));
           f << "###sz";
           break;
         }
         int mSz = (int) input->readULong(1);
         if (mSz+1 > child.m_entry.length()) {
-          MWAW_DEBUG_MSG(("NSParser::readSGP1: the %d text seems to short\n", child.m_type));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: the %d text seems to short\n", child.m_type));
           f << "###sz";
           break;
         }
@@ -1497,7 +1497,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       }
       case 100: {
         if (child.m_entry.length()!=0x24) {
-          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 100\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: unexpected length for type 100\n"));
           f << "###sz";
           break;
         }
@@ -1510,7 +1510,7 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
       }
       case 300: {
         if (child.m_entry.length()!=0x5c) {
-          MWAW_DEBUG_MSG(("NSParser::readSGP1: unexpected length for type 300\n"));
+          MWAW_DEBUG_MSG(("NisusWrtParser::readSGP1: unexpected length for type 300\n"));
           f << "###sz";
           break;
         }
@@ -1559,14 +1559,14 @@ bool NSParser::readSGP1(NSStruct::RecursifData const &data)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool NSParser::readPrintInfo(MWAWEntry const &entry)
+bool NisusWrtParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0x78) {
-    MWAW_DEBUG_MSG(("NSParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 128) {
-    MWAW_DEBUG_MSG(("NSParser::readPrintInfo: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPrintInfo: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -1616,7 +1616,7 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
   rsrcAscii().addNote(f.str().c_str());
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("NSParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPrintInfo: file is too short\n"));
     return false;
   }
 
@@ -1626,14 +1626,14 @@ bool NSParser::readPrintInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the PGLY zone ( page limit )
 ////////////////////////////////////////////////////////////
-bool NSParser::readPageLimit(MWAWEntry const &entry)
+bool NisusWrtParser::readPageLimit(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0xa2) {
-    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPageLimit: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 128) {
-    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPageLimit: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -1670,7 +1670,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
              LT[0] >= 0 && LT[1] >= 0 && RB[0] >= 0 && RB[1] >= 0;
   if (!dimOk && m_state->m_isTextDocument) {
     // can be ok in a glossary: in this case, all values can be 0
-    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the page margins seems odd\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPageLimit: the page margins seems odd\n"));
     f << "###dim,";
   }
   // all zero expected some time g0=2
@@ -1682,7 +1682,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
   int colSeps = (int) input->readLong(2);
   if (!dimOk) ;
   else if (numColumns <= 0 || numColumns > 8 || colSeps < 0 || colSeps *numColumns >= pageDim[0]) {
-    MWAW_DEBUG_MSG(("NSParser::readPageLimit: the columns definition seems odd\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPageLimit: the columns definition seems odd\n"));
     f << "###";
   }
   else {
@@ -1747,7 +1747,7 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
     pageDim = realPage.size();
   }
   else if (dimOk) {
-    MWAW_DEBUG_MSG(("NSParser::readPageLimit: realPage is smaller than page\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readPageLimit: realPage is smaller than page\n"));
     f << "###";
     dimOk = false;
   }
@@ -1831,14 +1831,14 @@ bool NSParser::readPageLimit(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the CPRC zone ( unknown )
 ////////////////////////////////////////////////////////////
-bool NSParser::readCPRC(MWAWEntry const &entry)
+bool NisusWrtParser::readCPRC(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0xe) {
-    MWAW_DEBUG_MSG(("NSParser::readCPRC: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readCPRC: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 128) {
-    MWAW_DEBUG_MSG(("NSParser::readCPRC: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readCPRC: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -1869,17 +1869,17 @@ bool NSParser::readCPRC(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the CNTR zone ( a list of related to VRS ?  )
 ////////////////////////////////////////////////////////////
-bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
+bool NisusWrtParser::readCNTR(MWAWEntry const &entry, int zoneId)
 {
   if (!entry.valid() || entry.length()<20 || (entry.length()%12) != 8) {
-    MWAW_DEBUG_MSG(("NSParser::readCNTR: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readCNTR: the entry is bad\n"));
     return false;
   }
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSParser::readCNTR: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readCNTR: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  //  NSParserInternal::Zone &zone = m_state->m_zones[zoneId];
+  //  NisusWrtParserInternal::Zone &zone = m_state->m_zones[zoneId];
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
   long pos = entry.begin();
@@ -1911,14 +1911,14 @@ bool NSParser::readCNTR(MWAWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 //! read the ABBR resource: a list of abreviation ?
 ////////////////////////////////////////////////////////////
-bool NSParser::readABBR(MWAWEntry const &entry)
+bool NisusWrtParser::readABBR(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()%32) {
-    MWAW_DEBUG_MSG(("NSParser::readABBR: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readABBR: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSParser::readABBR: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readABBR: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -1944,7 +1944,7 @@ bool NSParser::readABBR(MWAWEntry const &entry)
       f << "#id=" << id << ",";
     int sSz = int(input->readULong(1));
     if (sSz > 27) {
-      MWAW_DEBUG_MSG(("NSParser::readABBR: the string size is bad\n"));
+      MWAW_DEBUG_MSG(("NisusWrtParser::readABBR: the string size is bad\n"));
       f << "##";
     }
     else {
@@ -1964,14 +1964,14 @@ bool NSParser::readABBR(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 //! read the FTA2 resource: a list of  ?
 ////////////////////////////////////////////////////////////
-bool NSParser::readFTA2(MWAWEntry const &entry)
+bool NisusWrtParser::readFTA2(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()%12) {
-    MWAW_DEBUG_MSG(("NSParser::readFTA2: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readFTA2: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSParser::readFTA2: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readFTA2: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -2014,14 +2014,14 @@ bool NSParser::readFTA2(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 //! read the FnSc resource: a list of  ?
 ////////////////////////////////////////////////////////////
-bool NSParser::readFnSc(MWAWEntry const &entry)
+bool NisusWrtParser::readFnSc(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 0x42) {
-    MWAW_DEBUG_MSG(("NSParser::readFnSc: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readFnSc: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSParser::readFnSc: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readFnSc: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -2051,14 +2051,14 @@ bool NSParser::readFnSc(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 //! read the INFO resource: a unknown zone
 ////////////////////////////////////////////////////////////
-bool NSParser::readINFO(MWAWEntry const &entry)
+bool NisusWrtParser::readINFO(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0x23a) {
-    MWAW_DEBUG_MSG(("NSParser::readINFO: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readINFO: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSParser::readINFO: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtParser::readINFO: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -2151,7 +2151,7 @@ bool NSParser::readINFO(MWAWEntry const &entry)
   f.str("");
   f << "INFOC:";
 
-  NSStruct::FootnoteInfo &ftInfo = m_state->m_footnoteInfo;
+  NisusWrtStruct::FootnoteInfo &ftInfo = m_state->m_footnoteInfo;
   ftInfo.m_flags = (int)input->readULong(2);
   ftInfo.m_unknown = (int)input->readLong(2);
   ftInfo.m_distToDocument = (int)input->readLong(2);

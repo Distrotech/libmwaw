@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef NS_STRUCT
-#  define NS_STRUCT
+#ifndef NISUS_WRT_STRUCT
+#  define NISUS_WRT_STRUCT
 
 #include <iostream>
 #include <vector>
@@ -41,10 +41,10 @@
 
 #include "MWAWEntry.hxx"
 
-class NSParser;
+class NisusWrtParser;
 
 /** a namespace used to regroup the different structure used to parse a Nisus File */
-namespace NSStruct
+namespace NisusWrtStruct
 {
 /** the different zone */
 enum ZoneType { Z_Main=0, Z_Footnote, Z_HeaderFooter };
@@ -139,7 +139,7 @@ struct RecursifData {
   struct Node;
   struct Info;
   //! constructor
-  RecursifData(NSStruct::ZoneType zone, NSStruct::VariableType vType=NSStruct::V_None, int level=0) :
+  RecursifData(NisusWrtStruct::ZoneType zone, NisusWrtStruct::VariableType vType=NisusWrtStruct::V_None, int level=0) :
     m_info(new Info(zone, vType)), m_level(level), m_childList()
   {
   }
@@ -159,7 +159,7 @@ struct RecursifData {
     return *this;
   }
   //! read the data
-  bool read(NSParser &parser, MWAWEntry const &entry);
+  bool read(NisusWrtParser &parser, MWAWEntry const &entry);
 
   //! zone information
   shared_ptr<Info> m_info;
@@ -171,14 +171,14 @@ struct RecursifData {
   //! the zone information
   struct Info {
     //! the constructor
-    Info(NSStruct::ZoneType zType, NSStruct::VariableType vType=NSStruct::V_None) :
+    Info(NisusWrtStruct::ZoneType zType, NisusWrtStruct::VariableType vType=NisusWrtStruct::V_None) :
       m_zoneType(zType), m_variableType(vType)
     {
     }
     //! the zone id
-    NSStruct::ZoneType m_zoneType;
+    NisusWrtStruct::ZoneType m_zoneType;
     //! the variable type
-    NSStruct::VariableType m_variableType;
+    NisusWrtStruct::VariableType m_variableType;
   };
   //! the data data
   struct Node {

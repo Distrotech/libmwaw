@@ -195,21 +195,21 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWTable.hxx			\
 	MWAWTextListener.cxx		\
 	MWAWTextListener.hxx		\
-	NSGraph.cxx			\
-	NSGraph.hxx			\
-	NSParser.cxx			\
-	NSParser.hxx			\
-	NSStruct.cxx			\
-	NSStruct.hxx			\
-	NSText.cxx			\
-	NSText.hxx			\
+	NisusWrtGraph.cxx		\
+	NisusWrtGraph.hxx		\
+	NisusWrtParser.cxx		\
+	NisusWrtParser.hxx		\
+	NisusWrtStruct.cxx		\
+	NisusWrtStruct.hxx		\
+	NisusWrtText.cxx		\
+	NisusWrtText.hxx		\
 	TeachTxtParser.cxx		\
 	TeachTxtParser.hxx		\
-	WNEntry.hxx			\
-	WNParser.cxx			\
-	WNParser.hxx			\
-	WNText.cxx			\
-	WNText.hxx			\
+	WriteNowEntry.hxx		\
+	WriteNowParser.cxx		\
+	WriteNowParser.hxx		\
+	WriteNowText.cxx		\
+	WriteNowText.hxx		\
 	WriterPlsParser.cxx		\
 	WriterPlsParser.hxx		\
 	ZWrtParser.cxx			\

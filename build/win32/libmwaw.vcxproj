@@ -450,19 +450,19 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSGraph.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSParser.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSStruct.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSText.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -470,11 +470,11 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WNParser.cxx">
+    <ClCompile Include="..\..\src\lib\WriteNowParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WNText.cxx">
+    <ClCompile Include="..\..\src\lib\WriteNowText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -588,14 +588,14 @@
     <ClInclude Include="..\..\src\lib\MacWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacWrtProParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacWrtProStructures.hxx" />
-    <ClInclude Include="..\..\src\lib\NSGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\NSParser.hxx" />
-    <ClInclude Include="..\..\src\lib\NSStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\NSText.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />
-    <ClInclude Include="..\..\src\lib\WNEntry.hxx" />
-    <ClInclude Include="..\..\src\lib\WNParser.hxx" />
-    <ClInclude Include="..\..\src\lib\WNText.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowEntry.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowParser.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowText.hxx" />
     <ClInclude Include="..\..\src\lib\WriterPlsParser.hxx" />
     <ClInclude Include="..\..\src\lib\ZWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\ZWrtText.hxx" />

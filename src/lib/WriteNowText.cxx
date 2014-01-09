@@ -49,13 +49,13 @@
 #include "MWAWSection.hxx"
 #include "MWAWTable.hxx"
 
-#include "WNParser.hxx"
-#include "WNEntry.hxx"
+#include "WriteNowParser.hxx"
+#include "WriteNowEntry.hxx"
 
-#include "WNText.hxx"
+#include "WriteNowText.hxx"
 
-/** Internal: the structures of a WNText */
-namespace WNTextInternal
+/** Internal: the structures of a WriteNowText */
+namespace WriteNowTextInternal
 {
 ////////////////////////////////////////
 //! Internal: the fonts
@@ -154,7 +154,7 @@ struct Style {
 };
 
 ////////////////////////////////////////
-//! Internal: the token of a WNText
+//! Internal: the token of a WriteNowText
 struct Token {
   Token() : m_graphicZone(-1), m_box(), m_error("")
   {
@@ -199,7 +199,7 @@ struct Token {
 };
 
 ////////////////////////////////////////
-//! Internal: the table of a WNText
+//! Internal: the table of a WriteNowText
 struct TableData {
   //! constructor
   TableData() : m_type(-1), m_box(), m_color(MWAWColor::white()), m_error("")
@@ -450,7 +450,7 @@ struct ContentZones {
     return res;
   }
   //! the general zone
-  WNEntry m_entry;
+  WriteNowEntry m_entry;
   //! the zone id
   int m_id;
   //! the zone type : 0 : main, 1 header/footer, 2 footnote,
@@ -467,16 +467,16 @@ struct ContentZones {
 
 
 ////////////////////////////////////////
-//! Internal: the cell of a WNText
+//! Internal: the cell of a WriteNowText
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(WNText &parser) : MWAWCell(), m_parser(parser),
+  Cell(WriteNowText &parser) : MWAWCell(), m_parser(parser),
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
   bool sendContent(MWAWListenerPtr, MWAWTable &);
   //! the text parser
-  WNText &m_parser;
+  WriteNowText &m_parser;
   //! the list of zone
   std::vector<ContentZone> m_zonesList;
   //! a list to retrieve the footnote content
@@ -495,7 +495,7 @@ struct Table : public MWAWTable {
   Cell *get(int id)
   {
     if (id < 0 || id >= numCells()) {
-      MWAW_DEBUG_MSG(("WNTextInternal::Table::get: cell %d does not exists\n",id));
+      MWAW_DEBUG_MSG(("WriteNowTextInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
     return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
@@ -513,7 +513,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a WNText
+//! Internal: the state of a WriteNowText
 struct State {
   //! constructor
   State() : m_version(-1), m_numColumns(1), m_numPages(1), m_actualPage(1),
@@ -600,23 +600,23 @@ bool Cell::sendContent(MWAWListenerPtr, MWAWTable &)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-WNText::WNText(WNParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new WNTextInternal::State),
+WriteNowText::WriteNowText(WriteNowParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new WriteNowTextInternal::State),
   m_entryManager(parser.m_entryManager), m_mainParser(&parser)
 {
 }
 
-WNText::~WNText()
+WriteNowText::~WriteNowText()
 { }
 
-int WNText::version() const
+int WriteNowText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int WNText::numPages() const
+int WriteNowText::numPages() const
 {
   int nCol, width;
   m_state->m_actualPage = m_state->m_numPages = 1;
@@ -629,23 +629,23 @@ int WNText::numPages() const
     m_state->m_numPages = 1;
     return 1;
   }
-  shared_ptr<WNTextInternal::ContentZones> mainContent = m_state->m_mainZones[0].m_zones[0];
+  shared_ptr<WriteNowTextInternal::ContentZones> mainContent = m_state->m_mainZones[0].m_zones[0];
   int nPages = 1+mainContent->getNumberOfZonesWithType(0x10);
   m_state->m_numPages = nPages;
   return nPages;
 }
 
-WNEntry WNText::getHeader() const
+WriteNowEntry WriteNowText::getHeader() const
 {
   if (!m_state->m_header)
-    return WNEntry();
+    return WriteNowEntry();
   return m_state->m_header->m_entry;
 }
 
-WNEntry WNText::getFooter() const
+WriteNowEntry WriteNowText::getFooter() const
 {
   if (!m_state->m_footer)
-    return WNEntry();
+    return WriteNowEntry();
   return m_state->m_footer->m_entry;
 }
 
@@ -655,9 +655,9 @@ WNEntry WNText::getFooter() const
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-bool WNText::createZones()
+bool WriteNowText::createZones()
 {
-  std::multimap<std::string, WNEntry const *>::const_iterator iter;
+  std::multimap<std::string, WriteNowEntry const *>::const_iterator iter;
 
   iter = m_entryManager->m_typeMap.find("FontZone");
   if (iter != m_entryManager->m_typeMap.end())
@@ -670,13 +670,13 @@ bool WNText::createZones()
   // the text zone
   iter = m_entryManager->m_typeMap.find("TextZone");
   int numData = 0;
-  std::vector<WNEntry> listData[3];
+  std::vector<WriteNowEntry> listData[3];
   while (iter != m_entryManager->m_typeMap.end()) {
     if (iter->first != "TextZone")
       break;
     int id = iter->second->id();
     if (id < 0 || id > 2) {
-      MWAW_DEBUG_MSG(("WNText::createZones: find odd zone type:%d\n",id));
+      MWAW_DEBUG_MSG(("WriteNowText::createZones: find odd zone type:%d\n",id));
       ++iter;
       continue;
     }
@@ -689,12 +689,12 @@ bool WNText::createZones()
   m_mainParser->getColumnInfo(nCol, width);
   m_state->m_numColumns = nCol;
 
-  std::map<long, shared_ptr<WNTextInternal::ContentZones> > listDone;
-  std::map<long, shared_ptr<WNTextInternal::ContentZones> >::iterator it;
+  std::map<long, shared_ptr<WriteNowTextInternal::ContentZones> > listDone;
+  std::map<long, shared_ptr<WriteNowTextInternal::ContentZones> >::iterator it;
   /** we can now create the content zone and type them */
   for (int z = 2; z >= 0; z--) {
     for (size_t i = 0; i < listData[z].size(); i++) {
-      WNEntry data = listData[z][i];
+      WriteNowEntry data = listData[z][i];
       it = listDone.find(data.begin());
       if (it != listDone.end()) {
         m_state->m_mainZones[z].m_zones.push_back(it->second);
@@ -703,7 +703,7 @@ bool WNText::createZones()
 
       // ok we must create the data
       data.setId(numData++);
-      shared_ptr<WNTextInternal::ContentZones> zone;
+      shared_ptr<WriteNowTextInternal::ContentZones> zone;
       if (m_entryManager->add(data))
         zone = parseContent(m_entryManager->m_posMap.find(data.begin())->second);
       if (zone) {
@@ -714,16 +714,16 @@ bool WNText::createZones()
     }
   }
   /* we can now recreate a zone 0 which contains all the main content zone*/
-  WNTextInternal::Zone &mainZone = m_state->m_mainZones[0];
+  WriteNowTextInternal::Zone &mainZone = m_state->m_mainZones[0];
   size_t numZones = mainZone.m_zones.size();
-  std::vector<shared_ptr<WNTextInternal::ContentZones> > headerFooterList;
+  std::vector<shared_ptr<WriteNowTextInternal::ContentZones> > headerFooterList;
   std::vector<int> calledTypesList;
 
-  shared_ptr<WNTextInternal::ContentZones> zone0(new WNTextInternal::ContentZones);
+  shared_ptr<WriteNowTextInternal::ContentZones> zone0(new WriteNowTextInternal::ContentZones);
   zone0->m_id = -1;
   zone0->m_type = 0;
   for (size_t z = 0; z < numZones; z++) {
-    shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[z];
+    shared_ptr<WriteNowTextInternal::ContentZones> content =  mainZone.m_zones[z];
     switch (content->m_type) {
     case 0:
       break;
@@ -734,13 +734,13 @@ bool WNText::createZones()
       zone0->m_footnoteList.push_back(content);
       break;
     default:
-      MWAW_DEBUG_MSG(("WNText::createZones: find odd zone type(II):%d\n",content->m_type));
+      MWAW_DEBUG_MSG(("WriteNowText::createZones: find odd zone type(II):%d\n",content->m_type));
       break;
     }
     if (content->m_type != 0)
       continue;
     if (content->hasPageColumnBreak()) {
-      WNTextInternal::ContentZone breakF;
+      WriteNowTextInternal::ContentZone breakF;
       breakF.m_type=0x10;
       zone0->m_zonesList.push_back(breakF);
     }
@@ -756,30 +756,30 @@ bool WNText::createZones()
   /* try to create the footnote and the header link */
   int numHeaderFooter = 0; // header+footer
 
-  shared_ptr<WNTextInternal::ContentZones> content =  mainZone.m_zones[0];
+  shared_ptr<WriteNowTextInternal::ContentZones> content =  mainZone.m_zones[0];
   if (content->m_type != 0) return false;
 
   size_t numCalledZones = calledTypesList.size();
   for (size_t c = 0; c < numCalledZones; c++) {
     int called = calledTypesList[c];
     if (called < 5 || called > 6) {
-      MWAW_DEBUG_MSG(("WNText::createZones: unknown content %d\n", called));
+      MWAW_DEBUG_MSG(("WriteNowText::createZones: unknown content %d\n", called));
       continue;
     }
     int number = numHeaderFooter++;
     if (number >= int(headerFooterList.size())) {
-      MWAW_DEBUG_MSG(("WNText::createZones: can not find zone for type:%d\n", called));
+      MWAW_DEBUG_MSG(("WriteNowText::createZones: can not find zone for type:%d\n", called));
       continue;
     }
     if (called == 5) {
       if (m_state->m_header)
-        MWAW_DEBUG_MSG(("WNText::createZones: header is already defined\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::createZones: header is already defined\n"));
       else
         m_state->m_header = headerFooterList[(size_t)number];
     }
     else if (called == 6) {
       if (m_state->m_footer)
-        MWAW_DEBUG_MSG(("WNText::createZones: footer is already defined\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::createZones: footer is already defined\n"));
       else
         m_state->m_footer = headerFooterList[(size_t)number];
     }
@@ -791,18 +791,18 @@ bool WNText::createZones()
 ////////////////////////////////////////////////////////////
 // try to parse a text data zone
 ////////////////////////////////////////////////////////////
-shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &entry)
+shared_ptr<WriteNowTextInternal::ContentZones> WriteNowText::parseContent(WriteNowEntry const &entry)
 {
   int vers = version();
 
   if (m_state->getContentZone(entry.begin())) {
-    MWAW_DEBUG_MSG(("WNText::parseContent: textContent is already parsed\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::parseContent: textContent is already parsed\n"));
     return m_state->getContentZone(entry.begin());
   }
 
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("WNText::parseContent: text zone size is invalid\n"));
-    return shared_ptr<WNTextInternal::ContentZones>();
+    MWAW_DEBUG_MSG(("WriteNowText::parseContent: text zone size is invalid\n"));
+    return shared_ptr<WriteNowTextInternal::ContentZones>();
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -812,19 +812,19 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   // print the text zone data
   f << std::hex << "txtZone=[" << std::hex << entry.m_val[0] << std::dec
     <<",h=" << entry.m_val[1] << "],";
-  shared_ptr<WNTextInternal::ContentZones> text;
+  shared_ptr<WriteNowTextInternal::ContentZones> text;
   if (vers >= 3) {
     if (entry.length() < 16) {
-      MWAW_DEBUG_MSG(("WNText::parseContent: text zone size is too short\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::parseContent: text zone size is too short\n"));
       return text;
     }
     input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
     if (input->readLong(4) != entry.length()) {
-      MWAW_DEBUG_MSG(("WNText::parseContent: bad begin of last zone\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::parseContent: bad begin of last zone\n"));
       return text;
     }
 
-    text.reset(new WNTextInternal::ContentZones);
+    text.reset(new WriteNowTextInternal::ContentZones);
     text->m_entry = entry;
     text->m_id = entry.id();
 
@@ -846,16 +846,16 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
   }
   else {
     if (entry.length() < 2) {
-      MWAW_DEBUG_MSG(("WNText::parseContent: text zone size is too short\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::parseContent: text zone size is too short\n"));
       return text;
     }
     input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
     if (int(input->readULong(2))+2 != entry.length()) {
-      MWAW_DEBUG_MSG(("WNText::parseContent: bad begin of last zone\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::parseContent: bad begin of last zone\n"));
       return text;
     }
 
-    text.reset(new WNTextInternal::ContentZones);
+    text.reset(new WriteNowTextInternal::ContentZones);
     text->m_entry = entry;
     text->m_id = entry.id();
   }
@@ -864,10 +864,10 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
 
   while (long(input->tell()) < entry.end()) {
     long pos = input->tell();
-    WNTextInternal::ContentZone zone;
+    WriteNowTextInternal::ContentZone zone;
     int c = (int) input->readULong(1);
     if (c == 0xf0) {
-      MWAW_DEBUG_MSG(("WNText::parseContent: find 0xf0 entry\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::parseContent: find 0xf0 entry\n"));
       ascFile.addPos(pos);
       ascFile.addNote("TextData:##");
       return text;
@@ -907,7 +907,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
         }
       }
       if ((type == 0xb || type == 0xd) && numChar != 1) {
-        MWAW_DEBUG_MSG(("WNText::parseContent: find odd size for type %x entry\n", type));
+        MWAW_DEBUG_MSG(("WriteNowText::parseContent: find odd size for type %x entry\n", type));
         ascFile.addPos(pos);
         ascFile.addNote("TextData:##");
 
@@ -933,7 +933,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
 
   m_state->m_contentMap[entry.begin()] = text;
   if (long(input->tell()) != entry.end()) {
-    MWAW_DEBUG_MSG(("WNText::parseContent: go after entry end\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::parseContent: go after entry end\n"));
   }
 
   return text;
@@ -942,7 +942,7 @@ shared_ptr<WNTextInternal::ContentZones> WNText::parseContent(WNEntry const &ent
 ////////////////////////////////////////////////////////////
 // try to parse a list of content zones
 ////////////////////////////////////////////////////////////
-bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
+bool WriteNowText::parseZone(WriteNowEntry const &entry, std::vector<WriteNowEntry> &listData)
 {
   listData.resize(0);
   int vers = version();
@@ -953,7 +953,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
   }
   if (!entry.valid() || entry.length() < headerSz
       || (entry.length()%dataSz) !=(headerSz%dataSz)) {
-    MWAW_DEBUG_MSG(("WNText::parseZone: text zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::parseZone: text zone size is invalid\n"));
     return false;
   }
 
@@ -964,7 +964,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   long sz = (long) input->readULong(lengthSz);
   if (vers>2 && sz != entry.length()) {
-    MWAW_DEBUG_MSG(("WNText::parseZone: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::parseZone: bad begin of last zone\n"));
     return false;
   }
 
@@ -1015,7 +1015,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
       if (vers <= 2) break;
     }
 
-    WNEntry zEntry;
+    WriteNowEntry zEntry;
     zEntry.setBegin((long) input->readULong(vers <= 2 ? 2 : 4));
     if (vers > 2) zEntry.setLength((long) input->readULong(4));
     else if (zEntry.begin() &&
@@ -1036,7 +1036,7 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
       if (zEntry.end() > endPos) {
         if (!m_mainParser->checkIfPositionValid(zEntry.end())) {
           f << "#";
-          MWAW_DEBUG_MSG(("WNText::parseZone: odd pointer for text zone %d\n", elt));
+          MWAW_DEBUG_MSG(("WriteNowText::parseZone: odd pointer for text zone %d\n", elt));
           ok = false;
         }
         else
@@ -1067,17 +1067,17 @@ bool WNText::parseZone(WNEntry const &entry, std::vector<WNEntry> &listData)
 ////////////////////////////////////////////////////////////
 // the fonts names
 ////////////////////////////////////////////////////////////
-bool WNText::readFontNames(WNEntry const &entry)
+bool WriteNowText::readFontNames(WriteNowEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("WNText::readFontNames: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readFontNames: zone size is invalid\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNText::readFontNames: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readFontNames: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1097,7 +1097,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (long(input->tell())+N*8 > entry.end()) {
-    MWAW_DEBUG_MSG(("WNText::readFontNames: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readFontNames: the zone is too short\n"));
     return false;
   }
   ascFile.addPos(entry.begin());
@@ -1113,7 +1113,7 @@ bool WNText::readFontNames(WNEntry const &entry)
       f << "def,";
       break;
     default:
-      MWAW_DEBUG_MSG(("WNText::readFontNames: find unknown type %d\n", type));
+      MWAW_DEBUG_MSG(("WriteNowText::readFontNames: find unknown type %d\n", type));
       f << "#type=" << type << ",";
       break;
     }
@@ -1133,7 +1133,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     pos = defPos[(size_t) n];
     if (pos == entry.end()) continue;
     if (pos+13 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNText::readFontNames: can not read entry : %d\n", n));
+      MWAW_DEBUG_MSG(("WriteNowText::readFontNames: can not read entry : %d\n", n));
       continue;
     }
 
@@ -1151,7 +1151,7 @@ bool WNText::readFontNames(WNEntry const &entry)
     }
     int sz = (int) input->readULong(1);
     if (pos+13+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("WNText::readFontNames: can not read entry name : %d\n", n));
+      MWAW_DEBUG_MSG(("WriteNowText::readFontNames: can not read entry name : %d\n", n));
       return false;
     }
 
@@ -1160,14 +1160,14 @@ bool WNText::readFontNames(WNEntry const &entry)
     for (int i = 0; i < sz; i++) {
       char ch = (char) input->readULong(1);
       if (ch == '\0') {
-        MWAW_DEBUG_MSG(("WNText::readFontNames: pb with name field %d\n", n));
+        MWAW_DEBUG_MSG(("WriteNowText::readFontNames: pb with name field %d\n", n));
         ok = false;
         break;
       }
       else if (ch & 0x80) {
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("WNText::readFontNames: find odd font\n"));
+          MWAW_DEBUG_MSG(("WriteNowText::readFontNames: find odd font\n"));
           first = false;
         }
         ok = false;
@@ -1190,9 +1190,9 @@ bool WNText::readFontNames(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the fonts properties
 ////////////////////////////////////////////////////////////
-bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font &font)
+bool WriteNowText::readFont(MWAWInputStream &input, bool inStyle, WriteNowTextInternal::Font &font)
 {
-  font = WNTextInternal::Font();
+  font = WriteNowTextInternal::Font();
   int vers = version();
   libmwaw::DebugStream f;
 
@@ -1200,7 +1200,7 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
   int expectedLength = vers <= 2 ? 4 : 14;
   input.seek(expectedLength, librevenge::RVNG_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readFont: zone is too short \n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readFont: zone is too short \n"));
     return false;
   }
   input.seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1280,16 +1280,16 @@ bool WNText::readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
-bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ruler)
+bool WriteNowText::readParagraph(MWAWInputStream &input, WriteNowTextInternal::Paragraph &ruler)
 {
   libmwaw::DebugStream f;
   int vers = version();
-  ruler = WNTextInternal::Paragraph();
+  ruler = WriteNowTextInternal::Paragraph();
   long pos = input.tell();
   int expectedLength = vers <= 2 ? 8 : 16;
   input.seek(expectedLength, librevenge::RVNG_SEEK_CUR);
   if (pos+expectedLength != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readParagraph: zone is too short: %ld\n",
+    MWAW_DEBUG_MSG(("WriteNowText::readParagraph: zone is too short: %ld\n",
                     long(input.tell()) - pos));
     return false;
   }
@@ -1340,7 +1340,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
       MWAWTabStop newTab;
       int newVal = (int) input.readULong(2);
       if (tab && newVal < previousVal) {
-        MWAW_DEBUG_MSG(("WNText::readParagraph: find bad tab pos\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::readParagraph: find bad tab pos\n"));
         f << "#tab[" << tab << ",";
         input.seek(-1, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1380,7 +1380,7 @@ bool WNText::readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ru
   return true;
 }
 
-void WNText::setProperty(WNTextInternal::Paragraph const &ruler)
+void WriteNowText::setProperty(WriteNowTextInternal::Paragraph const &ruler)
 {
   m_state->m_paragraph = ruler;
   if (!m_parserState->m_textListener) return;
@@ -1390,20 +1390,20 @@ void WNText::setProperty(WNTextInternal::Paragraph const &ruler)
 ////////////////////////////////////////////////////////////
 // the style properties ?
 ////////////////////////////////////////////////////////////
-bool WNText::readStyles(WNEntry const &entry)
+bool WriteNowText::readStyles(WriteNowEntry const &entry)
 {
   m_state->m_styleList.resize(0);
   m_state->m_styleMap.clear();
 
   if (!entry.valid() || entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("WNText::readStyles: zone size is invalid\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readStyles: zone size is invalid\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   if (input->readLong(4) != entry.length()) {
-    MWAW_DEBUG_MSG(("WNText::readStyles: bad begin of last zone\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readStyles: bad begin of last zone\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1423,7 +1423,7 @@ bool WNText::readStyles(WNEntry const &entry)
     if (val) f << "g" << i << "=" << val << ",";
   }
   if (long(input->tell())+N*8 > entry.end()) {
-    MWAW_DEBUG_MSG(("WNText::readStyles: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readStyles: the zone is too short\n"));
     return false;
   }
   ascFile.addPos(entry.begin());
@@ -1450,7 +1450,7 @@ bool WNText::readStyles(WNEntry const &entry)
       f << "none,";
       break;
     default:
-      MWAW_DEBUG_MSG(("WNText::readStyles: find unknown type %d\n", type));
+      MWAW_DEBUG_MSG(("WriteNowText::readStyles: find unknown type %d\n", type));
       f << "#type=" << type << ",";
       break;
     }
@@ -1479,11 +1479,11 @@ bool WNText::readStyles(WNEntry const &entry)
   for (size_t n = 0; n < defPos.size(); n++) {
     pos = defPos[n];
     if (pos+34 > entry.end()) {
-      MWAW_DEBUG_MSG(("WNText::readStyles: can not read entry : %ld\n", long(n)));
+      MWAW_DEBUG_MSG(("WriteNowText::readStyles: can not read entry : %ld\n", long(n)));
       return false;
     }
 
-    WNTextInternal::Style style;
+    WriteNowTextInternal::Style style;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     f.str("");
     int type = (int) input->readULong(1);
@@ -1520,7 +1520,7 @@ bool WNText::readStyles(WNEntry const &entry)
       input->seek(pos+relPos[0], librevenge::RVNG_SEEK_SET);
       int sz = (int) input->readULong(1);
       if (!sz || pos+relPos[0]+1+sz > entry.end()) {
-        MWAW_DEBUG_MSG(("WNText::readStyles: can not read name for entry : %ld\n", long(n)));
+        MWAW_DEBUG_MSG(("WriteNowText::readStyles: can not read name for entry : %ld\n", long(n)));
         f << "name[length],";
       }
       else {
@@ -1542,7 +1542,7 @@ bool WNText::readStyles(WNEntry const &entry)
       input->seek(pos+relPos[1], librevenge::RVNG_SEEK_SET);
       input->pushLimit(relPos[2] ? pos+relPos[2] : entry.end());
 
-      WNTextInternal::Font font;
+      WriteNowTextInternal::Font font;
       if (readFont(*input, true, font)) {
         style.m_font = font;
         f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
@@ -1560,7 +1560,7 @@ bool WNText::readStyles(WNEntry const &entry)
       input->seek(pos+relPos[2], librevenge::RVNG_SEEK_SET);
       int sz = (int) input->readULong(2);
       input->pushLimit(pos+relPos[2]+sz);
-      WNTextInternal::Paragraph ruler;
+      WriteNowTextInternal::Paragraph ruler;
       if (readParagraph(*input, ruler)) {
         style.m_paragraph = ruler;
         f << ruler;
@@ -1583,14 +1583,14 @@ bool WNText::readStyles(WNEntry const &entry)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the token
 ////////////////////////////////////////////////////////////
-bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
+bool WriteNowText::readToken(MWAWInputStream &input, WriteNowTextInternal::Token &token)
 {
-  token=WNTextInternal::Token();
+  token=WriteNowTextInternal::Token();
 
   long pos = input.tell();
   input.seek(pos+54, librevenge::RVNG_SEEK_SET);
   if (pos+54 != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readToken: zone is too short \n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readToken: zone is too short \n"));
     return false;
   }
   input.seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1624,9 +1624,9 @@ bool WNText::readToken(MWAWInputStream &input, WNTextInternal::Token &token)
   return true;
 }
 
-bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
+bool WriteNowText::readTokenV2(MWAWInputStream &input, WriteNowTextInternal::Token &token)
 {
-  token=WNTextInternal::Token();
+  token=WriteNowTextInternal::Token();
 
   long actPos = input.tell();
   int dim[2];
@@ -1644,7 +1644,7 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
   MWAWInputStreamPtr ip(&input,MWAW_shared_ptr_noop_deleter<MWAWInputStream>());
   shared_ptr<MWAWPict> pict(MWAWPictData::get(ip, (int) sz));
   if (!pict) {
-    MWAW_DEBUG_MSG(("WNParser::readTokenV2: can not read the picture\n"));
+    MWAW_DEBUG_MSG(("WriteNowParser::readTokenV2: can not read the picture\n"));
     return false;
   }
   if (!m_parserState->m_textListener) return true;
@@ -1669,22 +1669,22 @@ bool WNText::readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the table
 ////////////////////////////////////////////////////////////
-bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
+bool WriteNowText::readTable(MWAWInputStream &input, WriteNowTextInternal::TableData &table)
 {
-  table=WNTextInternal::TableData();
+  table=WriteNowTextInternal::TableData();
   long pos = input.tell();
 
   table.m_type = (int) input.readULong(1);
   if (input.isEnd()) {
     if (table.m_type!=0) {
-      MWAW_DEBUG_MSG(("WNText::readTable: find a zone will 0 size\n"));
+      MWAW_DEBUG_MSG(("WriteNowText::readTable: find a zone will 0 size\n"));
       return false;
     }
     return true;
   }
   input.seek(pos+28, librevenge::RVNG_SEEK_SET);
   if (pos+28 != long(input.tell())) {
-    MWAW_DEBUG_MSG(("WNText::readTable: zone is too short \n"));
+    MWAW_DEBUG_MSG(("WriteNowText::readTable: zone is too short \n"));
     return false;
   }
   input.seek(pos+1, librevenge::RVNG_SEEK_SET);
@@ -1696,7 +1696,7 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
   if (m_mainParser->getColor(backColor,col))
     table.m_color = col;
   else {
-    MWAW_DEBUG_MSG(("WNText::readTable: can not read backgroundColor: %d\n", backColor));
+    MWAW_DEBUG_MSG(("WriteNowText::readTable: can not read backgroundColor: %d\n", backColor));
   }
   for (int i = 0; i < 4; i++) {
     table.m_flags[i] = (int) input.readULong(1); // 0x80, 0x81, 5, 0 : border flag ?
@@ -1716,26 +1716,26 @@ bool WNText::readTable(MWAWInputStream &input, WNTextInternal::TableData &table)
 
 ////////////////////////////////////////////////////////////
 //! send data to the listener
-bool WNText::send(WNEntry const &entry)
+bool WriteNowText::send(WriteNowEntry const &entry)
 {
-  shared_ptr<WNTextInternal::ContentZones> text
+  shared_ptr<WriteNowTextInternal::ContentZones> text
   (m_state->getContentZone(entry.begin()));
   if (!text) {
-    MWAW_DEBUG_MSG(("WNText::send: can not find entry\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::send: can not find entry\n"));
     return false;
   }
-  WNTextInternal::Paragraph ruler=m_state->getDefaultParagraph(text->m_type);
+  WriteNowTextInternal::Paragraph ruler=m_state->getDefaultParagraph(text->m_type);
   text->m_sent = true;
   return send(text->m_zonesList, text->m_footnoteList, ruler);
 }
 
-bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
-                  std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
-                  WNTextInternal::Paragraph &ruler)
+bool WriteNowText::send(std::vector<WriteNowTextInternal::ContentZone> &listZones,
+                        std::vector<shared_ptr<WriteNowTextInternal::ContentZones> > &footnoteList,
+                        WriteNowTextInternal::Paragraph &ruler)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("WNText::send: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::send: can not find the listener\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1747,12 +1747,12 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   bool rulerSet = false;
   int numLineTabs = 0, actTabs = 0, numFootnote = 0;
 
-  shared_ptr<WNTextInternal::Table> table;
-  shared_ptr<WNTextInternal::Cell> cell;
+  shared_ptr<WriteNowTextInternal::Table> table;
+  shared_ptr<WriteNowTextInternal::Cell> cell;
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   for (size_t z = 0; z < listZones.size(); z++) {
-    WNTextInternal::ContentZone const &zone = listZones[z];
+    WriteNowTextInternal::ContentZone const &zone = listZones[z];
     if (table && cell) {
       bool done = true;
       switch (zone.m_type) {
@@ -1767,7 +1767,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         cell->m_zonesList.push_back(zone);
         break;
       case 0x10:
-        MWAW_DEBUG_MSG(("WNText::send: find a page/column break in table(ignored)\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::send: find a page/column break in table(ignored)\n"));
         break;
       default:
         cell->m_zonesList.push_back(zone);
@@ -1780,7 +1780,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       static bool first=true;
       if (first) {
         first = false;
-        MWAW_DEBUG_MSG(("WNText::send: find some data in table but outside cell\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::send: find some data in table but outside cell\n"));
       }
     }
     switch (zone.m_type) {
@@ -1790,7 +1790,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
         numFootnote++;
       }
       else {
-        MWAW_DEBUG_MSG(("WNText::send: can not find footnote:%d\n", numFootnote));
+        MWAW_DEBUG_MSG(("WriteNowText::send: can not find footnote:%d\n", numFootnote));
       }
       break;
     case 0xd:
@@ -1835,7 +1835,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       if (ch == 0xf0) {
         ch = (int) input->readULong(1);
         if (ch & 0xf0) {
-          MWAW_DEBUG_MSG(("WNText::send: find odd 0xF0 following\n"));
+          MWAW_DEBUG_MSG(("WriteNowText::send: find odd 0xF0 following\n"));
           continue;
         }
         data.append((unsigned char)(0xf0 | ch));
@@ -1849,7 +1849,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       long sz = (long) data.size();
       const unsigned char *buffer = data.getDataBuffer();
       if (!buffer && sz) {
-        MWAW_DEBUG_MSG(("WNText::send: can find data buffer\n"));
+        MWAW_DEBUG_MSG(("WriteNowText::send: can find data buffer\n"));
         sz = 0;
       }
       if (sz && !rulerSet) {
@@ -1896,7 +1896,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     }
     case 0xa: {  // only in writenow 4.0 : related to a table ?
       if (!dataInput) break;
-      WNTextInternal::TableData tableData;
+      WriteNowTextInternal::TableData tableData;
       if (readTable(*dataInput, tableData)) {
         f << tableData;
 
@@ -1907,21 +1907,21 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
           if (table)
             needSendTable = true;
           else {
-            MWAW_DEBUG_MSG(("WNText::send: Find odd end of table\n"));
+            MWAW_DEBUG_MSG(("WriteNowText::send: Find odd end of table\n"));
           }
           break;
         case 1:
           if (!table)
-            table.reset(new WNTextInternal::Table);
+            table.reset(new WriteNowTextInternal::Table);
           else {
-            MWAW_DEBUG_MSG(("WNText::send: Find a table in a table\n"));
+            MWAW_DEBUG_MSG(("WriteNowText::send: Find a table in a table\n"));
           }
           break;
         case 2:
           if (table)
             needCreateCell = true;
           else {
-            MWAW_DEBUG_MSG(("WNText::send: Find cell outside a table\n"));
+            MWAW_DEBUG_MSG(("WriteNowText::send: Find cell outside a table\n"));
           }
           break;
         default:
@@ -1934,12 +1934,12 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
               table->sendAsText(listener);
           }
           else {
-            MWAW_DEBUG_MSG(("WNText::send: can not find the cell to send...\n"));
+            MWAW_DEBUG_MSG(("WriteNowText::send: can not find the cell to send...\n"));
           }
           table.reset();
         }
         if (needCreateCell) {
-          cell.reset(new WNTextInternal::Cell(*this));
+          cell.reset(new WriteNowTextInternal::Cell(*this));
           tableData.updateCell(*cell);
           table->add(cell);
         }
@@ -1958,7 +1958,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     }
     case 0xc: {
       if (!dataInput) break;
-      WNTextInternal::Paragraph newParagraph;
+      WriteNowTextInternal::Paragraph newParagraph;
       if (readParagraph(*dataInput, newParagraph)) {
         ruler = newParagraph;
         numLineTabs = int(ruler.m_tabs->size());
@@ -1972,7 +1972,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     }
     case 0xe: {
       if (!dataInput) break;
-      WNTextInternal::Token token;
+      WriteNowTextInternal::Token token;
       if (vers >= 3) {
         if (readToken(*dataInput, token)) {
           m_mainParser->sendGraphic(token.m_graphicZone, token.m_box);
@@ -1991,7 +1991,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
     }
     case 0xf: {
       if (!dataInput) break;
-      WNTextInternal::Font font;
+      WriteNowTextInternal::Font font;
       if (readFont(*dataInput, false, font)) {
         actFont=font.m_font;
         f << font.m_font.getDebugString(m_parserState->m_fontConverter) << font;
@@ -2004,7 +2004,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
       break;
     }
     default:
-      MWAW_DEBUG_MSG(("WNText::send: find keyword %x\n",zone.m_type));
+      MWAW_DEBUG_MSG(("WriteNowText::send: find keyword %x\n",zone.m_type));
       break;
     }
 
@@ -2013,7 +2013,7 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   }
 
   if (table) {
-    MWAW_DEBUG_MSG(("WNText::send: a table is not closed\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::send: a table is not closed\n"));
     if (!table->sendTable(listener))
       table->sendAsText(listener);
   }
@@ -2021,15 +2021,15 @@ bool WNText::send(std::vector<WNTextInternal::ContentZone> &listZones,
   return true;
 }
 
-void WNText::sendZone(int id)
+void WriteNowText::sendZone(int id)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("WNText::sendZone: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("WriteNowText::sendZone: can not find the listener\n"));
     return;
   }
   if (id < 0 || id >= 3) {
-    MWAW_DEBUG_MSG(("WNText::sendZone: called with id=%d\n",id));
+    MWAW_DEBUG_MSG(("WriteNowText::sendZone: called with id=%d\n",id));
     return;
   }
   if (id == 0) {
@@ -2045,8 +2045,8 @@ void WNText::sendZone(int id)
       listener->openSection(sec);
     }
   }
-  WNTextInternal::Zone &mZone = m_state->m_mainZones[id];
-  WNTextInternal::Paragraph ruler=m_state->getDefaultParagraph(id);
+  WriteNowTextInternal::Zone &mZone = m_state->m_mainZones[id];
+  WriteNowTextInternal::Paragraph ruler=m_state->getDefaultParagraph(id);
   if (id==0)
     listener->setParagraph(ruler);
   for (size_t i = 0; i < mZone.m_zones.size(); i++) {
@@ -2058,7 +2058,7 @@ void WNText::sendZone(int id)
   }
 }
 
-void WNText::flushExtra()
+void WriteNowText::flushExtra()
 {
   for (int z = 0; z < 3; z++) {
     if (z == 1) continue;

@@ -50,13 +50,13 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "NSParser.hxx"
-#include "NSStruct.hxx"
+#include "NisusWrtParser.hxx"
+#include "NisusWrtStruct.hxx"
 
-#include "NSText.hxx"
+#include "NisusWrtText.hxx"
 
-/** Internal: the structures of a NSText */
-namespace NSTextInternal
+/** Internal: the structures of a NisusWrtText */
+namespace NisusWrtTextInternal
 {
 /** Internal: the fonts and many other data*/
 struct Font {
@@ -225,7 +225,7 @@ struct Footnote {
   //! the paragraph position in the footnote zone (first and last)
   int m_paragraph[2];
   //! the text position
-  NSStruct::Position m_textPosition;
+  NisusWrtStruct::Position m_textPosition;
   //! the label in the text
   std::string m_textLabel;
   //! the label in the note
@@ -328,7 +328,7 @@ std::ostream &operator<<(std::ostream &o, DataPLC const &plc)
 
 //! internal structure used to store zone data
 struct Zone {
-  typedef std::multimap<NSStruct::Position,DataPLC,NSStruct::Position::Compare> PLCMap;
+  typedef std::multimap<NisusWrtStruct::Position,DataPLC,NisusWrtStruct::Position::Compare> PLCMap;
 
   //! constructor
   Zone() : m_entry(), m_paragraphList(), m_pictureParaList(), m_plcMap()
@@ -346,7 +346,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a NSText
+//! Internal: the state of a NisusWrtText
 struct State {
   //! constructor
   State() : m_version(-1), m_fontList(), m_footnoteList(),
@@ -374,11 +374,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a NSText
+//! Internal: the subdocument of a NisusWrtText
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(NSText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
+  SubDocument(NisusWrtText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type) {}
 
   //! destructor
@@ -397,7 +397,7 @@ public:
 
 protected:
   /** the text parser */
-  NSText *m_textParser;
+  NisusWrtText *m_textParser;
   //! the subdocument id
   int m_id;
   //! the subdocument type
@@ -442,30 +442,30 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-NSText::NSText(NSParser &parser) : m_parserState(parser.getParserState()),
-  m_state(new NSTextInternal::State), m_mainParser(&parser)
+NisusWrtText::NisusWrtText(NisusWrtParser &parser) : m_parserState(parser.getParserState()),
+  m_state(new NisusWrtTextInternal::State), m_mainParser(&parser)
 {
 }
 
-NSText::~NSText()
+NisusWrtText::~NisusWrtText()
 { }
 
-int NSText::version() const
+int NisusWrtText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int NSText::numPages() const
+int NisusWrtText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
-  const_cast<NSText *>(this)->computePositions();
+  const_cast<NisusWrtText *>(this)->computePositions();
   return m_state->m_numPages;
 }
 
-shared_ptr<MWAWSubDocument> NSText::getHeader(int page, int &numSimilar)
+shared_ptr<MWAWSubDocument> NisusWrtText::getHeader(int page, int &numSimilar)
 {
   numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
@@ -477,7 +477,7 @@ shared_ptr<MWAWSubDocument> NSText::getHeader(int page, int &numSimilar)
   }
   int hId = m_state->m_headersId[size_t(page-1)];
   if (hId >= 0)
-    res.reset(new NSTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), hId, libmwaw::DOC_HEADER_FOOTER));
+    res.reset(new NisusWrtTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), hId, libmwaw::DOC_HEADER_FOOTER));
   while (page < numHeaders && m_state->m_headersId[size_t(page)]==hId) {
     page++;
     numSimilar++;
@@ -485,7 +485,7 @@ shared_ptr<MWAWSubDocument> NSText::getHeader(int page, int &numSimilar)
   return res;
 }
 
-shared_ptr<MWAWSubDocument> NSText::getFooter(int page, int &numSimilar)
+shared_ptr<MWAWSubDocument> NisusWrtText::getFooter(int page, int &numSimilar)
 {
   numSimilar=1;
   shared_ptr<MWAWSubDocument> res;
@@ -497,7 +497,7 @@ shared_ptr<MWAWSubDocument> NSText::getFooter(int page, int &numSimilar)
   }
   int fId = m_state->m_footersId[size_t(page-1)];
   if (fId >= 0)
-    res.reset(new NSTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), fId, libmwaw::DOC_HEADER_FOOTER));
+    res.reset(new NisusWrtTextInternal::SubDocument(*this, m_mainParser->rsrcInput(), fId, libmwaw::DOC_HEADER_FOOTER));
   while (page < numFooters && m_state->m_footersId[size_t(page)]==fId) {
     page++;
     numSimilar++;
@@ -506,7 +506,7 @@ shared_ptr<MWAWSubDocument> NSText::getFooter(int page, int &numSimilar)
   return res;
 }
 
-void NSText::computePositions()
+void NisusWrtText::computePositions()
 {
   // first compute the number of page and the number of paragraph by pages
   int nPages = 1;
@@ -528,16 +528,16 @@ void NSText::computePositions()
   m_state->m_numPages = nPages;
 
   // update the main page zone
-  m_state->m_zones[NSStruct::Z_Main].m_entry.setBegin(0);
-  m_state->m_zones[NSStruct::Z_Main].m_entry.setEnd(input->tell());
-  m_state->m_zones[NSStruct::Z_Main].m_entry.setId(NSStruct::Z_Main);
+  m_state->m_zones[NisusWrtStruct::Z_Main].m_entry.setBegin(0);
+  m_state->m_zones[NisusWrtStruct::Z_Main].m_entry.setEnd(input->tell());
+  m_state->m_zones[NisusWrtStruct::Z_Main].m_entry.setId(NisusWrtStruct::Z_Main);
   // compute the header/footer pages
   int actPage = 1;
   Vec2i headerId(-1,-1), footerId(-1,-1);
   m_state->m_headersId.resize(size_t(nPages), -1);
   m_state->m_footersId.resize(size_t(nPages), -1);
   for (size_t i = 0; i < m_state->m_hfList.size(); i++) {
-    NSTextInternal::HeaderFooter &hf = m_state->m_hfList[i];
+    NisusWrtTextInternal::HeaderFooter &hf = m_state->m_hfList[i];
     int page = 1;
     long textPos = hf.m_textParagraph;
     if (hf.m_type == MWAWHeaderFooter::FOOTER && textPos) textPos--;
@@ -581,10 +581,10 @@ void NSText::computePositions()
 ////////////////////////////////////////////////////////////
 
 // find the different zones
-bool NSText::createZones()
+bool NisusWrtText::createZones()
 {
   if (!m_mainParser->getRSRCParser()) {
-    MWAW_DEBUG_MSG(("NSText::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap
@@ -638,7 +638,7 @@ bool NSText::createZones()
       if (it->first != posFontNames[z])
         break;
       MWAWEntry &entry = it++->second;
-      readPosToFont(entry, NSStruct::ZoneType(z));
+      readPosToFont(entry, NisusWrtStruct::ZoneType(z));
     }
   }
 
@@ -650,7 +650,7 @@ bool NSText::createZones()
       if (it->first != paragNames[z])
         break;
       MWAWEntry &entry = it++->second;
-      readParagraphs(entry, NSStruct::ZoneType(z));
+      readParagraphs(entry, NisusWrtStruct::ZoneType(z));
     }
   }
   // the picture associated to the paragraph
@@ -661,7 +661,7 @@ bool NSText::createZones()
       if (it->first != pictDNames[z])
         break;
       MWAWEntry &entry = it++->second;
-      readPICD(entry, NSStruct::ZoneType(z));
+      readPICD(entry, NisusWrtStruct::ZoneType(z));
     }
   }
 
@@ -716,10 +716,10 @@ bool NSText::createZones()
 ////////////////////////////////////////////////////////////
 
 // read a list of fonts
-bool NSText::readFontsList(MWAWEntry const &entry)
+bool NisusWrtText::readFontsList(MWAWEntry const &entry)
 {
   if (!entry.valid() && entry.length()!=0) {
-    MWAW_DEBUG_MSG(("NSText::readFontsList: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readFontsList: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -741,7 +741,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
       asciiFile.addPos(pos);
       asciiFile.addNote("FontNames###");
 
-      MWAW_DEBUG_MSG(("NSText::readFontsList: can not read flst\n"));
+      MWAW_DEBUG_MSG(("NisusWrtText::readFontsList: can not read flst\n"));
       return false;
     }
     int fId = (int)input->readULong(2);
@@ -754,7 +754,7 @@ bool NSText::readFontsList(MWAWEntry const &entry)
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("NSText::readFontsList: can not read pSize\n"));
+      MWAW_DEBUG_MSG(("NisusWrtText::readFontsList: can not read pSize\n"));
       return false;
     }
     std::string name("");
@@ -770,13 +770,13 @@ bool NSText::readFontsList(MWAWEntry const &entry)
 }
 
 // read the FTAB/STYL resource: a font format ?
-bool NSText::readFonts(MWAWEntry const &entry)
+bool NisusWrtText::readFonts(MWAWEntry const &entry)
 {
   bool isStyle = entry.type()=="STYL";
   int const fSize = isStyle ? 58 : 98;
   std::string name(isStyle ? "Style" : "Fonts");
   if ((!entry.valid()&&entry.length()) || (entry.length()%fSize)) {
-    MWAW_DEBUG_MSG(("NSText::readFonts: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readFonts: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -793,7 +793,7 @@ bool NSText::readFonts(MWAWEntry const &entry)
 
   long val;
   for (int i = 0; i < numElt; i++) {
-    NSTextInternal::Font font;
+    NisusWrtTextInternal::Font font;
     pos = input->tell();
     f.str("");
     if (!isStyle)
@@ -927,17 +927,17 @@ bool NSText::readFonts(MWAWEntry const &entry)
 }
 
 // read the FRMT resource: filepos -> fonts
-bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
+bool NisusWrtText::readPosToFont(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId)
 {
   if (!entry.valid() || (entry.length()%10)) {
-    MWAW_DEBUG_MSG(("NSText::readPosToFont: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readPosToFont: the entry is bad\n"));
     return false;
   }
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSText::readPosToFont: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtText::readPosToFont: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[zoneId];
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
@@ -950,9 +950,9 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   asciiFile.addPos(pos-4);
   asciiFile.addNote(f.str().c_str());
 
-  NSStruct::Position position;
-  NSTextInternal::DataPLC plc;
-  plc.m_type = NSTextInternal::P_Format;
+  NisusWrtStruct::Position position;
+  NisusWrtTextInternal::DataPLC plc;
+  plc.m_type = NisusWrtTextInternal::P_Format;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
@@ -964,7 +964,7 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     int id = (int) input->readLong(2);
     f << "F" << id << ",";
     plc.m_id = id;
-    zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(position, plc));
+    zone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(position, plc));
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     input->seek(pos+10, librevenge::RVNG_SEEK_SET);
@@ -977,29 +977,29 @@ bool NSText::readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 ////////////////////////////////////////////////////////////
 
 // send the paragraph to the listener
-void NSText::setProperty(NSTextInternal::Paragraph const &para, int width)
+void NisusWrtText::setProperty(NisusWrtTextInternal::Paragraph const &para, int width)
 {
   if (!m_parserState->m_textListener) return;
   double origRMargin = para.m_margins[2].get();
   double rMargin=double(width)/72.-origRMargin;
   if (rMargin < 0.0) rMargin = 0;
-  const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
+  const_cast<NisusWrtTextInternal::Paragraph &>(para).m_margins[2] = rMargin;
   m_parserState->m_textListener->setParagraph(para);
-  const_cast<NSTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
+  const_cast<NisusWrtTextInternal::Paragraph &>(para).m_margins[2] = origRMargin;
 }
 
 // read the RULE resource: a list of rulers
-bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
+bool NisusWrtText::readParagraphs(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId)
 {
   if (!entry.valid() && entry.length() != 0) {
-    MWAW_DEBUG_MSG(("NSText::readParagraphs: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: the entry is bad\n"));
     return false;
   }
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSText::readParagraphs: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[zoneId];
 
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -1012,15 +1012,15 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   f << "Entries(RULE)[" << entry.type() << entry.id() << "]";
   if (entry.id()==1004) f << "[Styl]";
   else if (entry.id() != 1003) {
-    MWAW_DEBUG_MSG(("NSText::readParagraphs: find unexpected entryId: %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: find unexpected entryId: %d\n", entry.id()));
     f << "###";
   }
   f << ":N=" << numElt;
   asciiFile.addPos(pos-4);
   asciiFile.addNote(f.str().c_str());
 
-  NSTextInternal::DataPLC plc;
-  plc.m_type = NSTextInternal::P_Ruler;
+  NisusWrtTextInternal::DataPLC plc;
+  plc.m_type = NisusWrtTextInternal::P_Ruler;
 
   long val;
   while (input->tell() != entry.end()) {
@@ -1032,7 +1032,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("NSText::readParagraphs: can not read end of zone\n"));
+      MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: can not read end of zone\n"));
       return false;
     }
 
@@ -1041,7 +1041,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       input->seek(-4, librevenge::RVNG_SEEK_CUR);
       break;
     }
-    NSStruct::Position textPosition;
+    NisusWrtStruct::Position textPosition;
     textPosition.m_paragraph = (int) nPara;  // checkme or ???? + para
 
     long sz = (long) input->readULong(4);
@@ -1050,10 +1050,10 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("NSText::readParagraphs: can not read the size zone\n"));
+      MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: can not read the size zone\n"));
       return false;
     }
-    NSTextInternal::Paragraph para;
+    NisusWrtTextInternal::Paragraph para;
 
     para.setInterline(double(input->readLong(4))/65536., librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
     para.m_spacings[1] = float(input->readLong(4))/65536.f/72.f;
@@ -1111,7 +1111,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     bool ok = true;
     if (0x40+8*numTabs+2 > sz) {
       f << "###";
-      MWAW_DEBUG_MSG(("NSText::readParagraphs: can not read the string\n"));
+      MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: can not read the string\n"));
       ok = false;
       numTabs = 0;
     }
@@ -1162,7 +1162,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     if (pSz) {
       if (input->tell()+pSz != pos+sz && input->tell()+pSz+1 != pos+sz) {
         f << "name###";
-        MWAW_DEBUG_MSG(("NSText::readParagraphs: can not read the ruler name\n"));
+        MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: can not read the ruler name\n"));
         asciiFile.addDelimiter(input->tell()-1,'#');
       }
       else {
@@ -1176,7 +1176,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     para.m_extra=f.str();
     if (entry.id() == 1003) {
       zone.m_paragraphList.push_back(para);
-      zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(textPosition, plc));
+      zone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(textPosition, plc));
     }
 
     f.str("");
@@ -1195,7 +1195,7 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
 
-    MWAW_DEBUG_MSG(("NSText::readParagraphs: find odd end\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readParagraphs: find odd end\n"));
     return true;
   }
   for (int i = 0; i < 31; i++) { // only find 0 expected f12=0|100
@@ -1213,13 +1213,13 @@ bool NSText::readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 ////////////////////////////////////////////////////////////
 
 // read the header/footer main entry
-bool NSText::readHeaderFooter(MWAWEntry const &entry)
+bool NisusWrtText::readHeaderFooter(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%32)) {
-    MWAW_DEBUG_MSG(("NSText::readHeaderFooter: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readHeaderFooter: the entry is bad\n"));
     return false;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[NSStruct::Z_HeaderFooter];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[NisusWrtStruct::Z_HeaderFooter];
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
@@ -1232,14 +1232,14 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
   asciiFile.addPos(pos-4);
   asciiFile.addNote(f.str().c_str());
 
-  NSTextInternal::DataPLC plc;
-  plc.m_type = NSTextInternal::P_HeaderFooter;
+  NisusWrtTextInternal::DataPLC plc;
+  plc.m_type = NisusWrtTextInternal::P_HeaderFooter;
   long val;
   long lastPara = 0;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
-    NSTextInternal::HeaderFooter hf;
+    NisusWrtTextInternal::HeaderFooter hf;
     hf.m_textParagraph = input->readLong(4);
     hf.m_paragraph[0] = lastPara;
     hf.m_paragraph[1] = lastPara = input->readLong(4);
@@ -1282,9 +1282,9 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
 
     m_state->m_hfList.push_back(hf);
     plc.m_id = i+1;
-    NSStruct::Position hfPosition;
+    NisusWrtStruct::Position hfPosition;
     hfPosition.m_paragraph=int(lastPara);
-    zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(hfPosition, plc));
+    zone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(hfPosition, plc));
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     input->seek(pos+32, librevenge::RVNG_SEEK_SET);
@@ -1293,14 +1293,14 @@ bool NSText::readHeaderFooter(MWAWEntry const &entry)
 }
 
 // read the footnote main entry
-bool NSText::readFootnotes(MWAWEntry const &entry)
+bool NisusWrtText::readFootnotes(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%36)) {
-    MWAW_DEBUG_MSG(("NSText::readFootnotes: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readFootnotes: the entry is bad\n"));
     return false;
   }
-  NSTextInternal::Zone &mainZone = m_state->m_zones[NSStruct::Z_Main];
-  NSTextInternal::Zone &zone = m_state->m_zones[NSStruct::Z_Footnote];
+  NisusWrtTextInternal::Zone &mainZone = m_state->m_zones[NisusWrtStruct::Z_Main];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[NisusWrtStruct::Z_Footnote];
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &asciiFile = m_mainParser->rsrcAscii();
@@ -1313,14 +1313,14 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
   asciiFile.addPos(pos-4);
   asciiFile.addNote(f.str().c_str());
 
-  NSTextInternal::DataPLC plc;
-  plc.m_type = NSTextInternal::P_Footnote;
+  NisusWrtTextInternal::DataPLC plc;
+  plc.m_type = NisusWrtTextInternal::P_Footnote;
   int lastParagraph = 0;
   long val;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
-    NSTextInternal::Footnote footnote;
+    NisusWrtTextInternal::Footnote footnote;
     footnote.m_textPosition.m_paragraph = (int) input->readULong(4); // checkme or ??? m_paragraph
     footnote.m_textPosition.m_word = (int) input->readULong(2);
     footnote.m_textPosition.m_char = (int) input->readULong(2);
@@ -1355,10 +1355,10 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
 
     m_state->m_footnoteList.push_back(footnote);
     plc.m_id = i;
-    mainZone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(footnote.m_textPosition, plc));
-    NSStruct::Position notePosition;
+    mainZone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(footnote.m_textPosition, plc));
+    NisusWrtStruct::Position notePosition;
     notePosition.m_paragraph= footnote.m_paragraph[0];
-    zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(notePosition, plc));
+    zone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(notePosition, plc));
 
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1368,17 +1368,17 @@ bool NSText::readFootnotes(MWAWEntry const &entry)
 }
 
 // read the PICD zone ( a list of picture ? )
-bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
+bool NisusWrtText::readPICD(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId)
 {
   if ((!entry.valid()&&entry.length()) || (entry.length()%14)) {
-    MWAW_DEBUG_MSG(("NSText::readPICD: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::readPICD: the entry is bad\n"));
     return false;
   }
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSText::readPICD: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtText::readPICD: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[zoneId];
   entry.setParsed(true);
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
@@ -1391,12 +1391,12 @@ bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  NSTextInternal::DataPLC plc;
-  plc.m_type = NSTextInternal::P_PicturePara;
+  NisusWrtTextInternal::DataPLC plc;
+  plc.m_type = NisusWrtTextInternal::P_PicturePara;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
-    NSTextInternal::PicturePara pict;
+    NisusWrtTextInternal::PicturePara pict;
     pict.m_paragraph = (int) input->readLong(4);
     int dim[4];
     for (int j = 0; j < 4; j++)
@@ -1405,10 +1405,10 @@ bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
     pict.m_id = (int) input->readULong(2);
     zone.m_pictureParaList.push_back(pict);
 
-    NSStruct::Position pictPosition;
+    NisusWrtStruct::Position pictPosition;
     pictPosition.m_paragraph= pict.m_paragraph;
     plc.m_id = i;
-    zone.m_plcMap.insert(NSTextInternal::Zone::PLCMap::value_type(pictPosition, plc));
+    zone.m_plcMap.insert(NisusWrtTextInternal::Zone::PLCMap::value_type(pictPosition, plc));
 
     f << "PICD" << i << ":" << pict;
     ascFile.addPos(pos);
@@ -1425,25 +1425,25 @@ bool NSText::readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId)
 ////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &pos)
+long NisusWrtText::findFilePos(NisusWrtStruct::ZoneType zoneId, NisusWrtStruct::Position const &pos)
 {
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSText::findFilePos: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtText::findFilePos: find unexpected zoneId: %d\n", zoneId));
     return -1;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[zoneId];
   MWAWEntry entry = zone.m_entry;
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("NSText::findFilePos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::findFilePos: the entry is bad\n"));
     return -1;
   }
 
-  bool isMain = zoneId == NSStruct::Z_Main;
+  bool isMain = zoneId == NisusWrtStruct::Z_Main;
   MWAWInputStreamPtr input = isMain ?
                              m_mainParser->getInput() : m_mainParser->rsrcInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
-  NSStruct::Position actPos;
+  NisusWrtStruct::Position actPos;
   for (int i = 0; i < entry.length(); i++) {
     if (input->isEnd())
       break;
@@ -1468,35 +1468,35 @@ long NSText::findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &po
   }
   if (pos == actPos)
     return input->tell();
-  MWAW_DEBUG_MSG(("NSText::findFilePos: can not find the position\n"));
+  MWAW_DEBUG_MSG(("NisusWrtText::findFilePos: can not find the position\n"));
   return -1;
 }
 
 ////////////////////////////////////////////////////////////
-bool NSText::sendHeaderFooter(int hfId)
+bool NisusWrtText::sendHeaderFooter(int hfId)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("NSText::sendHeaderFooter: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendHeaderFooter: can not find the listener\n"));
     return false;
   }
   if (hfId >= int(m_state->m_hfList.size())) {
-    MWAW_DEBUG_MSG(("NSText::sendHeaderFooter: can not find the headerFooter list\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendHeaderFooter: can not find the headerFooter list\n"));
     return false;
   }
   if (hfId < 0)
     return true;
-  NSTextInternal::HeaderFooter const &hf = m_state->m_hfList[size_t(hfId)];
+  NisusWrtTextInternal::HeaderFooter const &hf = m_state->m_hfList[size_t(hfId)];
   hf.m_parsed = true;
 
   MWAWEntry entry;
-  entry.setId(NSStruct::Z_HeaderFooter);
-  NSStruct::Position pos;
+  entry.setId(NisusWrtStruct::Z_HeaderFooter);
+  NisusWrtStruct::Position pos;
   pos.m_paragraph = (int) hf.m_paragraph[0];
-  entry.setBegin(findFilePos(NSStruct::Z_HeaderFooter, pos));
+  entry.setBegin(findFilePos(NisusWrtStruct::Z_HeaderFooter, pos));
   pos.m_paragraph = (int) hf.m_paragraph[1];
-  entry.setEnd(findFilePos(NSStruct::Z_HeaderFooter, pos));
+  entry.setEnd(findFilePos(NisusWrtStruct::Z_HeaderFooter, pos));
   if (entry.begin() < 0 || entry.length() < 0) {
-    MWAW_DEBUG_MSG(("NSText::sendHeaderFooter: can not compute the headerFooter entry\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendHeaderFooter: can not compute the headerFooter entry\n"));
     return false;
   }
   pos.m_paragraph = (int) hf.m_paragraph[0];
@@ -1505,31 +1505,31 @@ bool NSText::sendHeaderFooter(int hfId)
 }
 
 ////////////////////////////////////////////////////////////
-bool NSText::sendFootnote(int footnoteId)
+bool NisusWrtText::sendFootnote(int footnoteId)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("NSText::sendFootnote: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendFootnote: can not find the listener\n"));
     return false;
   }
   if (footnoteId >= int(m_state->m_footnoteList.size())) {
-    MWAW_DEBUG_MSG(("NSText::sendFootnote: can not find the footnote list\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendFootnote: can not find the footnote list\n"));
     return false;
   }
   if (footnoteId < 0)
     return true;
-  NSTextInternal::Footnote const &fnote =
+  NisusWrtTextInternal::Footnote const &fnote =
     m_state->m_footnoteList[size_t(footnoteId)];
   fnote.m_parsed = true;
 
   MWAWEntry entry;
-  entry.setId(NSStruct::Z_Footnote);
-  NSStruct::Position pos;
+  entry.setId(NisusWrtStruct::Z_Footnote);
+  NisusWrtStruct::Position pos;
   pos.m_paragraph = fnote.m_paragraph[0];
-  entry.setBegin(findFilePos(NSStruct::Z_Footnote, pos));
+  entry.setBegin(findFilePos(NisusWrtStruct::Z_Footnote, pos));
   pos.m_paragraph = fnote.m_paragraph[1];
-  entry.setEnd(findFilePos(NSStruct::Z_Footnote, pos));
+  entry.setEnd(findFilePos(NisusWrtStruct::Z_Footnote, pos));
   if (entry.begin() < 0 || entry.length() < 0) {
-    MWAW_DEBUG_MSG(("NSText::sendFootnote: can not compute the footnote entry\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendFootnote: can not compute the footnote entry\n"));
     return false;
   }
   pos.m_paragraph = fnote.m_paragraph[0];
@@ -1538,27 +1538,27 @@ bool NSText::sendFootnote(int footnoteId)
 }
 
 ////////////////////////////////////////////////////////////
-bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
+bool NisusWrtText::sendText(MWAWEntry entry, NisusWrtStruct::Position firstPos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("NSText::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendText: can not find the listener\n"));
     return false;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("NSText::sendText: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendText: the entry is bad\n"));
     return false;
   }
 
-  NSStruct::ZoneType zoneId = (NSStruct::ZoneType) entry.id();
+  NisusWrtStruct::ZoneType zoneId = (NisusWrtStruct::ZoneType) entry.id();
   if (zoneId < 0 || zoneId >= 3) {
-    MWAW_DEBUG_MSG(("NSText::sendText: find unexpected zoneId: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendText: find unexpected zoneId: %d\n", zoneId));
     return false;
   }
-  NSTextInternal::Zone &zone = m_state->m_zones[zoneId];
-  bool isMain = zoneId == NSStruct::Z_Main;
+  NisusWrtTextInternal::Zone &zone = m_state->m_zones[zoneId];
+  bool isMain = zoneId == NisusWrtStruct::Z_Main;
   int width = int(72.0*m_mainParser->getPageWidth());
-  if (isMain || zoneId == NSStruct::Z_Footnote) {
+  if (isMain || zoneId == NisusWrtStruct::Z_Footnote) {
     float colSep = 0.5f;
     int nCol = 1;
     m_mainParser->getColumnInfo(nCol, colSep);
@@ -1583,15 +1583,15 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
   libmwaw::DebugStream f;
   f << "Entries(TEXT)[" << zoneId << "]:";
   std::string str("");
-  NSStruct::Position actPos(firstPos);
-  NSTextInternal::Zone::PLCMap::iterator it = zone.m_plcMap.begin();
+  NisusWrtStruct::Position actPos(firstPos);
+  NisusWrtTextInternal::Zone::PLCMap::iterator it = zone.m_plcMap.begin();
   while (it != zone.m_plcMap.end() && it->first.cmp(actPos) < 0)
     ++it;
 
-  NSTextInternal::Font actFont;
+  NisusWrtTextInternal::Font actFont;
   actFont.m_font = MWAWFont(3,12);
   listener->setFont(actFont.m_font);
-  NSStruct::FootnoteInfo ftInfo;
+  NisusWrtStruct::FootnoteInfo ftInfo;
   m_mainParser->getFootnoteInfo(ftInfo);
   bool lastCharFootnote = false;
   int noteId = 0, numVar=0, actVar=-1;
@@ -1601,24 +1601,24 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     if (i==entry.length() && !lastCharFootnote)
       break;
     while (it != zone.m_plcMap.end() && it->first.cmp(actPos) <= 0) {
-      NSStruct::Position const &plcPos = it->first;
-      NSTextInternal::DataPLC const &plc = it++->second;
+      NisusWrtStruct::Position const &plcPos = it->first;
+      NisusWrtTextInternal::DataPLC const &plc = it++->second;
       f << str;
       str="";
       if (plcPos.cmp(actPos) < 0) {
-        MWAW_DEBUG_MSG(("NSText::sendText: oops find unexpected position\n"));
+        MWAW_DEBUG_MSG(("NisusWrtText::sendText: oops find unexpected position\n"));
         f << "###[" << plc << "]";
         continue;
       }
       f << "[" << plc << "]";
       switch (plc.m_type) {
-      case NSTextInternal::P_Format: {
+      case NisusWrtTextInternal::P_Format: {
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_fontList.size())) {
-          MWAW_DEBUG_MSG(("NSText::sendText: oops can not find the actual font\n"));
+          MWAW_DEBUG_MSG(("NisusWrtText::sendText: oops can not find the actual font\n"));
           f << "###";
           break;
         }
-        NSTextInternal::Font const &font = m_state->m_fontList[size_t(plc.m_id)];
+        NisusWrtTextInternal::Font const &font = m_state->m_fontList[size_t(plc.m_id)];
         actFont = font;
         if (font.m_pictureId <= 0)
           listener->setFont(font.m_font);
@@ -1632,30 +1632,30 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         }
         break;
       }
-      case NSTextInternal::P_Ruler: {
+      case NisusWrtTextInternal::P_Ruler: {
         if (plc.m_id < 0 || plc.m_id >= int(zone.m_paragraphList.size())) {
-          MWAW_DEBUG_MSG(("NSText::sendText: oops can not find the actual ruler\n"));
+          MWAW_DEBUG_MSG(("NisusWrtText::sendText: oops can not find the actual ruler\n"));
           f << "###";
           break;
         }
-        NSTextInternal::Paragraph const &para = zone.m_paragraphList[size_t(plc.m_id)];
+        NisusWrtTextInternal::Paragraph const &para = zone.m_paragraphList[size_t(plc.m_id)];
         setProperty(para, width);
         break;
       }
-      case NSTextInternal::P_Footnote: {
+      case NisusWrtTextInternal::P_Footnote: {
         if (!isMain) break;
         if (!lastCharFootnote) {
-          MWAW_DEBUG_MSG(("NSText::sendText: oops do not find the footnote symbol\n"));
+          MWAW_DEBUG_MSG(("NisusWrtText::sendText: oops do not find the footnote symbol\n"));
           break;
         }
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_footnoteList.size())) {
-          MWAW_DEBUG_MSG(("NSText::sendText: can not find the footnote\n"));
-          MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, -1, libmwaw::DOC_NOTE));
+          MWAW_DEBUG_MSG(("NisusWrtText::sendText: can not find the footnote\n"));
+          MWAWSubDocumentPtr subdoc(new NisusWrtTextInternal::SubDocument(*this, input, -1, libmwaw::DOC_NOTE));
           listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
           break;
         }
-        MWAWSubDocumentPtr subdoc(new NSTextInternal::SubDocument(*this, input, plc.m_id, libmwaw::DOC_NOTE));
-        NSTextInternal::Footnote const &fnote = m_state->m_footnoteList[size_t(plc.m_id)];
+        MWAWSubDocumentPtr subdoc(new NisusWrtTextInternal::SubDocument(*this, input, plc.m_id, libmwaw::DOC_NOTE));
+        NisusWrtTextInternal::Footnote const &fnote = m_state->m_footnoteList[size_t(plc.m_id)];
         noteId++;
         if (fnote.m_number && noteId != fnote.m_number)
           noteId = fnote.m_number;
@@ -1665,23 +1665,23 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
         listener->insertNote(note, subdoc);
         break;
       }
-      case NSTextInternal::P_PicturePara: {
+      case NisusWrtTextInternal::P_PicturePara: {
         if (plc.m_id < 0 || plc.m_id >= int(zone.m_pictureParaList.size())) {
-          MWAW_DEBUG_MSG(("NSText::sendText: can not find the paragraph picture\n"));
+          MWAW_DEBUG_MSG(("NisusWrtText::sendText: can not find the paragraph picture\n"));
           break;
         }
-        NSTextInternal::PicturePara &pict = zone.m_pictureParaList[size_t(plc.m_id)];
+        NisusWrtTextInternal::PicturePara &pict = zone.m_pictureParaList[size_t(plc.m_id)];
         MWAWPosition pictPos(pict.m_position.min(), pict.m_position.size(), librevenge::RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Paragraph);
         pictPos.m_wrapping = MWAWPosition::WBackground;
         m_mainParser->sendPicture(pict.m_id, pictPos);
         break;
       }
-      case NSTextInternal::P_HeaderFooter:
+      case NisusWrtTextInternal::P_HeaderFooter:
         break;
-      case NSTextInternal::P_Unknown:
+      case NisusWrtTextInternal::P_Unknown:
       default:
-        MWAW_DEBUG_MSG(("NSText::sendText: oops can not find unknown plc type\n"));
+        MWAW_DEBUG_MSG(("NisusWrtText::sendText: oops can not find unknown plc type\n"));
         f << "###";
         break;
       }
@@ -1725,7 +1725,7 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
     switch (c) {
     case 0x1: {
       if (actFont.m_pictureId <= 0) {
-        MWAW_DEBUG_MSG(("NSText::sendText: can not find pictureId for char 1\n"));
+        MWAW_DEBUG_MSG(("NisusWrtText::sendText: can not find pictureId for char 1\n"));
         f << "#";
         break;
       }
@@ -1807,12 +1807,12 @@ bool NSText::sendText(MWAWEntry entry, NSStruct::Position firstPos)
 }
 
 //! send data to the listener
-bool NSText::sendMainText()
+bool NisusWrtText::sendMainText()
 {
   if (!m_parserState->m_textListener) return true;
 
   if (!m_state->m_zones[0].m_entry.valid()) {
-    MWAW_DEBUG_MSG(("NSText::sendMainText: can not find the main text\n"));
+    MWAW_DEBUG_MSG(("NisusWrtText::sendMainText: can not find the main text\n"));
     return false;
   }
   m_state->m_zones[0].m_entry.setParsed(true);
@@ -1821,7 +1821,7 @@ bool NSText::sendMainText()
 }
 
 
-void NSText::flushExtra()
+void NisusWrtText::flushExtra()
 {
   if (!m_parserState->m_textListener) return;
   for (size_t f = 0; f < m_state->m_footnoteList.size(); f++) {

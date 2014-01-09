@@ -34,8 +34,8 @@
 /*
  * entry for WriteNow
  */
-#ifndef WN_MWAW_ENTRY
-#  define WN_MWAW_ENTRY
+#ifndef WRITE_NOW_ENTRY
+#  define WRITE_NOW_ENTRY
 
 #include <iostream>
 #include <map>
@@ -44,8 +44,8 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWEntry.hxx"
 
-struct WNEntry : public MWAWEntry {
-  WNEntry() : MWAWEntry(), m_fileType(-1)
+struct WriteNowEntry : public MWAWEntry {
+  WriteNowEntry() : MWAWEntry(), m_fileType(-1)
   {
     for (int i = 0; i < 4; i++) m_val[i] = 0;
   }
@@ -60,7 +60,7 @@ struct WNEntry : public MWAWEntry {
     return isZoneType() && valid();
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, WNEntry const &entry)
+  friend std::ostream &operator<<(std::ostream &o, WriteNowEntry const &entry)
   {
     if (entry.type().length()) {
       o << entry.type();
@@ -94,30 +94,30 @@ struct WNEntry : public MWAWEntry {
 };
 
 /** the manager of the entries */
-struct WNEntryManager {
-  WNEntryManager() : m_posMap(), m_typeMap() {}
+struct WriteNowEntryManager {
+  WriteNowEntryManager() : m_posMap(), m_typeMap() {}
 
   //! return an entry for a position
-  WNEntry get(long pos) const
+  WriteNowEntry get(long pos) const
   {
-    std::map<long, WNEntry>::const_iterator it = m_posMap.find(pos);
+    std::map<long, WriteNowEntry>::const_iterator it = m_posMap.find(pos);
     if (it == m_posMap.end())
-      return WNEntry();
+      return WriteNowEntry();
     return it->second;
   }
 
   //! add a new entry
-  bool add(WNEntry const &entry)
+  bool add(WriteNowEntry const &entry)
   {
     if (!entry.valid()) return false;
     if (m_posMap.find(entry.begin()) != m_posMap.end()) {
-      MWAW_DEBUG_MSG(("WNEntryManager:add: an entry for this position already exists\n"));
+      MWAW_DEBUG_MSG(("WriteNowEntryManager:add: an entry for this position already exists\n"));
       return false;
     }
-    std::map<long, WNEntry>::iterator it =
-      m_posMap.insert(std::pair<long, WNEntry>(entry.begin(), entry)).first;
+    std::map<long, WriteNowEntry>::iterator it =
+      m_posMap.insert(std::pair<long, WriteNowEntry>(entry.begin(), entry)).first;
     m_typeMap.insert
-    (std::multimap<std::string, WNEntry const *>::value_type(entry.type(), &(it->second)));
+    (std::multimap<std::string, WriteNowEntry const *>::value_type(entry.type(), &(it->second)));
     return true;
   }
 
@@ -128,9 +128,9 @@ struct WNEntryManager {
     m_typeMap.clear();
   }
   //! the list of entries by position
-  std::map<long, WNEntry> m_posMap;
+  std::map<long, WriteNowEntry> m_posMap;
   //! the list of entries
-  std::multimap<std::string, WNEntry const *> m_typeMap;
+  std::multimap<std::string, WriteNowEntry const *> m_typeMap;
 };
 
 #endif

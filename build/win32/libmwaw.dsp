@@ -439,19 +439,19 @@ SOURCE=..\..\src\lib\MacWrtProStructures.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSGraph.cxx
+SOURCE=..\..\src\lib\NisusWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSParser.cxx
+SOURCE=..\..\src\lib\NisusWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSStruct.cxx
+SOURCE=..\..\src\lib\NisusWrtStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSText.cxx
+SOURCE=..\..\src\lib\NisusWrtText.cxx
 # End Source File
 # Begin Source File
 
@@ -459,11 +459,11 @@ SOURCE=..\..\src\lib\TeachTxtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNParser.cxx
+SOURCE=..\..\src\lib\WriteNowParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNText.cxx
+SOURCE=..\..\src\lib\WriteNowText.cxx
 # End Source File
 # Begin Source File
 
@@ -855,19 +855,19 @@ SOURCE=..\..\src\lib\MacWrtProStructures.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSGraph.hxx
+SOURCE=..\..\src\lib\NisusWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSParser.hxx
+SOURCE=..\..\src\lib\NisusWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSStruct.hxx
+SOURCE=..\..\src\lib\NisusWrtStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSText.hxx
+SOURCE=..\..\src\lib\NisusWrtText.hxx
 # End Source File
 # Begin Source File
 
@@ -875,15 +875,15 @@ SOURCE=..\..\src\lib\TeachTxtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNEntry.hxx
+SOURCE=..\..\src\lib\WriteNowEntry.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNParser.hxx
+SOURCE=..\..\src\lib\WriteNowParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNText.hxx
+SOURCE=..\..\src\lib\WriteNowText.hxx
 # End Source File
 # Begin Source File
 

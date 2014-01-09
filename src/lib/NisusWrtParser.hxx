@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef NS_PARSER
-#  define NS_PARSER
+#ifndef NISUS_WRT_PARSER
+#  define NISUS_WRT_PARSER
 
 #include <string>
 #include <vector>
@@ -42,30 +42,30 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "NSStruct.hxx"
+#include "NisusWrtStruct.hxx"
 
 #include "MWAWParser.hxx"
 
-namespace NSParserInternal
+namespace NisusWrtParserInternal
 {
 struct State;
 }
 
-class NSGraph;
-class NSText;
+class NisusWrtGraph;
+class NisusWrtText;
 
 /** \brief the main class to read a Nisus Writer file
  */
-class NSParser : public MWAWTextParser
+class NisusWrtParser : public MWAWTextParser
 {
-  friend struct NSStruct::RecursifData;
-  friend class NSGraph;
-  friend class NSText;
+  friend struct NisusWrtStruct::RecursifData;
+  friend class NisusWrtGraph;
+  friend class NisusWrtText;
 public:
   //! constructor
-  NSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  NisusWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~NSParser();
+  virtual ~NisusWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -85,7 +85,7 @@ protected:
   //! returns the columns information
   void getColumnInfo(int &numColumns, float &colSep) const;
   //! returns the footnote information
-  void getFootnoteInfo(NSStruct::FootnoteInfo &fInfo) const;
+  void getFootnoteInfo(NisusWrtStruct::FootnoteInfo &fInfo) const;
 
   //! adds a new page
   void newPage(int number);
@@ -93,10 +93,10 @@ protected:
   // variable access
 
   //! returns the date format corresponding to a variable id or ""
-  std::string getDateFormat(NSStruct::ZoneType zoneId, int vId) const;
+  std::string getDateFormat(NisusWrtStruct::ZoneType zoneId, int vId) const;
 
   //! returns the fieldtype or a string corresponding to a variable
-  bool getReferenceData(NSStruct::ZoneType zoneId, int vId,
+  bool getReferenceData(NisusWrtStruct::ZoneType zoneId, int vId,
                         MWAWField::Type &fType,
                         std::string &content,
                         std::vector<int> &number) const;
@@ -125,16 +125,16 @@ protected:
   bool readINFO(MWAWEntry const &entry);
 
   //! parse the MRK7 resource
-  bool readReference(NSStruct::RecursifData const &data);
+  bool readReference(NisusWrtStruct::RecursifData const &data);
   //! parse the DSPL/VARI/VRS resource: numbering definition, variable or variable ?
-  bool readVariable(NSStruct::RecursifData const &data);
+  bool readVariable(NisusWrtStruct::RecursifData const &data);
   //! read the CNTR resource: a list of  version controler ?
   bool readCNTR(MWAWEntry const &entry, int zoneId);
   //! parse the DPND resource: numbering reset ( one by zone ) : related to CNTR and VRS ?
   bool readNumberingReset(MWAWEntry const &entry, int zoneId);
 
   //! parse the SGP1 resource: a unknown resource
-  bool readSGP1(NSStruct::RecursifData const &data);
+  bool readSGP1(NisusWrtStruct::RecursifData const &data);
   //! parse the ABBR resource: a list of abreviation?
   bool readABBR(MWAWEntry const &entry);
   //! parse the FTA2 resource: a list of ? find in v6 document
@@ -152,13 +152,13 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<NSParserInternal::State> m_state;
+  shared_ptr<NisusWrtParserInternal::State> m_state;
 
   //! the graph parser
-  shared_ptr<NSGraph> m_graphParser;
+  shared_ptr<NisusWrtGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<NSText> m_textParser;
+  shared_ptr<NisusWrtText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -35,8 +35,8 @@
  * Parser to WriteNow text document
  *
  */
-#ifndef WN_TEXT
-#  define WN_TEXT
+#ifndef WRITE_NOW_TEXT
+#  define WRITE_NOW_TEXT
 
 #include <list>
 #include <string>
@@ -52,7 +52,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace WNTextInternal
+namespace WriteNowTextInternal
 {
 struct ContentZone;
 struct ContentZones;
@@ -68,25 +68,25 @@ struct Cell;
 struct State;
 }
 
-struct WNEntry;
-struct WNEntryManager;
+struct WriteNowEntry;
+struct WriteNowEntryManager;
 
-class WNParser;
+class WriteNowParser;
 
 /** \brief the main class to read the text part of writenow file
  *
  *
  *
  */
-class WNText
+class WriteNowText
 {
-  friend class WNParser;
-  friend struct WNTextInternal::Cell;
+  friend class WriteNowParser;
+  friend struct WriteNowTextInternal::Cell;
 public:
   //! constructor
-  WNText(WNParser &parser);
+  WriteNowText(WriteNowParser &parser);
   //! destructor
-  virtual ~WNText();
+  virtual ~WriteNowText();
 
   /** returns the file version */
   int version() const;
@@ -95,10 +95,10 @@ public:
   int numPages() const;
 
   /** returns the header entry (if defined) */
-  WNEntry getHeader() const;
+  WriteNowEntry getHeader() const;
 
   /** returns the footer entry (if defined) */
-  WNEntry getFooter() const;
+  WriteNowEntry getFooter() const;
 
 protected:
   //! finds the different text zones
@@ -109,10 +109,10 @@ protected:
 
   /** try to read the text zone ( list of entries )
       and to create the text data zone */
-  bool parseZone(WNEntry const &entry, std::vector<WNEntry> &listData);
+  bool parseZone(WriteNowEntry const &entry, std::vector<WriteNowEntry> &listData);
 
   //! parse a text data zone ( and create the associated structure )
-  shared_ptr<WNTextInternal::ContentZones> parseContent(WNEntry const &entry);
+  shared_ptr<WriteNowTextInternal::ContentZones> parseContent(WriteNowEntry const &entry);
 
   /** send all the content zone of a zone defined by id
       0: main, 1  header/footer, 2: footnote
@@ -120,44 +120,44 @@ protected:
   void sendZone(int id);
 
   //! send the text to the listener
-  bool send(WNEntry const &entry);
+  bool send(WriteNowEntry const &entry);
 
   //! send the text to the listener
-  bool send(std::vector<WNTextInternal::ContentZone> &listZones,
-            std::vector<shared_ptr<WNTextInternal::ContentZones> > &footnoteList,
-            WNTextInternal::Paragraph &ruler);
+  bool send(std::vector<WriteNowTextInternal::ContentZone> &listZones,
+            std::vector<shared_ptr<WriteNowTextInternal::ContentZones> > &footnoteList,
+            WriteNowTextInternal::Paragraph &ruler);
 
   /** sends a paragraph property to the listener */
-  void setProperty(WNTextInternal::Paragraph const &ruler);
+  void setProperty(WriteNowTextInternal::Paragraph const &ruler);
 
   //
   // low level
   //
 
   //! try to read the fonts zone
-  bool readFontNames(WNEntry const &entry);
+  bool readFontNames(WriteNowEntry const &entry);
 
   //! read a font
-  bool readFont(MWAWInputStream &input, bool inStyle, WNTextInternal::Font &font);
+  bool readFont(MWAWInputStream &input, bool inStyle, WriteNowTextInternal::Font &font);
 
   //! read a paragraph format
-  bool readParagraph(MWAWInputStream &input, WNTextInternal::Paragraph &ruler);
+  bool readParagraph(MWAWInputStream &input, WriteNowTextInternal::Paragraph &ruler);
 
   //! read a token
-  bool readToken(MWAWInputStream &input, WNTextInternal::Token &token);
+  bool readToken(MWAWInputStream &input, WriteNowTextInternal::Token &token);
 
   //! read a token (v2)
-  bool readTokenV2(MWAWInputStream &input, WNTextInternal::Token &token);
+  bool readTokenV2(MWAWInputStream &input, WriteNowTextInternal::Token &token);
 
   //! read a table frame (checkme)
-  bool readTable(MWAWInputStream &input, WNTextInternal::TableData &table);
+  bool readTable(MWAWInputStream &input, WriteNowTextInternal::TableData &table);
 
   //! try to read the styles zone
-  bool readStyles(WNEntry const &entry);
+  bool readStyles(WriteNowEntry const &entry);
 
 private:
-  WNText(WNText const &orig);
-  WNText &operator=(WNText const &orig);
+  WriteNowText(WriteNowText const &orig);
+  WriteNowText &operator=(WriteNowText const &orig);
 
 protected:
   //
@@ -167,13 +167,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<WNTextInternal::State> m_state;
+  shared_ptr<WriteNowTextInternal::State> m_state;
 
   //! the list of entry
-  shared_ptr<WNEntryManager> m_entryManager;
+  shared_ptr<WriteNowEntryManager> m_entryManager;
 
   //! the main parser;
-  WNParser *m_mainParser;
+  WriteNowParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

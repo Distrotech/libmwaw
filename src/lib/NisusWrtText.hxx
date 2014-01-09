@@ -35,37 +35,37 @@
  * Parser to Nisus text document
  *
  */
-#ifndef NS_TEXT
-#  define NS_TEXT
+#ifndef NISUS_WRT_TEXT
+#  define NISUS_WRT_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-#include "NSStruct.hxx"
+#include "NisusWrtStruct.hxx"
 
-namespace NSTextInternal
+namespace NisusWrtTextInternal
 {
 class SubDocument;
 struct Paragraph;
 struct State;
 }
 
-class NSParser;
+class NisusWrtParser;
 
 /** \brief the main class to read the text part of Nisus file
  *
  *
  *
  */
-class NSText
+class NisusWrtText
 {
-  friend class NSTextInternal::SubDocument;
-  friend class NSParser;
+  friend class NisusWrtTextInternal::SubDocument;
+  friend class NisusWrtParser;
 public:
   //! constructor
-  NSText(NSParser &parser);
+  NisusWrtText(NisusWrtParser &parser);
   //! destructor
-  virtual ~NSText();
+  virtual ~NisusWrtText();
 
   /** returns the file version */
   int version() const;
@@ -92,7 +92,7 @@ protected:
   /** read a text entry.
      \note entry.id() must correspond to the zone id.
      \note while the main text is in the data fork, the footnote/header footer is in a ??TX rsrc.*/
-  bool sendText(MWAWEntry entry, NSStruct::Position fPos=NSStruct::Position());
+  bool sendText(MWAWEntry entry, NisusWrtStruct::Position fPos=NisusWrtStruct::Position());
 
   /** try to send the ith footnote */
   bool sendFootnote(int footnoteId);
@@ -108,7 +108,7 @@ protected:
   void computePositions();
 
   /** sends a paragraph property to the listener */
-  void setProperty(NSTextInternal::Paragraph const &ruler, int width);
+  void setProperty(NisusWrtTextInternal::Paragraph const &ruler, int width);
 
   //! read the list of fonts
   bool readFontsList(MWAWEntry const &entry);
@@ -120,23 +120,23 @@ protected:
   //! read the FTAB/STYL resource: a list of fonts
   bool readFonts(MWAWEntry const &entry);
   //! read the FRMT resource: a list of filepos -> fontId
-  bool readPosToFont(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
+  bool readPosToFont(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId);
 
   //! read the RULE resource: a list of paragraphs
-  bool readParagraphs(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
+  bool readParagraphs(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId);
 
   //! read the PICD resource: a list of pict link to the paragraph
-  bool readPICD(MWAWEntry const &entry, NSStruct::ZoneType zoneId);
+  bool readPICD(MWAWEntry const &entry, NisusWrtStruct::ZoneType zoneId);
 
   //
   // low level
   //
 
   //! find the file pos which correspond to a pos
-  long findFilePos(NSStruct::ZoneType zoneId, NSStruct::Position const &pos);
+  long findFilePos(NisusWrtStruct::ZoneType zoneId, NisusWrtStruct::Position const &pos);
 private:
-  NSText(NSText const &orig);
-  NSText &operator=(NSText const &orig);
+  NisusWrtText(NisusWrtText const &orig);
+  NisusWrtText &operator=(NisusWrtText const &orig);
 
 protected:
   //
@@ -146,10 +146,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<NSTextInternal::State> m_state;
+  shared_ptr<NisusWrtTextInternal::State> m_state;
 
   //! the main parser;
-  NSParser *m_mainParser;
+  NisusWrtParser *m_mainParser;
 
 };
 #endif

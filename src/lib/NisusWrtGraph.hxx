@@ -35,8 +35,8 @@
  * Parser to Nisus Writer document ( graphic part )
  *
  */
-#ifndef NS_GRAPH
-#  define NS_GRAPH
+#ifndef NISUS_WRT_GRAPH
+#  define NISUS_WRT_GRAPH
 
 #include <string>
 #include <vector>
@@ -48,32 +48,32 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "NSStruct.hxx"
+#include "NisusWrtStruct.hxx"
 
-namespace NSGraphInternal
+namespace NisusWrtGraphInternal
 {
 struct RSSOEntry;
 struct State;
 class SubDocument;
 }
 
-class NSParser;
+class NisusWrtParser;
 
 /** \brief the main class to read the graphic part of a Nisus file
  *
  *
  *
  */
-class NSGraph
+class NisusWrtGraph
 {
-  friend class NSParser;
-  friend class NSGraphInternal::SubDocument;
+  friend class NisusWrtParser;
+  friend class NisusWrtGraphInternal::SubDocument;
 
 public:
   //! constructor
-  NSGraph(NSParser &parser);
+  NisusWrtGraph(NisusWrtParser &parser);
   //! destructor
-  virtual ~NSGraph();
+  virtual ~NisusWrtGraph();
 
   /** returns the file version */
   int version() const;
@@ -102,7 +102,7 @@ protected:
   //! read the PLAC resource: a list of picture placements ?
   bool readPLAC(MWAWEntry const &entry);
   //! parse the PLDT resource: a unknown resource
-  bool readPLDT(NSStruct::RecursifData const &data);
+  bool readPLDT(NisusWrtStruct::RecursifData const &data);
   //! read the PGRA resource: the number of page? graphics
   bool readPGRA(MWAWEntry const &entry);
 
@@ -111,11 +111,11 @@ protected:
   //
 
   //! try to find a RSSO entry in a picture file
-  std::vector<NSGraphInternal::RSSOEntry> findRSSOEntry(MWAWInputStreamPtr inp) const;
+  std::vector<NisusWrtGraphInternal::RSSOEntry> findRSSOEntry(MWAWInputStreamPtr inp) const;
 
 private:
-  NSGraph(NSGraph const &orig);
-  NSGraph &operator=(NSGraph const &orig);
+  NisusWrtGraph(NisusWrtGraph const &orig);
+  NisusWrtGraph &operator=(NisusWrtGraph const &orig);
 
 protected:
   //
@@ -125,10 +125,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<NSGraphInternal::State> m_state;
+  shared_ptr<NisusWrtGraphInternal::State> m_state;
 
   //! the main parser;
-  NSParser *m_mainParser;
+  NisusWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

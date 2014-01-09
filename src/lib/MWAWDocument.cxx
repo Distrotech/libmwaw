@@ -65,9 +65,9 @@
 #include "MsWks4Parser.hxx"
 #include "MsWrd1Parser.hxx"
 #include "MsWrdParser.hxx"
-#include "NSParser.hxx"
+#include "NisusWrtParser.hxx"
 #include "TeachTxtParser.hxx"
-#include "WNParser.hxx"
+#include "WriteNowParser.hxx"
 #include "WriterPlsParser.hxx"
 #include "ZWrtParser.hxx"
 
@@ -453,14 +453,14 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
         parser.reset(new MsWks4Parser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_NISUSWRITER:
-      parser.reset(new NSParser(input, rsrcParser, header));
+      parser.reset(new NisusWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
       parser.reset(new TeachTxtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_WRITENOW:
-      parser.reset(new WNParser(input, rsrcParser, header));
+      parser.reset(new WriteNowParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_WRITERPLUS:
       parser.reset(new WriterPlsParser(input, rsrcParser, header));

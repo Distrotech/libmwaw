@@ -37,8 +37,8 @@
  *   or http://www.mactech.com/articles/mactech/Vol.01/01.09/AllAboutPrinting/index.html
  */
 
-#ifndef MWAW_PRINT
-#  define MWAW_PRINT
+#ifndef MWAW_PRINTER
+#  define MWAW_PRINTER
 
 #  include <assert.h>
 #  include <ostream>
