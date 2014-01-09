@@ -50,15 +50,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "ZWParser.hxx"
+#include "ZWrtParser.hxx"
 
-#include "ZWText.hxx"
+#include "ZWrtText.hxx"
 
-/** Internal: the structures of a ZWText */
-namespace ZWTextInternal
+/** Internal: the structures of a ZWrtText */
+namespace ZWrtTextInternal
 {
 ////////////////////////////////////////
-//! Internal: struct used to store the font of a ZWText
+//! Internal: struct used to store the font of a ZWrtText
 struct Font {
   //! constructor
   Font() : m_font(), m_height(0), m_extra("")
@@ -84,7 +84,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 }
 
 ////////////////////////////////////////
-//! Internal: struct used to store a header/footer of a ZWText
+//! Internal: struct used to store a header/footer of a ZWrtText
 struct HFZone {
   //! constructor
   HFZone() : m_pos(), m_font(), m_extra("")
@@ -117,7 +117,7 @@ struct HFZone {
 };
 
 ////////////////////////////////////////
-//! Internal: struct used to store a section of a ZWText
+//! Internal: struct used to store a section of a ZWrtText
 struct Section {
   //! constructor
   Section() : m_id(), m_pos(), m_name(""), m_idFontMap(), m_parsed(false)
@@ -136,7 +136,7 @@ struct Section {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a ZWText
+//! Internal: the state of a ZWrtText
 struct State {
   //! constructor
   State() : m_version(-1), m_numPages(-1), m_actualPage(1), m_idSectionMap(), m_header(), m_footer()
@@ -167,11 +167,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a ZWText
+//! Internal: the subdocument of a ZWrtText
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ZWText &pars, MWAWInputStreamPtr input, int id, MWAWEntry entry, ZWText::TextCode type) :
+  SubDocument(ZWrtText &pars, MWAWInputStreamPtr input, int id, MWAWEntry entry, ZWrtText::TextCode type) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_type(type), m_pos(entry) {}
 
   //! destructor
@@ -190,11 +190,11 @@ public:
 
 protected:
   /** the text parser */
-  ZWText *m_textParser;
+  ZWrtText *m_textParser;
   //! the section id
   int m_id;
   //! the type of document
-  ZWText::TextCode m_type;
+  ZWrtText::TextCode m_type;
   //! the file pos
   MWAWEntry m_pos;
 private:
@@ -217,15 +217,15 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("ZWTextInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_textParser);
 
   long pos = m_input->tell();
-  if (m_type==ZWText::Link)
+  if (m_type==ZWrtText::Link)
     listener->insertUnicodeString("link to ");
-  else if (m_type==ZWText::Tag)
+  else if (m_type==ZWrtText::Tag)
     listener->insertUnicodeString("ref: ");
   m_textParser->sendText(m_id, m_pos);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -235,46 +235,46 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ZWText::ZWText(ZWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ZWTextInternal::State), m_mainParser(&parser)
+ZWrtText::ZWrtText(ZWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ZWrtTextInternal::State), m_mainParser(&parser)
 {
 }
 
-ZWText::~ZWText()
+ZWrtText::~ZWrtText()
 { }
 
-int ZWText::version() const
+int ZWrtText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int ZWText::numPages() const
+int ZWrtText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
-  const_cast<ZWText *>(this)->computePositions();
+  const_cast<ZWrtText *>(this)->computePositions();
   return m_state->m_numPages;
 }
 
-bool ZWText::hasHeaderFooter(bool header) const
+bool ZWrtText::hasHeaderFooter(bool header) const
 {
   if (header) return m_state->m_header.ok();
   return m_state->m_footer.ok();
 }
 
-void ZWText::computePositions()
+void ZWrtText::computePositions()
 {
   m_state->m_actualPage = 1;
 
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   int nPages = 0;
-  std::map<int,ZWTextInternal::Section>::iterator it =
+  std::map<int,ZWrtTextInternal::Section>::iterator it =
     m_state->m_idSectionMap.begin();
   while (it!=m_state->m_idSectionMap.end()) {
     nPages++;
-    ZWTextInternal::Section &section=(it++)->second;
+    ZWrtTextInternal::Section &section=(it++)->second;
     if (!section.m_pos.valid())
       continue;
     long endPos = section.m_pos.end();
@@ -299,11 +299,11 @@ void ZWText::computePositions()
 ////////////////////////////////////////////////////////////
 
 // find the different zones
-bool ZWText::createZones()
+bool ZWrtText::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("ZWText::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -343,7 +343,7 @@ bool ZWText::createZones()
         readSectionFonts(entry);
         break;
       case 1: {
-        ZWTextInternal::Section &sec=m_state->getSection(entry.id());
+        ZWrtTextInternal::Section &sec=m_state->getSection(entry.id());
         sec.m_pos = entry;
         break;
       }
@@ -358,7 +358,7 @@ bool ZWText::createZones()
   return true;
 }
 
-ZWText::TextCode ZWText::isTextCode
+ZWrtText::TextCode ZWrtText::isTextCode
 (MWAWInputStreamPtr &input, long endPos, MWAWEntry &dPos) const
 {
   dPos=MWAWEntry();
@@ -374,7 +374,7 @@ ZWText::TextCode ZWText::isTextCode
     return c=='C' ? Center : NewPage;
   }
   std::string expectedString("");
-  ZWText::TextCode res = None;
+  ZWrtText::TextCode res = None;
   switch (c) {
   case 'b':
     expectedString="bookmark";
@@ -419,11 +419,11 @@ ZWText::TextCode ZWText::isTextCode
   return None;
 }
 
-bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry)
+bool ZWrtText::sendText(ZWrtTextInternal::Section const &zone, MWAWEntry const &entry)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendText: can not find a listener\n"));
     return false;
   }
   bool main = entry.begin()==zone.m_pos.begin();
@@ -439,9 +439,9 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   long pos = entry.begin(), endPos = entry.end();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  ZWTextInternal::Font actFont;
+  ZWrtTextInternal::Font actFont;
   actFont.m_font=MWAWFont(3,12);
-  std::map<long, ZWTextInternal::Font>::const_iterator fIt=
+  std::map<long, ZWrtTextInternal::Font>::const_iterator fIt=
     zone.m_idFontMap.begin();
   long cPos = pos-zone.m_pos.begin();
   while (fIt != zone.m_idFontMap.end() && fIt->first<cPos)
@@ -489,12 +489,12 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
       case Tag:
       case BookMark: {
         if (textCode==Link) {
-          MWAW_DEBUG_MSG(("ZWText::sendText: find a link, uses bookmark\n"));
+          MWAW_DEBUG_MSG(("ZWrtText::sendText: find a link, uses bookmark\n"));
         }
         else if (textCode==Tag) {
-          MWAW_DEBUG_MSG(("ZWText::sendText: find a tag, uses bookmark\n"));
+          MWAW_DEBUG_MSG(("ZWrtText::sendText: find a tag, uses bookmark\n"));
         }
-        MWAWSubDocumentPtr subdoc(new ZWTextInternal::SubDocument(*this, input, zone.m_id, textData, textCode));
+        MWAWSubDocumentPtr subdoc(new ZWrtTextInternal::SubDocument(*this, input, zone.m_id, textData, textCode));
         listener->insertComment(subdoc);
         break;
       }
@@ -530,32 +530,32 @@ bool ZWText::sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entr
   return true;
 }
 
-bool ZWText::sendText(int sectionId, MWAWEntry const &entry)
+bool ZWrtText::sendText(int sectionId, MWAWEntry const &entry)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("ZWText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendText: can not find a listener\n"));
     return false;
   }
-  std::map<int,ZWTextInternal::Section>::iterator it =
+  std::map<int,ZWrtTextInternal::Section>::iterator it =
     m_state->m_idSectionMap.find(sectionId);
   if (it==m_state->m_idSectionMap.end()) {
-    MWAW_DEBUG_MSG(("ZWText::sendText: can not find the section\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendText: can not find the section\n"));
     return false;
   }
   sendText(it->second, entry);
   return true;
 }
 
-bool ZWText::sendMainText()
+bool ZWrtText::sendMainText()
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("ZWText::sendMainText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendMainText: can not find a listener\n"));
     return false;
   }
-  std::map<int,ZWTextInternal::Section>::iterator it =
+  std::map<int,ZWrtTextInternal::Section>::iterator it =
     m_state->m_idSectionMap.begin();
   while (it!=m_state->m_idSectionMap.end()) {
-    ZWTextInternal::Section &section=(it++)->second;
+    ZWrtTextInternal::Section &section=(it++)->second;
     sendText(section, section.m_pos);
   }
   return true;
@@ -564,10 +564,10 @@ bool ZWText::sendMainText()
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool ZWText::readSectionFonts(MWAWEntry const &entry)
+bool ZWrtText::readSectionFonts(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
-    MWAW_DEBUG_MSG(("ZWText::readSectionFonts: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readSectionFonts: the entry is bad\n"));
     return false;
   }
 
@@ -576,7 +576,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   f << "Entries(" << entry.type() << ")[" << entry << "]:";
   entry.setParsed(true);
-  ZWTextInternal::Section &section = m_state->getSection(entry.id());
+  ZWrtTextInternal::Section &section = m_state->getSection(entry.id());
   section.m_name = entry.name();
 
   long pos = entry.begin();
@@ -584,7 +584,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
   if (2+N*20 != int(entry.length())) {
-    MWAW_DEBUG_MSG(("ZWText::readSectionFonts: the number N seems bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readSectionFonts: the number N seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -595,7 +595,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    ZWTextInternal::Font font;
+    ZWrtTextInternal::Font font;
     f.str("");
     long cPos=(long) input->readULong(4);
     font.m_height = (int) input->readLong(2);
@@ -620,7 +620,7 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
       font.m_font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_font.setFlags(flags);
     font.m_extra = f.str();
-    section.m_idFontMap.insert(std::map<long, ZWTextInternal::Font>::value_type(cPos, font));
+    section.m_idFontMap.insert(std::map<long, ZWrtTextInternal::Font>::value_type(cPos, font));
 
     f.str("");
     f << entry.type() << "-F" << i << ":cPos=" << std::hex << cPos << std::dec << ","
@@ -635,10 +635,10 @@ bool ZWText::readSectionFonts(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // Styles
 //////////////////////////////////////////////
-bool ZWText::readStyles(MWAWEntry const &entry)
+bool ZWrtText::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWText::readStyles: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readStyles: the entry is bad\n"));
     return false;
   }
 
@@ -651,7 +651,7 @@ bool ZWText::readStyles(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!m_mainParser->getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWText::readStyles: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readStyles: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -660,7 +660,7 @@ bool ZWText::readStyles(MWAWEntry const &entry)
 
   size_t numFields = fields.size();
   if (numFields < 9) {
-    MWAW_DEBUG_MSG(("ZWText::readStyles: the fields list seems very short\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readStyles: the fields list seems very short\n"));
   }
   std::string strVal;
   int intVal;
@@ -732,17 +732,17 @@ bool ZWText::readStyles(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header/footer zone
 ////////////////////////////////////////////////////////////
-bool ZWText::sendHeaderFooter(bool header)
+bool ZWrtText::sendHeaderFooter(bool header)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendHeaderFooter: can not find a listener\n"));
     return false;
   }
-  ZWTextInternal::HFZone const &zone = header ?
-                                       m_state->m_header : m_state->m_footer;
+  ZWrtTextInternal::HFZone const &zone = header ?
+                                         m_state->m_header : m_state->m_footer;
   if (!zone.ok()) {
-    MWAW_DEBUG_MSG(("ZWText::sendHeaderFooter: zone is not valid\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::sendHeaderFooter: zone is not valid\n"));
     return false;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -797,15 +797,15 @@ bool ZWText::sendHeaderFooter(bool header)
   return true;
 }
 
-bool ZWText::readHFZone(MWAWEntry const &entry)
+bool ZWrtText::readHFZone(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWText::readHFZone: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readHFZone: the entry is bad\n"));
     return false;
   }
 
   if (entry.id()!=128) {
-    MWAW_DEBUG_MSG(("ZWText::readHFZone: the entry id is odd\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readHFZone: the entry id is odd\n"));
   }
   long pos = entry.begin();
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -815,7 +815,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!m_mainParser->getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWText::readHFZone: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readHFZone: can not get fields list\n"));
     f << "Entries(" << entry.type() << ")[" << entry << "]:";
     f << "###";
     ascFile.addPos(pos-4);
@@ -825,15 +825,15 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
 
   size_t numFields = fields.size();
   if (numFields < 9) {
-    MWAW_DEBUG_MSG(("ZWText::readHFZone: the fields list seems very short\n"));
+    MWAW_DEBUG_MSG(("ZWrtText::readHFZone: the fields list seems very short\n"));
   }
   std::string strVal;
   int intVal;
   bool boolVal;
   std::vector<int> intList;
-  ZWTextInternal::HFZone &zone =
+  ZWrtTextInternal::HFZone &zone =
     entry.type()=="HEAD" ? m_state->m_header : m_state->m_footer;
-  ZWTextInternal::Font &font = zone.m_font;
+  ZWrtTextInternal::Font &font = zone.m_font;
   uint32_t flags=0;
   for (size_t ff = 0; ff < numFields; ff++) {
     ZWField const &field = fields[ff];
@@ -926,7 +926,7 @@ bool ZWText::readHFZone(MWAWEntry const &entry)
 //
 ////////////////////////////////////////////////////////////
 
-void ZWText::flushExtra()
+void ZWrtText::flushExtra()
 {
 }
 

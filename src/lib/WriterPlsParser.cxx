@@ -52,10 +52,10 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "WPParser.hxx"
+#include "WriterPlsParser.hxx"
 
-/** Internal: the structures of a WPParser */
-namespace WPParserInternal
+/** Internal: the structures of a WriterPlsParser */
+namespace WriterPlsParserInternal
 {
 //! Page informations
 struct PageInfo {
@@ -528,7 +528,7 @@ struct ParagraphData {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a WPParser
+//! Internal: the state of a WriterPlsParser
 struct State {
   //! constructor
   State() : m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
@@ -545,11 +545,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a WPParser
+//! Internal: the subdocument of a WriterPlsParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(WPParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(WriterPlsParser &pars, MWAWInputStreamPtr input, int zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -604,7 +604,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<WPParser *>(m_parser)->sendWindow(m_id);
+  reinterpret_cast<WriterPlsParser *>(m_parser)->sendWindow(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -612,22 +612,22 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-WPParser::WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+WriterPlsParser::WriterPlsParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-WPParser::~WPParser()
+WriterPlsParser::~WriterPlsParser()
 {
 }
 
-void WPParser::init()
+void WriterPlsParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new WPParserInternal::State);
+  m_state.reset(new WriterPlsParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
@@ -636,7 +636,7 @@ void WPParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-double WPParser::getTextHeight() const
+double WriterPlsParser::getTextHeight() const
 {
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
@@ -644,7 +644,7 @@ double WPParser::getTextHeight() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void WPParser::newPage(int number)
+void WriterPlsParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -662,7 +662,7 @@ void WPParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
+void WriterPlsParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -685,7 +685,7 @@ void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("WPParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -696,11 +696,11 @@ void WPParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void WriterPlsParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("WPParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -713,7 +713,7 @@ void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     if (m_state->m_windows[i].m_paragraphs.size() == 0)
       continue;
     MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new WPParserInternal::SubDocument(*this, getInput(), i));
+    hF.m_subDocument.reset(new WriterPlsParserInternal::SubDocument(*this, getInput(), i));
     ps.setHeaderFooter(hF);
   }
 
@@ -732,7 +732,7 @@ void WPParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool WPParser::createZones()
+bool WriterPlsParser::createZones()
 {
   if (!readWindowsInfo(0) || !readPrintInfo())
     return false;
@@ -767,9 +767,9 @@ bool WPParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WPParser::checkHeader(MWAWHeader *header, bool strict)
+bool WriterPlsParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = WPParserInternal::State();
+  *m_state = WriterPlsParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -778,7 +778,7 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
   int const headerSize=2;
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
-    MWAW_DEBUG_MSG(("WPParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -799,7 +799,7 @@ bool WPParser::checkHeader(MWAWHeader *header, bool strict)
   return ok;
 }
 
-bool WPParser::readWindowsInfo(int zone)
+bool WriterPlsParser::readWindowsInfo(int zone)
 {
   assert(zone >= 0 && zone < 3);
   MWAWInputStreamPtr input = getInput();
@@ -807,11 +807,11 @@ bool WPParser::readWindowsInfo(int zone)
   long debPos = input->tell();
   input->seek(debPos+0xf4,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != debPos+0xf4) {
-    MWAW_DEBUG_MSG(("WPParser::readWindowsZone: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: file is too short\n"));
     return false;
   }
 
-  WPParserInternal::WindowsInfo info;
+  WriterPlsParserInternal::WindowsInfo info;
 
   input->seek(debPos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
@@ -839,7 +839,7 @@ bool WPParser::readWindowsInfo(int zone)
   long pos;
   for (int i = 0; i < 7; i++) {
     pos = input->tell();
-    WPParserInternal::WindowsInfo::Zone infoZone;
+    WriterPlsParserInternal::WindowsInfo::Zone infoZone;
     infoZone.m_unknown[0] = (int) input->readULong(1);
     infoZone.m_width = (int) input->readULong(2);
     infoZone.m_unknown[1] = (int) input->readULong(1);
@@ -925,23 +925,23 @@ bool WPParser::readWindowsInfo(int zone)
 ////////////////////////////////////////////////////////////
 // read all the windows zone info
 ////////////////////////////////////////////////////////////
-bool WPParser::readWindowsZone(int zone)
+bool WriterPlsParser::readWindowsZone(int zone)
 {
   assert(zone >= 0 && zone < 3);
 
   MWAWInputStreamPtr input = getInput();
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
   libmwaw::DebugStream f;
   for (int wh=1; wh < 7; wh++) {
-    WPParserInternal::WindowsInfo::Zone const &z = wInfo.m_zone[wh];
+    WriterPlsParserInternal::WindowsInfo::Zone const &z = wInfo.m_zone[wh];
     int length = z.m_size;
     if (!length) continue;
 
     long pos = input->tell();
     input->seek(length, librevenge::RVNG_SEEK_CUR);
     if (long(input->tell()) != pos+length) {
-      MWAW_DEBUG_MSG(("WPParser::readWindowsZone: zone is too short\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: zone is too short\n"));
       return false;
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -985,7 +985,7 @@ bool WPParser::readWindowsZone(int zone)
   }
 
   for (int i = int(wInfo.m_paragraphs.size())-1; i >= 0; i--) {
-    WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
+    WriterPlsParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
     if (!pInfo.m_pos)	continue;
 
     input->seek(pInfo.m_pos, librevenge::RVNG_SEEK_SET);
@@ -994,7 +994,7 @@ bool WPParser::readWindowsZone(int zone)
     long endPos = pInfo.m_pos+4+length+length2;
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) {
-      MWAW_DEBUG_MSG(("WPParser::readWindowsZone: data zone is too short\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: data zone is too short\n"));
       return false;
     }
     switch (pInfo.getType()) {
@@ -1002,7 +1002,7 @@ bool WPParser::readWindowsZone(int zone)
       length = (long) input->readULong(4);
       input->seek(length, librevenge::RVNG_SEEK_CUR);
       if (long(input->tell()) != endPos+length+4) {
-        MWAW_DEBUG_MSG(("WPParser::readWindowsZone: graphics zone is too short\n"));
+        MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: graphics zone is too short\n"));
         return false;
       }
       break;
@@ -1017,15 +1017,15 @@ bool WPParser::readWindowsZone(int zone)
 ////////////////////////////////////////////////////////////
 // send the windows zone info
 ////////////////////////////////////////////////////////////
-bool WPParser::sendWindow(int zone, Vec2i limits)
+bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("WPParser::readWindowsZone: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: can not find a listener\n"));
     return false;
   }
   assert(zone >= 0 && zone < 3);
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
   bool sendAll = limits[0] < 0;
 
@@ -1040,11 +1040,11 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       actParag = limits[0];
       endParag = limits[1];
       if (endParag > int(wInfo.m_paragraphs.size())) {
-        MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with limits\n"));
+        MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with limits\n"));
         endParag = int(wInfo.m_paragraphs.size());
       }
       if (endParag <= actParag) {
-        MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb2 with limits\n"));
+        MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb2 with limits\n"));
         return true;
       }
     }
@@ -1058,14 +1058,14 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       else {
         endParag = wInfo.m_pages[(size_t)pg+1].m_firstLine-1;
         if (endParag == -1 || endParag < actParag) {
-          MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with page zone\n"));
+          MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with page zone\n"));
           continue;
         }
       }
     }
 
     for (int i = actParag; i < endParag; i++) {
-      WPParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
+      WriterPlsParserInternal::ParagraphInfo const &pInfo = wInfo.m_paragraphs[(size_t)i];
       if (!pInfo.m_pos) {
         readText(pInfo);
         continue;
@@ -1075,7 +1075,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
       case 3: // col break: seems simillar to an entry data (without text)
         if (numCols) {
           if (actCol >numCols) {
-            MWAW_DEBUG_MSG(("WPParser::readWindowsZone: pb with col break\n"));
+            MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with col break\n"));
           }
           else {
             actCol++;
@@ -1092,7 +1092,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
         if (findSection(zone, Vec2i(i, endParag), section)) {
           if (!canCreateSection) {
             if (section.numColumns()>1) {
-              MWAW_DEBUG_MSG(("WPParser::readWindowsZone: find a section in auxilliary zone\n"));
+              MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: find a section in auxilliary zone\n"));
             }
           }
           else {
@@ -1132,7 +1132,7 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
           }
         }
         else {
-          MWAW_DEBUG_MSG(("WPParser::readWindowsZone: table across a page\n"));
+          MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: table across a page\n"));
         }
         break;
       default:
@@ -1157,10 +1157,10 @@ bool WPParser::sendWindow(int zone, Vec2i limits)
  *
  * Note: complex because we need to read the file in order to find the limit
  */
-bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
+bool WriterPlsParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
 {
   assert(zone >= 0 && zone < 3);
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
   sec=MWAWSection();
   std::vector<int> listPos;
@@ -1171,7 +1171,7 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
   if (!numPos)
     return true;
   if (listPos[numPos-1] >= limits[1]) {
-    MWAW_DEBUG_MSG(("WPParser::findSection: columns across a page\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::findSection: columns across a page\n"));
     return false;
   }
 
@@ -1181,18 +1181,18 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
     int line = listPos[j];
     long pos = wInfo.m_paragraphs[(size_t)line].m_pos;
     if (!pos) {
-      MWAW_DEBUG_MSG(("WPParser::findSection: bad data pos\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::findSection: bad data pos\n"));
       return false;
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (input->readLong(2)) {
-      MWAW_DEBUG_MSG(("WPParser::findSection: find a text size\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::findSection: find a text size\n"));
       return false;
     }
     input->seek(8, librevenge::RVNG_SEEK_CUR); // sz2 and type, h, indent
     int val = (int) input->readLong(2);
     if (val <= 0 || long(input->tell()) != pos + 12) {
-      MWAW_DEBUG_MSG(("WPParser::findSection: file is too short\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::findSection: file is too short\n"));
       return false;
     }
     totalSize += val;
@@ -1204,7 +1204,7 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
   if (sec.m_columns.size()==1)
     sec.m_columns.resize(0);
   if (totalSize >= int(72.*getPageWidth())) {
-    MWAW_DEBUG_MSG(("WPParser::findSection: total size is too big\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::findSection: total size is too big\n"));
     return false;
   }
   return true;
@@ -1213,7 +1213,7 @@ bool WPParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
 ////////////////////////////////////////////////////////////
 // read all the windows zone info
 ////////////////////////////////////////////////////////////
-bool WPParser::readPageInfo(int zone)
+bool WriterPlsParser::readPageInfo(int zone)
 {
   assert(zone >= 0 && zone < 3);
 
@@ -1222,10 +1222,10 @@ bool WPParser::readPageInfo(int zone)
 
   libmwaw::DebugStream f;
 
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
   int numPages = wInfo.m_zone[1].m_number;
   if (wInfo.m_zone[1].m_size != numPages * 10) {
-    MWAW_DEBUG_MSG(("WPParser::readPageInfo: odd page size\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readPageInfo: odd page size\n"));
     return false;
   }
 
@@ -1236,7 +1236,7 @@ bool WPParser::readPageInfo(int zone)
 
   for (int page = 0; page < numPages; page++) {
     pos = input->tell();
-    WPParserInternal::PageInfo pInfo;
+    WriterPlsParserInternal::PageInfo pInfo;
     pInfo.m_firstLine = (int) input->readLong(2);
     if ((page == 0 && pInfo.m_firstLine != 1) || pInfo.m_firstLine < actNumLine)
       return false;
@@ -1263,7 +1263,7 @@ bool WPParser::readPageInfo(int zone)
 ////////////////////////////////////////////////////////////
 // read a windows paragraph info
 ////////////////////////////////////////////////////////////
-MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data)
+MWAWParagraph WriterPlsParser::getParagraph(WriterPlsParserInternal::ParagraphData const &data)
 {
   MWAWParagraph para;
 
@@ -1281,14 +1281,14 @@ MWAWParagraph WPParser::getParagraph(WPParserInternal::ParagraphData const &data
   return para;
 }
 
-bool WPParser::readParagraphInfo(int zone)
+bool WriterPlsParser::readParagraphInfo(int zone)
 {
   assert(zone >= 0 && zone < 3);
 
   libmwaw::DebugStream f;
 
   MWAWInputStreamPtr input = getInput();
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
   int numPara = wInfo.m_zone[3].m_number;
   long endPos = long(input->tell()) + wInfo.m_zone[3].m_size;
 
@@ -1297,7 +1297,7 @@ bool WPParser::readParagraphInfo(int zone)
     long pos = input->tell();
     if (pos == endPos) break;
     if (pos > endPos) return false;
-    WPParserInternal::ParagraphInfo pInfo;
+    WriterPlsParserInternal::ParagraphInfo pInfo;
 
     f.str("");
     f << "Entries(ParaInfo)-"<< para+1 << ":";
@@ -1344,23 +1344,23 @@ bool WPParser::readParagraphInfo(int zone)
 ////////////////////////////////////////////////////////////
 // read all the windows col info ?
 ////////////////////////////////////////////////////////////
-bool WPParser::readColInfo(int zone)
+bool WriterPlsParser::readColInfo(int zone)
 {
   assert(zone >= 0 && zone < 3);
 
   libmwaw::DebugStream f;
 
-  WPParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
+  WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
   int numCols = wInfo.m_zone[2].m_number;
   if (wInfo.m_zone[2].m_size != numCols * 16) {
-    MWAW_DEBUG_MSG(("WPParser::readColInfo: odd col size\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readColInfo: odd col size\n"));
     return false;
   }
 
   MWAWInputStreamPtr input = getInput();
   for (int col = 0; col < numCols; col++) {
     long pos = input->tell();
-    WPParserInternal::ColumnInfo cInfo;
+    WriterPlsParserInternal::ColumnInfo cInfo;
     cInfo.m_col = (int) input->readLong(2);
     cInfo.m_unknown[0] = (int) input->readLong(2);
     cInfo.m_numCol = (int) input->readLong(2);
@@ -1379,10 +1379,10 @@ bool WPParser::readColInfo(int zone)
   return true;
 }
 
-bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
+bool WriterPlsParser::readText(WriterPlsParserInternal::ParagraphInfo const &info)
 {
-  WPParserInternal::ParagraphData data;
-  std::vector<WPParserInternal::Line> lines;
+  WriterPlsParserInternal::ParagraphData data;
+  std::vector<WriterPlsParserInternal::Line> lines;
   assert(info.m_pos);
 
   if (!readParagraphData(info, true, data))
@@ -1397,7 +1397,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
 
   int numLines = data.m_numData[1];
   if (!readLines(info, numLines, lines)) {
-    MWAW_DEBUG_MSG(("WPParser::readText: pb with the lines\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readText: pb with the lines\n"));
     lines.resize(0);
     input->seek(pos+numLines*16, librevenge::RVNG_SEEK_SET);
     f << "###lines,";
@@ -1420,7 +1420,7 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   if (!getTextListener())
     return true;
   std::string const &text = data.m_text;
-  std::vector<WPParserInternal::Font> const &fonts = data.m_fonts;
+  std::vector<WriterPlsParserInternal::Font> const &fonts = data.m_fonts;
   long numChars = (long) text.length();
   size_t actFont = 0, numFonts = fonts.size();
   int actLine = 0;
@@ -1459,12 +1459,12 @@ bool WPParser::readText(WPParserInternal::ParagraphInfo const &info)
   return true;
 }
 
-bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mainBlock)
+bool WriterPlsParser::readSection(WriterPlsParserInternal::ParagraphInfo const &info, bool mainBlock)
 {
-  WPParserInternal::ParagraphData data;
+  WriterPlsParserInternal::ParagraphData data;
 
   if (!info.m_pos) {
-    MWAW_DEBUG_MSG(("WPParser::readSection: can not find the beginning pos\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readSection: can not find the beginning pos\n"));
     return false;
   }
 
@@ -1480,12 +1480,12 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
 
   int numData = data.m_numData[1];
   if (numData != 1) {
-    MWAW_DEBUG_MSG(("WPParser::readSection: unexpected num of data: %d \n", numData));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readSection: unexpected num of data: %d \n", numData));
   }
 
-  std::vector<WPParserInternal::SectionInfo> sections;
+  std::vector<WriterPlsParserInternal::SectionInfo> sections;
   for (int i = 0; i < numData; i++) {
-    WPParserInternal::SectionInfo section;
+    WriterPlsParserInternal::SectionInfo section;
     for (int j = 0; j < 2; j++)
       section.m_flags[j] = (int) input->readLong(2);
     section.m_numCol = (int) input->readLong(2); // checkme
@@ -1516,12 +1516,12 @@ bool WPParser::readSection(WPParserInternal::ParagraphInfo const &info, bool mai
   return true;
 }
 
-bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
+bool WriterPlsParser::readTable(WriterPlsParserInternal::ParagraphInfo const &info)
 {
-  WPParserInternal::ParagraphData data;
+  WriterPlsParserInternal::ParagraphData data;
 
   if (!info.m_pos) {
-    MWAW_DEBUG_MSG(("WPParser::readTable: can not find the beginning pos\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readTable: can not find the beginning pos\n"));
     return false;
   }
 
@@ -1537,12 +1537,12 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
 
   int numData = data.m_numData[1];
   if (numData <= 1) {
-    MWAW_DEBUG_MSG(("WPParser::readTable: unexpected num of data: %d \n", numData));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readTable: unexpected num of data: %d \n", numData));
   }
 
-  std::vector<WPParserInternal::ColumnTableInfo> columns;
+  std::vector<WriterPlsParserInternal::ColumnTableInfo> columns;
   for (int i = 0; i < numData; i++) {
-    WPParserInternal::ColumnTableInfo cols;
+    WriterPlsParserInternal::ColumnTableInfo cols;
     cols.m_height = (int) input->readLong(2);
     for (int j = 0; j < 2; j++)
       cols.m_colX[j] = (int) input->readLong(2);
@@ -1558,7 +1558,7 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
   if (getTextListener()) {
     std::vector<float> colSize((size_t)numData);
     for (int i = 0; i < numData; i++) {
-      WPParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
+      WriterPlsParserInternal::ColumnTableInfo const &cols = columns[(size_t)i];
       colSize[(size_t)i] = float(cols.m_colX[1]-cols.m_colX[0]);
     }
     MWAWTable table(MWAWTable::TableDimBit);
@@ -1585,12 +1585,12 @@ bool WPParser::readTable(WPParserInternal::ParagraphInfo const &info)
   return true;
 }
 
-bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
+bool WriterPlsParser::readGraphic(WriterPlsParserInternal::ParagraphInfo const &info)
 {
-  WPParserInternal::ParagraphData data;
+  WriterPlsParserInternal::ParagraphData data;
 
   if (!info.m_pos) {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the beginning pos\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: can not find the beginning pos\n"));
     return false;
   }
 
@@ -1606,12 +1606,12 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
 
   int numData = data.m_numData[1];
   if (numData != 1) {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: unexpected num of data: %d \n", numData));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: unexpected num of data: %d \n", numData));
   }
 
-  std::vector<WPParserInternal::GraphicInfo> graphicsInfos;
+  std::vector<WriterPlsParserInternal::GraphicInfo> graphicsInfos;
   for (int i = 0; i < numData; i++) {
-    WPParserInternal::GraphicInfo gInfo;
+    WriterPlsParserInternal::GraphicInfo gInfo;
     gInfo.m_flags[0] = (int) input->readLong(1);
     gInfo.m_width = (int) input->readLong(2);
     gInfo.m_flags[1] = (int) input->readULong(1); //
@@ -1634,7 +1634,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   pos = input->tell();
   long length = (long) input->readULong(4);
   if (!length) {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: find a zero size graphics\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: find a zero size graphics\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Graphic):#sz=0");
     return true;
@@ -1642,7 +1642,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   long endPos = pos+4+length;
   input->seek(length, librevenge::RVNG_SEEK_CUR);
   if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: file is too short\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1654,7 +1654,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)length, box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: can not find the picture\n"));
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1665,7 +1665,7 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
     naturalSize = box.size();
   }
   else {
-    MWAW_DEBUG_MSG(("WPParser::readGraphic: can not find the picture size\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: can not find the picture size\n"));
     actualSize = Vec2f(100,100);
   }
 
@@ -1708,9 +1708,9 @@ bool WPParser::readGraphic(WPParserInternal::ParagraphInfo const &info)
 ////////////////////////////////////////////////////////////
 // read a paragraph
 ////////////////////////////////////////////////////////////
-bool WPParser::readUnknown(WPParserInternal::ParagraphInfo const &info)
+bool WriterPlsParser::readUnknown(WriterPlsParserInternal::ParagraphInfo const &info)
 {
-  WPParserInternal::ParagraphData data;
+  WriterPlsParserInternal::ParagraphData data;
   if (!readParagraphData(info, true, data))
     return false;
 
@@ -1749,8 +1749,8 @@ bool WPParser::readUnknown(WPParserInternal::ParagraphInfo const &info)
 ////////////////////////////////////////////////////////////
 // read the beginning of a paragraph data
 ////////////////////////////////////////////////////////////
-bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bool hasFonts,
-                                 WPParserInternal::ParagraphData &data)
+bool WriterPlsParser::readParagraphData(WriterPlsParserInternal::ParagraphInfo const &info, bool hasFonts,
+                                        WriterPlsParserInternal::ParagraphData &data)
 {
   libmwaw::DebugStream f;
 
@@ -1758,14 +1758,14 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   long pos = info.m_pos;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  data = WPParserInternal::ParagraphData();
+  data = WriterPlsParserInternal::ParagraphData();
   int textLength = (int) input->readLong(2);
   int length2 = (int) input->readLong(2);
   data.m_endPos = pos+4+textLength+length2;
 
   input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
   if (textLength < 0 || length2 < 0 || input->tell() != data.m_endPos) {
-    MWAW_DEBUG_MSG(("WPParser::readParagraphData:  paragraph is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readParagraphData:  paragraph is too short\n"));
     return false;
   }
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -1785,7 +1785,7 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
 
   // format type
   if (info.m_type != data.m_type + (data.m_typeFlag!=0 ? 8 : 0)) {
-    MWAW_DEBUG_MSG(("WPParser::readParagraph: I find an unexpected type\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readParagraph: I find an unexpected type\n"));
     f << "#diffType=" << info.m_type << ",";
   }
 
@@ -1798,11 +1798,11 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
   for (int i = 0; i < 2; i++)
     data.m_numData[i] = (int) input->readLong(2);
 
-  std::vector<WPParserInternal::Font> &fonts = data.m_fonts;
+  std::vector<WriterPlsParserInternal::Font> &fonts = data.m_fonts;
   if (hasFonts) {
     long actPos = input->tell();
     if (!readFonts(data.m_numData[0], data.m_type, fonts)) {
-      MWAW_DEBUG_MSG(("WPParser::readParagraph: pb with the fonts\n"));
+      MWAW_DEBUG_MSG(("WriterPlsParser::readParagraph: pb with the fonts\n"));
       fonts.resize(0);
       input->seek(actPos+data.m_numData[0]*16, librevenge::RVNG_SEEK_SET);
     }
@@ -1825,8 +1825,8 @@ bool WPParser::readParagraphData(WPParserInternal::ParagraphInfo const &info, bo
 ////////////////////////////////////////////////////////////
 // read a series of fonts
 ////////////////////////////////////////////////////////////
-bool WPParser::readFonts
-(int nFonts, int type, std::vector<WPParserInternal::Font> &fonts)
+bool WriterPlsParser::readFonts
+(int nFonts, int type, std::vector<WriterPlsParserInternal::Font> &fonts)
 {
   fonts.resize(0);
   MWAWInputStreamPtr input = getInput();
@@ -1843,7 +1843,7 @@ bool WPParser::readFonts
   int actPos = 0;
   libmwaw::DebugStream f;
   for (int i = 0; i < nFonts; i++) {
-    WPParserInternal::Font fInfo;
+    WriterPlsParserInternal::Font fInfo;
     f.str("");
     int val = (int) input->readLong(2); // 65|315
     if (val) f << "dim?=" << val << ",";
@@ -1895,16 +1895,16 @@ bool WPParser::readFonts
 ////////////////////////////////////////////////////////////
 // read a series of lines
 ////////////////////////////////////////////////////////////
-bool WPParser::readLines
-(WPParserInternal::ParagraphInfo const &/*info*/,
- int nLines, std::vector<WPParserInternal::Line> &lines)
+bool WriterPlsParser::readLines
+(WriterPlsParserInternal::ParagraphInfo const &/*info*/,
+ int nLines, std::vector<WriterPlsParserInternal::Line> &lines)
 {
   lines.resize(0);
   MWAWInputStreamPtr input = getInput();
 
   int actPos = 0;
   for (int i = 0; i < nLines; i++) {
-    WPParserInternal::Line lInfo;
+    WriterPlsParserInternal::Line lInfo;
     lInfo.m_height = (int) input->readLong(2);
     lInfo.m_maxFontSize = (int) input->readLong(2); // checkMe
     lInfo.m_width = (int) input->readLong(2);
@@ -1927,7 +1927,7 @@ bool WPParser::readLines
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool WPParser::readPrintInfo()
+bool WriterPlsParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1970,7 +1970,7 @@ bool WPParser::readPrintInfo()
 
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("WPParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readPrintInfo: file is too short\n"));
     return false;
   }
 

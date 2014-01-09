@@ -552,15 +552,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPParser.cxx"
+				RelativePath="..\..\src\lib\WriterPlsParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWParser.cxx"
+				RelativePath="..\..\src\lib\ZWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWText.cxx"
+				RelativePath="..\..\src\lib\ZWrtText.cxx"
 				>
 			</File>
 		</Filter>
@@ -973,15 +973,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPParser.hxx"
+				RelativePath="..\..\src\lib\WriterPlsParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWParser.hxx"
+				RelativePath="..\..\src\lib\ZWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWText.hxx"
+				RelativePath="..\..\src\lib\ZWrtText.hxx"
 				>
 			</File>
 		</Filter>

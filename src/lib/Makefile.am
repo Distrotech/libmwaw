@@ -210,12 +210,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	WNParser.hxx			\
 	WNText.cxx			\
 	WNText.hxx			\
-	WPParser.cxx			\
-	WPParser.hxx			\
-	ZWParser.cxx			\
-	ZWParser.hxx			\
-	ZWText.cxx			\
-	ZWText.hxx
+	WriterPlsParser.cxx		\
+	WriterPlsParser.hxx		\
+	ZWrtParser.cxx			\
+	ZWrtParser.hxx			\
+	ZWrtText.cxx			\
+	ZWrtText.hxx
 
 if OS_WIN32
 

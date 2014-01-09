@@ -35,35 +35,35 @@
  * Parser to ZWrite document
  *
  */
-#ifndef ZW_TEXT
-#  define ZW_TEXT
+#ifndef Z_WRT_TEXT
+#  define Z_WRT_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace ZWTextInternal
+namespace ZWrtTextInternal
 {
 struct Section;
 struct State;
 class SubDocument;
 }
 
-class ZWParser;
+class ZWrtParser;
 
 /** \brief the main class to read the text part of ZWrite Text file
  *
  *
  *
  */
-class ZWText
+class ZWrtText
 {
-  friend class ZWParser;
-  friend class ZWTextInternal::SubDocument;
+  friend class ZWrtParser;
+  friend class ZWrtTextInternal::SubDocument;
 public:
   //! constructor
-  ZWText(ZWParser &parser);
+  ZWrtText(ZWrtParser &parser);
   //! destructor
-  virtual ~ZWText();
+  virtual ~ZWrtText();
 
   /** returns the file version */
   int version() const;
@@ -92,7 +92,7 @@ protected:
   void computePositions();
 
   //! try to send a section
-  bool sendText(ZWTextInternal::Section const &zone, MWAWEntry const &entry);
+  bool sendText(ZWrtTextInternal::Section const &zone, MWAWEntry const &entry);
   //! try to send a section using an id
   bool sendText(int sectionId, MWAWEntry const &entry);
   //! check if a character after '<' corresponds to a text code
@@ -112,8 +112,8 @@ protected:
   bool readSectionFonts(MWAWEntry const &entry);
 
 private:
-  ZWText(ZWText const &orig);
-  ZWText &operator=(ZWText const &orig);
+  ZWrtText(ZWrtText const &orig);
+  ZWrtText &operator=(ZWrtText const &orig);
 
 protected:
   //
@@ -123,10 +123,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<ZWTextInternal::State> m_state;
+  shared_ptr<ZWrtTextInternal::State> m_state;
 
   //! the main parser;
-  ZWParser *m_mainParser;
+  ZWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

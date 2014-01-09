@@ -68,8 +68,8 @@
 #include "NSParser.hxx"
 #include "TTParser.hxx"
 #include "WNParser.hxx"
-#include "WPParser.hxx"
-#include "ZWParser.hxx"
+#include "WriterPlsParser.hxx"
+#include "ZWrtParser.hxx"
 
 /** small namespace use to define private class/method used by MWAWDocument */
 namespace MWAWDocumentInternal
@@ -463,10 +463,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new WNParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_WRITERPLUS:
-      parser.reset(new WPParser(input, rsrcParser, header));
+      parser.reset(new WriterPlsParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_ZWRITE:
-      parser.reset(new ZWParser(input, rsrcParser, header));
+      parser.reset(new ZWrtParser(input, rsrcParser, header));
       break;
 
     case MWAWDocument::MWAW_T_FRAMEMAKER:

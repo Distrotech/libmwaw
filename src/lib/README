@@ -24,8 +24,8 @@
 - NS* : parser of Nisus Writer documents,
 - TT* : parser of TeachText/SimpleText/Tex-Edit documents,
 - WN* : parser of WriteNow documents
-- WP* : parser of WriterPlus documents
-- ZW* : parser of Z-Write documents
+- WriterPls* : parser of WriterPlus documents
+- ZWrt*      : parser of Z-Write documents
 
 ------------------------------------------------------------
 --------------            Exported           --------------
@@ -108,7 +108,7 @@ These files defined basic structures which must be used by the parsers :
 ------------------------------------------------------------
 ---  Acta/BeagleWks/CW/DM/ED/FullWrt                     ---
 ---           GW/LW/MacWrt/MsWks/MCD                     ---
----           MDW/MOR/MRW/MSW/NS/TT/WN/WP/ZW             ---
+---  MDW/MOR/MRW/MSW/NS/TT/WN/WriterPls/ZWrt             ---
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -202,7 +202,7 @@ WNParser : parser of WriteNow document : v1.0-4.0
 -   WNText : class which reads the text and its structures
 -   WNEntry : class to store the entry found in the document
 
-WPParser : parser of WriterPlus document
+WriterPlsParser : parser of WriterPlus document
 
-ZWParser : parser of Z-Write document : v1.3
--   ZWText : class which reads the text and its structures
+ZWrtParser : parser of Z-Write document : v1.3
+-   ZWrtText : class which reads the text and its structures

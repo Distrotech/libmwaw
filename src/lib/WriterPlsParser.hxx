@@ -35,8 +35,8 @@
  * Parser to convert some WriterPlus text document ( a french text editor )
  *
  */
-#ifndef WP_PARSER
-#  define WP_PARSER
+#ifndef WRITER_PLS_PARSER
+#  define WRITER_PLS_PARSER
 
 #include <list>
 #include <string>
@@ -48,7 +48,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace WPParserInternal
+namespace WriterPlsParserInternal
 {
 struct State;
 struct Font;
@@ -63,15 +63,15 @@ class SubDocument;
  *
  *
  */
-class WPParser : public MWAWTextParser
+class WriterPlsParser : public MWAWTextParser
 {
-  friend class WPParserInternal::SubDocument;
+  friend class WriterPlsParserInternal::SubDocument;
 
 public:
   //! constructor
-  WPParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  WriterPlsParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~WPParser();
+  virtual ~WriterPlsParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -114,19 +114,19 @@ protected:
   bool findSection(int zone, Vec2i limits, MWAWSection &sec);
 
   //! read a section
-  bool readSection(WPParserInternal::ParagraphInfo const &info, bool mainBlock);
+  bool readSection(WriterPlsParserInternal::ParagraphInfo const &info, bool mainBlock);
 
   //! read a text
-  bool readText(WPParserInternal::ParagraphInfo const &info);
+  bool readText(WriterPlsParserInternal::ParagraphInfo const &info);
 
   //! read a table
-  bool readTable(WPParserInternal::ParagraphInfo const &info);
+  bool readTable(WriterPlsParserInternal::ParagraphInfo const &info);
 
   //! read a graphic
-  bool readGraphic(WPParserInternal::ParagraphInfo const &info);
+  bool readGraphic(WriterPlsParserInternal::ParagraphInfo const &info);
 
   //! read a unknown section
-  bool readUnknown(WPParserInternal::ParagraphInfo const &info);
+  bool readUnknown(WriterPlsParserInternal::ParagraphInfo const &info);
 
   //! returns the page height, ie. paper size less margin (in inches) and header/footer
   double getTextHeight() const;
@@ -139,17 +139,17 @@ protected:
   //
 
   //! reads a paragraph data
-  bool readParagraphData(WPParserInternal::ParagraphInfo const &info, bool hasFonts,
-                         WPParserInternal::ParagraphData &data);
+  bool readParagraphData(WriterPlsParserInternal::ParagraphInfo const &info, bool hasFonts,
+                         WriterPlsParserInternal::ParagraphData &data);
   //! returns a paragraph corresponding to a paragraph data
-  MWAWParagraph getParagraph(WPParserInternal::ParagraphData const &data);
+  MWAWParagraph getParagraph(WriterPlsParserInternal::ParagraphData const &data);
   //! reads a list of font (with position)
   bool readFonts(int nFonts, int type,
-                 std::vector<WPParserInternal::Font> &fonts);
+                 std::vector<WriterPlsParserInternal::Font> &fonts);
 
   //! reads a list of line (with position)
-  bool readLines(WPParserInternal::ParagraphInfo const &info,
-                 int nLines, std::vector<WPParserInternal::Line> &lines);
+  bool readLines(WriterPlsParserInternal::ParagraphInfo const &info,
+                 int nLines, std::vector<WriterPlsParserInternal::Line> &lines);
 
 protected:
   //
@@ -157,7 +157,7 @@ protected:
   //
 
   //! the state
-  shared_ptr<WPParserInternal::State> m_state;
+  shared_ptr<WriterPlsParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

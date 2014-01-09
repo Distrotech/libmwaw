@@ -467,15 +467,15 @@ SOURCE=..\..\src\lib\WNText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPParser.cxx
+SOURCE=..\..\src\lib\WriterPlsParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWParser.cxx
+SOURCE=..\..\src\lib\ZWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWText.cxx
+SOURCE=..\..\src\lib\ZWrtText.cxx
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -887,15 +887,15 @@ SOURCE=..\..\src\lib\WNText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPParser.hxx
+SOURCE=..\..\src\lib\WriterPlsParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWParser.hxx
+SOURCE=..\..\src\lib\ZWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWText.hxx
+SOURCE=..\..\src\lib\ZWrtText.hxx
 # End Source File
 # End Group
 # End Target

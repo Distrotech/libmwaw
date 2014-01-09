@@ -478,15 +478,15 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WPParser.cxx">
+    <ClCompile Include="..\..\src\lib\WriterPlsParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\ZWParser.cxx">
+    <ClCompile Include="..\..\src\lib\ZWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\ZWText.cxx">
+    <ClCompile Include="..\..\src\lib\ZWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -596,9 +596,9 @@
     <ClInclude Include="..\..\src\lib\WNEntry.hxx" />
     <ClInclude Include="..\..\src\lib\WNParser.hxx" />
     <ClInclude Include="..\..\src\lib\WNText.hxx" />
-    <ClInclude Include="..\..\src\lib\WPParser.hxx" />
-    <ClInclude Include="..\..\src\lib\ZWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\ZWText.hxx" />
+    <ClInclude Include="..\..\src\lib\WriterPlsParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ZWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ZWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\libmwaw_internal.hxx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

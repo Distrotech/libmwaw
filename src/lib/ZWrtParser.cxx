@@ -47,15 +47,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "ZWText.hxx"
+#include "ZWrtText.hxx"
 
-#include "ZWParser.hxx"
+#include "ZWrtParser.hxx"
 
-/** Internal: the structures of a ZWParser */
-namespace ZWParserInternal
+/** Internal: the structures of a ZWrtParser */
+namespace ZWrtParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a ZWParser
+//! Internal: the state of a ZWrtParser
 struct State {
   //! constructor
   State() : m_actPage(0), m_numPages(0), m_headerUsed(true), m_footerUsed(true), m_headerHeight(0), m_footerHeight(0)
@@ -73,11 +73,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a ZWParser
+//! Internal: the subdocument of a ZWrtParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ZWParser &pars, MWAWInputStreamPtr input, bool header) :
+  SubDocument(ZWrtParser &pars, MWAWInputStreamPtr input, bool header) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_isHeader(header) {}
 
   //! destructor
@@ -110,12 +110,12 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("ZWParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ZWrtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_parser);
 
-  reinterpret_cast<ZWParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  reinterpret_cast<ZWrtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
 }
 }
 
@@ -123,35 +123,35 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ZWParser::ZWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+ZWrtParser::ZWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
 
-ZWParser::~ZWParser()
+ZWrtParser::~ZWrtParser()
 {
 }
 
-void ZWParser::init()
+void ZWrtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new ZWParserInternal::State);
+  m_state.reset(new ZWrtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_textParser.reset(new ZWText(*this));
+  m_textParser.reset(new ZWrtText(*this));
 }
 
-MWAWInputStreamPtr ZWParser::rsrcInput()
+MWAWInputStreamPtr ZWrtParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &ZWParser::rsrcAscii()
+libmwaw::DebugFile &ZWrtParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -159,7 +159,7 @@ libmwaw::DebugFile &ZWParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f ZWParser::getPageLeftTop() const
+Vec2f ZWrtParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -168,7 +168,7 @@ Vec2f ZWParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-bool ZWParser::sendHeaderFooter(bool header)
+bool ZWrtParser::sendHeaderFooter(bool header)
 {
   MWAWInputStreamPtr rsrc = rsrcInput();
   long rsrcPos = rsrc->tell();
@@ -180,7 +180,7 @@ bool ZWParser::sendHeaderFooter(bool header)
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void ZWParser::newPage(int number)
+void ZWrtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -196,7 +196,7 @@ void ZWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void ZWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void ZWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -213,7 +213,7 @@ void ZWParser::parse(librevenge::RVNGTextInterface *docInterface)
     }
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("ZWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -224,11 +224,11 @@ void ZWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void ZWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void ZWrtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("ZWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -244,12 +244,12 @@ void ZWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerUsed && m_textParser->hasHeaderFooter(true)) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset(new ZWParserInternal::SubDocument(*this, getInput(), true));
+    header.m_subDocument.reset(new ZWrtParserInternal::SubDocument(*this, getInput(), true));
     ps.setHeaderFooter(header);
   }
   if (m_state->m_footerUsed && m_textParser->hasHeaderFooter(false)) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset(new ZWParserInternal::SubDocument(*this, getInput(), false));
+    footer.m_subDocument.reset(new ZWrtParserInternal::SubDocument(*this, getInput(), false));
     ps.setHeaderFooter(footer);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -265,11 +265,11 @@ void ZWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool ZWParser::createZones()
+bool ZWrtParser::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("ZWParser::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -343,15 +343,15 @@ bool ZWParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool ZWParser::readPrintInfo(MWAWEntry const &entry)
+bool ZWrtParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
 
   if (entry.id()!=128) {
-    MWAW_DEBUG_MSG(("ZWParser::readPrintInfo: the entry id is odd\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readPrintInfo: the entry id is odd\n"));
   }
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
@@ -362,7 +362,7 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWParser::readPrintInfo: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readPrintInfo: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -371,7 +371,7 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
 
   size_t numFields = fields.size();
   if (numFields < 6) {
-    MWAW_DEBUG_MSG(("ZWParser::readPrintInfo: the fields list seems very short\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readPrintInfo: the fields list seems very short\n"));
   }
   bool boolVal;
   float floatVal;
@@ -452,10 +452,10 @@ bool ZWParser::readPrintInfo(MWAWEntry const &entry)
 }
 
 // read the print info xml data
-bool ZWParser::readCPRT(MWAWEntry const &entry)
+bool ZWrtParser::readCPRT(MWAWEntry const &entry)
 {
   if (entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("ZWParser::readCPRT: data seems to short\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readCPRT: data seems to short\n"));
     return false;
   }
 
@@ -482,15 +482,15 @@ bool ZWParser::readCPRT(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the bar state/windows pos, ...
 ////////////////////////////////////////////////////////////
-bool ZWParser::readBarState(MWAWEntry const &entry)
+bool ZWrtParser::readBarState(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readBarState: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readBarState: the entry is bad\n"));
     return false;
   }
 
   if (entry.id()!=128) {
-    MWAW_DEBUG_MSG(("ZWParser::readBarState: the entry id is odd\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readBarState: the entry id is odd\n"));
   }
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
@@ -501,7 +501,7 @@ bool ZWParser::readBarState(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields) || !fields.size()) {
-    MWAW_DEBUG_MSG(("ZWParser::readBarState: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readBarState: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -514,7 +514,7 @@ bool ZWParser::readBarState(MWAWEntry const &entry)
     f << "#set,";
   size_t numFields = fields.size();
   if (numFields > 1) {
-    MWAW_DEBUG_MSG(("ZWParser::readBarState: find extra fields\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readBarState: find extra fields\n"));
   }
   for (size_t ff = 1; ff < numFields; ff++) {
     if (fields[ff].getDebugString(input, res))
@@ -528,15 +528,15 @@ bool ZWParser::readBarState(MWAWEntry const &entry)
   return true;
 }
 
-bool ZWParser::readHTMLPref(MWAWEntry const &entry)
+bool ZWrtParser::readHTMLPref(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readHTMLPref: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readHTMLPref: the entry is bad\n"));
     return false;
   }
 
   if (entry.id()!=128) {
-    MWAW_DEBUG_MSG(("ZWParser::readHTMLPref: the entry id is odd\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readHTMLPref: the entry id is odd\n"));
   }
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
@@ -547,7 +547,7 @@ bool ZWParser::readHTMLPref(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWParser::readHTMLPref: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readHTMLPref: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -556,7 +556,7 @@ bool ZWParser::readHTMLPref(MWAWEntry const &entry)
 
   size_t numFields = fields.size();
   if (numFields < 4) {
-    MWAW_DEBUG_MSG(("ZWParser::readHTMLPref: the fields list seems very short\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readHTMLPref: the fields list seems very short\n"));
   }
   std::string strVal;
   bool boolVal;
@@ -594,11 +594,11 @@ bool ZWParser::readHTMLPref(MWAWEntry const &entry)
   return true;
 }
 
-bool ZWParser::readSectionRange(MWAWEntry const &entry)
+bool ZWrtParser::readSectionRange(MWAWEntry const &entry)
 {
   long pos = entry.begin();
   if (pos <= 0) {
-    MWAW_DEBUG_MSG(("ZWParser::readSectionRange: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readSectionRange: the entry is bad\n"));
     return false;
   }
 
@@ -621,7 +621,7 @@ bool ZWParser::readSectionRange(MWAWEntry const &entry)
     bool done=input->tell()>=entry.end();
     char c = done ? char(0xa) : (char) input->readULong(1);
     if (c==0) {
-      MWAW_DEBUG_MSG(("ZWParser::readSectionRange: find a 0 char\n"));
+      MWAW_DEBUG_MSG(("ZWrtParser::readSectionRange: find a 0 char\n"));
       name +="##[0]";
       continue;
     }
@@ -648,15 +648,15 @@ bool ZWParser::readSectionRange(MWAWEntry const &entry)
   return true;
 }
 
-bool ZWParser::readWindowPos(MWAWEntry const &entry)
+bool ZWrtParser::readWindowPos(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readWindowPos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readWindowPos: the entry is bad\n"));
     return false;
   }
 
   if (entry.id()!=128) {
-    MWAW_DEBUG_MSG(("ZWParser::readWindowPos: the entry id is odd\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readWindowPos: the entry id is odd\n"));
   }
   long pos = entry.begin();
   MWAWInputStreamPtr input = rsrcInput();
@@ -667,7 +667,7 @@ bool ZWParser::readWindowPos(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWParser::readWindowPos: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readWindowPos: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -676,7 +676,7 @@ bool ZWParser::readWindowPos(MWAWEntry const &entry)
 
   size_t numFields = fields.size();
   if (numFields < 6) {
-    MWAW_DEBUG_MSG(("ZWParser::readWindowPos: the fields list seems very short\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readWindowPos: the fields list seems very short\n"));
   }
   std::string strVal;
   int intVal;
@@ -722,10 +722,10 @@ bool ZWParser::readWindowPos(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // read a cursor position in a section ?
-bool ZWParser::readCPos(MWAWEntry const &entry)
+bool ZWrtParser::readCPos(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readCPos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readCPos: the entry is bad\n"));
     return false;
   }
 
@@ -738,7 +738,7 @@ bool ZWParser::readCPos(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields) || !fields.size()) {
-    MWAW_DEBUG_MSG(("ZWParser::readCPos: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readCPos: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -751,12 +751,12 @@ bool ZWParser::readCPos(MWAWEntry const &entry)
       f << "cPos=" << intVal << ",";
   }
   else {
-    MWAW_DEBUG_MSG(("ZWParser::readCPos: can not read cursor pos\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readCPos: can not read cursor pos\n"));
     ff = 0;
   }
   size_t numFields = fields.size();
   if (numFields > 1) {
-    MWAW_DEBUG_MSG(("ZWParser::readCPos: find extra fields\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readCPos: find extra fields\n"));
   }
   std::string res;
   for (; ff < numFields; ff++) {
@@ -772,10 +772,10 @@ bool ZWParser::readCPos(MWAWEntry const &entry)
 }
 
 // read a cursor position in a section ?
-bool ZWParser::readSLen(MWAWEntry const &entry)
+bool ZWrtParser::readSLen(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("ZWParser::readSLen: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readSLen: the entry is bad\n"));
     return false;
   }
 
@@ -788,7 +788,7 @@ bool ZWParser::readSLen(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields) || !fields.size()) {
-    MWAW_DEBUG_MSG(("ZWParser::readSLen: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readSLen: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -801,12 +801,12 @@ bool ZWParser::readSLen(MWAWEntry const &entry)
       f << "len?=" << intVal << ",";
   }
   else {
-    MWAW_DEBUG_MSG(("ZWParser::readSLen: can not read cursor pos\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readSLen: can not read cursor pos\n"));
     ff = 0;
   }
   size_t numFields = fields.size();
   if (numFields > 1) {
-    MWAW_DEBUG_MSG(("ZWParser::readSLen: find extra fields\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readSLen: find extra fields\n"));
   }
   std::string res;
   for (; ff < numFields; ff++) {
@@ -824,10 +824,10 @@ bool ZWParser::readSLen(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read a generic zone ...
 ////////////////////////////////////////////////////////////
-bool ZWParser::readUnknownZone(MWAWEntry const &entry)
+bool ZWrtParser::readUnknownZone(MWAWEntry const &entry)
 {
   if (entry.begin() <= 0) {
-    MWAW_DEBUG_MSG(("ZWParser::readUnknownZone: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readUnknownZone: the entry is bad\n"));
     return false;
   }
 
@@ -841,7 +841,7 @@ bool ZWParser::readUnknownZone(MWAWEntry const &entry)
 
   std::vector<ZWField> fields;
   if (!getFieldList(entry, fields)) {
-    MWAW_DEBUG_MSG(("ZWParser::readUnknownZone: can not get fields list\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::readUnknownZone: can not get fields list\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -870,19 +870,19 @@ bool ZWParser::readUnknownZone(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool ZWParser::checkHeader(MWAWHeader *header, bool strict)
+bool ZWrtParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = ZWParserInternal::State();
+  *m_state = ZWrtParserInternal::State();
   if (!getRSRCParser())
     return false;
   // check if the RANG section exists
   MWAWEntry entry = getRSRCParser()->getEntry("RANG", 128);
   if (entry.begin()<=0) { // length can be 0, so ...
-    MWAW_DEBUG_MSG(("ZWParser::checkHeader: can not find the RANG[128] resource\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::checkHeader: can not find the RANG[128] resource\n"));
     return false;
   }
   if (getInput()->hasDataFork()) {
-    MWAW_DEBUG_MSG(("ZWParser::checkHeader: find some data fork\n"));
+    MWAW_DEBUG_MSG(("ZWrtParser::checkHeader: find some data fork\n"));
     if (strict)
       return false;
   }
@@ -895,7 +895,7 @@ bool ZWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // read a list of field
 ////////////////////////////////////////////////////////////
-bool ZWParser::getFieldList(MWAWEntry const &entry, std::vector<ZWField> &list)
+bool ZWrtParser::getFieldList(MWAWEntry const &entry, std::vector<ZWField> &list)
 {
   list.resize(0);
   MWAWInputStreamPtr input = rsrcInput();

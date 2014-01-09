@@ -352,7 +352,7 @@ struct Paragraph : public MWAWParagraph {
 };
 
 ////////////////////////////////////////
-//! Internal: the cell of a WNProStructure
+//! Internal: the cell of a MacWrtProStructure
 struct Cell : public MWAWCell {
   //! constructor
   Cell(MacWrtProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0)

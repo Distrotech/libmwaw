@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef ZW_PARSER
-#  define ZW_PARSER
+#ifndef Z_WRT_PARSER
+#  define Z_WRT_PARSER
 
 #include <string>
 #include <vector>
@@ -44,13 +44,13 @@
 
 #include "MWAWParser.hxx"
 
-namespace ZWParserInternal
+namespace ZWrtParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class ZWText;
+class ZWrtText;
 
 /** a structure to store a field of a ZWrite file */
 struct ZWField {
@@ -78,15 +78,15 @@ struct ZWField {
 
 /** \brief the main class to read a ZWrite file
  */
-class ZWParser : public MWAWTextParser
+class ZWrtParser : public MWAWTextParser
 {
-  friend class ZWParserInternal::SubDocument;
-  friend class ZWText;
+  friend class ZWrtParserInternal::SubDocument;
+  friend class ZWrtText;
 public:
   //! constructor
-  ZWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  ZWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~ZWParser();
+  virtual ~ZWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -150,10 +150,10 @@ protected:
   //
 
   //! the state
-  shared_ptr<ZWParserInternal::State> m_state;
+  shared_ptr<ZWrtParserInternal::State> m_state;
 
   //! the text parser
-  shared_ptr<ZWText> m_textParser;
+  shared_ptr<ZWrtText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
