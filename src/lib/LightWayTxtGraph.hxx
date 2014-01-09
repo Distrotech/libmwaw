@@ -32,36 +32,43 @@
 */
 
 /*
- * Parser to LightWay Text document
+ * Parser to LightWay Text document ( graphic part )
  *
  */
-#ifndef LW_TEXT
-#  define LW_TEXT
+#ifndef LIGHT_WAY_TXT_GRAPH
+#  define LIGHT_WAY_TXT_GRAPH
+
+#include <string>
+#include <vector>
+
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
-#include "MWAWDebug.hxx"
 
-namespace LWTextInternal
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
+
+namespace LightWayTxtGraphInternal
 {
-struct Font;
 struct State;
 }
 
-class LWParser;
+class LightWayTxtParser;
 
-/** \brief the main class to read the text part of LightWay Text file
+/** \brief the main class to read the graphic part of a LightWay Text file
  *
  *
  *
  */
-class LWText
+class LightWayTxtGraph
 {
-  friend class LWParser;
+  friend class LightWayTxtParser;
+
 public:
   //! constructor
-  LWText(LWParser &parser);
+  LightWayTxtGraph(LightWayTxtParser &parser);
   //! destructor
-  virtual ~LWText();
+  virtual ~LightWayTxtGraph();
 
   /** returns the file version */
   int version() const;
@@ -70,54 +77,38 @@ public:
   int numPages() const;
 
 protected:
-  //! finds the different text zones
+  //! finds the different graphic zones
   bool createZones();
-
-  //! send a main zone
-  bool sendMainText();
-
-  //! return a color corresponding to an id
-  bool getColor(int id, MWAWColor &col) const;
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
+  //! try to send the page graphic
+  bool sendPageGraphics();
+
+  //! try to send a graph
+  void send(int id);
+
   //
-  // intermediate level
+  // Intermediate level
   //
 
-  /** compute the positions */
-  void computePositions();
+  //! try to send a JPEG resource
+  bool sendJPEG(MWAWEntry const &entry);
 
-  //! read the fonts ( styl resource)
-  bool readFonts(MWAWEntry const &entry);
-  //! read the Font2 resource ( underline, upperline, ...)
-  bool readFont2(MWAWEntry const &entry);
+  //! try to send a PICT resource
+  bool sendPICT(MWAWEntry const &entry);
 
-  //! read the rulers (stylx resource)
-  bool readRulers(MWAWEntry const &entry);
-  /** send the paragraph properties */
-  void setProperty(MWAWParagraph const &para);
+  //
+  // low level
+  //
 
-  //! read the ruby data
-  bool readRuby(MWAWEntry const &entry);
-
-  //! read the header/footer part of the document zone
-  bool readDocumentHF(MWAWEntry const &entry);
-  //! returns true if there is a header/footer
-  bool hasHeaderFooter(bool header) const;
-  //! try to send the header/footer
-  bool sendHeaderFooter(bool header);
-
-  //! read the unknown styu resource
-  bool readStyleU(MWAWEntry const &entry);
-
-  //! read the styl resource
-  bool readUnknownStyle(MWAWEntry const &entry);
+  //! try to find a JPEG size
+  static bool findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz);
 
 private:
-  LWText(LWText const &orig);
-  LWText &operator=(LWText const &orig);
+  LightWayTxtGraph(LightWayTxtGraph const &orig);
+  LightWayTxtGraph &operator=(LightWayTxtGraph const &orig);
 
 protected:
   //
@@ -127,10 +118,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<LWTextInternal::State> m_state;
+  shared_ptr<LightWayTxtGraphInternal::State> m_state;
 
   //! the main parser;
-  LWParser *m_mainParser;
+  LightWayTxtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -35,8 +35,8 @@
  * Parser to More document
  *
  */
-#ifndef MOR_TEXT
-#  define MOR_TEXT
+#ifndef MORE_TEXT
+#  define MORE_TEXT
 
 #include <set>
 
@@ -45,7 +45,7 @@
 
 struct MWAWListLevel;
 
-namespace MORTextInternal
+namespace MoreTextInternal
 {
 struct Outline;
 struct Paragraph;
@@ -54,22 +54,22 @@ struct State;
 class SubDocument;
 }
 
-class MORParser;
+class MoreParser;
 
 /** \brief the main class to read the text part of More Text file
  *
  *
  *
  */
-class MORText
+class MoreText
 {
-  friend class MORParser;
-  friend class MORTextInternal::SubDocument;
+  friend class MoreParser;
+  friend class MoreTextInternal::SubDocument;
 public:
   //! constructor
-  MORText(MORParser &parser);
+  MoreText(MoreParser &parser);
   //! destructor
-  virtual ~MORText();
+  virtual ~MoreText();
 
   /** returns the file version */
   int version() const;
@@ -125,7 +125,7 @@ protected:
   bool readOutlineList(MWAWEntry const &entry);
 
   //! read a outline
-  bool readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outline);
+  bool readOutline(MWAWEntry const &entry, MoreTextInternal::Outline &outline);
 
   /** try to read a fontname
 
@@ -133,7 +133,7 @@ protected:
    */
   bool readFont(MWAWEntry const &entry, std::string &fName, int &fId);
   /** try to read some tabs */
-  bool readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para, std::string &mess);
+  bool readTabs(MWAWEntry const &entry, MoreTextInternal::Paragraph &para, std::string &mess);
   /** read a custom list level */
   bool readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level);
 
@@ -141,8 +141,8 @@ protected:
   bool parseUnknown(MWAWEntry const &entry, long fDecal);
 
 private:
-  MORText(MORText const &orig);
-  MORText &operator=(MORText const &orig);
+  MoreText(MoreText const &orig);
+  MoreText &operator=(MoreText const &orig);
 
 protected:
   //
@@ -152,10 +152,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MORTextInternal::State> m_state;
+  shared_ptr<MoreTextInternal::State> m_state;
 
   //! the main parser;
-  MORParser *m_mainParser;
+  MoreParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

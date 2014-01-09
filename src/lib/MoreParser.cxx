@@ -50,15 +50,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MORText.hxx"
+#include "MoreText.hxx"
 
-#include "MORParser.hxx"
+#include "MoreParser.hxx"
 
-/** Internal: the structures of a MORParser */
-namespace MORParserInternal
+/** Internal: the structures of a MoreParser */
+namespace MoreParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a MORParser
+//! Internal: the state of a MoreParser
 struct State {
   //! constructor
   State() : m_typeEntryMap(), m_backgroundColor(MWAWColor::white()), m_colorList(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
@@ -97,11 +97,11 @@ void State::setDefaultColorList(int version)
 }
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MORParser
+//! Internal: the subdocument of a MoreParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MORParser &pars, MWAWInputStreamPtr input) :
+  SubDocument(MoreParser &pars, MWAWInputStreamPtr input) :
     MWAWSubDocument(&pars, input, MWAWEntry()) {}
 
   //! destructor
@@ -131,11 +131,11 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MORParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MoreParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_parser);
-  //static_cast<MORParser *>(m_parser)->sendHeaderFooter();
+  //static_cast<MoreParser *>(m_parser)->sendHeaderFooter();
 }
 }
 
@@ -143,35 +143,35 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MORParser::MORParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MoreParser::MoreParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
 
-MORParser::~MORParser()
+MoreParser::~MoreParser()
 {
 }
 
-void MORParser::init()
+void MoreParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MORParserInternal::State);
+  m_state.reset(new MoreParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_textParser.reset(new MORText(*this));
+  m_textParser.reset(new MoreText(*this));
 }
 
-MWAWInputStreamPtr MORParser::rsrcInput()
+MWAWInputStreamPtr MoreParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &MORParser::rsrcAscii()
+libmwaw::DebugFile &MoreParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -179,18 +179,18 @@ libmwaw::DebugFile &MORParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f MORParser::getPageLeftTop() const
+Vec2f MoreParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-bool MORParser::checkAndStore(MWAWEntry const &entry)
+bool MoreParser::checkAndStore(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.begin() < 0x80 || !getInput()->checkPosition(entry.end()))
     return false;
   if (entry.type().empty()) {
-    MWAW_DEBUG_MSG(("MORParser::checkAndStore: entry type is not set\n"));
+    MWAW_DEBUG_MSG(("MoreParser::checkAndStore: entry type is not set\n"));
     return false;
   }
 
@@ -199,7 +199,7 @@ bool MORParser::checkAndStore(MWAWEntry const &entry)
   return true;
 }
 
-bool MORParser::checkAndFindSize(MWAWEntry &entry)
+bool MoreParser::checkAndFindSize(MWAWEntry &entry)
 {
   MWAWInputStreamPtr &input= getInput();
   if (entry.begin()<0 || !input->checkPosition(entry.begin()+4))
@@ -218,7 +218,7 @@ bool MORParser::checkAndFindSize(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MORParser::newPage(int number)
+void MoreParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -231,7 +231,7 @@ void MORParser::newPage(int number)
   }
 }
 
-bool MORParser::getColor(int id, MWAWColor &col) const
+bool MoreParser::getColor(int id, MWAWColor &col) const
 {
   int numColor = (int) m_state->m_colorList.size();
   if (!numColor) {
@@ -247,7 +247,7 @@ bool MORParser::getColor(int id, MWAWColor &col) const
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MORParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MoreParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -266,7 +266,7 @@ void MORParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MORParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MoreParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -277,11 +277,11 @@ void MORParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MORParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MoreParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MORParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MoreParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -321,12 +321,12 @@ void MORParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MORParser::createZones()
+bool MoreParser::createZones()
 {
   int vers=version();
   MWAWInputStreamPtr input = getInput();
   if (vers<2) {
-    MWAW_DEBUG_MSG(("MORParser::createZones: do not know how to createZone for v1\n"));
+    MWAW_DEBUG_MSG(("MoreParser::createZones: do not know how to createZone for v1\n"));
     return false;
   }
   if (!readZonesList())
@@ -392,14 +392,14 @@ bool MORParser::createZones()
   return m_textParser->createZones();
 }
 
-bool MORParser::readZonesList()
+bool MoreParser::readZonesList()
 {
   int vers=version();
   if (vers<2)
     return false;
   MWAWInputStreamPtr input = getInput();
   if (!input->checkPosition(0x80)) {
-    MWAW_DEBUG_MSG(("MORParser::readZonesList: file is too short\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readZonesList: file is too short\n"));
     return false;
   }
   long pos=8;
@@ -420,7 +420,7 @@ bool MORParser::readZonesList()
     f << names[i] << "(" << std::hex << entry.begin() << "<->" << entry.end()
       << std::dec <<  "), ";
     if (!checkAndStore(entry)) {
-      MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read entry %d\n", i));
+      MWAW_DEBUG_MSG(("MoreParser::readZonesList: can not read entry %d\n", i));
       f << "###";
     }
   }
@@ -439,7 +439,7 @@ bool MORParser::readZonesList()
     f << names[i] << "(" << std::hex << entry.begin() << "<->" << entry.end()
       << std::dec <<  "), ";
     if (!checkAndStore(entry)) {
-      MWAW_DEBUG_MSG(("MORParser::readZonesList: can not read entry %d\n", i));
+      MWAW_DEBUG_MSG(("MoreParser::readZonesList: can not read entry %d\n", i));
       f << "###";
     }
   }
@@ -460,10 +460,10 @@ bool MORParser::readZonesList()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MORParser::readPrintInfo(MWAWEntry const &entry)
+bool MoreParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 120) {
-    MWAW_DEBUG_MSG(("MORParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
 
@@ -513,10 +513,10 @@ bool MORParser::readPrintInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the document info
 ////////////////////////////////////////////////////////////
-bool MORParser::readDocumentInfo(MWAWEntry const &entry)
+bool MoreParser::readDocumentInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 436) {
-    MWAW_DEBUG_MSG(("MORParser::readDocumentInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readDocumentInfo: the entry is bad\n"));
     return false;
   }
 
@@ -560,7 +560,7 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
     }
   }
   else {
-    MWAW_DEBUG_MSG(("MORParser::readDocumentInfo: can not read the page dimension\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readDocumentInfo: can not read the page dimension\n"));
     f << "###";
   }
   static int const expectedVal[4]= {0,3,1,0}; // unknown
@@ -631,10 +631,10 @@ bool MORParser::readDocumentInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the list of free position
 ////////////////////////////////////////////////////////////
-bool MORParser::readFreePos(MWAWEntry const &entry)
+bool MoreParser::readFreePos(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<4) {
-    MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readFreePos: the entry is bad\n"));
     return false;
   }
 
@@ -647,7 +647,7 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
   int N=(int) input->readULong(4);
   f << "Entries(FreePos):N=" << N;
   if (4+N*8 > entry.length()) {
-    MWAW_DEBUG_MSG(("MORParser::readFreePos: the number of entry seems bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readFreePos: the number of entry seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -679,7 +679,7 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
     }
     if (tEntry.valid()) {
       if (!input->checkPosition(tEntry.end())) {
-        MWAW_DEBUG_MSG(("MORParser::readFreePos: the entry does not seems valid\n"));
+        MWAW_DEBUG_MSG(("MoreParser::readFreePos: the entry does not seems valid\n"));
         f << "###";
       }
       else
@@ -710,9 +710,9 @@ bool MORParser::readFreePos(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MORParser::checkHeader(MWAWHeader *header, bool strict)
+bool MoreParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MORParserInternal::State();
+  *m_state = MoreParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(0x80))
     return false;
@@ -764,10 +764,10 @@ bool MORParser::checkHeader(MWAWHeader *header, bool strict)
 //////////////////////////////////////////////
 // slide
 //////////////////////////////////////////////
-bool MORParser::readSlideList(MWAWEntry const &entry)
+bool MoreParser::readSlideList(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%8)) {
-    MWAW_DEBUG_MSG(("MORParser::readSlideList: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readSlideList: the entry is bad\n"));
     return false;
   }
 
@@ -795,7 +795,7 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
     if (fPos==0x50) // checkme: default or related to filePosition 0x50 ?
       ;
     else if (!checkAndFindSize(tEntry)) {
-      MWAW_DEBUG_MSG(("MORParser::readSlideList: can not read a file position\n"));
+      MWAW_DEBUG_MSG(("MoreParser::readSlideList: can not read a file position\n"));
       f << "###";
     }
     else
@@ -825,10 +825,10 @@ bool MORParser::readSlideList(MWAWEntry const &entry)
   return true;
 }
 
-bool MORParser::readSlide(MWAWEntry const &entry)
+bool MoreParser::readSlide(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<16) {
-    MWAW_DEBUG_MSG(("MORParser::readSlide: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readSlide: the entry is bad\n"));
     return false;
   }
   long pos = entry.begin();
@@ -866,7 +866,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
         dataSz=4+(int) input->readULong(4);
         break;
       default:
-        MWAW_DEBUG_MSG(("MORParser::readSlide: argh... find unexpected type %d\n", type));
+        MWAW_DEBUG_MSG(("MoreParser::readSlide: argh... find unexpected type %d\n", type));
         break;
       }
     }
@@ -910,7 +910,7 @@ bool MORParser::readSlide(MWAWEntry const &entry)
   return true;
 }
 
-bool MORParser::readGraphic(MWAWEntry const &entry)
+bool MoreParser::readGraphic(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<0xd)
     return false;
@@ -964,10 +964,10 @@ bool MORParser::readGraphic(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // checkme: not sure...
-bool MORParser::readUnknown9(MWAWEntry const &entry)
+bool MoreParser::readUnknown9(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 26) {
-    MWAW_DEBUG_MSG(("MORParser::readUnknown9: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readUnknown9: the entry is bad\n"));
     return false;
   }
 
@@ -1027,11 +1027,11 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
       }
     }
     if (!ok) {
-      MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some unknown structure\n"));
+      MWAW_DEBUG_MSG(("MoreParser::readUnknown9: find some unknown structure\n"));
       f << "###";
     }
     else if (endFPos!=input->tell()) {
-      MWAW_DEBUG_MSG(("MORParser::readUnknown9: find some extra data\n"));
+      MWAW_DEBUG_MSG(("MoreParser::readUnknown9: find some extra data\n"));
       f << "###";
       ascii().addDelimiter(input->tell(),'|');
     }
@@ -1044,7 +1044,7 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
   }
   pos=input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("MORParser::readUnknown9: the parsing stopped before end\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readUnknown9: the parsing stopped before end\n"));
     ascii().addPos(pos);
     ascii().addNote("Unknown9(II)");
   }
@@ -1052,7 +1052,7 @@ bool MORParser::readUnknown9(MWAWEntry const &entry)
 }
 
 // a list of colors ( the first zone of block9)
-bool MORParser::readColors(long endPos)
+bool MoreParser::readColors(long endPos)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1094,7 +1094,7 @@ bool MORParser::readColors(long endPos)
 }
 
 // a backside definition? ( the last zones of block9)
-bool MORParser::readBackside(long endPos, std::string &extra)
+bool MoreParser::readBackside(long endPos, std::string &extra)
 {
   extra="";
 
@@ -1144,7 +1144,7 @@ bool MORParser::readBackside(long endPos, std::string &extra)
 }
 
 // a pattern ( the zones of block9 which follow color)
-bool MORParser::readPattern(long endPos, MORStruct::Pattern &pattern)
+bool MoreParser::readPattern(long endPos, MORStruct::Pattern &pattern)
 {
   pattern = MORStruct::Pattern();
   MWAWInputStreamPtr input = getInput();
@@ -1173,7 +1173,7 @@ bool MORParser::readPattern(long endPos, MORStruct::Pattern &pattern)
 }
 
 /* a ? ( the middle zone of block9). checkme: structure */
-bool MORParser::readUnkn9Sub(long endPos)
+bool MoreParser::readUnkn9Sub(long endPos)
 {
   MWAWInputStreamPtr input = getInput();
   long debPos = input->tell();
@@ -1250,7 +1250,7 @@ bool MORParser::readUnkn9Sub(long endPos)
   f.str("");
   f << "Unkn9A-III:N=" << N << ",";
   if (pos+2+(N+1)*8 > endPos) {
-    MWAW_DEBUG_MSG(("MORParser::readUnkn9Sub: can not read end of zone\n"));
+    MWAW_DEBUG_MSG(("MoreParser::readUnkn9Sub: can not read end of zone\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());

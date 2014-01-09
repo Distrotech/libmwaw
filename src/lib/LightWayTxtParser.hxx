@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MOR_PARSER
-#  define MOR_PARSER
+#ifndef LIGHT_WAY_TXT_PARSER
+#  define LIGHT_WAY_TXT_PARSER
 
 #include <string>
 #include <vector>
@@ -44,46 +44,27 @@
 
 #include "MWAWParser.hxx"
 
-namespace MORParserInternal
+namespace LightWayTxtParserInternal
 {
 class SubDocument;
 struct State;
 }
 
-class MORText;
+class LightWayTxtGraph;
+class LightWayTxtText;
 
-/** \brief a namespace used to define basic structures in a More file
+/** \brief the main class to read a LightWay Text file
  */
-namespace MORStruct
+class LightWayTxtParser : public MWAWTextParser
 {
-struct Pattern {
-  //!constructor
-  Pattern() : m_frontColor(MWAWColor::black()), m_backColor(MWAWColor::white())
-  {
-    for (int i=0; i<8; i++) m_pattern[i]=0;
-  }
-  //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, Pattern const &pat);
-  //! the pattern
-  unsigned char m_pattern[8];
-  //! the front color
-  MWAWColor m_frontColor;
-  //! the back color
-  MWAWColor m_backColor;
-};
-}
-
-/** \brief the main class to read a More file
- */
-class MORParser : public MWAWTextParser
-{
-  friend class MORParserInternal::SubDocument;
-  friend class MORText;
+  friend class LightWayTxtParserInternal::SubDocument;
+  friend class LightWayTxtGraph;
+  friend class LightWayTxtText;
 public:
   //! constructor
-  MORParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  LightWayTxtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MORParser();
+  virtual ~LightWayTxtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -100,62 +81,41 @@ protected:
 
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
+  //! returns the number of column and the column separator (in point)
+  bool getColumnInfo(int &numCols, int &colSep) const;
   //! adds a new page
   void newPage(int number);
-  //! return the color which corresponds to an id (if possible)
-  bool getColor(int id, MWAWColor &col) const;
+  //! returns true if the main text is in data fork
+  bool textInDataFork() const;
+
+  // interface with the graph parser
+
+  //! ask the graph parser to send a graph
+  void sendGraphic(int graphId);
 
   // interface with the text parser
+
+  //! try to send the header/footer
+  bool sendHeaderFooter(bool header);
 
 protected:
   //! finds the different objects zones
   bool createZones();
 
-  //! read the list of zones ( v2-3) : first 0x80 bytes
-  bool readZonesList();
-
-  //! read a PrintInfo zone ( first block )
+  //! read a PrintInfo block
   bool readPrintInfo(MWAWEntry const &entry);
-
-  //! read a docinfo zone ( second block )
-  bool readDocumentInfo(MWAWEntry const &entry);
-
-  //! read the list of slide definitions
-  bool readSlideList(MWAWEntry const &entry);
-
-  //! read a slide definitions
-  bool readSlide(MWAWEntry const &entry);
-
-  //! read a graphic ( in a slide )
-  bool readGraphic(MWAWEntry const &entry);
-
-  //! read a unknown zone ( block 9 )
-  bool readUnknown9(MWAWEntry const &entry);
-
-  //! read a color zone ( beginning of block 9 )
-  bool readColors(long endPos);
-
-  //! read a pattern ( some sub zone of block 9)
-  bool readPattern(long endPos, MORStruct::Pattern &pattern);
-
-  //! read a backside ( some sub zone of block 9)
-  bool readBackside(long endPos, std::string &extra);
-
-  //! read the list of free file position
-  bool readFreePos(MWAWEntry const &entry);
-
-  //! read the last subzone find in a block 9 ( unknown meaning)
-  bool readUnkn9Sub(long endPos);
-
-  //
-  // low level
-  //
-
-  //! check if the entry is valid, if so store it in the list of entry
-  bool checkAndStore(MWAWEntry const &entry);
-
-  //! check if the entry is valid defined by the begin pos points to a zone: dataSz data
-  bool checkAndFindSize(MWAWEntry &entry);
+  //! read a DocInfo block
+  bool readDocInfo(MWAWEntry const &entry);
+  //! read a Document, Header/Footer block (1000)
+  bool readDocument(MWAWEntry const &entry);
+  //! read a LWSR block (1002)
+  bool readLWSR2(MWAWEntry const &entry);
+  //! read a MPSR block (1005)
+  bool readMPSR5(MWAWEntry const &entry);
+  //! read a TOC page block
+  bool readTOCPage(MWAWEntry const &entry);
+  //! read a TOC data block
+  bool readTOC(MWAWEntry const &entry);
 
   //! return the input input
   MWAWInputStreamPtr rsrcInput();
@@ -166,12 +126,17 @@ protected:
   //
   // data
   //
-
   //! the state
-  shared_ptr<MORParserInternal::State> m_state;
+  shared_ptr<LightWayTxtParserInternal::State> m_state;
+
+  //! a flag to know if page span has been set
+  bool m_pageSpanSet;
+
+  //! the graph parser
+  shared_ptr<LightWayTxtGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<MORText> m_textParser;
+  shared_ptr<LightWayTxtText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

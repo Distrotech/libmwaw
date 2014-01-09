@@ -54,7 +54,7 @@
 #include "GWParser.hxx"
 #include "HanMacWrdJParser.hxx"
 #include "HanMacWrdKParser.hxx"
-#include "LWParser.hxx"
+#include "LightWayTxtParser.hxx"
 #include "MacDocParser.hxx"
 #include "MacWrtParser.hxx"
 #include "MacWrtProParser.hxx"
@@ -62,7 +62,7 @@
 #include "MsWks3Parser.hxx"
 #include "MsWks4Parser.hxx"
 #include "MindWrtParser.hxx"
-#include "MORParser.hxx"
+#include "MoreParser.hxx"
 #include "MSW1Parser.hxx"
 #include "MSWParser.hxx"
 #include "NSParser.hxx"
@@ -420,7 +420,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new HanMacWrdKParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
-      parser.reset(new LWParser(input, rsrcParser, header));
+      parser.reset(new LightWayTxtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACDOC:
       parser.reset(new MacDocParser(input, rsrcParser, header));
@@ -438,7 +438,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new MindWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MORE:
-      parser.reset(new MORParser(input, rsrcParser, header));
+      parser.reset(new MoreParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
       if (header->getMajorVersion()==1)

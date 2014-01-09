@@ -82,12 +82,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	HanMacWrdKParser.hxx		\
 	HanMacWrdKText.cxx		\
 	HanMacWrdKText.hxx		\
-	LWGraph.cxx			\
-	LWGraph.hxx			\
-	LWParser.cxx			\
-	LWParser.hxx			\
-	LWText.cxx			\
-	LWText.hxx			\
+	LightWayTxtGraph.cxx		\
+	LightWayTxtGraph.hxx		\
+	LightWayTxtParser.cxx		\
+	LightWayTxtParser.hxx		\
+	LightWayTxtText.cxx		\
+	LightWayTxtText.hxx		\
 	MacDocParser.cxx		\
 	MacDocParser.hxx		\
 	MacWrtParser.cxx		\
@@ -104,6 +104,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MarinerWrtText.hxx		\
 	MindWrtParser.cxx		\
 	MindWrtParser.hxx		\
+	MoreParser.cxx			\
+	MoreParser.hxx			\
+	MoreText.cxx			\
+	MoreText.hxx			\
 	MsWksGraph.cxx			\
 	MsWksGraph.hxx			\
 	MsWksParser.cxx			\
@@ -120,10 +124,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MsWks4Text.hxx			\
 	MsWks4Zone.cxx			\
 	MsWks4Zone.hxx			\
-	MORParser.cxx			\
-	MORParser.hxx			\
-	MORText.cxx			\
-	MORText.hxx			\
 	MSW1Parser.cxx			\
 	MSW1Parser.hxx			\
 	MSWParser.cxx			\

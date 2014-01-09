@@ -51,12 +51,12 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "LWParser.hxx"
+#include "LightWayTxtParser.hxx"
 
-#include "LWText.hxx"
+#include "LightWayTxtText.hxx"
 
-/** Internal: the structures of a LWText */
-namespace LWTextInternal
+/** Internal: the structures of a LightWayTxtText */
+namespace LightWayTxtTextInternal
 {
 /** the different plc type */
 enum PLCType { P_Font, P_Font2, P_Ruler, P_Ruby, P_StyleU, P_StyleV, P_Unknown};
@@ -111,7 +111,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 }
 
 ////////////////////////////////////////
-//! Internal: struct used to store the font of a LWText
+//! Internal: struct used to store the font of a LightWayTxtText
 struct Font {
   //! constructor
   Font() : m_font(), m_height(0), m_pictId(0)
@@ -173,7 +173,7 @@ struct Paragraph : public MWAWParagraph {
 };
 
 ////////////////////////////////////////
-//! Internal: the header/footer zone of a LWText
+//! Internal: the header/footer zone of a LightWayTxtText
 struct HFZone {
   //! constructor
   HFZone() : m_numChar(0), m_pos(), m_height(0), m_font(), m_justify(MWAWParagraph::JustificationLeft), m_extra("")
@@ -224,7 +224,7 @@ std::ostream &operator<<(std::ostream &o, HFZone const &hf)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a LWText
+//! Internal: the state of a LightWayTxtText
 struct State {
   //! constructor
   State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_fontsList(), m_auxiFontsList(), m_paragraphsList(), m_plcMap(), m_header(), m_footer()
@@ -252,48 +252,48 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-LWText::LWText(LWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new LWTextInternal::State), m_mainParser(&parser)
+LightWayTxtText::LightWayTxtText(LightWayTxtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new LightWayTxtTextInternal::State), m_mainParser(&parser)
 {
 }
 
-LWText::~LWText()
+LightWayTxtText::~LightWayTxtText()
 { }
 
-int LWText::version() const
+int LightWayTxtText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int LWText::numPages() const
+int LightWayTxtText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
-  const_cast<LWText *>(this)->computePositions();
+  const_cast<LightWayTxtText *>(this)->computePositions();
   return m_state->m_numPages;
 }
 
 
-void LWText::computePositions()
+void LightWayTxtText::computePositions()
 {
   int nPages = 1;
   m_state->m_actualPage = 1;
   m_state->m_numPages = nPages;
 }
 
-bool LWText::hasHeaderFooter(bool header) const
+bool LightWayTxtText::hasHeaderFooter(bool header) const
 {
   if (header)
     return m_state->m_header.m_pos.valid();
   return m_state->m_footer.m_pos.valid();
 }
 
-bool LWText::getColor(int id, MWAWColor &col) const
+bool LightWayTxtText::getColor(int id, MWAWColor &col) const
 {
   if (id < 0 || id >= 11) {
-    MWAW_DEBUG_MSG(("LWText::createZones: can not find col for id=%d\n", id));
+    MWAW_DEBUG_MSG(("LightWayTxtText::createZones: can not find col for id=%d\n", id));
     return false;
   }
   static uint32_t const color[] = {
@@ -309,11 +309,11 @@ bool LWText::getColor(int id, MWAWColor &col) const
 ////////////////////////////////////////////////////////////
 
 // find the different zones
-bool LWText::createZones()
+bool LightWayTxtText::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("LWText::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -371,14 +371,14 @@ bool LWText::createZones()
   return true;
 }
 
-bool LWText::sendMainText()
+bool LightWayTxtText::sendMainText()
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("LWText::sendMainText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::sendMainText: can not find a listener\n"));
     return false;
   }
-  std::multimap<long, LWTextInternal::PLC>::const_iterator plcIt;
+  std::multimap<long, LightWayTxtTextInternal::PLC>::const_iterator plcIt;
 
   bool useDataFork=m_mainParser->textInDataFork();
   libmwaw::DebugFile &ascFile =
@@ -391,7 +391,7 @@ bool LWText::sendMainText()
   if (!useDataFork) {
     MWAWEntry entry = m_mainParser->getRSRCParser()->getEntry("TEXT", 128);
     if (!entry.valid()) {
-      MWAW_DEBUG_MSG(("LWText::sendMainText: can not find text entry\n"));
+      MWAW_DEBUG_MSG(("LightWayTxtText::sendMainText: can not find text entry\n"));
       return false;
     }
     beginPos=entry.begin();
@@ -400,7 +400,7 @@ bool LWText::sendMainText()
 
   long pos = beginPos;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  LWTextInternal::Font font, auxiFont;
+  LightWayTxtTextInternal::Font font, auxiFont;
 
   int numCols, sepWidth;
   if (m_mainParser->getColumnInfo(numCols, sepWidth) && numCols > 1) {
@@ -428,32 +428,32 @@ bool LWText::sendMainText()
     plcIt = m_state->m_plcMap.find(actC);
     bool fontChanged = false;
     while (plcIt != m_state->m_plcMap.end() && plcIt->first<=actC) {
-      LWTextInternal::PLC const &plc = plcIt++->second;
+      LightWayTxtTextInternal::PLC const &plc = plcIt++->second;
       f << "[" << plc << "]";
       switch (plc.m_type) {
-      case LWTextInternal::P_Font:
+      case LightWayTxtTextInternal::P_Font:
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_fontsList.size())) {
-          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find font %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("LightWayTxtText::sendMainText: can not find font %d\n", plc.m_id));
           break;
         }
         font = m_state->m_fontsList[size_t(plc.m_id)];
         fontChanged = true;
         break;
-      case LWTextInternal::P_Font2:
+      case LightWayTxtTextInternal::P_Font2:
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_auxiFontsList.size())) {
-          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find auxi font %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("LightWayTxtText::sendMainText: can not find auxi font %d\n", plc.m_id));
           break;
         }
         auxiFont = m_state->m_auxiFontsList[size_t(plc.m_id)];
         fontChanged = true;
         break;
-      case LWTextInternal::P_Ruler: {
+      case LightWayTxtTextInternal::P_Ruler: {
         float newDeltaSpacing = 0;
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_paragraphsList.size())) {
-          MWAW_DEBUG_MSG(("LWText::sendMainText: can not find paragraph %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("LightWayTxtText::sendMainText: can not find paragraph %d\n", plc.m_id));
         }
         else {
-          LWTextInternal::Paragraph const &para=m_state->m_paragraphsList[size_t(plc.m_id)];
+          LightWayTxtTextInternal::Paragraph const &para=m_state->m_paragraphsList[size_t(plc.m_id)];
           newDeltaSpacing = para.m_deltaSpacing;
           setProperty(para);
         }
@@ -463,17 +463,17 @@ bool LWText::sendMainText()
         }
         break;
       }
-      case LWTextInternal::P_Ruby:
-      case LWTextInternal::P_StyleU:
-      case LWTextInternal::P_StyleV:
-      case LWTextInternal::P_Unknown:
+      case LightWayTxtTextInternal::P_Ruby:
+      case LightWayTxtTextInternal::P_StyleU:
+      case LightWayTxtTextInternal::P_StyleV:
+      case LightWayTxtTextInternal::P_Unknown:
       default:
         break;
       }
     }
     f << c;
     if (fontChanged) {
-      LWTextInternal::Font final(font);
+      LightWayTxtTextInternal::Font final(font);
       final.merge(auxiFont);
       if (deltaSpacing<0||deltaSpacing>0)
         final.m_font.setDeltaLetterSpacing(deltaSpacing+final.m_font.deltaLetterSpacing());
@@ -509,10 +509,10 @@ bool LWText::sendMainText()
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool LWText::readFonts(MWAWEntry const &entry)
+bool LightWayTxtText::readFonts(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 2) {
-    MWAW_DEBUG_MSG(("LWText::readFonts: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readFonts: the entry is bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -526,7 +526,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   if (long(N*20+2) != entry.length()) {
-    MWAW_DEBUG_MSG(("LWText::readFonts: the number of entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readFonts: the number of entry seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -535,11 +535,11 @@ bool LWText::readFonts(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  LWTextInternal::PLC plc;
-  plc.m_type = LWTextInternal::P_Font;
+  LightWayTxtTextInternal::PLC plc;
+  plc.m_type = LightWayTxtTextInternal::P_Font;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    LWTextInternal::Font font;
+    LightWayTxtTextInternal::Font font;
     f.str("");
     long cPos = input->readLong(4);
     font.m_height = (int) input->readLong(2);
@@ -573,7 +573,7 @@ bool LWText::readFonts(MWAWEntry const &entry)
 
     m_state->m_fontsList.push_back(font);
     plc.m_id = i;
-    m_state->m_plcMap.insert(std::map<long, LWTextInternal::PLC>::value_type(cPos, plc));
+    m_state->m_plcMap.insert(std::map<long, LightWayTxtTextInternal::PLC>::value_type(cPos, plc));
 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -583,10 +583,10 @@ bool LWText::readFonts(MWAWEntry const &entry)
   return true;
 }
 
-bool LWText::readFont2(MWAWEntry const &entry)
+bool LightWayTxtText::readFont2(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%10) != 2) {
-    MWAW_DEBUG_MSG(("LWText::readFont2: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readFont2: the entry seems bad\n"));
     return false;
   }
 
@@ -602,7 +602,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (entry.length() != N*10+2) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWText::readFont2: N seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readFont2: N seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
 
@@ -611,12 +611,12 @@ bool LWText::readFont2(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  LWTextInternal::PLC plc;
-  plc.m_type = LWTextInternal::P_Font2;
+  LightWayTxtTextInternal::PLC plc;
+  plc.m_type = LightWayTxtTextInternal::P_Font2;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
-    LWTextInternal::Font font;
+    LightWayTxtTextInternal::Font font;
 
     long cPos = input->readLong(4);
     uint32_t flag = (uint32_t) input->readULong(2), flags=0;
@@ -721,7 +721,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
     else if (percent == 11)   // fixme: backColor is the border color
       flags |= MWAWFont::boxedBit;
     else {
-      MWAW_DEBUG_MSG(("LWText::readFont2: find unknown percent id=%d\n", percent));
+      MWAW_DEBUG_MSG(("LightWayTxtText::readFont2: find unknown percent id=%d\n", percent));
     }
     // 0: 0%, .. 10:100%, 11:border
     if (val & 0xf)
@@ -754,7 +754,7 @@ bool LWText::readFont2(MWAWEntry const &entry)
     plc.m_id = i;
     plc.m_extra = f.str();
     m_state->m_auxiFontsList.push_back(font);
-    m_state->m_plcMap.insert(std::map<long, LWTextInternal::PLC>::value_type(cPos, plc));
+    m_state->m_plcMap.insert(std::map<long, LightWayTxtTextInternal::PLC>::value_type(cPos, plc));
 
     f.str("");
     f << "Font2-" << i << ":cPos=" << std::hex << cPos << std::dec << ",Fa" << i << ","
@@ -769,16 +769,16 @@ bool LWText::readFont2(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // Ruler
 //////////////////////////////////////////////
-void LWText::setProperty(MWAWParagraph const &ruler)
+void LightWayTxtText::setProperty(MWAWParagraph const &ruler)
 {
   if (!m_parserState->m_textListener) return;
   m_parserState->m_textListener->setParagraph(ruler);
 }
 
-bool LWText::readRulers(MWAWEntry const &entry)
+bool LightWayTxtText::readRulers(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%84) != 2) {
-    MWAW_DEBUG_MSG(("LWText::readRulers: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readRulers: the entry seems bad\n"));
     return false;
   }
 
@@ -794,7 +794,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (entry.length() != N*84+2) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWText::readRulers: N seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readRulers: N seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
 
@@ -803,10 +803,10 @@ bool LWText::readRulers(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  LWTextInternal::PLC plc;
-  plc.m_type = LWTextInternal::P_Ruler;
+  LightWayTxtTextInternal::PLC plc;
+  plc.m_type = LightWayTxtTextInternal::P_Ruler;
   for (int i = 0; i < N; i++) {
-    LWTextInternal::Paragraph para;
+    LightWayTxtTextInternal::Paragraph para;
 
     pos = input->tell();
     f.str("");
@@ -839,7 +839,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     }
     int numTabs = (int) input->readULong(1);
     if (numTabs > 16) {
-      MWAW_DEBUG_MSG(("LWText::readRulers: the numbers of tabs seems bad\n"));
+      MWAW_DEBUG_MSG(("LightWayTxtText::readRulers: the numbers of tabs seems bad\n"));
       f << "###nTabs=" << numTabs << ",";
       numTabs=0;
     }
@@ -903,7 +903,7 @@ bool LWText::readRulers(MWAWEntry const &entry)
     para.m_extra = f.str();
     m_state->m_paragraphsList.push_back(para);
     plc.m_id = i;
-    m_state->m_plcMap.insert(std::map<long, LWTextInternal::PLC>::value_type(cPos, plc));
+    m_state->m_plcMap.insert(std::map<long, LightWayTxtTextInternal::PLC>::value_type(cPos, plc));
 
     f.str("");
     f << "Ruler-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << para;
@@ -917,17 +917,17 @@ bool LWText::readRulers(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // HF
 //////////////////////////////////////////////
-bool LWText::sendHeaderFooter(bool header)
+bool LightWayTxtText::sendHeaderFooter(bool header)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::sendHeaderFooter: can not find the listener\n"));
     return false;
   }
-  LWTextInternal::HFZone const &zone =
+  LightWayTxtTextInternal::HFZone const &zone =
     header ? m_state->m_header : m_state->m_footer;
   if (!zone.m_pos.valid()) {
-    MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not find the text\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::sendHeaderFooter: can not find the text\n"));
     return false;
   }
   MWAWParagraph para;
@@ -941,7 +941,7 @@ bool LWText::sendHeaderFooter(bool header)
   std::string str("");
   for (int c = 0; c < numChar; c++) {
     if (input->isEnd()) {
-      MWAW_DEBUG_MSG(("LWText::sendHeaderFooter: can not read end of text\n"));
+      MWAW_DEBUG_MSG(("LightWayTxtText::sendHeaderFooter: can not read end of text\n"));
       break;
     }
     str += (char) input->readULong(1);
@@ -978,7 +978,7 @@ bool LWText::sendHeaderFooter(bool header)
   return true;
 }
 
-bool LWText::readDocumentHF(MWAWEntry const &entry)
+bool LightWayTxtText::readDocumentHF(MWAWEntry const &entry)
 {
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
@@ -988,14 +988,14 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
   f << "Document(HF):";
   if (entry.length()<0x50) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWText::readDocumentHF: HF seems too short\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readDocumentHF: HF seems too short\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return false;
   }
 
   for (int s=0; s < 2; s++) {
-    LWTextInternal::HFZone zone;
+    LightWayTxtTextInternal::HFZone zone;
     zone.m_height = (int) input->readLong(2);
     zone.m_numChar = (int) input->readLong(2);
     // ruler align
@@ -1067,7 +1067,7 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
     }
   }
   else {
-    MWAW_DEBUG_MSG(("LWText::readDocumentHF: HF can not determine header/footer text\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readDocumentHF: HF can not determine header/footer text\n"));
     f << "###";
   }
   std::string name(""); // something like <NAME>(<PAGE>)
@@ -1082,10 +1082,10 @@ bool LWText::readDocumentHF(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // Unknown
 //////////////////////////////////////////////
-bool LWText::readStyleU(MWAWEntry const &entry)
+bool LightWayTxtText::readStyleU(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%8) != 4) {
-    MWAW_DEBUG_MSG(("LWText::readStyleU: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readStyleU: the entry seems bad\n"));
     return false;
   }
 
@@ -1101,7 +1101,7 @@ bool LWText::readStyleU(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (entry.length() != N*8+4) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWText::readStyleU: N seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readStyleU: N seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
 
@@ -1110,8 +1110,8 @@ bool LWText::readStyleU(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  LWTextInternal::PLC plc;
-  plc.m_type = LWTextInternal::P_StyleU;
+  LightWayTxtTextInternal::PLC plc;
+  plc.m_type = LightWayTxtTextInternal::P_StyleU;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
@@ -1123,7 +1123,7 @@ bool LWText::readStyleU(MWAWEntry const &entry)
     if (val) f << "f0=" << val << ",";
     plc.m_id = i;
     plc.m_extra = f.str();
-    m_state->m_plcMap.insert(std::map<long, LWTextInternal::PLC>::value_type(cPos, plc));
+    m_state->m_plcMap.insert(std::map<long, LightWayTxtTextInternal::PLC>::value_type(cPos, plc));
 
     f.str("");
     f << "StyleU-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << plc;
@@ -1134,10 +1134,10 @@ bool LWText::readStyleU(MWAWEntry const &entry)
   return true;
 }
 
-bool LWText::readRuby(MWAWEntry const &entry)
+bool LightWayTxtText::readRuby(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%6) != 4) {
-    MWAW_DEBUG_MSG(("LWText::readRuby: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readRuby: the entry seems bad\n"));
     return false;
   }
 
@@ -1153,7 +1153,7 @@ bool LWText::readRuby(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (entry.length() != N*6+4) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWText::readRuby: N seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readRuby: N seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
 
@@ -1162,8 +1162,8 @@ bool LWText::readRuby(MWAWEntry const &entry)
 
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  LWTextInternal::PLC plc;
-  plc.m_type = LWTextInternal::P_Ruby;
+  LightWayTxtTextInternal::PLC plc;
+  plc.m_type = LightWayTxtTextInternal::P_Ruby;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
@@ -1172,7 +1172,7 @@ bool LWText::readRuby(MWAWEntry const &entry)
     f << "n[ruby]=" << (int) input->readULong(1) << ",";
     plc.m_id = i;
     plc.m_extra = f.str();
-    m_state->m_plcMap.insert(std::map<long, LWTextInternal::PLC>::value_type(cPos, plc));
+    m_state->m_plcMap.insert(std::map<long, LightWayTxtTextInternal::PLC>::value_type(cPos, plc));
 
     f.str("");
     f << "Ruby-" << i << ":cPos=" << std::hex << cPos << std::dec << "," << plc;
@@ -1183,10 +1183,10 @@ bool LWText::readRuby(MWAWEntry const &entry)
   return true;
 }
 
-bool LWText::readUnknownStyle(MWAWEntry const &entry)
+bool LightWayTxtText::readUnknownStyle(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 4) {
-    MWAW_DEBUG_MSG(("LWText::readUnknownStyle: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readUnknownStyle: the entry is bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
@@ -1206,7 +1206,7 @@ bool LWText::readUnknownStyle(MWAWEntry const &entry)
   f << "N=" << N << ",";
   int fSz = N ? int((entry.length()-numSz)/N) : 0;
   if (long(N*fSz+numSz) != entry.length()) {
-    MWAW_DEBUG_MSG(("LWText::readUnknownStyle: the number of entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtText::readUnknownStyle: the number of entry seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -1233,7 +1233,7 @@ bool LWText::readUnknownStyle(MWAWEntry const &entry)
 //
 ////////////////////////////////////////////////////////////
 
-void LWText::flushExtra()
+void LightWayTxtText::flushExtra()
 {
 }
 

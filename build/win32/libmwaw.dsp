@@ -219,15 +219,15 @@ SOURCE=..\..\src\lib\libmwaw_internal.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWGraph.cxx
+SOURCE=..\..\src\lib\LightWayTxtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWParser.cxx
+SOURCE=..\..\src\lib\LightWayTxtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWText.cxx
+SOURCE=..\..\src\lib\LightWayTxtText.cxx
 # End Source File
 # Begin Source File
 
@@ -239,11 +239,11 @@ SOURCE=..\..\src\lib\MindWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORParser.cxx
+SOURCE=..\..\src\lib\MoreParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORText.cxx
+SOURCE=..\..\src\lib\MoreText.cxx
 # End Source File
 # Begin Source File
 
@@ -619,15 +619,15 @@ SOURCE=..\..\src\lib\libmwaw_internal.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWGraph.hxx
+SOURCE=..\..\src\lib\LightWayTxtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWParser.hxx
+SOURCE=..\..\src\lib\LightWayTxtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWText.hxx
+SOURCE=..\..\src\lib\LightWayTxtText.hxx
 # End Source File
 # Begin Source File
 
@@ -639,11 +639,11 @@ SOURCE=..\..\src\lib\MindWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORParser.hxx
+SOURCE=..\..\src\lib\MoreParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORText.hxx
+SOURCE=..\..\src\lib\MoreText.hxx
 # End Source File
 # Begin Source File
 

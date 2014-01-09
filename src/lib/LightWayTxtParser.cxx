@@ -47,16 +47,16 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "LWGraph.hxx"
-#include "LWText.hxx"
+#include "LightWayTxtGraph.hxx"
+#include "LightWayTxtText.hxx"
 
-#include "LWParser.hxx"
+#include "LightWayTxtParser.hxx"
 
-/** Internal: the structures of a LWParser */
-namespace LWParserInternal
+/** Internal: the structures of a LightWayTxtParser */
+namespace LightWayTxtParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a LWParser
+//! Internal: the state of a LightWayTxtParser
 struct State {
   //! constructor
   State() : m_isApplication(false), m_actPage(0), m_numPages(0), m_numCol(1), m_colSep(0), m_headerHeight(0), m_footerHeight(0)
@@ -74,11 +74,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a LWParser
+//! Internal: the subdocument of a LightWayTxtParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(LWParser &pars, MWAWInputStreamPtr input, bool header) :
+  SubDocument(LightWayTxtParser &pars, MWAWInputStreamPtr input, bool header) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_isHeader(header) {}
 
   //! destructor
@@ -111,12 +111,12 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("LWParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_parser);
 
-  reinterpret_cast<LWParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  reinterpret_cast<LightWayTxtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
 }
 }
 
@@ -124,41 +124,41 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-LWParser::LWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+LightWayTxtParser::LightWayTxtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_pageSpanSet(false), m_graphParser(), m_textParser()
 {
   init();
 }
 
-LWParser::~LWParser()
+LightWayTxtParser::~LightWayTxtParser()
 {
 }
 
-void LWParser::init()
+void LightWayTxtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new LWParserInternal::State);
+  m_state.reset(new LightWayTxtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_graphParser.reset(new LWGraph(*this));
-  m_textParser.reset(new LWText(*this));
+  m_graphParser.reset(new LightWayTxtGraph(*this));
+  m_textParser.reset(new LightWayTxtText(*this));
 }
 
-MWAWInputStreamPtr LWParser::rsrcInput()
+MWAWInputStreamPtr LightWayTxtParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &LWParser::rsrcAscii()
+libmwaw::DebugFile &LightWayTxtParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
 
-bool LWParser::textInDataFork() const
+bool LightWayTxtParser::textInDataFork() const
 {
   return !m_state->m_isApplication;
 }
@@ -166,7 +166,7 @@ bool LWParser::textInDataFork() const
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f LWParser::getPageLeftTop() const
+Vec2f LightWayTxtParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -175,7 +175,7 @@ Vec2f LWParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-bool LWParser::getColumnInfo(int &numCols, int &colSep) const
+bool LightWayTxtParser::getColumnInfo(int &numCols, int &colSep) const
 {
   if (m_state->m_numCol < 1) {
     numCols = 1;
@@ -187,7 +187,7 @@ bool LWParser::getColumnInfo(int &numCols, int &colSep) const
   return true;
 }
 
-bool LWParser::sendHeaderFooter(bool header)
+bool LightWayTxtParser::sendHeaderFooter(bool header)
 {
   MWAWInputStreamPtr input = getInput();
   MWAWInputStreamPtr rsrc = rsrcInput();
@@ -202,7 +202,7 @@ bool LWParser::sendHeaderFooter(bool header)
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-void LWParser::sendGraphic(int graphId)
+void LightWayTxtParser::sendGraphic(int graphId)
 {
   MWAWInputStreamPtr input = getInput();
   MWAWInputStreamPtr rsrc = rsrcInput();
@@ -216,7 +216,7 @@ void LWParser::sendGraphic(int graphId)
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void LWParser::newPage(int number)
+void LightWayTxtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -232,7 +232,7 @@ void LWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void LWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void LightWayTxtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -256,7 +256,7 @@ void LWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("LWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -267,11 +267,11 @@ void LWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void LWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void LightWayTxtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("LWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -289,12 +289,12 @@ void LWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   MWAWPageSpan ps(getPageSpan());
   if (m_textParser->hasHeaderFooter(true)) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset(new LWParserInternal::SubDocument(*this, getInput(), true));
+    header.m_subDocument.reset(new LightWayTxtParserInternal::SubDocument(*this, getInput(), true));
     ps.setHeaderFooter(header);
   }
   if (m_textParser->hasHeaderFooter(false)) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset(new LWParserInternal::SubDocument(*this, getInput(), false));
+    footer.m_subDocument.reset(new LightWayTxtParserInternal::SubDocument(*this, getInput(), false));
     ps.setHeaderFooter(footer);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -310,11 +310,11 @@ void LWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool LWParser::createZones()
+bool LightWayTxtParser::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("LWParser::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -373,12 +373,12 @@ bool LWParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the doc/print info
 ////////////////////////////////////////////////////////////
-bool LWParser::readDocInfo(MWAWEntry const &entry)
+bool LightWayTxtParser::readDocInfo(MWAWEntry const &entry)
 {
   if (entry.id() != 1003)
     return false;
   if (!entry.valid() || (entry.length()%0x40)) {
-    MWAW_DEBUG_MSG(("LWParser::readDocInfo: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readDocInfo: the entry seems bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -445,14 +445,14 @@ bool LWParser::readDocInfo(MWAWEntry const &entry)
   return true;
 }
 
-bool LWParser::readPrintInfo(MWAWEntry const &entry)
+bool LightWayTxtParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 0x78) {
-    MWAW_DEBUG_MSG(("LWParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
   if (entry.id() != 1001) {
-    MWAW_DEBUG_MSG(("LWParser::readPrintInfo: the entry id %d is odd\n", entry.id()));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readPrintInfo: the entry id %d is odd\n", entry.id()));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -508,12 +508,12 @@ bool LWParser::readPrintInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the TOC data
 ////////////////////////////////////////////////////////////
-bool LWParser::readTOCPage(MWAWEntry const &entry)
+bool LightWayTxtParser::readTOCPage(MWAWEntry const &entry)
 {
   if (entry.id() != 1007)
     return false;
   if (!entry.valid() || entry.length()<0x24) {
-    MWAW_DEBUG_MSG(("LWParser::readTOCPage: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readTOCPage: the entry is bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -536,7 +536,7 @@ bool LWParser::readTOCPage(MWAWEntry const &entry)
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   if (input->tell()+N>entry.end()) {
-    MWAW_DEBUG_MSG(("LWParser::readTOCPage: the page seems bead\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readTOCPage: the page seems bead\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -551,12 +551,12 @@ bool LWParser::readTOCPage(MWAWEntry const &entry)
   return true;
 }
 
-bool LWParser::readTOC(MWAWEntry const &entry)
+bool LightWayTxtParser::readTOC(MWAWEntry const &entry)
 {
   if (entry.id() != 1007)
     return false;
   if (!entry.valid() || entry.length()<2) {
-    MWAW_DEBUG_MSG(("LWParser::readTOC: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readTOC: the entry is bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -570,7 +570,7 @@ bool LWParser::readTOC(MWAWEntry const &entry)
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   if (long(N*9+2) > entry.length()) {
-    MWAW_DEBUG_MSG(("LWParser::readTOC: the number of entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readTOC: the number of entry seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -610,7 +610,7 @@ bool LWParser::readTOC(MWAWEntry const &entry)
   }
   if (!ok) {
     f << "###";
-    MWAW_DEBUG_MSG(("LWParser::readTOC: can not read end\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readTOC: can not read end\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -620,12 +620,12 @@ bool LWParser::readTOC(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the main document information data then unknown data
 ////////////////////////////////////////////////////////////
-bool LWParser::readDocument(MWAWEntry const &entry)
+bool LightWayTxtParser::readDocument(MWAWEntry const &entry)
 {
   if (entry.id() != 1000)
     return false;
   if (!entry.valid() || entry.length()<0x28) {
-    MWAW_DEBUG_MSG(("LWParser::readDocument: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readDocument: the entry seems bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -690,12 +690,12 @@ bool LWParser::readDocument(MWAWEntry const &entry)
   return true;
 }
 
-bool LWParser::readLWSR2(MWAWEntry const &entry)
+bool LightWayTxtParser::readLWSR2(MWAWEntry const &entry)
 {
   if (entry.id() != 1002)
     return false;
   if (!entry.valid() || entry.length()%4) {
-    MWAW_DEBUG_MSG(("LWParser::readLWSR2: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readLWSR2: the entry seems bad\n"));
     return false;
   }
   int N = int(entry.length()/4);
@@ -716,12 +716,12 @@ bool LWParser::readLWSR2(MWAWEntry const &entry)
   return true;
 }
 
-bool LWParser::readMPSR5(MWAWEntry const &entry)
+bool LightWayTxtParser::readMPSR5(MWAWEntry const &entry)
 {
   if (entry.id() != 1005)
     return false;
   if (!entry.valid() || entry.length() != 0x48) {
-    MWAW_DEBUG_MSG(("LWParser::readMPSR5: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::readMPSR5: the entry is bad\n"));
     return false;
   }
   MWAWInputStreamPtr input = rsrcInput();
@@ -791,9 +791,9 @@ bool LWParser::readMPSR5(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
+bool LightWayTxtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  *m_state = LWParserInternal::State();
+  *m_state = LightWayTxtParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !getRSRCParser())
     return false;
@@ -813,7 +813,7 @@ bool LWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   // check if the LWSR string exists
   entry = getRSRCParser()->getEntry("LWSR", 1000);
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("LWParser::checkHeader: can not find the LWSR[1000] resource, not a Mac File!!!\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtParser::checkHeader: can not find the LWSR[1000] resource, not a Mac File!!!\n"));
     return false;
   }
   if (header)

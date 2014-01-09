@@ -230,15 +230,15 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWParser.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWText.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -250,11 +250,11 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MORParser.cxx">
+    <ClCompile Include="..\..\src\lib\MoreParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MORText.cxx">
+    <ClCompile Include="..\..\src\lib\MoreText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -530,13 +530,13 @@
     <ClInclude Include="..\..\src\lib\HanMacWrdKGraph.hxx" />
     <ClInclude Include="..\..\src\lib\HanMacWrdKParser.hxx" />
     <ClInclude Include="..\..\src\lib\HanMacWrdKText.hxx" />
-    <ClInclude Include="..\..\src\lib\LWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\LWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\LWText.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtText.hxx" />
     <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\MindWrtParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MORParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MORText.hxx" />
+    <ClInclude Include="..\..\src\lib\MoreParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MoreText.hxx" />
     <ClInclude Include="..\..\src\lib\MarinerWrtGraph.hxx" />
     <ClInclude Include="..\..\src\lib\MarinerWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\MarinerWrtText.hxx" />

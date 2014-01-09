@@ -48,15 +48,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "LWParser.hxx"
+#include "LightWayTxtParser.hxx"
 
-#include "LWGraph.hxx"
+#include "LightWayTxtGraph.hxx"
 
-/** Internal: the structures of a LWGraph */
-namespace LWGraphInternal
+/** Internal: the structures of a LightWayTxtGraph */
+namespace LightWayTxtGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a LWGraph
+//! Internal: the state of a LightWayTxtGraph
 struct State {
   //! constructor
   State() : m_numPages(-1), m_idPictMap(), m_idJPEGMap() { }
@@ -72,21 +72,21 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-LWGraph::LWGraph(LWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new LWGraphInternal::State),
+LightWayTxtGraph::LightWayTxtGraph(LightWayTxtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new LightWayTxtGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-LWGraph::~LWGraph()
+LightWayTxtGraph::~LightWayTxtGraph()
 { }
 
-int LWGraph::version() const
+int LightWayTxtGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-int LWGraph::numPages() const
+int LightWayTxtGraph::numPages() const
 {
   if (m_state->m_numPages < 0)
     m_state->m_numPages= (m_state->m_idPictMap.size() ||m_state->m_idJPEGMap.size()) ? 1 : 0;
@@ -98,11 +98,11 @@ int LWGraph::numPages() const
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool LWGraph::createZones()
+bool LightWayTxtGraph::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   if (!rsrcParser) {
-    MWAW_DEBUG_MSG(("LWGraph::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::createZones: can not find the entry map\n"));
     return false;
   }
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -137,13 +137,13 @@ bool LWGraph::createZones()
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool LWGraph::sendPICT(MWAWEntry const &entry)
+bool LightWayTxtGraph::sendPICT(MWAWEntry const &entry)
 {
   entry.setParsed(true);
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
 
   if (!m_parserState->m_textListener || !rsrcParser) {
-    MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::sendPICT: can not find the listener\n"));
     return false;
   }
   librevenge::RVNGBinaryData data;
@@ -151,7 +151,7 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
 
   MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
   if (!input) {
-    MWAW_DEBUG_MSG(("LWGraph::sendPICT: can not find the stream\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::sendPICT: can not find the stream\n"));
     return false;
   }
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, int(entry.length())));
@@ -169,14 +169,14 @@ bool LWGraph::sendPICT(MWAWEntry const &entry)
   return true;
 }
 
-bool LWGraph::sendJPEG(MWAWEntry const &entry)
+bool LightWayTxtGraph::sendJPEG(MWAWEntry const &entry)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("LWGraph::sendJPEG: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::sendJPEG: can not find the listener\n"));
     return false;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("LWGraph::sendJPEG: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::sendJPEG: the entry is bad\n"));
     return false;
   }
 
@@ -215,23 +215,23 @@ bool LWGraph::sendJPEG(MWAWEntry const &entry)
   return true;
 }
 
-bool LWGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz)
+bool LightWayTxtGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz)
 {
   sz = Vec2i(100,100);
   MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
   if (!input) {
-    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: can not find the stream\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::findJPEGSize: can not find the stream\n"));
     return false;
   }
 
   if (input->readULong(4)!=0xFFD8FFE0) {
-    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: invalid header\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::findJPEGSize: invalid header\n"));
     return false;
   }
   long pos = input->tell();
   int len = (int) input->readULong(2);
   if (input->readULong(4)!=0x4a464946) {
-    MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: not a JFIF file\n"));
+    MWAW_DEBUG_MSG(("LightWayTxtGraph::findJPEGSize: not a JFIF file\n"));
     return false;
   }
   input->seek(pos+len, librevenge::RVNG_SEEK_SET);
@@ -240,7 +240,7 @@ bool LWGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz)
     pos = input->tell();
     len = (int) input->readULong(2);
     if ((header&0xFF00) != 0xFF00) {
-      MWAW_DEBUG_MSG(("LWGraph::findJPEGSize: oops bad data header\n"));
+      MWAW_DEBUG_MSG(("LightWayTxtGraph::findJPEGSize: oops bad data header\n"));
       break;
     }
     if (header != 0xFFC0) {
@@ -261,7 +261,7 @@ bool LWGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz)
 // send data
 ////////////////////////////////////////////////////////////
 
-void LWGraph::send(int id)
+void LightWayTxtGraph::send(int id)
 {
   if (m_state->m_idJPEGMap.find(999+id) != m_state->m_idJPEGMap.end()) {
     sendJPEG(m_state->m_idJPEGMap.find(999+id)->second);
@@ -271,15 +271,15 @@ void LWGraph::send(int id)
     sendPICT(m_state->m_idPictMap.find(999+id)->second);
     return;
   }
-  MWAW_DEBUG_MSG(("LWGraph::send: can not find graphic %d\n", id));
+  MWAW_DEBUG_MSG(("LightWayTxtGraph::send: can not find graphic %d\n", id));
 }
 
-bool LWGraph::sendPageGraphics()
+bool LightWayTxtGraph::sendPageGraphics()
 {
   return true;
 }
 
-void LWGraph::flushExtra()
+void LightWayTxtGraph::flushExtra()
 {
 #ifdef DEBUG
   std::map<int, MWAWEntry>::const_iterator it;

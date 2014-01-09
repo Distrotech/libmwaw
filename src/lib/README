@@ -3,29 +3,29 @@
 ------------------------------------------------------------
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
-- Acta*      : parser of Acta documents
-- BeagleWks* : parser of BeagleWorks and WordPerfect Works documents
-- CW*        : parser of ClarisWorks and AppleWorks documents
-- DM*        : parser of DOCMaker documents
-- EDoc*      : parser of eDOC documents
-- FullWrt*   : parser of FullWrite documents
-- GW*        : parser of GreatWorks documents
-- HanMacWrdJ*: parser of HanMac Word-J documents
-- HanMacWrdK*: parser of HanMac Word-K documents
-- LW*        : parser of LightWay Text documents
-- MacDoc*    : parser of MacDoc documents
-- MacWrt*    : parser of MacWrite documents
-- MacWrtPro* : parser of MacWrite II, MacWrite Pro documents
-- MarinerWrt*: parser of Mariner Write documents
-- MindWrt*   : parser of MindWrite documents
-- MsWks*     : parser of Microsoft Works documents
-- MOR*       : parser of More documents (organization part)
+- Acta*         : parser of Acta documents
+- BeagleWks*    : parser of BeagleWorks and WordPerfect Works documents
+- CW*           : parser of ClarisWorks and AppleWorks documents
+- DM*           : parser of DOCMaker documents
+- EDoc*         : parser of eDOC documents
+- FullWrt*      : parser of FullWrite documents
+- GW*           : parser of GreatWorks documents
+- HanMacWrdJ*   : parser of HanMac Word-J documents
+- HanMacWrdK*   : parser of HanMac Word-K documents
+- LightWayTxt*  : parser of LightWay Text documents
+- MacDoc*       : parser of MacDoc documents
+- MacWrt*       : parser of MacWrite documents
+- MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
+- MarinerWrt*   : parser of Mariner Write documents
+- MindWrt*      : parser of MindWrite documents
+- MsWks*        : parser of Microsoft Works documents
+- More*         : parser of More documents (organization part)
 - MSW* : parser of Microsoft Word documents
 - NS* : parser of Nisus Writer documents,
 - TT* : parser of TeachText/SimpleText/Tex-Edit documents,
 - WN* : parser of WriteNow documents
-- WriterPls* : parser of WriterPlus documents
-- ZWrt*      : parser of Z-Write documents
+- WriterPls*    : parser of WriterPlus documents
+- ZWrt*         : parser of Z-Write documents
 
 ------------------------------------------------------------
 --------------            Exported           --------------
@@ -107,8 +107,8 @@ These files defined basic structures which must be used by the parsers :
 
 ------------------------------------------------------------
 ---  Acta/BeagleWks/CW/DM/EDoc/FullWrt                   ---
----  GW/HanMacWrd/LW/MacDoc/MacWrt/MarinerWrt/MindWrt    ---
----  MsWks/MOR/MSW/NS/TT/WN/WriterPls/ZWrt               ---
+---  GW/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt   ---
+---  MindWrt/More/MsWks/MSW/NS/TT/WN/WriterPls/ZWrt       ---
 ------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -155,9 +155,9 @@ HanMacWrdKParser : parser of HanMac Word-K 2.0.5-2.0.6
 -   HanMacWrdKGraph : class which reads the picture/graph/frame
 -   HanMacWrdKText : class which reads the text
 
-LWParser : parser of LightWay Text v4.5
--   LWGraph : class which reads the picture/graph/frame
--   LWText : class which reads the text
+LightWayTxtParser : parser of LightWay Text v4.5
+-   LightWayTxtGraph : class which reads the picture/graph/frame
+-   LightWayTxtText : class which reads the text
 
 MacDocParser : parser of MacDoc document: v1.3
 
@@ -166,7 +166,14 @@ MacWrtParser : parser of MacWrite document : v1.0-5.01
 MacWrtProParser : parser of MacWrite II, Pro (v1.0-1.5) document
 -   MacWrtProStructures : class which reads the main structures find in a document
 
+MarinerWrtParser : parser of Mariner Write 1.6
+-   MarinerWrtGraph : class which reads the picture/graph/token
+-   MarinerWrtText : class which reads the text
+
 MindWrtParser : parser of MindWrite document: v2.1
+
+MoreParser: parser of More document : v2.0 v3.0 ( organization part )
+-   MoreText : class which reads the text
 
 MsWksParser: generic parser of Microsoft Works parser
 - MsWksGraph : class which reads the picture/graph 
@@ -176,13 +183,6 @@ MsWksParser: generic parser of Microsoft Works parser
 - MsWks4Parser : parser of Microsoft Works document : v4.0
 -   MsWks4Zone : parser of the text ole 
 -   MsWks4Text : class which reads the text
-
-MORParser: parser of More document : v2.0 v3.0 ( organization part )
--   MORText : class which reads the text
-
-MarinerWrtParser : parser of Mariner Write 1.6
--   MarinerWrtGraph : class which reads the picture/graph/token
--   MarinerWrtText : class which reads the text
 
 MSW1Parser : parser of Microsoft Word document : v1.0 
 

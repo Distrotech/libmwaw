@@ -52,15 +52,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MORParser.hxx"
+#include "MoreParser.hxx"
 
-#include "MORText.hxx"
+#include "MoreText.hxx"
 
-/** Internal: the structures of a MORText */
-namespace MORTextInternal
+/** Internal: the structures of a MoreText */
+namespace MoreTextInternal
 {
 ////////////////////////////////////////
-//! Internal: the paragraph of a MORText
+//! Internal: the paragraph of a MoreText
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph(): MWAWParagraph(), m_listType(0), m_customListLevel(),
@@ -177,7 +177,7 @@ struct Paragraph : public MWAWParagraph {
 };
 
 ////////////////////////////////////////
-//! Internal: the outline data of a MORText
+//! Internal: the outline data of a MoreText
 struct Outline {
   //! constructor
   Outline()
@@ -194,7 +194,7 @@ struct Outline {
 };
 
 ////////////////////////////////////////
-//! Internal and low level: the outline modifier header of a MORText
+//! Internal and low level: the outline modifier header of a MoreText
 struct OutlineMod {
   //! constructor
   OutlineMod(): m_type(-1), m_flags(0), m_entry(), m_extra("")
@@ -312,7 +312,7 @@ struct OutlineMod {
 };
 
 ////////////////////////////////////////
-//! Internal: the comment data of a MORText
+//! Internal: the comment data of a MoreText
 struct Comment {
   //! constructor
   Comment() : m_entry(), m_extra("")
@@ -331,7 +331,7 @@ struct Comment {
 };
 
 ////////////////////////////////////////
-//! Internal: the topic data of a MORText
+//! Internal: the topic data of a MoreText
 struct Topic {
   //! an enum used to define the different type of data attached to a topic
   enum AttachementType { AOutline=0, AComment, ASpeakerNote };
@@ -384,7 +384,7 @@ struct Topic {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MORText
+//! Internal: the state of a MoreText
 struct State {
   //! constructor
   State() : m_version(-1), m_topicList(), m_commentList(), m_speakerList(), m_outlineList(),
@@ -411,11 +411,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MORText
+//! Internal: the subdocument of a MoreText
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MORText &pars, MWAWInputStreamPtr input, int zId, int what) :
+  SubDocument(MoreText &pars, MWAWInputStreamPtr input, int zId, int what) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(zId), m_what(what) {}
 
   //! destructor
@@ -434,7 +434,7 @@ public:
 
 protected:
   /** the text parser */
-  MORText *m_textParser;
+  MoreText *m_textParser;
   //! the subdocument id
   int m_id;
   //! a int to know what to send 0: header/footer, 1: comment, 2:note
@@ -486,45 +486,45 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MORText::MORText(MORParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new MORTextInternal::State), m_mainParser(&parser)
+MoreText::MoreText(MoreParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MoreTextInternal::State), m_mainParser(&parser)
 {
 }
 
-MORText::~MORText()
+MoreText::~MoreText()
 { }
 
-int MORText::version() const
+int MoreText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int MORText::numPages() const
+int MoreText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
 
-  MWAW_DEBUG_MSG(("MORText::createZones is not called\n"));
-  const_cast<MORText *>(this)->createZones();
+  MWAW_DEBUG_MSG(("MoreText::createZones is not called\n"));
+  const_cast<MoreText *>(this)->createZones();
   return m_state->m_numPages;
 }
 
-shared_ptr<MWAWSubDocument> MORText::getHeaderFooter(bool header)
+shared_ptr<MWAWSubDocument> MoreText::getHeaderFooter(bool header)
 {
   shared_ptr<MWAWSubDocument> res;
   size_t id=header ? 1 : 2;
   if (id >= m_state->m_topicList.size())
     return res;
-  MORTextInternal::Topic const &topic= m_state->m_topicList[id];
+  MoreTextInternal::Topic const &topic= m_state->m_topicList[id];
   // check if the content is empty
-  int comment=topic.m_attachList[MORTextInternal::Topic::AComment];
+  int comment=topic.m_attachList[MoreTextInternal::Topic::AComment];
   if (comment < 0 || comment >= int(m_state->m_commentList.size()))
     return res;
   if (m_state->m_commentList[size_t(comment)].m_entry.length()<=4)
     return res;
-  res.reset(new MORTextInternal::SubDocument(*this, m_parserState->m_input, int(id), 0));
+  res.reset(new MoreTextInternal::SubDocument(*this, m_parserState->m_input, int(id), 0));
   return res;
 }
 
@@ -535,7 +535,7 @@ shared_ptr<MWAWSubDocument> MORText::getHeaderFooter(bool header)
 //
 // find/send the different zones
 //
-bool MORText::createZones()
+bool MoreText::createZones()
 {
   if (m_state->m_topicList.empty())
     return false;
@@ -543,7 +543,7 @@ bool MORText::createZones()
   // first create the list of cloned topic
   std::vector<int> clonedList;
   for (size_t i=0; i < m_state->m_topicList.size(); i++) {
-    MORTextInternal::Topic const &topic=m_state->m_topicList[i];
+    MoreTextInternal::Topic const &topic=m_state->m_topicList[i];
     if (topic.m_isCloned)
       clonedList.push_back(int(i));
   }
@@ -551,27 +551,27 @@ bool MORText::createZones()
   int numCloned=int(clonedList.size());
   size_t actAttach[3]= {0,0,0};
   size_t numAttach[3]= {0,0,0};
-  numAttach[MORTextInternal::Topic::AOutline]=m_state->m_outlineList.size();
-  numAttach[MORTextInternal::Topic::AComment]=m_state->m_commentList.size();
-  numAttach[MORTextInternal::Topic::ASpeakerNote]=m_state->m_speakerList.size();
+  numAttach[MoreTextInternal::Topic::AOutline]=m_state->m_outlineList.size();
+  numAttach[MoreTextInternal::Topic::AComment]=m_state->m_commentList.size();
+  numAttach[MoreTextInternal::Topic::ASpeakerNote]=m_state->m_speakerList.size();
   for (size_t i=0; i < m_state->m_topicList.size(); i++) {
-    MORTextInternal::Topic &topic=m_state->m_topicList[i];
+    MoreTextInternal::Topic &topic=m_state->m_topicList[i];
     for (int j=0; j < 3; j++) {
       if (!topic.m_hasList[j])
         continue;
       if (actAttach[j] >= numAttach[j]) {
-        MWAW_DEBUG_MSG(("MORText::createZones: can not find attach-%d for topic %d\n", int(j), int(i)));
+        MWAW_DEBUG_MSG(("MoreText::createZones: can not find attach-%d for topic %d\n", int(j), int(i)));
         continue;
       }
       topic.m_attachList[j]=int(actAttach[j]++);
       switch (j) {
-      case MORTextInternal::Topic::AOutline:
+      case MoreTextInternal::Topic::AOutline:
         break;
-      case MORTextInternal::Topic::AComment: // no need to add empty comment
+      case MoreTextInternal::Topic::AComment: // no need to add empty comment
         if (m_state->m_commentList[(size_t)topic.m_attachList[j]].m_entry.length() <= 4)
           topic.m_attachList[j]=-1;
         break;
-      case MORTextInternal::Topic::ASpeakerNote: // no need to add empty speaker note
+      case MoreTextInternal::Topic::ASpeakerNote: // no need to add empty speaker note
         if (m_state->m_speakerList[(size_t)topic.m_attachList[j]].length() <= 4)
           topic.m_attachList[j]=-1;
         break;
@@ -583,7 +583,7 @@ bool MORText::createZones()
     if (cloneId < 0)
       continue;
     if (cloneId==0 || cloneId > numCloned) {
-      MWAW_DEBUG_MSG(("MORText::createZones: can not find original for topic %d\n", int(i)));
+      MWAW_DEBUG_MSG(("MoreText::createZones: can not find original for topic %d\n", int(i)));
       topic.m_cloneId=-1;
     }
     else
@@ -592,7 +592,7 @@ bool MORText::createZones()
 
   // now check that we have no loop
   for (size_t i=0; i < m_state->m_topicList.size(); i++) {
-    MORTextInternal::Topic &topic=m_state->m_topicList[i];
+    MoreTextInternal::Topic &topic=m_state->m_topicList[i];
     if (topic.m_cloneId<0)
       continue;
     std::set<size_t> parent;
@@ -601,11 +601,11 @@ bool MORText::createZones()
   // now compute the number of page
   int nPages = 1;
   for (size_t i=0; i < m_state->m_topicList.size(); i++) {
-    MORTextInternal::Topic const &topic=m_state->m_topicList[i];
+    MoreTextInternal::Topic const &topic=m_state->m_topicList[i];
     if (topic.m_numPageBreak >= 0) {
       nPages+=topic.m_numPageBreak;
     }
-    int outId=topic.m_attachList[MORTextInternal::Topic::AOutline];
+    int outId=topic.m_attachList[MoreTextInternal::Topic::AOutline];
     if (outId<0) continue;
     if (m_state->m_outlineList[(size_t)outId].m_paragraphs[0].m_pageBreak)
       nPages++;
@@ -615,11 +615,11 @@ bool MORText::createZones()
   return true;
 }
 
-int MORText::getLastTopicChildId(int tId) const
+int MoreText::getLastTopicChildId(int tId) const
 {
   size_t numTopic=m_state->m_topicList.size();
   if (tId < 0||tId>= int(numTopic)) {
-    MWAW_DEBUG_MSG(("MORText::getLastTopicChildId: can not find topic %d\n", tId));
+    MWAW_DEBUG_MSG(("MoreText::getLastTopicChildId: can not find topic %d\n", tId));
     return tId;
   }
   size_t p=size_t(tId);
@@ -629,21 +629,21 @@ int MORText::getLastTopicChildId(int tId) const
   return int(p);
 }
 
-int MORText::checkTopicList(size_t tId, std::set<size_t> &parent)
+int MoreText::checkTopicList(size_t tId, std::set<size_t> &parent)
 {
   size_t numTopic=m_state->m_topicList.size();
   if (tId>=numTopic) {
-    MWAW_DEBUG_MSG(("MORText::checkTopicList: can not find topic %d\n", int(tId)));
+    MWAW_DEBUG_MSG(("MoreText::checkTopicList: can not find topic %d\n", int(tId)));
     return 0;
   }
   if (parent.find(tId)!=parent.end()) {
-    MWAW_DEBUG_MSG(("MORText::checkTopicList: repairing fails\n"));
+    MWAW_DEBUG_MSG(("MoreText::checkTopicList: repairing fails\n"));
     throw libmwaw::ParseException();
   }
   parent.insert(tId);
-  MORTextInternal::Topic &topic=m_state->m_topicList[tId];
+  MoreTextInternal::Topic &topic=m_state->m_topicList[tId];
   int nPages=0;
-  int outId=topic.m_attachList[MORTextInternal::Topic::AOutline];
+  int outId=topic.m_attachList[MoreTextInternal::Topic::AOutline];
   if (outId>=0) {
     if (m_state->m_outlineList[(size_t)outId].m_paragraphs[0].m_pageBreak)
       nPages++;
@@ -651,7 +651,7 @@ int MORText::checkTopicList(size_t tId, std::set<size_t> &parent)
   int id=int(tId);
   if (topic.m_cloneId>=0) {
     if (parent.find(size_t(topic.m_cloneId))!=parent.end()) {
-      MWAW_DEBUG_MSG(("MORText::checkTopicList: find a loop, remove a clone\n"));
+      MWAW_DEBUG_MSG(("MoreText::checkTopicList: find a loop, remove a clone\n"));
       topic.m_cloneId=-1;
       parent.erase(tId);
       return 0;
@@ -670,10 +670,10 @@ int MORText::checkTopicList(size_t tId, std::set<size_t> &parent)
 }
 
 // try read to the file text position
-bool MORText::readTopic(MWAWEntry const &entry)
+bool MoreText::readTopic(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%10)) {
-    MWAW_DEBUG_MSG(("MORText::readTopic: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readTopic: the entry is bad\n"));
     return false;
   }
   // topic 0-2: ?, header,footer, topic 3: title, after document
@@ -691,7 +691,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
   int N=int(entry.length()/10);
   for (int i=0; i < N; i++) {
     pos=input->tell();
-    MORTextInternal::Topic topic;
+    MoreTextInternal::Topic topic;
     f.str("");
     topic.m_level = (int) input->readLong(2);
     bool isAClone=false;
@@ -701,17 +701,17 @@ bool MORText::readTopic(MWAWEntry const &entry)
     if (flag&0x10) topic.m_isCloned=true;
     if (flag&0x20) isAClone=true;
     if (flag&0x40) {
-      topic.m_hasList[MORTextInternal::Topic::ASpeakerNote]=true;
+      topic.m_hasList[MoreTextInternal::Topic::ASpeakerNote]=true;
       f << "S" << m_state->m_actualSpeaker++ << ",";
     }
     if (flag&0x80) {
-      topic.m_hasList[MORTextInternal::Topic::AComment]=true;
+      topic.m_hasList[MoreTextInternal::Topic::AComment]=true;
       f << "C" << m_state->m_actualComment++ << ",";
     }
     if (flag&0x400) f << "showComment,";
     if (flag&0x2000) topic.m_isStartSlide=true;
     if (flag&0x8000) {
-      topic.m_hasList[MORTextInternal::Topic::AOutline]=true;
+      topic.m_hasList[MoreTextInternal::Topic::AOutline]=true;
       f << "O" << m_state->m_actualOutline++ << ",";
     }
     // find only bits: 5208
@@ -724,7 +724,7 @@ bool MORText::readTopic(MWAWEntry const &entry)
       f << "pos=" << std::hex << fPos << std::dec << ",";
       topic.m_entry.setBegin(fPos);
       if (!m_mainParser->checkAndFindSize(topic.m_entry)) {
-        MWAW_DEBUG_MSG(("MORText::readTopic: can not read a text position\n"));
+        MWAW_DEBUG_MSG(("MoreText::readTopic: can not read a text position\n"));
         f << "###";
         topic.m_entry = MWAWEntry();
       }
@@ -744,10 +744,10 @@ bool MORText::readTopic(MWAWEntry const &entry)
   return true;
 }
 
-bool MORText::readComment(MWAWEntry const &entry)
+bool MoreText::readComment(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%8)) {
-    MWAW_DEBUG_MSG(("MORText::readComment: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readComment: the entry is bad\n"));
     return false;
   }
   // comment0? comment1: header, comment2: footer
@@ -765,13 +765,13 @@ bool MORText::readComment(MWAWEntry const &entry)
   int N=int(entry.length()/8);
   for (int i=0; i < N; i++) {
     pos=input->tell();
-    MORTextInternal::Comment comment;
+    MoreTextInternal::Comment comment;
     f.str("");
     long fPos = input->readLong(4);
     f << "pos=" << std::hex << fPos << std::dec << ",";
     comment.m_entry.setBegin(fPos);
     if (!m_mainParser->checkAndFindSize(comment.m_entry)) {
-      MWAW_DEBUG_MSG(("MORText::readComment: can not read a file position\n"));
+      MWAW_DEBUG_MSG(("MoreText::readComment: can not read a file position\n"));
       f << "###";
       comment.m_entry.setLength(0);
     }
@@ -792,10 +792,10 @@ bool MORText::readComment(MWAWEntry const &entry)
   return true;
 }
 
-bool MORText::readSpeakerNote(MWAWEntry const &entry)
+bool MoreText::readSpeakerNote(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%4)) {
-    MWAW_DEBUG_MSG(("MORText::readSpeakerNote: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readSpeakerNote: the entry is bad\n"));
     return false;
   }
 
@@ -815,7 +815,7 @@ bool MORText::readSpeakerNote(MWAWEntry const &entry)
     MWAWEntry tEntry;
     tEntry.setBegin(fPos);
     if (!m_mainParser->checkAndFindSize(tEntry)) {
-      MWAW_DEBUG_MSG(("MORText::readSpeakerNote: can not read a file position\n"));
+      MWAW_DEBUG_MSG(("MoreText::readSpeakerNote: can not read a file position\n"));
       f << "###";
       tEntry.setLength(0);
     }
@@ -829,14 +829,14 @@ bool MORText::readSpeakerNote(MWAWEntry const &entry)
 //
 // send the text
 //
-bool MORText::sendMainText()
+bool MoreText::sendMainText()
 {
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   std::vector<MWAWParagraph> paraStack;
   /* skip 0: unknown, 1: header(comment), 2: footer(comment), 3: title?, after text */
   for (size_t i=4; i < m_state->m_topicList.size(); i++) {
-    MORTextInternal::Topic const &topic = m_state->m_topicList[i];
+    MoreTextInternal::Topic const &topic = m_state->m_topicList[i];
     MWAWEntry const &entry=topic.m_entry;
     if (!entry.valid()) { // a clone ?
       sendTopic(int(i),0,paraStack);
@@ -856,51 +856,51 @@ bool MORText::sendMainText()
   return true;
 }
 
-bool MORText::sendComment(int cId)
+bool MoreText::sendComment(int cId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MORText::sendComment: can not find a listener!"));
+    MWAW_DEBUG_MSG(("MoreText::sendComment: can not find a listener!"));
     return true;
   }
   if (cId < 0 || cId >= int(m_state->m_commentList.size())) {
-    MWAW_DEBUG_MSG(("MORText::sendComment: can not find the comment %d!", cId));
+    MWAW_DEBUG_MSG(("MoreText::sendComment: can not find the comment %d!", cId));
     return false;
   }
   return sendText(m_state->m_commentList[size_t(cId)].m_entry, MWAWFont(3,12));
 }
 
-bool MORText::sendSpeakerNote(int nId)
+bool MoreText::sendSpeakerNote(int nId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MORText::sendSpeakerNote: can not find a listener!"));
+    MWAW_DEBUG_MSG(("MoreText::sendSpeakerNote: can not find a listener!"));
     return true;
   }
   if (nId < 0 || nId >= int(m_state->m_speakerList.size())) {
-    MWAW_DEBUG_MSG(("MORText::sendSpeakerNote: can not find the speaker note %d!", nId));
+    MWAW_DEBUG_MSG(("MoreText::sendSpeakerNote: can not find the speaker note %d!", nId));
     return false;
   }
   return sendText(m_state->m_speakerList[size_t(nId)], MWAWFont(3,12));
 }
 
-bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraStack)
+bool MoreText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraStack)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MORText::sendTopic: can not find a listener!"));
+    MWAW_DEBUG_MSG(("MoreText::sendTopic: can not find a listener!"));
     return true;
   }
   if (tId < 0 || tId >= int(m_state->m_topicList.size())) {
-    MWAW_DEBUG_MSG(("MORText::sendTopic: can not find the topic note %d!", tId));
+    MWAW_DEBUG_MSG(("MoreText::sendTopic: can not find the topic note %d!", tId));
     return false;
   }
-  MORTextInternal::Topic const &topic=m_state->m_topicList[size_t(tId)];
+  MoreTextInternal::Topic const &topic=m_state->m_topicList[size_t(tId)];
   MWAWEntry entry=topic.m_entry;
   int level=topic.m_level+dLevel;
   if (level < 0) {
     if (tId>=4) {
-      MWAW_DEBUG_MSG(("MORText::sendTopic: oops level is negatif!\n"));
+      MWAW_DEBUG_MSG(("MoreText::sendTopic: oops level is negatif!\n"));
     }
     level=0;
   }
@@ -908,13 +908,13 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
   int actId=tId, lastId = tId, cloneDLevel=0;
   if (tId==1||tId==2) {
     // header/footer: the data are in the comment...
-    int comment=topic.m_attachList[MORTextInternal::Topic::AComment];
+    int comment=topic.m_attachList[MoreTextInternal::Topic::AComment];
     if (comment<0||comment>=int(m_state->m_commentList.size()))
       return false;
     entry=m_state->m_commentList[size_t(comment)].m_entry;
   }
   else if (topic.m_cloneId>=0 && topic.m_cloneId < (int) m_state->m_topicList.size()) {
-    MORTextInternal::Topic const &cTopic =
+    MoreTextInternal::Topic const &cTopic =
       m_state->m_topicList[size_t(topic.m_cloneId)];
     entry=cTopic.m_entry;
     actId = topic.m_cloneId;
@@ -925,10 +925,10 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
     return false;
   // retrieve the ouline
   MWAWFont font(3,12);
-  MORTextInternal::Paragraph para;
-  int outl=topic.m_attachList[MORTextInternal::Topic::AOutline];
+  MoreTextInternal::Paragraph para;
+  int outl=topic.m_attachList[MoreTextInternal::Topic::AOutline];
   if (outl>=0 && outl < (int) m_state->m_outlineList.size()) {
-    MORTextInternal::Outline const &outline=m_state->m_outlineList[size_t(outl)];
+    MoreTextInternal::Outline const &outline=m_state->m_outlineList[size_t(outl)];
     if (outline.m_paragraphs[0].m_pageBreak)
       m_mainParser->newPage(++m_state->m_actualPage);
     para=outline.m_paragraphs[0];
@@ -957,14 +957,14 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
   if (tId==1||tId==2)
     return true;
   // send potential comment and speakernote
-  int comment=topic.m_attachList[MORTextInternal::Topic::AComment];
+  int comment=topic.m_attachList[MoreTextInternal::Topic::AComment];
   if (comment>=0) {
-    MWAWSubDocumentPtr doc(new MORTextInternal::SubDocument(*this, m_parserState->m_input, comment, 1));
+    MWAWSubDocumentPtr doc(new MoreTextInternal::SubDocument(*this, m_parserState->m_input, comment, 1));
     listener->insertComment(doc);
   }
-  int speaker=topic.m_attachList[MORTextInternal::Topic::ASpeakerNote];
+  int speaker=topic.m_attachList[MoreTextInternal::Topic::ASpeakerNote];
   if (speaker>=0) {
-    MWAWSubDocumentPtr doc(new MORTextInternal::SubDocument(*this, m_parserState->m_input, speaker, 2));
+    MWAWSubDocumentPtr doc(new MoreTextInternal::SubDocument(*this, m_parserState->m_input, speaker, 2));
     listener->insertComment(doc);
   }
 
@@ -974,11 +974,11 @@ bool MORText::sendTopic(int tId, int dLevel, std::vector<MWAWParagraph> &paraSta
   return ok;
 }
 
-bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
+bool MoreText::sendText(MWAWEntry const &entry, MWAWFont const &font)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MORText::sendText: can not find a listener!"));
+    MWAW_DEBUG_MSG(("MoreText::sendText: can not find a listener!"));
     return true;
   }
 
@@ -996,7 +996,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
   }
 
   if (entry.length()<4) {
-    MWAW_DEBUG_MSG(("MORText::sendText: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::sendText: the entry is bad\n"));
     return false;
   }
 
@@ -1022,7 +1022,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     }
     if (actPos+1 >= endPos) {
       f << "@[#]";
-      MWAW_DEBUG_MSG(("MORText::sendText: text end by 0x1b\n"));
+      MWAW_DEBUG_MSG(("MoreText::sendText: text end by 0x1b\n"));
       continue;
     }
     int fld=(int)input->readULong(1);
@@ -1054,12 +1054,12 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     case 0x30: // font
       if (actPos+4+2 > endPos) {
         f << "@[#fId]";
-        MWAW_DEBUG_MSG(("MORText::sendText: field font seems too short\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field font seems too short\n"));
         break;
       }
       val = (int) input->readULong(2);
       if (!(val&0x8000)) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fId: unexpected id\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fId: unexpected id\n"));
         f << "@[#fId]";
         input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1069,7 +1069,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       sendFont = false;
       val = (int) input->readULong(2);
       if (val!=0x1b30) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fId: unexpected end field\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fId: unexpected end field\n"));
         f << "###";
         input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1078,13 +1078,13 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     case 0x31:
       if (actPos+4+2 > endPos) {
         f << "@[#fSz]";
-        MWAW_DEBUG_MSG(("MORText::sendText: field fSz seems too short\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fSz seems too short\n"));
         break;
       }
       val = (int) input->readLong(2);
       f << "@[fSz=" << val << "]";
       if (val <= 0) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fSz seems bad\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fSz seems bad\n"));
         f << "###";
       }
       else {
@@ -1093,7 +1093,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       }
       val = (int) input->readULong(2);
       if (val!=0x1b31) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fSz: unexpected end field\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fSz: unexpected end field\n"));
         f << "###";
         input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1102,14 +1102,14 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     case 0x38: {
       if (actPos+4+10 > endPos) {
         f << "@[#fCol]";
-        MWAW_DEBUG_MSG(("MORText::sendText: field fCol seems too short\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fCol seems too short\n"));
         break;
       }
       uint16_t values[5];
       for (int i=0; i < 5; i++)
         values[i]=(uint16_t)input->readULong(2);
       if (values[0]!=0xe || values[4]!=0xe) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fCol: color sep seems bad\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fCol: color sep seems bad\n"));
         f << "@[fCol###]";
       }
       else {
@@ -1122,7 +1122,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       }
       val = (int) input->readULong(2);
       if (val!=0x1b38) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field fCol: unexpected end field\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field fCol: unexpected end field\n"));
         f << "###";
         input->seek(-2, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1221,14 +1221,14 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     case 0xb9: {
       if (actPos+4+8 > endPos) {
         f << "@[#field]";
-        MWAW_DEBUG_MSG(("MORText::sendText: field b9 seems too short\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field b9 seems too short\n"));
         break;
       }
       uint16_t values[4];
       for (int i=0; i < 4; i++)
         values[i]=(uint16_t)input->readULong(2);
       if (values[0]!=0xc || values[3]!=0xc) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field the separator seems bad\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field the separator seems bad\n"));
         f << "@[field###]";
       }
       else {
@@ -1281,13 +1281,13 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
           break;
         default:
           f << "@[field=##" << values[1] << ":" << values[2] << "]";
-          MWAW_DEBUG_MSG(("MORText::sendText: unknown field\n"));
+          MWAW_DEBUG_MSG(("MoreText::sendText: unknown field\n"));
           break;
         }
       }
       val = (int) input->readULong(2);
       if (val!=0x1bb9) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field b9: unexpected end field\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field b9: unexpected end field\n"));
         f << "###";
         input->seek(-2, librevenge::RVNG_SEEK_CUR);
       }
@@ -1296,12 +1296,12 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
     case 0xf9: {
       if (actPos+22 > endPos) {
         f << "@[#picture]";
-        MWAW_DEBUG_MSG(("MORText::sendText: field f9 seems too short\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field f9 seems too short\n"));
         break;
       }
       long sz=(long) input->readULong(4);
       if (sz<22 || actPos+sz>=endPos) {
-        MWAW_DEBUG_MSG(("MORText::sendText: field f9: bad field size\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: field f9: bad field size\n"));
         f << "###";
         input->seek(actPos+2, librevenge::RVNG_SEEK_CUR);
         break;
@@ -1309,7 +1309,7 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       input->seek(actPos+sz-6, librevenge::RVNG_SEEK_SET);
       if ((int) input->readULong(4)!=sz &&
           (int) input->readULong(2)!=int(0x1b00|fld)) {
-        MWAW_DEBUG_MSG(("MORText::sendText: find a unknown picture end field\n"));
+        MWAW_DEBUG_MSG(("MoreText::sendText: find a unknown picture end field\n"));
         f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
         input->seek(actPos+2, librevenge::RVNG_SEEK_SET);
         break;
@@ -1355,13 +1355,13 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
         input->seek(actPos+sz-4, librevenge::RVNG_SEEK_SET);
         if ((int) input->readULong(2)==sz &&
             (int) input->readULong(2)==int(0x1b00|fld)) {
-          MWAW_DEBUG_MSG(("MORText::sendText: find a unknown field, but can infer size\n"));
+          MWAW_DEBUG_MSG(("MoreText::sendText: find a unknown field, but can infer size\n"));
           f << "@[#" << std::hex << fld << std::dec << ":" << sz << "]";
           break;
         }
         input->seek(actPos+2, librevenge::RVNG_SEEK_SET);
       }
-      MWAW_DEBUG_MSG(("MORText::sendText: find a unknown field\n"));
+      MWAW_DEBUG_MSG(("MoreText::sendText: find a unknown field\n"));
       f << "@[#" << std::hex << fld << std::dec << "]";
       break;
     }
@@ -1379,10 +1379,10 @@ bool MORText::sendText(MWAWEntry const &entry, MWAWFont const &font)
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool MORText::readFonts(MWAWEntry const &entry)
+bool MoreText::readFonts(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MORText::readFonts: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readFonts: the entry is bad\n"));
     return false;
   }
 
@@ -1399,7 +1399,7 @@ bool MORText::readFonts(MWAWEntry const &entry)
   while (1) {
     pos=input->tell();
     if (pos+1 > endPos) {
-      MWAW_DEBUG_MSG(("MORText::readFonts: problem reading a font\n"));
+      MWAW_DEBUG_MSG(("MoreText::readFonts: problem reading a font\n"));
       break;
     }
     int fSz=int(input->readULong(1));
@@ -1428,7 +1428,7 @@ bool MORText::readFonts(MWAWEntry const &entry)
 
   pos = input->tell();
   if (pos != endPos) {
-    MWAW_DEBUG_MSG(("MORText::readFonts: problem reading a font\n"));
+    MWAW_DEBUG_MSG(("MoreText::readFonts: problem reading a font\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Fonts:###");
   }
@@ -1439,10 +1439,10 @@ bool MORText::readFonts(MWAWEntry const &entry)
 //////////////////////////////////////////////
 // outline
 //////////////////////////////////////////////
-bool MORText::readOutlineList(MWAWEntry const &entry)
+bool MoreText::readOutlineList(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%4)) {
-    MWAW_DEBUG_MSG(("MORText::readOutlineList: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readOutlineList: the entry is bad\n"));
     return false;
   }
 
@@ -1462,7 +1462,7 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
     tEntry.setBegin(input->readLong(4));
     tEntry.setId(int(i));
     if (!m_mainParser->checkAndFindSize(tEntry)) {
-      MWAW_DEBUG_MSG(("MORText::readOutlineList: can not read a file position\n"));
+      MWAW_DEBUG_MSG(("MoreText::readOutlineList: can not read a file position\n"));
       f << "###,";
     }
     else
@@ -1476,12 +1476,12 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
     MWAWEntry const &tEntry=posList[i];
     if (!tEntry.valid())
       continue;
-    MORTextInternal::Outline outline;
+    MoreTextInternal::Outline outline;
     if (readOutline(tEntry, outline)) {
       m_state->m_outlineList.push_back(outline);
       continue;
     }
-    m_state->m_outlineList.push_back(MORTextInternal::Outline());
+    m_state->m_outlineList.push_back(MoreTextInternal::Outline());
     ascFile.addPos(tEntry.begin());
     ascFile.addNote("Outline-data:###");
     ascFile.addPos(tEntry.end());
@@ -1490,10 +1490,10 @@ bool MORText::readOutlineList(MWAWEntry const &entry)
   return true;
 }
 
-bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outline)
+bool MoreText::readOutline(MWAWEntry const &entry, MoreTextInternal::Outline &outline)
 {
   if (!entry.valid() || entry.length()<8) {
-    MWAW_DEBUG_MSG(("MORText::readOutline: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("MoreText::readOutline: the entry is bad\n"));
     return false;
   }
   int vers = version();
@@ -1508,25 +1508,25 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
   f << "Outline[O" << entry.id() << "]:";
   int val=(int) input->readULong(2);
   if (val!=6*(vers-1)) {
-    MWAW_DEBUG_MSG(("MORText::readOutline: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("MoreText::readOutline: find unexpected type\n"));
     f << "#f0=" << val << ",";
   }
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   long lastListPos = pos+8+N*16;
   if (lastListPos > endPos) {
-    MWAW_DEBUG_MSG(("MORText::readOutline: can not read length\n"));
+    MWAW_DEBUG_MSG(("MoreText::readOutline: can not read length\n"));
     return false;
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  std::vector<MORTextInternal::OutlineMod> outlineModList;
+  std::vector<MoreTextInternal::OutlineMod> outlineModList;
   for (int n=0; n<N; n++) {
     pos = input->tell();
     f.str("");
 
-    MORTextInternal::OutlineMod outlineMod;
+    MoreTextInternal::OutlineMod outlineMod;
     val=int(input->readLong(1));
     if (val!=6*(vers-1))
       f << "#f0=" << val << ",";
@@ -1539,7 +1539,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
     for (int i=0; i < 4; i++)
       values[i] = (int) input->readULong(2);
     int const which= outlineMod.getModId();
-    MORTextInternal::Paragraph &para = outline.m_paragraphs[which];
+    MoreTextInternal::Paragraph &para = outline.m_paragraphs[which];
     MWAWFont &font=outline.m_fonts[which];
     uint32_t fFlags=font.flags();
     bool haveExtra=false;
@@ -1555,7 +1555,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
         f << "sz=" << values[0] << ",";
       }
       else {
-        MWAW_DEBUG_MSG(("MORText::readOutline: the font size seems bad\n"));
+        MWAW_DEBUG_MSG(("MoreText::readOutline: the font size seems bad\n"));
         f << "##sz=" << values[0] << ",";
       }
       break;
@@ -1782,14 +1782,14 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
   }
 
   for (size_t n=0; n < outlineModList.size(); n++) {
-    MORTextInternal::OutlineMod const &outlineMod=outlineModList[n];
+    MoreTextInternal::OutlineMod const &outlineMod=outlineModList[n];
     if (!outlineMod.m_entry.valid())
       continue;
     f.str("");
     f << "Outline[O" << entry.id() << "-A" << n << "]:";
     bool ok=false;
 
-    MORTextInternal::Paragraph &para = outline.m_paragraphs[outlineMod.getModId()];
+    MoreTextInternal::Paragraph &para = outline.m_paragraphs[outlineMod.getModId()];
     MWAWFont &font=outline.m_fonts[outlineMod.getModId()];
     switch (outlineMod.m_type) {
     case 0x301: {
@@ -1839,7 +1839,7 @@ bool MORText::readOutline(MWAWEntry const &entry, MORTextInternal::Outline &outl
 //////////////////////////////////////////////
 // small structure
 //////////////////////////////////////////////
-bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
+bool MoreText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
 {
   fName="";
   fId=-1;
@@ -1869,7 +1869,7 @@ bool MORText::readFont(MWAWEntry const &entry, std::string &fName, int &fId)
   return true;
 }
 
-bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
+bool MoreText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
 {
   level=MWAWListLevel();
   if (entry.length()<22)
@@ -1980,7 +1980,7 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
       libmwaw::appendUnicode((uint32_t)c, level.m_label);
     else {
       f << "##";
-      MWAW_DEBUG_MSG(("MORText::readCustomListLevel: label char seems bad\n"));
+      MWAW_DEBUG_MSG(("MoreText::readCustomListLevel: label char seems bad\n"));
       libmwaw::appendUnicode('#', level.m_label);
     }
   }
@@ -1992,8 +1992,8 @@ bool MORText::readCustomListLevel(MWAWEntry const &entry, MWAWListLevel &level)
   return true;
 }
 
-bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
-                       std::string &mess)
+bool MoreText::readTabs(MWAWEntry const &entry, MoreTextInternal::Paragraph &para,
+                        std::string &mess)
 {
   mess="";
   if (entry.length() < 4)
@@ -2067,7 +2067,7 @@ bool MORText::readTabs(MWAWEntry const &entry, MORTextInternal::Paragraph &para,
 //////////////////////////////////////////////
 // unknown structure
 //////////////////////////////////////////////
-bool MORText::parseUnknown(MWAWEntry const &entry, long fDecal)
+bool MoreText::parseUnknown(MWAWEntry const &entry, long fDecal)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -2097,7 +2097,7 @@ bool MORText::parseUnknown(MWAWEntry const &entry, long fDecal)
   }
 
   std::string mess;
-  MORTextInternal::Paragraph para;
+  MoreTextInternal::Paragraph para;
   if (readTabs(entry, para, mess)) {
     f << "tabs=[" << mess << "],";
     ascFile.addPos(pos+fDecal);

@@ -304,15 +304,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWGraph.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWParser.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWText.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtText.cxx"
 				>
 			</File>
 			<File
@@ -324,11 +324,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORParser.cxx"
+				RelativePath="..\..\src\lib\MoreParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORText.cxx"
+				RelativePath="..\..\src\lib\MoreText.cxx"
 				>
 			</File>
 			<File
@@ -705,15 +705,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWGraph.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWParser.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWText.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtText.hxx"
 				>
 			</File>
 			<File
@@ -725,11 +725,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORParser.hxx"
+				RelativePath="..\..\src\lib\MoreParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORText.hxx"
+				RelativePath="..\..\src\lib\MoreText.hxx"
 				>
 			</File>
 			<File
