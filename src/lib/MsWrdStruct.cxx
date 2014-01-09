@@ -36,9 +36,9 @@
 #include "MWAWInputStream.hxx"
 #include "MWAWSection.hxx"
 
-#include "MSWStruct.hxx"
+#include "MsWrdStruct.hxx"
 
-namespace MSWStruct
+namespace MsWrdStruct
 {
 // ------ font -------------
 std::ostream &operator<<(std::ostream &o, Font const &font)
@@ -425,7 +425,7 @@ Variable<Table::Cell> &Table::getCell(int id)
 {
   if (id < 0) {
     static Variable<Table::Cell> badCell;
-    MWAW_DEBUG_MSG(("MSWStruct::Table::getCell: can not return a negative cell id\n"));
+    MWAW_DEBUG_MSG(("MsWrdStruct::Table::getCell: can not return a negative cell id\n"));
     return badCell;
   }
   if (m_cells.size() <= size_t(id)) m_cells.resize(size_t(id)+1);
@@ -445,7 +445,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     if (!sz || dSz < 2+sz) return false;
     int N = (int) input->readULong(1);
     if (1+(N+1)*2 > sz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Table::read: table definition seems odd\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Table::read: table definition seems odd\n"));
       f << "#colDef";
       input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
       break;
@@ -535,7 +535,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
       input->seek(2, librevenge::RVNG_SEEK_CUR);
-      MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for background range\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Table::read: pb for background range\n"));
       f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
       break;
     }
@@ -562,7 +562,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     int lastCol = (int) input->readLong(1);
     if (firstCol < 0 || lastCol < 0 || firstCol+1 > lastCol) {
       input->seek(3, librevenge::RVNG_SEEK_CUR);
-      MWAW_DEBUG_MSG(("MSWStruct::Table::read: pb for mod color\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Table::read: pb for mod color\n"));
       f << "###backRange=" << firstCol << "<->" << lastCol-1 << ",";
       break;
     }
@@ -782,7 +782,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
       m_justify = MWAWParagraph::JustificationFull;
       return true;
     default:
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: can not read align\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Paragraph::read: can not read align\n"));
       f << "#align=" << val << ",";
       break;
     }
@@ -868,13 +868,13 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
   case 0x17:  { // tabs
     int sz = (int) input->readULong(1);
     if (sz<2 || 2+sz > dSz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: can not read tab\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Paragraph::read: can not read tab\n"));
       return false;
     }
     int deletedSz=(c==0x17) ? 4 : 2;
     int N0 = (int) input->readULong(1);
     if (deletedSz*N0 > sz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num of deleted tabs seems odd\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Paragraph::read: num of deleted tabs seems odd\n"));
       return false;
     }
     if (N0) {
@@ -894,7 +894,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     }
     int N = (int) input->readULong(1);
     if (N*3+deletedSz*N0+2 != sz) {
-      MWAW_DEBUG_MSG(("MSWStruct::Paragraph::read: num tab seems odd\n"));
+      MWAW_DEBUG_MSG(("MsWrdStruct::Paragraph::read: num tab seems odd\n"));
       f << "#";
       m_extra += f.str();
       return false;
@@ -1133,7 +1133,7 @@ void Paragraph::updateParagraphToFinalState(Paragraph const *style)
   if (!m_interline.isSet()) return;
   double interline=*m_interline;
   if (interline<-1 || interline>1) {
-    MWAW_DEBUG_MSG(("MSWStruct::Paragraph::updateParagraphToFinalState: interline spacing seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdStruct::Paragraph::updateParagraphToFinalState: interline spacing seems odd\n"));
     setInterline(1.0, librevenge::RVNG_PERCENT);
     return;
   }

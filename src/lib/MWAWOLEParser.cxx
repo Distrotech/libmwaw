@@ -121,7 +121,7 @@ protected:
     m_mapCls[0x00000319]="Picture"; // addon Enhanced Metafile ( find in some file)
 
     m_mapCls[0x000212F0]="MSWordArt"; // or MSWordArt.2
-    m_mapCls[0x00021302]="MSWorksREVENGEoc"; // addon
+    m_mapCls[0x00021302]="MSWorksWPDoc"; // addon
 
     // MS Apps
     m_mapCls[0x00030000]= "ExcelWorksheet";
@@ -637,7 +637,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
   else {
     /* I found:
       c1dbcd28e20ace11a29a00aa004a1a72     for MSWorks.Table
-      c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksREVENGEoc
+      c2dbcd28e20ace11a29a00aa004a1a72     for Microsoft Works/MSWorksWPDoc
       a3bcb394c2bd1b10a18306357c795b37     for Microsoft Drawing 1.01/MSDraw.1.01
       b25aa40e0a9ed111a40700c04fb932ba     for Quill96 Story Group Class ( basic MSWorks doc?)
       796827ed8bc9d111a75f00c04fb9667b     for MSWorks4Sheet

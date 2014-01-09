@@ -32,11 +32,11 @@
 */
 
 /*
- * Class to read/store the MSW structures
+ * Class to read/store the MsWrd structures
  */
 
-#ifndef MSW_STRUCT
-#  define MSW_STRUCT
+#ifndef MS_WRD_STRUCT
+#  define MS_WRD_STRUCT
 
 #include <iostream>
 #include <string>
@@ -48,7 +48,7 @@
 #include "MWAWParagraph.hxx"
 
 /** namespace to store the main structure which appears in a Microsoft Word 3.0-5.0 file */
-namespace MSWStruct
+namespace MsWrdStruct
 {
 //! generic function use to fill a border using the read data
 MWAWBorder getBorder(int val, std::string &extra);

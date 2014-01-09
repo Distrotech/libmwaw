@@ -291,23 +291,23 @@ SOURCE=..\..\src\lib\MsWksTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSW1Parser.cxx
+SOURCE=..\..\src\lib\MsWrd1Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWParser.cxx
+SOURCE=..\..\src\lib\MsWrdParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWStruct.cxx
+SOURCE=..\..\src\lib\MsWrdStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWText.cxx
+SOURCE=..\..\src\lib\MsWrdText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWTextStyles.cxx
+SOURCE=..\..\src\lib\MsWrdTextStyles.cxx
 # End Source File
 # Begin Source File
 
@@ -691,23 +691,23 @@ SOURCE=..\..\src\lib\MsWksTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSW1Parser.hxx
+SOURCE=..\..\src\lib\MsWrd1Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWParser.hxx
+SOURCE=..\..\src\lib\MsWrdParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWStruct.hxx
+SOURCE=..\..\src\lib\MsWrdStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWText.hxx
+SOURCE=..\..\src\lib\MsWrdText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWTextStyles.hxx
+SOURCE=..\..\src\lib\MsWrdTextStyles.hxx
 # End Source File
 # Begin Source File
 

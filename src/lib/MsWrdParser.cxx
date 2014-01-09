@@ -49,15 +49,15 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MSWParser.hxx"
+#include "MsWrdParser.hxx"
 
-#include "MSWText.hxx"
+#include "MsWrdText.hxx"
 
-/** Internal: the structures of a MSWParser */
-namespace MSWParserInternal
+/** Internal: the structures of a MsWrdParser */
+namespace MsWrdParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the object of MSWParser
+//! Internal: the object of MsWrdParser
 struct Object {
   Object() : m_textPos(-1), m_pos(), m_name(""), m_id(-1), m_extra("")
   {
@@ -68,9 +68,9 @@ struct Object {
     for (int i = 0; i < 2; i++) m_flags[i] = 0;
   }
 
-  MSWEntry getEntry() const
+  MsWrdEntry getEntry() const
   {
-    MSWEntry res;
+    MsWrdEntry res;
     res.setBegin(m_pos.begin());
     res.setEnd(m_pos.end());
     res.setType("ObjectData");
@@ -124,7 +124,7 @@ struct Object {
 };
 
 ////////////////////////////////////////
-//! Internal: the picture of a MSWParser
+//! Internal: the picture of a MsWrdParser
 struct Picture {
   struct Zone;
   Picture() : m_dim(), m_picturesList(), m_flag(0)
@@ -171,7 +171,7 @@ struct Picture {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MSWParser
+//! Internal: the state of a MsWrdParser
 struct State {
   //! constructor
   State() : m_bot(-1), m_eot(-1), m_endNote(false),
@@ -204,18 +204,18 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MSWParser
+//! Internal: the subdocument of a MsWrdParser
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor for footnote, comment
-  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
+  SubDocument(MsWrdParser &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(id), m_type(type), m_pictFPos(-1), m_pictCPos(-1)  {}
   //! constructor for header/footer
-  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, MWAWEntry entry, libmwaw::SubDocumentType type) :
+  SubDocument(MsWrdParser &pars, MWAWInputStreamPtr input, MWAWEntry entry, libmwaw::SubDocumentType type) :
     MWAWSubDocument(&pars, input, entry), m_id(-1), m_type(type), m_pictFPos(-1), m_pictCPos(-1)  {}
   //! constructor for picture
-  SubDocument(MSWParser &pars, MWAWInputStreamPtr input, long fPos, int cPos) :
+  SubDocument(MsWrdParser &pars, MWAWInputStreamPtr input, long fPos, int cPos) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(-1), m_type(libmwaw::DOC_NONE), m_pictFPos(fPos), m_pictCPos(cPos) {}
 
   //! destructor
@@ -253,11 +253,11 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
 
   long pos = m_input->tell();
   if (m_type == libmwaw::DOC_NONE && m_pictCPos >= 0 && m_pictFPos > 0)
-    reinterpret_cast<MSWParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
+    reinterpret_cast<MsWrdParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
   else if (m_type == libmwaw::DOC_HEADER_FOOTER)
-    reinterpret_cast<MSWParser *>(m_parser)->send(m_zone);
+    reinterpret_cast<MsWrdParser *>(m_parser)->send(m_zone);
   else
-    reinterpret_cast<MSWParser *>(m_parser)->send(m_id, type);
+    reinterpret_cast<MsWrdParser *>(m_parser)->send(m_id, type);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -275,9 +275,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 }
 
 ////////////////////////////////////////////////////////////
-// MSWEntry
+// MsWrdEntry
 ////////////////////////////////////////////////////////////
-std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
+std::ostream &operator<<(std::ostream &o, MsWrdEntry const &entry)
 {
   if (entry.type().length()) {
     o << entry.type();
@@ -290,33 +290,33 @@ std::ostream &operator<<(std::ostream &o, MSWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSWParser::MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MsWrdParser::MsWrdParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_entryMap(), m_textParser()
 {
   init();
 }
 
-MSWParser::~MSWParser()
+MsWrdParser::~MsWrdParser()
 {
 }
 
-void MSWParser::init()
+void MsWrdParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MSWParserInternal::State);
+  m_state.reset(new MsWrdParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_textParser.reset(new MSWText(*this));
+  m_textParser.reset(new MsWrdText(*this));
 }
 
 ////////////////////////////////////////////////////////////
 // new page and color
 ////////////////////////////////////////////////////////////
-void MSWParser::newPage(int number)
+void MsWrdParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -329,7 +329,7 @@ void MSWParser::newPage(int number)
   }
 }
 
-bool MSWParser::getColor(int id, MWAWColor &col) const
+bool MsWrdParser::getColor(int id, MWAWColor &col) const
 {
   switch (id) {
   case 0:
@@ -357,49 +357,49 @@ bool MSWParser::getColor(int id, MWAWColor &col) const
     col=MWAWColor(255,255,255);
     break; // white
   default:
-    MWAW_DEBUG_MSG(("MSWParser::getColor: unknown color=%d\n", id));
+    MWAW_DEBUG_MSG(("MsWrdParser::getColor: unknown color=%d\n", id));
     return false;
   }
   return true;
 }
 
-void MSWParser::sendFootnote(int id)
+void MsWrdParser::sendFootnote(int id)
 {
   if (!getTextListener()) return;
 
-  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
+  MWAWSubDocumentPtr subdoc(new MsWrdParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_NOTE));
   getTextListener()->insertNote
   (MWAWNote(m_state->m_endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
 }
 
-void MSWParser::sendFieldComment(int id)
+void MsWrdParser::sendFieldComment(int id)
 {
   if (!getTextListener()) return;
 
-  MWAWSubDocumentPtr subdoc(new MSWParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_COMMENT_ANNOTATION));
+  MWAWSubDocumentPtr subdoc(new MsWrdParserInternal::SubDocument(*this, getInput(), id, libmwaw::DOC_COMMENT_ANNOTATION));
   getTextListener()->insertComment(subdoc);
 }
 
-void MSWParser::send(MWAWEntry const &entry)
+void MsWrdParser::send(MWAWEntry const &entry)
 {
   m_textParser->sendText(entry, false);
 }
 
-void MSWParser::send(int id, libmwaw::SubDocumentType type)
+void MsWrdParser::send(int id, libmwaw::SubDocumentType type)
 {
   if (type==libmwaw::DOC_COMMENT_ANNOTATION)
     m_textParser->sendFieldComment(id);
   else if (type==libmwaw::DOC_NOTE)
     m_textParser->sendFootnote(id);
   else {
-    MWAW_DEBUG_MSG(("MSWParser::send: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::send: find unexpected type\n"));
   }
 }
 
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MsWrdParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -425,7 +425,7 @@ void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MSWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -436,11 +436,11 @@ void MSWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MsWrdParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MSWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -453,14 +453,14 @@ void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   if (entry.valid()) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
     header.m_subDocument.reset
-    (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
+    (new MsWrdParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
     ps.setHeaderFooter(header);
   }
   entry = m_textParser->getFooter();
   if (entry.valid()) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
     footer.m_subDocument.reset
-    (new MSWParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
+    (new MsWrdParserInternal::SubDocument(*this, getInput(), entry, libmwaw::DOC_HEADER_FOOTER));
     ps.setHeaderFooter(footer);
   }
   int numPage = 1;
@@ -486,7 +486,7 @@ void MSWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 // try to find the different zone
 ////////////////////////////////////////////////////////////
-bool MSWParser::createZones()
+bool MsWrdParser::createZones()
 {
   if (!readZoneList()) return false;
   MWAWInputStreamPtr input = getInput();
@@ -499,7 +499,7 @@ bool MSWParser::createZones()
   ascii().addPos(m_state->m_eot);
   ascii().addNote("_");
 
-  std::multimap<std::string, MSWEntry>::iterator it;
+  std::multimap<std::string, MsWrdEntry>::iterator it;
   it = m_entryMap.find("PrintInfo");
   if (it != m_entryMap.end())
     readPrintInfo(it->second);
@@ -527,12 +527,12 @@ bool MSWParser::createZones()
   it = m_entryMap.find("Picture");
   while (it != m_entryMap.end()) {
     if (!it->second.hasType("Picture")) break;
-    MSWEntry &entry=it++->second;
+    MsWrdEntry &entry=it++->second;
     readPicture(entry);
   }
 
   for (it=m_entryMap.begin(); it!=m_entryMap.end(); ++it) {
-    MSWEntry const &entry = it->second;
+    MsWrdEntry const &entry = it->second;
     if (entry.isParsed()) continue;
     ascii().addPos(entry.begin());
     f.str("");
@@ -548,7 +548,7 @@ bool MSWParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the zone list ( FIB )
 ////////////////////////////////////////////////////////////
-bool MSWParser::readZoneList()
+bool MsWrdParser::readZoneList()
 {
   MWAWInputStreamPtr input = getInput();
   int const vers = version();
@@ -661,7 +661,7 @@ bool MSWParser::readZoneList()
   ascii().addNote(f.str().c_str());
 
   if (input->isEnd()) {
-    MWAW_DEBUG_MSG(("MSWParser::readZoneList: can not read list zone\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readZoneList: can not read list zone\n"));
     return false;
   }
   return true;
@@ -678,9 +678,9 @@ bool MSWParser::readZoneList()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
+bool MsWrdParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MSWParserInternal::State();
+  *m_state = MsWrdParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -689,7 +689,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   libmwaw::DebugStream f;
   int headerSize=64;
   if (!input->checkPosition(0x88)) {
-    MWAW_DEBUG_MSG(("MSWParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::checkHeader: file is too short\n"));
     return false;
   }
   long pos = 0;
@@ -753,11 +753,11 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   if (m_state->m_bot > m_state->m_eot) {
     f << "#text,";
     if (0x100 <= m_state->m_eot) {
-      MWAW_DEBUG_MSG(("MSWParser::checkHeader: problem with text position: reset begin to default\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::checkHeader: problem with text position: reset begin to default\n"));
       m_state->m_bot = 0x100;
     }
     else {
-      MWAW_DEBUG_MSG(("MSWParser::checkHeader: problem with text position: reset to empty\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::checkHeader: problem with text position: reset to empty\n"));
       m_state->m_bot = m_state->m_eot = 0x100;
     }
   }
@@ -779,7 +779,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
   long endOfData = (long) input->readULong(4);
   f << "eof=" << std::hex << endOfData << std::dec << ",";
   if (endOfData < 100 || !input->checkPosition(endOfData)) {
-    MWAW_DEBUG_MSG(("MSWParser::checkHeader: end of file pos is too small\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::checkHeader: end of file pos is too small\n"));
     if (endOfData < m_state->m_eot || strict)
       return false;
     f << "#endOfData,";
@@ -819,7 +819,7 @@ bool MSWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // try to the end of the header
 ////////////////////////////////////////////////////////////
-bool MSWParser::readHeaderEndV3()
+bool MsWrdParser::readHeaderEndV3()
 {
   MWAWInputStreamPtr input = getInput();
   if (!input->checkPosition(0xb8))
@@ -856,7 +856,7 @@ bool MSWParser::readHeaderEndV3()
     if (2*(dim[3]+dim[5]) > dim[1] || 2*(dim[2]+dim[4]) > dim[0]) dimOk = false;
     if (!dimOk) {
       f << "###";
-      MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: page dimensions seem bad\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readHeaderEndV3: page dimensions seem bad\n"));
     }
     else {
       getPageSpan().setMarginTop(dim[2]);
@@ -944,7 +944,7 @@ bool MSWParser::readHeaderEndV3()
   }
   if (sz > 31) {
     f << "###";
-    MWAW_DEBUG_MSG(("MSWParser::readHeaderEndV3: next filename seems bad\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readHeaderEndV3: next filename seems bad\n"));
   }
   else {
     std::string fName("");
@@ -961,10 +961,10 @@ bool MSWParser::readHeaderEndV3()
 ////////////////////////////////////////////////////////////
 // try to read an entry
 ////////////////////////////////////////////////////////////
-MSWEntry MSWParser::readEntry(std::string type, int id)
+MsWrdEntry MsWrdParser::readEntry(std::string type, int id)
 {
   MWAWInputStreamPtr input = getInput();
-  MSWEntry entry;
+  MsWrdEntry entry;
   entry.setType(type);
   entry.setId(id);
   long pos = input->tell();
@@ -980,7 +980,7 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
     return entry;
   }
   if (!input->checkPosition(debPos+sz)) {
-    MWAW_DEBUG_MSG(("MSWParser::readEntry: problem reading entry: %s\n", type.c_str()));
+    MWAW_DEBUG_MSG(("MsWrdParser::readEntry: problem reading entry: %s\n", type.c_str()));
     f << "#";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -990,7 +990,7 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
   entry.setBegin(debPos);
   entry.setLength(sz);
   m_entryMap.insert
-  (std::multimap<std::string, MSWEntry>::value_type(type, entry));
+  (std::multimap<std::string, MsWrdEntry>::value_type(type, entry));
 
   f << std::hex << debPos << "[" << sz << "],";
   ascii().addPos(pos);
@@ -1002,10 +1002,10 @@ MSWEntry MSWParser::readEntry(std::string type, int id)
 ////////////////////////////////////////////////////////////
 // read the document information
 ////////////////////////////////////////////////////////////
-bool MSWParser::readDocumentInfo(MSWEntry &entry)
+bool MsWrdParser::readDocumentInfo(MsWrdEntry &entry)
 {
   if (entry.length() != 0x20) {
-    MWAW_DEBUG_MSG(("MSWParser::readDocumentInfo: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readDocumentInfo: the zone size seems odd\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1039,7 +1039,7 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
     getPageSpan().setFormWidth(dim[1]);
   }
   else {
-    MWAW_DEBUG_MSG(("MSWParser::readDocumentInfo: the page dimensions seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readDocumentInfo: the page dimensions seems odd\n"));
   }
 
   int val = (int) input->readLong(2); // always 0 ?
@@ -1073,10 +1073,10 @@ bool MSWParser::readDocumentInfo(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the zone 17
 ////////////////////////////////////////////////////////////
-bool MSWParser::readZone17(MSWEntry &entry)
+bool MsWrdParser::readZone17(MsWrdEntry &entry)
 {
   if (entry.length() != 0x2a) {
-    MWAW_DEBUG_MSG(("MSWParser::readZone17: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readZone17: the zone size seems odd\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1150,10 +1150,10 @@ bool MSWParser::readZone17(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the printer name
 ////////////////////////////////////////////////////////////
-bool MSWParser::readPrinter(MSWEntry &entry)
+bool MsWrdParser::readPrinter(MsWrdEntry &entry)
 {
   if (entry.length() < 2) {
-    MWAW_DEBUG_MSG(("MSWParser::readPrinter: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPrinter: the zone seems to short\n"));
     return false;
   }
 
@@ -1164,12 +1164,12 @@ bool MSWParser::readPrinter(MSWEntry &entry)
   f << "Printer:";
   int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWParser::readPrinter: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPrinter: the zone seems to short\n"));
     return false;
   }
   int strSz = (int) input->readULong(1);
   if (strSz+2> sz) {
-    MWAW_DEBUG_MSG(("MSWParser::readPrinter: name seems to big\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPrinter: name seems to big\n"));
     return false;
   }
   std::string name("");
@@ -1197,10 +1197,10 @@ bool MSWParser::readPrinter(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the document summary
 ////////////////////////////////////////////////////////////
-bool MSWParser::readDocSum(MSWEntry &entry)
+bool MsWrdParser::readDocSum(MsWrdEntry &entry)
 {
   if (entry.length() < 8) {
-    MWAW_DEBUG_MSG(("MSWParser::readDocSum: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readDocSum: the zone seems to short\n"));
     return false;
   }
 
@@ -1211,7 +1211,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
   f << "DocSum:";
   int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWParser::readDocSum: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readDocSum: the zone seems to short\n"));
     return false;
   }
   entry.setParsed(true);
@@ -1228,7 +1228,7 @@ bool MSWParser::readDocSum(MSWEntry &entry)
     if (sz == 0 || sz == 0xFF) continue;
 
     if (actPos+1+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("MSWParser::readDocSum: string %d to short...\n", i));
+      MWAW_DEBUG_MSG(("MsWrdParser::readDocSum: string %d to short...\n", i));
       f << "#";
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       break;
@@ -1252,11 +1252,11 @@ bool MSWParser::readDocSum(MSWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read  a list of strings zone
 ////////////////////////////////////////////////////////////
-bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
+bool MsWrdParser::readStringsZone(MsWrdEntry &entry, std::vector<std::string> &list)
 {
   list.resize(0);
   if (entry.length() < 2) {
-    MWAW_DEBUG_MSG(("MSWParser::readStringsZone: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readStringsZone: the zone seems to short\n"));
     return false;
   }
 
@@ -1267,7 +1267,7 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
   f << entry;
   int sz = (int) input->readULong(2);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWParser::readStringsZone: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readStringsZone: the zone seems to short\n"));
     return false;
   }
   ascii().addPos(entry.begin());
@@ -1278,7 +1278,7 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
     pos = input->tell();
     int strSz = (int) input->readULong(1);
     if (pos+strSz+1> entry.end()) {
-      MWAW_DEBUG_MSG(("MSWParser::readStringsZone: a string seems to big\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readStringsZone: a string seems to big\n"));
       f << "#";
       break;
     }
@@ -1309,41 +1309,41 @@ bool MSWParser::readStringsZone(MSWEntry &entry, std::vector<std::string> &list)
 ////////////////////////////////////////////////////////////
 // read the objects
 ////////////////////////////////////////////////////////////
-bool MSWParser::readObjects()
+bool MsWrdParser::readObjects()
 {
   MWAWInputStreamPtr input = getInput();
 
-  std::multimap<std::string, MSWEntry>::iterator it;
+  std::multimap<std::string, MsWrdEntry>::iterator it;
 
   it = m_entryMap.find("ObjectList");
   while (it != m_entryMap.end()) {
     if (!it->second.hasType("ObjectList")) break;
-    MSWEntry &entry=it++->second;
+    MsWrdEntry &entry=it++->second;
     readObjectList(entry);
   }
 
   it = m_entryMap.find("ObjectFlags");
   while (it != m_entryMap.end()) {
     if (!it->second.hasType("ObjectFlags")) break;
-    MSWEntry &entry=it++->second;
+    MsWrdEntry &entry=it++->second;
     readObjectFlags(entry);
   }
 
   it = m_entryMap.find("ObjectName");
   while (it != m_entryMap.end()) {
     if (!it->second.hasType("ObjectName")) break;
-    MSWEntry &entry=it++->second;
+    MsWrdEntry &entry=it++->second;
     std::vector<std::string> list;
     readStringsZone(entry, list);
 
     if (entry.id() < 0 || entry.id() > 1) {
-      MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected entry id: %d\n", entry.id()));
+      MWAW_DEBUG_MSG(("MsWrdParser::readObjects: unexpected entry id: %d\n", entry.id()));
       continue;
     }
-    std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
+    std::vector<MsWrdParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
     size_t numObjects = listObject.size();
     if (list.size() != numObjects) {
-      MWAW_DEBUG_MSG(("MSWParser::readObjects: unexpected number of name\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readObjects: unexpected number of name\n"));
       if (list.size() < numObjects) numObjects = list.size();
     }
     for (size_t i = 0; i < numObjects; i++)
@@ -1351,7 +1351,7 @@ bool MSWParser::readObjects()
   }
 
   for (int st = 0; st < 2; st++) {
-    std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[st];
+    std::vector<MsWrdParserInternal::Object> &listObject = m_state->m_objectList[st];
 
     for (size_t i = 0; i < listObject.size(); i++)
       readObject(listObject[i]);
@@ -1359,16 +1359,16 @@ bool MSWParser::readObjects()
   return true;
 }
 
-bool MSWParser::readObjectList(MSWEntry &entry)
+bool MsWrdParser::readObjectList(MsWrdEntry &entry)
 {
   if (entry.id() < 0 || entry.id() > 1) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectList: unexpected entry id: %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObjectList: unexpected entry id: %d\n", entry.id()));
     return false;
   }
-  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
+  std::vector<MsWrdParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
   listObject.resize(0);
   if (entry.length() < 4 || (entry.length()%18) != 4) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectList: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObjectList: the zone size seems odd\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1379,8 +1379,8 @@ bool MSWParser::readObjectList(MSWEntry &entry)
   f << "ObjectList[" << entry.id() << "]:";
   int N=int(entry.length()/18);
 
-  std::multimap<long, MSWText::PLC> &plcMap=m_textParser->getTextPLCMap();
-  MSWText::PLC plc(MSWText::PLC::Object);
+  std::multimap<long, MsWrdText::PLC> &plcMap=m_textParser->getTextPLCMap();
+  MsWrdText::PLC plc(MsWrdText::PLC::Object);
   std::vector<long> textPos; // checkme
   textPos.resize((size_t)N+1);
   f << "[";
@@ -1391,14 +1391,14 @@ bool MSWParser::readObjectList(MSWEntry &entry)
     if (i == N)
       break;
     plc.m_id = i;
-    plcMap.insert(std::multimap<long, MSWText::PLC>::value_type(tPos,plc));
+    plcMap.insert(std::multimap<long, MsWrdText::PLC>::value_type(tPos,plc));
   }
   f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   for (int i = 0; i < N; i++) {
-    MSWParserInternal::Object object;
+    MsWrdParserInternal::Object object;
     object.m_textPos = textPos[(size_t)i];
     pos = input->tell();
     f.str("");
@@ -1416,7 +1416,7 @@ bool MSWParser::readObjectList(MSWEntry &entry)
     f.str("");
     f << "ObjectList-" << i << ":" << object;
     if (!input->checkPosition(object.m_pos.begin())) {
-      MWAW_DEBUG_MSG(("MSWParser::readObjectList: pb with ptr\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readObjectList: pb with ptr\n"));
       f << "#ptr=" << std::hex << object.m_pos.begin() << std::dec << ",";
       object.m_pos.setBegin(0);
     }
@@ -1432,16 +1432,16 @@ bool MSWParser::readObjectList(MSWEntry &entry)
 
 }
 
-bool MSWParser::readObjectFlags(MSWEntry &entry)
+bool MsWrdParser::readObjectFlags(MsWrdEntry &entry)
 {
   if (entry.id() < 0 || entry.id() > 1) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected entry id: %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObjectFlags: unexpected entry id: %d\n", entry.id()));
     return false;
   }
-  std::vector<MSWParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
+  std::vector<MsWrdParserInternal::Object> &listObject = m_state->m_objectList[entry.id()];
   int numObject = (int) listObject.size();
   if (entry.length() < 4 || (entry.length()%6) != 4) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObjectFlags: the zone size seems odd\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1452,7 +1452,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
   f << "ObjectFlags[" << entry.id() << "]:";
   int N=int(entry.length()/6);
   if (N != numObject) {
-    MWAW_DEBUG_MSG(("MSWParser::readObjectFlags: unexpected number of object\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObjectFlags: unexpected number of object\n"));
   }
 
   f << "[";
@@ -1489,7 +1489,7 @@ bool MSWParser::readObjectFlags(MSWEntry &entry)
 
 }
 
-bool MSWParser::readObject(MSWParserInternal::Object &obj)
+bool MsWrdParser::readObject(MsWrdParserInternal::Object &obj)
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
@@ -1502,7 +1502,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 
   f << "Entries(ObjectData):Obj" << obj.m_id << ",";
   if (!input->checkPosition(pos+sz) || sz < 6) {
-    MWAW_DEBUG_MSG(("MSWParser::readObject: pb finding object data sz\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObject: pb finding object data sz\n"));
     f << "#";
     ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
@@ -1515,16 +1515,16 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 
   int fSz = (int) input->readULong(2);
   if (fSz < 0 || fSz+6 > sz) {
-    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the name\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObject: pb reading the name\n"));
     f << "#";
     ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
     return false;
   }
-  MSWEntry fileEntry = obj.getEntry();
+  MsWrdEntry fileEntry = obj.getEntry();
   fileEntry.setParsed(true);
   m_entryMap.insert
-  (std::multimap<std::string, MSWEntry>::value_type
+  (std::multimap<std::string, MsWrdEntry>::value_type
    (fileEntry.type(), fileEntry));
 
   long zoneEnd = pos+6+fSz;
@@ -1551,7 +1551,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   // 0 or a small size c for annotation an equivalent of file type?
   fSz = (int) input->readULong(1);
   if (pos+fSz+1 > endPos) {
-    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the second field zone\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObject: pb reading the second field zone\n"));
     f << "#fSz=" << fSz;
     ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
@@ -1578,7 +1578,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     ascii().addDelimiter(input->tell(),'|');
   }
   if (isAnnotation) {
-    MWAW_DEBUG_MSG(("MSWParser::readObject: find some annotations, not implemented\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObject: find some annotations, not implemented\n"));
   }
   pos = input->tell();
   if (pos+2>endPos) {
@@ -1602,7 +1602,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
   long dataSz = (long) input->readULong(4);
   pos = input->tell();
   if (pos+dataSz > endPos) {
-    MWAW_DEBUG_MSG(("MSWParser::readObject: pb reading the last field size zone\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readObject: pb reading the last field size zone\n"));
     f << "#fSz[last]=" << dataSz;
     ascii().addPos(beginPos);
     ascii().addNote(f.str().c_str());
@@ -1618,7 +1618,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     fSz = (int) input->readULong(1);
     bool ok=true;
     if (fSz+7 > dataSz) {
-      MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation string\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readObject: can not read the annotation string\n"));
       f << "###";
       ok = false;
     }
@@ -1639,7 +1639,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
     if (!ok) {
     }
     else if (fSz+9 > dataSz) {
-      MWAW_DEBUG_MSG(("MSWParser::readObject: can not read the annotation comment\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readObject: can not read the annotation comment\n"));
       f << "###";
     }
     else {
@@ -1666,7 +1666,7 @@ bool MSWParser::readObject(MSWParserInternal::Object &obj)
 ////////////////////////////////////////////////////////////
 // check if a zone is a picture/read a picture
 ////////////////////////////////////////////////////////////
-bool MSWParser::checkPicturePos(long pos, int type)
+bool MsWrdParser::checkPicturePos(long pos, int type)
 {
   MWAWInputStreamPtr input = getInput();
   if (pos < 0x100 || !input->checkPosition(pos))
@@ -1689,24 +1689,24 @@ bool MSWParser::checkPicturePos(long pos, int type)
     return false;
 
   static int id = 0;
-  MSWEntry entry;
+  MsWrdEntry entry;
   entry.setBegin(pos);
   entry.setEnd(endPos);
   entry.setType("Picture");
   entry.setPictType(type);
   entry.setId(id++);
   m_entryMap.insert
-  (std::multimap<std::string, MSWEntry>::value_type(entry.type(), entry));
+  (std::multimap<std::string, MsWrdEntry>::value_type(entry.type(), entry));
 
   return true;
 }
 
-bool MSWParser::readPicture(MSWEntry &entry)
+bool MsWrdParser::readPicture(MsWrdEntry &entry)
 {
   if (m_state->m_picturesMap.find(entry.begin())!=m_state->m_picturesMap.end())
     return true;
   if (entry.length() < 30 && entry.length() != 14) {
-    MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPicture: the zone seems too short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1717,12 +1717,12 @@ bool MSWParser::readPicture(MSWEntry &entry)
   f << "Entries(Picture)[" << entry.pictType() << "-" << entry.id() << "]:";
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWParser::readPicture: the zone size seems too big\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPicture: the zone size seems too big\n"));
     return false;
   }
   int N = (int) input->readULong(1);
   f << "N=" << N << ",";
-  MSWParserInternal::Picture pict;
+  MsWrdParserInternal::Picture pict;
   pict.m_flag = (int) input->readULong(1); // find 0 or 0x80
   int dim[4];
   for (int i = 0; i < 4; i++)
@@ -1733,13 +1733,13 @@ bool MSWParser::readPicture(MSWEntry &entry)
   ascii().addNote(f.str().c_str());
 
   for (int n=0; n < N; n++) {
-    MSWParserInternal::Picture::Zone zone;
+    MsWrdParserInternal::Picture::Zone zone;
     pos = input->tell();
     f.str("");
     f << "Picture-" << n << "[" << entry.pictType() << "-" << entry.id() << "]:";
     sz = (long) input->readULong(4);
     if (sz < 16 || sz+pos > entry.end()) {
-      MWAW_DEBUG_MSG(("MSWParser::readPicture: pb with the picture size\n"));
+      MWAW_DEBUG_MSG(("MsWrdParser::readPicture: pb with the picture size\n"));
       f << "#";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1780,22 +1780,22 @@ bool MSWParser::readPicture(MSWEntry &entry)
   return true;
 }
 
-void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
+void MsWrdParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("MSWParser::sendPicture: listener is not set\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::sendPicture: listener is not set\n"));
     return;
   }
   if (m_state->m_picturesMap.find(fPos)==m_state->m_picturesMap.end()) {
-    MWAW_DEBUG_MSG(("MSWParser::sendPicture: can not find picture for pos %lx\n", fPos));
+    MWAW_DEBUG_MSG(("MsWrdParser::sendPicture: can not find picture for pos %lx\n", fPos));
     return;
   }
-  MSWParserInternal::Picture const &pict= m_state->m_picturesMap.find(fPos)->second;
+  MsWrdParserInternal::Picture const &pict= m_state->m_picturesMap.find(fPos)->second;
   MWAWInputStreamPtr input = getInput();
   if (pict.m_picturesList.size()!=1 &&
       (anchor == MWAWPosition::Char || anchor == MWAWPosition::CharBaseLine)) {
-    shared_ptr<MSWParserInternal::SubDocument> subdoc
-    (new MSWParserInternal::SubDocument(*this, input, fPos, cPos));
+    shared_ptr<MsWrdParserInternal::SubDocument> subdoc
+    (new MsWrdParserInternal::SubDocument(*this, input, fPos, cPos));
     MWAWPosition pictPos(pict.m_dim.min(), pict.m_dim.size(), librevenge::RVNG_POINT);;
     pictPos.setRelativePosition(MWAWPosition::Char,
                                 MWAWPosition::XLeft, MWAWPosition::YTop);
@@ -1816,7 +1816,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
   librevenge::RVNGBinaryData data;
   Box2f naturalBox;
   for (size_t p = 0; p < pict.m_picturesList.size(); p++) {
-    MSWParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
+    MsWrdParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
     if (!zone.m_pos.valid()) continue;
     MWAWPosition pos(basicPos);
     pos.setOrigin(pos.origin()+(Vec2f)zone.m_dim.min());
@@ -1825,7 +1825,7 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
     input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)zone.m_pos.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
-      MWAW_DEBUG_MSG(("MSWParser::sendPicture: can not find the picture %d\n", int(p)));
+      MWAW_DEBUG_MSG(("MsWrdParser::sendPicture: can not find the picture %d\n", int(p)));
       continue;
     }
 
@@ -1842,10 +1842,10 @@ void MSWParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MSWParser::readPrintInfo(MSWEntry &entry)
+bool MsWrdParser::readPrintInfo(MsWrdEntry &entry)
 {
   if (entry.length() < 0x78) {
-    MWAW_DEBUG_MSG(("MSWParser::readPrintInfo: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdParser::readPrintInfo: the zone seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();

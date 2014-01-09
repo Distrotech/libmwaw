@@ -376,23 +376,23 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSW1Parser.cxx"
+				RelativePath="..\..\src\lib\MsWrd1Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWParser.cxx"
+				RelativePath="..\..\src\lib\MsWrdParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWStruct.cxx"
+				RelativePath="..\..\src\lib\MsWrdStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWText.cxx"
+				RelativePath="..\..\src\lib\MsWrdText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWTextStyles.cxx"
+				RelativePath="..\..\src\lib\MsWrdTextStyles.cxx"
 				>
 			</File>
 			<File
@@ -777,23 +777,23 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSW1Parser.hxx"
+				RelativePath="..\..\src\lib\MsWrd1Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWParser.hxx"
+				RelativePath="..\..\src\lib\MsWrdParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWStruct.hxx"
+				RelativePath="..\..\src\lib\MsWrdStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWText.hxx"
+				RelativePath="..\..\src\lib\MsWrdText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWTextStyles.hxx"
+				RelativePath="..\..\src\lib\MsWrdTextStyles.hxx"
 				>
 			</File>
 			<File

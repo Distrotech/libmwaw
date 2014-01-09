@@ -49,10 +49,10 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MSW1Parser.hxx"
+#include "MsWrd1Parser.hxx"
 
-/** Internal: the structures of a MSW1Parser */
-namespace MSW1ParserInternal
+/** Internal: the structures of a MsWrd1Parser */
+namespace MsWrd1ParserInternal
 {
 /** different types
  *
@@ -108,7 +108,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 }
 
 ////////////////////////////////////////
-//! Internal: the font of a MSW1Parser
+//! Internal: the font of a MsWrd1Parser
 struct Font {
   //! constructor
   Font(): m_font(), m_type(0), m_extras("")
@@ -132,7 +132,7 @@ std::ostream &operator<<(std::ostream &o, Font const &ft)
 }
 
 ////////////////////////////////////////
-//! Internal: the paragraph of a MSW1Parser
+//! Internal: the paragraph of a MsWrd1Parser
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph(): MWAWParagraph(), m_type(0), m_type2(0)
@@ -168,7 +168,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a MSW1Parser
+//! Internal: the state of a MsWrd1Parser
 struct State {
   //! constructor
   State() : m_eot(-1), m_numColumns(1), m_columnsSep(0), m_textZonesList(), m_mainTextZonesList(),
@@ -212,12 +212,12 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MSWParser
+//! Internal: the subdocument of a MsWrdParser
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor for footnote, header
-  SubDocument(MSW1Parser &pars, MWAWInputStreamPtr input, MWAWEntry const &position) :
+  SubDocument(MsWrd1Parser &pars, MWAWInputStreamPtr input, MWAWEntry const &position) :
     MWAWSubDocument(&pars, input, position)  {}
 
   //! destructor
@@ -253,7 +253,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   long pos = m_input->tell();
-  reinterpret_cast<MSW1Parser *>(m_parser)->sendText(m_zone);
+  reinterpret_cast<MsWrd1Parser *>(m_parser)->sendText(m_zone);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -262,22 +262,22 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSW1Parser::MSW1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MsWrd1Parser::MsWrd1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-MSW1Parser::~MSW1Parser()
+MsWrd1Parser::~MsWrd1Parser()
 {
 }
 
-void MSW1Parser::init()
+void MsWrd1Parser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MSW1ParserInternal::State);
+  m_state.reset(new MsWrd1ParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
@@ -286,7 +286,7 @@ void MSW1Parser::init()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MSW1Parser::newPage(int number)
+void MsWrd1Parser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -299,7 +299,7 @@ void MSW1Parser::newPage(int number)
   }
 }
 
-void MSW1Parser::removeLastCharIfEOL(MWAWEntry &entry)
+void MsWrd1Parser::removeLastCharIfEOL(MWAWEntry &entry)
 {
   if (!entry.valid()) return;
   MWAWInputStreamPtr input = getInput();
@@ -312,7 +312,7 @@ void MSW1Parser::removeLastCharIfEOL(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MSW1Parser::parse(librevenge::RVNGTextInterface *docInterface)
+void MsWrd1Parser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -332,7 +332,7 @@ void MSW1Parser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MSW1Parser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -343,7 +343,7 @@ void MSW1Parser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // send the main zone
 ////////////////////////////////////////////////////////////
-void MSW1Parser::sendMain()
+void MsWrd1Parser::sendMain()
 {
   for (size_t i = 0; i < m_state->m_mainTextZonesList.size(); i++) {
     int id = m_state->m_mainTextZonesList[i];
@@ -362,11 +362,11 @@ void MSW1Parser::sendMain()
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MSW1Parser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MsWrd1Parser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MSW1Parser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -390,7 +390,7 @@ void MSW1Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
       if (!entry.valid()) break;
       MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
       header.m_subDocument.reset
-      (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
+      (new MsWrd1ParserInternal::SubDocument(*this, getInput(), entry));
       ps.setHeaderFooter(header);
       int j = i+1;
       while (j < numHeaders && m_state->m_headersId[size_t(j)]==id) {
@@ -410,7 +410,7 @@ void MSW1Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
       if (!entry.valid()) break;
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
       footer.m_subDocument.reset
-      (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
+      (new MsWrd1ParserInternal::SubDocument(*this, getInput(), entry));
       ps.setHeaderFooter(footer);
       int j = i+1;
       while (j < numFooters && m_state->m_footersId[size_t(j)]==id) {
@@ -438,7 +438,7 @@ void MSW1Parser::createDocument(librevenge::RVNGTextInterface *documentInterface
 ////////////////////////////////////////////////////////////
 
 // create the different zones
-bool MSW1Parser::createZones()
+bool MsWrd1Parser::createZones()
 {
   libmwaw::DebugStream f;
   if (m_state->m_eot < 0x80) return false;
@@ -456,7 +456,7 @@ bool MSW1Parser::createZones()
     if (!input->checkPosition(m_state->m_fileZonesLimit[z+1]*0x80)) {
       f.str("");
       f << "Entries(Zone" << z << "):###";
-      MWAW_DEBUG_MSG(("MSW1Parser::createZones: zone %d is too long\n",z));
+      MWAW_DEBUG_MSG(("MsWrd1Parser::createZones: zone %d is too long\n",z));
       ascii().addPos(m_state->m_fileZonesLimit[z]*0x80);
       ascii().addNote(f.str().c_str());
       break;
@@ -498,7 +498,7 @@ bool MSW1Parser::createZones()
 }
 
 // try to read retrieve the header/footer zones ...
-bool MSW1Parser::prepareTextZones()
+bool MsWrd1Parser::prepareTextZones()
 {
   m_state->m_numPages = 1;
   m_state->m_textZonesList.resize(0);
@@ -512,13 +512,13 @@ bool MSW1Parser::prepareTextZones()
       endMain = pos;
   }
   if (endMain < 0x80) {
-    MWAW_DEBUG_MSG(("MSW1Parser::sendText: oops problem computing the limit of the main section"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::sendText: oops problem computing the limit of the main section"));
     m_state->m_textZonesList.push_back(Vec2l(0x80, m_state->m_eot));
     m_state->m_mainTextZonesList.push_back(0);
     return false;
   }
 
-  std::multimap<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
+  std::multimap<long,MsWrd1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
   long pos = 0x80, prevMainPos=pos;
   int actPage = 1;
   int actType = 0;
@@ -532,8 +532,8 @@ bool MSW1Parser::prepareTextZones()
     }
     else {
       pos = plcIt->first;
-      MSW1ParserInternal::PLC const &plc = plcIt++->second;
-      if (plc.m_type==MSW1ParserInternal::PAGE && pos!=0x80) {
+      MsWrd1ParserInternal::PLC const &plc = plcIt++->second;
+      if (plc.m_type==MsWrd1ParserInternal::PAGE && pos!=0x80) {
         if (actPage> int(m_state->m_headersId.size())) {
           m_state->m_headersId.resize(size_t(actPage),-1);
           m_state->m_headersId[size_t(actPage)-1] = headerId[(actPage%2)];
@@ -544,7 +544,7 @@ bool MSW1Parser::prepareTextZones()
         }
         actPage++;
       }
-      if (plc.m_type!=MSW1ParserInternal::RULER) continue;
+      if (plc.m_type!=MsWrd1ParserInternal::RULER) continue;
       if (plc.m_id >= 0 && plc.m_id < int(m_state->m_paragraphsList.size()))
         newType = (m_state->m_paragraphsList[size_t(plc.m_id)].m_type2>>4);
       if (newType == actType)
@@ -600,15 +600,15 @@ bool MSW1Parser::prepareTextZones()
 ////////////////////////////////////////////////////////////
 
 // read the character property
-bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
+bool MsWrd1Parser::readFont(long fPos, MsWrd1ParserInternal::Font &font)
 {
-  font = MSW1ParserInternal::Font();
+  font = MsWrd1ParserInternal::Font();
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input = getInput();
   input->seek(fPos, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readLong(1);
   if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readFont: the zone size seems bad\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readFont: the zone size seems bad\n"));
     return false;
   }
   font.m_type = (int) input->readULong(1);
@@ -664,15 +664,15 @@ bool MSW1Parser::readFont(long fPos, MSW1ParserInternal::Font &font)
 }
 
 /* read the paragraph property */
-bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
+bool MsWrd1Parser::readParagraph(long fPos, MsWrd1ParserInternal::Paragraph &para)
 {
-  para = MSW1ParserInternal::Paragraph();
+  para = MsWrd1ParserInternal::Paragraph();
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input = getInput();
   input->seek(fPos, librevenge::RVNG_SEEK_SET);
   int sz = (int) input->readLong(1);
   if (sz < 1 || sz > 0x7f || !input->checkPosition(fPos+1+sz)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readParagraph: the zone size seems bad\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readParagraph: the zone size seems bad\n"));
     return false;
   }
   para.m_type = (int) input->readULong(1);
@@ -795,11 +795,11 @@ bool MSW1Parser::readParagraph(long fPos, MSW1ParserInternal::Paragraph &para)
 }
 
 /* read the page break separation */
-bool MSW1Parser::readPageBreak(Vec2i limits)
+bool MsWrd1Parser::readPageBreak(Vec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readPageBreak: the zone is not well defined\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readPageBreak: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -809,7 +809,7 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
   if (N==0 || 4+6*N > (limits[1]-limits[0])*0x80) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readPageBreak: the number of element seems odds\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readPageBreak: the number of element seems odds\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -817,7 +817,7 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
   }
   long val = (int) input->readULong(2); // 1|a
   f << "unkn=" << val << ",";
-  MSW1ParserInternal::PLC plc(MSW1ParserInternal::PAGE);
+  MsWrd1ParserInternal::PLC plc(MsWrd1ParserInternal::PAGE);
   for (int i = 0; i < N; i++) {
     int pg = (int) input->readULong(2);
     long textPos = long(input->readULong(4))+0x80;
@@ -826,7 +826,7 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
     if (textPos < m_state->m_eot) {
       plc.m_id = pg;
       m_state->m_plcMap.insert
-      (std::multimap<long,MSW1ParserInternal::PLC>::value_type(textPos, plc));
+      (std::multimap<long,MsWrd1ParserInternal::PLC>::value_type(textPos, plc));
     }
     else if (i != N-1)
       f << "###";
@@ -840,17 +840,17 @@ bool MSW1Parser::readPageBreak(Vec2i limits)
 }
 
 /* read the footnote zone */
-bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
+bool MsWrd1Parser::readFootnoteCorrespondance(Vec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readFootnoteCorrespondance: the zone is not well defined\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readFootnoteCorrespondance: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
 
   long textEnd = m_state->m_eot;
-  MSW1ParserInternal::PLC plc(MSW1ParserInternal::FOOTNOTE);
+  MsWrd1ParserInternal::PLC plc(MsWrd1ParserInternal::FOOTNOTE);
   long pos = limits[0]*0x80;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   f << "Entries(Footnote):";
@@ -859,7 +859,7 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
   f << "N=" << N << ",";
   if (N!=N1) f << "N1=" << N1 << ",";
   if (N!=N1 || N==0 || 4+8*N > (limits[1]-limits[0])*0x80) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readFootnoteCorrespondance: the number of element seems odds\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readFootnoteCorrespondance: the number of element seems odds\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -879,9 +879,9 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
     plc.m_id = int(footnoteMap.size());
     footnoteMap[notePos]=plc.m_id;
     m_state->m_plcMap.insert
-    (std::multimap<long,MSW1ParserInternal::PLC>::value_type(textPos, plc));
+    (std::multimap<long,MsWrd1ParserInternal::PLC>::value_type(textPos, plc));
     m_state->m_plcMap.insert
-    (std::multimap<long,MSW1ParserInternal::PLC>::value_type(notePos, plc));
+    (std::multimap<long,MsWrd1ParserInternal::PLC>::value_type(notePos, plc));
   }
   m_state->m_footnotesList.resize(footnoteMap.size(),0);
   std::map<long, int>::iterator fIt=footnoteMap.begin();
@@ -902,16 +902,16 @@ bool MSW1Parser::readFootnoteCorrespondance(Vec2i limits)
 }
 
 /* read the zone4: a list of main zone ( headers, footers ) ? */
-bool MSW1Parser::readZones(Vec2i limits)
+bool MsWrd1Parser::readZones(Vec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readZones: the zone is not well defined\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readZones: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f;
 
-  MSW1ParserInternal::PLC plc(MSW1ParserInternal::ZONE);
+  MsWrd1ParserInternal::PLC plc(MsWrd1ParserInternal::ZONE);
   long pos = limits[0]*0x80;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   f << "Entries(Zones):";
@@ -920,7 +920,7 @@ bool MSW1Parser::readZones(Vec2i limits)
   f << "N=" << N << ",";
   if (N!=N1) f << "N1=" << N1 << ",";
   if (N!=N1 || N==0 || 4+10*N > (limits[1]-limits[0])*0x80) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readZones: the number of element seems odds\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readZones: the number of element seems odds\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -935,7 +935,7 @@ bool MSW1Parser::readZones(Vec2i limits)
     if (textPos < m_state->m_eot) {
       plc.m_id = i;
       m_state->m_plcMap.insert
-      (std::multimap<long,MSW1ParserInternal::PLC>::value_type(textPos, plc));
+      (std::multimap<long,MsWrd1ParserInternal::PLC>::value_type(textPos, plc));
     }
     else if (textPos != m_state->m_eot && i != N-1)
       f << "###";
@@ -949,11 +949,11 @@ bool MSW1Parser::readZones(Vec2i limits)
 }
 
 /* read the document information */
-bool MSW1Parser::readDocInfo(Vec2i limits)
+bool MsWrd1Parser::readDocInfo(Vec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] != limits[0]+1 || !input->checkPosition(limits[1]*0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readDocInfo: the zone is not well defined\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readDocInfo: the zone is not well defined\n"));
     return false;
   }
 
@@ -1077,7 +1077,7 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
     m_state->m_columnsSep = colSep;
   }
   else {
-    MWAW_DEBUG_MSG(("MSW1Parser::readDocInfo: some dimension do not look good\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readDocInfo: some dimension do not look good\n"));
   }
   ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
@@ -1088,18 +1088,18 @@ bool MSW1Parser::readDocInfo(Vec2i limits)
 }
 
 // read a plc zone (char or paragraph properties )
-bool MSW1Parser::readPLC(Vec2i limits, int wh)
+bool MsWrd1Parser::readPLC(Vec2i limits, int wh)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::readPLC: the zone is not well defined\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::readPLC: the zone is not well defined\n"));
     return false;
   }
   libmwaw::DebugStream f, f2;
 
   std::map<long, int> posIdMap;
-  MSW1ParserInternal::PLC plc(wh==0 ? MSW1ParserInternal::FONT :
-                              MSW1ParserInternal::RULER);
+  MsWrd1ParserInternal::PLC plc(wh==0 ? MsWrd1ParserInternal::FONT :
+                                MsWrd1ParserInternal::RULER);
   char const *what = wh==0 ? "Char" : "Para";
 
   for (int z = limits[0], n=0; z < limits[1]; z++, n++) {
@@ -1111,7 +1111,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
     f << "N=" << N << ",";
     if (4+N*6 > 0x7f) {
       f << "###";
-      MWAW_DEBUG_MSG(("MSW1Parser::readPLC: the number of element seems to big\n"));
+      MWAW_DEBUG_MSG(("MsWrd1Parser::readPLC: the number of element seems to big\n"));
       ascii().addDelimiter(input->tell(),'|');
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1139,7 +1139,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
           f2.str("");
           f2 << what << "-";
           if (wh == 0) {
-            MSW1ParserInternal::Font font;
+            MsWrd1ParserInternal::Font font;
             if (readFont(dataPos, font)) {
               plc.m_id=int(m_state->m_fontsList.size());
               m_state->m_fontsList.push_back(font);
@@ -1156,7 +1156,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
             ascii().addNote(f2.str().c_str());
           }
           else {
-            MSW1ParserInternal::Paragraph para;
+            MsWrd1ParserInternal::Paragraph para;
             if (readParagraph(dataPos, para)) {
               plc.m_id=int(m_state->m_paragraphsList.size());
               m_state->m_paragraphsList.push_back(para);
@@ -1176,7 +1176,7 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
         input->seek(actPos, librevenge::RVNG_SEEK_SET);
       }
       m_state->m_plcMap.insert
-      (std::multimap<long,MSW1ParserInternal::PLC>::value_type(fPos, plc));
+      (std::multimap<long,MsWrd1ParserInternal::PLC>::value_type(fPos, plc));
       fPos = newPos;
       f << ":" << plc << ",";
     }
@@ -1191,11 +1191,11 @@ bool MSW1Parser::readPLC(Vec2i limits, int wh)
 ////////////////////////////////////////////////////////////
 // try to read a text entry
 ////////////////////////////////////////////////////////////
-bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
+bool MsWrd1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 {
   if (!textEntry.valid()) return false;
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("MSW1Parser::sendText: can not find a listener!"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::sendText: can not find a listener!"));
     return true;
   }
   if (isMain) {
@@ -1213,20 +1213,20 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
   libmwaw::DebugStream f;
   f << "TextContent:";
   int actFId=-1, actRId = -1, actPage=0;
-  std::multimap<long,MSW1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
+  std::multimap<long,MsWrd1ParserInternal::PLC>::iterator plcIt = m_state->m_plcMap.begin();
   while (plcIt != m_state->m_plcMap.end() && plcIt->first < pos) {
-    MSW1ParserInternal::PLC const &plc = plcIt++->second;
-    if (plc.m_type == MSW1ParserInternal::FONT)
+    MsWrd1ParserInternal::PLC const &plc = plcIt++->second;
+    if (plc.m_type == MsWrd1ParserInternal::FONT)
       actFId = plc.m_id;
-    else if (plc.m_type == MSW1ParserInternal::RULER)
+    else if (plc.m_type == MsWrd1ParserInternal::RULER)
       actRId = plc.m_id;
-    else if (plc.m_type == MSW1ParserInternal::PAGE)
+    else if (plc.m_type == MsWrd1ParserInternal::PAGE)
       actPage++;
   }
   // new page can be in header, ..., so sometimes we must force a new page...
   if (isMain && actPage > m_state->m_actPage)
     newPage(actPage);
-  MSW1ParserInternal::Font actFont, defFont;
+  MsWrd1ParserInternal::Font actFont, defFont;
   defFont.m_font = MWAWFont(3,12);
   if (actFId>=0 && actFId < int(m_state->m_fontsList.size()))
     actFont = m_state->m_fontsList[size_t(actFId)];
@@ -1246,9 +1246,9 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         firstPlc = false;
       }
 
-      MSW1ParserInternal::PLC const &plc = plcIt++->second;
+      MsWrd1ParserInternal::PLC const &plc = plcIt++->second;
       switch (plc.m_type) {
-      case MSW1ParserInternal::FONT:
+      case MsWrd1ParserInternal::FONT:
         if (plc.m_id >= 0 && plc.m_id < int(m_state->m_fontsList.size()))
           getTextListener()->setFont(m_state->m_fontsList[size_t(plc.m_id)].m_font);
         else
@@ -1256,17 +1256,17 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         actFont.m_font = getTextListener()->getFont();
         fontNotSent = false;
         break;
-      case MSW1ParserInternal::RULER:
+      case MsWrd1ParserInternal::RULER:
         actRId = plc.m_id;
         rulerNotSent = true;
         break;
-      case MSW1ParserInternal::PAGE:
+      case MsWrd1ParserInternal::PAGE:
         if (isMain) newPage(++actPage);
         break;
-      case MSW1ParserInternal::FOOTNOTE: {
+      case MsWrd1ParserInternal::FOOTNOTE: {
         if (!isMain) break;
         if (plc.m_id < 0 || plc.m_id >= int(m_state->m_footnotesList.size())) {
-          MWAW_DEBUG_MSG(("MSW1Parser::sendText: oops, can not find a footnote!\n"));
+          MWAW_DEBUG_MSG(("MsWrd1Parser::sendText: oops, can not find a footnote!\n"));
           break;
         }
         MWAWEntry entry;
@@ -1274,12 +1274,12 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
         entry.setEnd(m_state->m_footnotesList[size_t(plc.m_id)][1]);
         removeLastCharIfEOL(entry);
         shared_ptr<MWAWSubDocument> subdoc
-        (new MSW1ParserInternal::SubDocument(*this, getInput(), entry));
+        (new MsWrd1ParserInternal::SubDocument(*this, getInput(), entry));
         getTextListener()->insertNote(MWAWNote(m_state->m_endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
         break;
       }
-      case MSW1ParserInternal::ZONE:
-      case MSW1ParserInternal::UNKNOWN:
+      case MsWrd1ParserInternal::ZONE:
+      case MsWrd1ParserInternal::UNKNOWN:
       default:
         break;
       }
@@ -1289,7 +1289,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
       if (actRId >= 0 && actRId < int(m_state->m_paragraphsList.size()))
         setProperty(m_state->m_paragraphsList[size_t(actRId)]);
       else
-        setProperty(MSW1ParserInternal::Paragraph());
+        setProperty(MsWrd1ParserInternal::Paragraph());
       rulerNotSent = false;
     }
     if (fontNotSent) getTextListener()->setFont(actFont.m_font);
@@ -1319,7 +1319,7 @@ bool MSW1Parser::sendText(MWAWEntry const &textEntry, bool isMain)
 }
 
 // send the ruler properties
-void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)
+void MsWrd1Parser::setProperty(MsWrd1ParserInternal::Paragraph const &para)
 {
   if (!getTextListener()) return;
   getTextListener()->setParagraph(para);
@@ -1330,16 +1330,16 @@ void MSW1Parser::setProperty(MSW1ParserInternal::Paragraph const &para)
 ////////////////////////////////////////////////////////////
 
 // read the header
-bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
+bool MsWrd1Parser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MSW1ParserInternal::State();
+  *m_state = MsWrd1ParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
     return false;
 
   libmwaw::DebugStream f;
   if (!input->checkPosition(0x80)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::checkHeader: file is too short\n"));
     return false;
   }
   long pos = 0;
@@ -1374,7 +1374,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
   m_state->m_eot = (long) input->readULong(4);
   f << "text=" << std::hex << 0x80 << "<->" << m_state->m_eot << ",";
   if (0x80 > m_state->m_eot || !input->checkPosition(m_state->m_eot)) {
-    MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: problem with text position must stop\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::checkHeader: problem with text position must stop\n"));
     return false;
   }
 
@@ -1391,7 +1391,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
         << m_state->m_fileZonesLimit[i+1]*0x80 << ",";
       continue;
     }
-    MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: problem reading the zones positions\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::checkHeader: problem reading the zones positions\n"));
     if (strict) return false;
     f << "###" << m_state->m_fileZonesLimit[i+1]*0x80 << ",";
     m_state->m_fileZonesLimit[i+1] = m_state->m_fileZonesLimit[i];
@@ -1413,7 +1413,7 @@ bool MSW1Parser::checkHeader(MWAWHeader *header, bool strict)
   for (int i = 0; i < 2; i++)
     textSize[i] = input->readLong(4);
   if (textSize[0] != textSize[1] || 0x80+textSize[0] != m_state->m_eot) {
-    MWAW_DEBUG_MSG(("MSW1Parser::checkHeader: problem with text position length\n"));
+    MWAW_DEBUG_MSG(("MsWrd1Parser::checkHeader: problem with text position length\n"));
     if (strict) return false;
     f << "##textSize=" << std::hex << textSize[0] << ":" << textSize[1] << std::dec << ",";
     if (textSize[1] > textSize[0]) textSize[0] = textSize[1];

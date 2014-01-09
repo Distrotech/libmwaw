@@ -35,8 +35,8 @@
  * Parser to Microsoft Word text document
  *
  */
-#ifndef MSW_MWAW_TEXT
-#  define MSW_MWAW_TEXT
+#ifndef MS_WRD_MWAW_TEXT
+#  define MS_WRD_MWAW_TEXT
 
 #include <map>
 #include <string>
@@ -48,23 +48,23 @@
 
 #include "MWAWDebug.hxx"
 
-#include "MSWTextStyles.hxx"
+#include "MsWrdTextStyles.hxx"
 
-namespace MSWTextInternal
+namespace MsWrdTextInternal
 {
 struct State;
 struct Table;
 }
 
-struct MSWEntry;
-class MSWParser;
-class MSWTextStyles;
+struct MsWrdEntry;
+class MsWrdParser;
+class MsWrdTextStyles;
 
 /** \brief the main class to read the text part of Microsoft Word file */
-class MSWText
+class MsWrdText
 {
-  friend class MSWParser;
-  friend class MSWTextStyles;
+  friend class MsWrdParser;
+  friend class MsWrdTextStyles;
 public:
   //! Internal: the plc
   struct PLC {
@@ -94,9 +94,9 @@ public:
   };
 public:
   //! constructor
-  MSWText(MSWParser &parser);
+  MsWrdText(MsWrdParser &parser);
   //! destructor
-  virtual ~MSWText();
+  virtual ~MsWrdText();
 
   /** returns the file version */
   int version() const;
@@ -130,46 +130,46 @@ protected:
   bool createZones(long bot);
 
   //! read the text structure(some paragraph style+some text position?)
-  bool readTextStruct(MSWEntry &entry);
+  bool readTextStruct(MsWrdEntry &entry);
 
   //! read the page limit ?
-  bool readPageBreak(MSWEntry &entry);
+  bool readPageBreak(MsWrdEntry &entry);
 
   //! read the paragraph height info
-  bool readParagraphInfo(MSWEntry entry);
+  bool readParagraphInfo(MsWrdEntry entry);
 
   //! read the field data
-  bool readFields(MSWEntry &entry, std::vector<long> const &fieldPos);
+  bool readFields(MsWrdEntry &entry, std::vector<long> const &fieldPos);
 
   //! send a field note to a listener
   bool sendFieldComment(int id);
 
   //! read the footnote pos in text + val
-  bool readFootnotesPos(MSWEntry &entry, std::vector<long> const &noteDef);
+  bool readFootnotesPos(MsWrdEntry &entry, std::vector<long> const &noteDef);
 
   //! read the footnote data
-  bool readFootnotesData(MSWEntry &entry);
+  bool readFootnotesData(MsWrdEntry &entry);
 
   //! send a note to a listener
   bool sendFootnote(int id);
 
   //! read the font names
-  bool readFontNames(MSWEntry &entry);
+  bool readFontNames(MsWrdEntry &entry);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
   //! try to send a table.
-  bool sendTable(MSWTextInternal::Table const &table);
+  bool sendTable(MsWrdTextInternal::Table const &table);
 
-  // interface with MSWTextStyles
+  // interface with MsWrdTextStyles
 
   //! returns the main text length
   long getMainTextLength() const;
   //! returns the text correspondance zone ( textpos, plc )
-  std::multimap<long, MSWText::PLC> &getTextPLCMap();
+  std::multimap<long, MsWrdText::PLC> &getTextPLCMap();
   //! returns the file correspondance zone ( filepos, plc )
-  std::multimap<long, MSWText::PLC> &getFilePLCMap();
+  std::multimap<long, MsWrdText::PLC> &getFilePLCMap();
 
   //
   // low level
@@ -193,11 +193,11 @@ protected:
   bool updateTableBeginnningAt(long cPos, long &nextCPos);
 
   //! read a zone which consists in a list of int
-  bool readLongZone(MSWEntry &entry, int sz, std::vector<long> &list);
+  bool readLongZone(MsWrdEntry &entry, int sz, std::vector<long> &list);
 
 private:
-  MSWText(MSWText const &orig);
-  MSWText &operator=(MSWText const &orig);
+  MsWrdText(MsWrdText const &orig);
+  MsWrdText &operator=(MsWrdText const &orig);
 
 protected:
   //
@@ -207,13 +207,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MSWTextInternal::State> m_state;
+  shared_ptr<MsWrdTextInternal::State> m_state;
 
   //! the style manager
-  shared_ptr<MSWTextStyles> m_stylesManager;
+  shared_ptr<MsWrdTextStyles> m_stylesManager;
 
   //! the main parser;
-  MSWParser *m_mainParser;
+  MsWrdParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

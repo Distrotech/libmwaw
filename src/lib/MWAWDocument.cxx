@@ -63,8 +63,8 @@
 #include "MoreParser.hxx"
 #include "MsWks3Parser.hxx"
 #include "MsWks4Parser.hxx"
-#include "MSW1Parser.hxx"
-#include "MSWParser.hxx"
+#include "MsWrd1Parser.hxx"
+#include "MsWrdParser.hxx"
 #include "NSParser.hxx"
 #include "TeachTxtParser.hxx"
 #include "WNParser.hxx"
@@ -442,9 +442,9 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
       if (header->getMajorVersion()==1)
-        parser.reset(new MSW1Parser(input, rsrcParser, header));
+        parser.reset(new MsWrd1Parser(input, rsrcParser, header));
       else
-        parser.reset(new MSWParser(input, rsrcParser, header));
+        parser.reset(new MsWrdParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getMajorVersion() < 100)

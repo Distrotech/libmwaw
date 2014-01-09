@@ -35,17 +35,17 @@
 #include "MWAWTextListener.hxx"
 #include "MWAWSection.hxx"
 
-#include "MSWParser.hxx"
-#include "MSWStruct.hxx"
-#include "MSWText.hxx"
+#include "MsWrdParser.hxx"
+#include "MsWrdStruct.hxx"
+#include "MsWrdText.hxx"
 
-#include "MSWTextStyles.hxx"
+#include "MsWrdTextStyles.hxx"
 
-/** Internal: the structures of a MSWTextStyles */
-namespace MSWTextStylesInternal
+/** Internal: the structures of a MsWrdTextStyles */
+namespace MsWrdTextStylesInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a MSWTextStylesInternal
+//! Internal: the state of a MsWrdTextStylesInternal
 struct State {
   //! constructor
   State() : m_version(-1), m_defaultFont(2,12),
@@ -64,45 +64,45 @@ struct State {
   std::map<int,int> m_nextStyleMap;
 
   //! the list of fonts
-  std::vector<MSWStruct::Font> m_fontList;
+  std::vector<MsWrdStruct::Font> m_fontList;
 
   //! the list of paragraph
-  std::vector<MSWStruct::Paragraph> m_paragraphList;
+  std::vector<MsWrdStruct::Paragraph> m_paragraphList;
 
   //! the list of section
-  std::vector<MSWStruct::Section> m_sectionList;
+  std::vector<MsWrdStruct::Section> m_sectionList;
 
   //! the list of paragraph in textstruct
-  std::vector<MSWStruct::Paragraph> m_textstructParagraphList;
+  std::vector<MsWrdStruct::Paragraph> m_textstructParagraphList;
 
   //! the list of fonts in style
-  std::map<int, MSWStruct::Font> m_styleFontMap;
+  std::map<int, MsWrdStruct::Font> m_styleFontMap;
 
   //! the list of paragraph in style
-  std::map<int, MSWStruct::Paragraph> m_styleParagraphMap;
+  std::map<int, MsWrdStruct::Paragraph> m_styleParagraphMap;
 };
 }
 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MSWTextStyles::MSWTextStyles(MSWText &textParser) :
-  m_parserState(textParser.getParserState()), m_state(new MSWTextStylesInternal::State),
+MsWrdTextStyles::MsWrdTextStyles(MsWrdText &textParser) :
+  m_parserState(textParser.getParserState()), m_state(new MsWrdTextStylesInternal::State),
   m_mainParser(textParser.m_mainParser), m_textParser(&textParser)
 {
 }
 
-MSWTextStyles::~MSWTextStyles()
+MsWrdTextStyles::~MsWrdTextStyles()
 { }
 
-int MSWTextStyles::version() const
+int MsWrdTextStyles::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-MWAWFont const &MSWTextStyles::getDefaultFont() const
+MWAWFont const &MsWrdTextStyles::getDefaultFont() const
 {
   return m_state->m_defaultFont;
 }
@@ -110,7 +110,7 @@ MWAWFont const &MSWTextStyles::getDefaultFont() const
 ////////////////////////////////////////////////////////////
 // try to read a font
 ////////////////////////////////////////////////////////////
-bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type)
+bool MsWrdTextStyles::readFont(MsWrdStruct::Font &font, MsWrdTextStyles::ZoneType type)
 {
   bool mainZone = type==TextZone;
   libmwaw::DebugStream f;
@@ -293,9 +293,9 @@ bool MSWTextStyles::readFont(MSWStruct::Font &font, MSWTextStyles::ZoneType type
   return true;
 }
 
-bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
+bool MsWrdTextStyles::getFont(ZoneType type, int id, MsWrdStruct::Font &font)
 {
-  MSWStruct::Font *fFont = 0;
+  MsWrdStruct::Font *fFont = 0;
   switch (type) {
   case TextZone:
     if (id < 0 || id >= int(m_state->m_fontList.size()))
@@ -310,11 +310,11 @@ bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
   case TextStructZone:
   case InParagraphDefinition:
   default:
-    MWAW_DEBUG_MSG(("MSWTextStyles::getFont: do not know how to send this type of font\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::getFont: do not know how to send this type of font\n"));
     return false;
   }
   if (!fFont) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::getFont: can not find font with %d[type=%d]\n", id, int(type)));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::getFont: can not find font with %d[type=%d]\n", id, int(type)));
     return false;
   }
   int fId = font.m_font->id();
@@ -327,10 +327,10 @@ bool MSWTextStyles::getFont(ZoneType type, int id, MSWStruct::Font &font)
   return true;
 }
 
-void MSWTextStyles::setProperty(MSWStruct::Font const &font)
+void MsWrdTextStyles::setProperty(MsWrdStruct::Font const &font)
 {
   if (!m_parserState->m_textListener) return;
-  MSWStruct::Font tmp = font;
+  MsWrdStruct::Font tmp = font;
   if (tmp.m_font->id() < 0) tmp.m_font->setId(m_state->m_defaultFont.id());
   if (tmp.m_font->size() <= 0) tmp.m_font->setSize(m_state->m_defaultFont.size());
   tmp.updateFontToFinalState();
@@ -340,7 +340,7 @@ void MSWTextStyles::setProperty(MSWStruct::Font const &font)
 ////////////////////////////////////////////////////////////
 // read/send the paragraph zone
 ////////////////////////////////////////////////////////////
-bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &para)
+bool MsWrdTextStyles::getParagraph(ZoneType type, int id, MsWrdStruct::Paragraph &para)
 {
   switch (type) {
   case TextZone:
@@ -360,21 +360,21 @@ bool MSWTextStyles::getParagraph(ZoneType type, int id, MSWStruct::Paragraph &pa
     return true;
   case InParagraphDefinition:
   default:
-    MWAW_DEBUG_MSG(("MSWTextStyles::getParagraph: do not know how to send this type of font\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::getParagraph: do not know how to send this type of font\n"));
     return false;
   }
 
-  MWAW_DEBUG_MSG(("MSWTextStyles::getParagraph: can not find paragraph with %d[type=%d]\n", id, int(type)));
+  MWAW_DEBUG_MSG(("MsWrdTextStyles::getParagraph: can not find paragraph with %d[type=%d]\n", id, int(type)));
   return false;
 }
 
-void MSWTextStyles::sendDefaultParagraph()
+void MsWrdTextStyles::sendDefaultParagraph()
 {
   if (!m_parserState->m_textListener) return;
-  m_parserState->m_textListener->setParagraph(MSWStruct::Paragraph(version()));
+  m_parserState->m_textListener->setParagraph(MsWrdStruct::Paragraph(version()));
 }
 
-bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
+bool MsWrdTextStyles::readParagraph(MsWrdStruct::Paragraph &para, int dataSz)
 {
   int sz;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -536,7 +536,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
           << para.m_font->m_font->getDebugString(m_parserState->m_fontConverter)
           << "," << *para.m_font << "],";
       done = true;
-      para.m_font = MSWStruct::Font();
+      para.m_font = MsWrdStruct::Font();
       if (!readFont(*para.m_font, InParagraphDefinition) || long(input->tell()) > endPos) {
         done = false;
         f << "#";
@@ -571,7 +571,7 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
   if (long(input->tell()) != endPos) {
     static bool first = true;
     if (first) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readParagraph: can not read end of paragraph\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readParagraph: can not read end of paragraph\n"));
       first = false;
     }
     ascFile.addDelimiter(input->tell(),'|');
@@ -586,10 +586,10 @@ bool MSWTextStyles::readParagraph(MSWStruct::Paragraph &para, int dataSz)
 ////////////////////////////////////////////////////////////
 // read the char/parag plc
 ////////////////////////////////////////////////////////////
-bool MSWTextStyles::readPLCList(MSWEntry &entry)
+bool MsWrdTextStyles::readPLCList(MsWrdEntry &entry)
 {
   if (entry.length() < 10 || (entry.length()%6) != 4) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readPLCList: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLCList: the zone size seems odd\n"));
     return false;
   }
   long pos = entry.begin();
@@ -611,14 +611,14 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
     f << std::hex << "[filePos?=" << textPos[(size_t)i] << ",dPos=" << defPos << std::dec << ",";
     f << "],";
 
-    MSWEntry plc;
+    MsWrdEntry plc;
     plc.setType(entry.id() ? "ParagPLC" : "CharPLC");
     plc.setId(i);
     plc.setBegin(defPos*expectedSize);
     plc.setLength(expectedSize);
     if (!input->checkPosition(plc.end())) {
       f << "#PLC,";
-      MWAW_DEBUG_MSG(("MSWTextStyles::readPLCList: plc def is outside the file\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLCList: plc def is outside the file\n"));
     }
     else {
       long actPos = input->tell();
@@ -637,20 +637,20 @@ bool MSWTextStyles::readPLCList(MSWEntry &entry)
   return true;
 }
 
-bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
+bool MsWrdTextStyles::readPLC(MsWrdEntry &entry, int type, Vec2<long> const &fLimit)
 {
   int const vers = version();
   int const expectedSize = (vers <= 3) ? 0x80 : 0x200;
   int const posFactor = (vers <= 3) ? 1 : 2;
   if (entry.length() != expectedSize) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLC: the zone size seems odd\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.end()-1, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readULong(1);
   if (5*(N+1) > entry.length()) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: the number of plc seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLC: the number of plc seems odd\n"));
     return false;
   }
 
@@ -666,7 +666,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
   for (int i = 0; i <= N; i++)
     filePos[(size_t)i] = (long) input->readULong(4);
   if (filePos[0] != fLimit[0]) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: bad first limit\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLC: bad first limit\n"));
     return false;
   }
   std::map<int, int> mapPosId;
@@ -674,8 +674,8 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
   decal.resize((size_t)N);
   size_t numData = type == 0 ? m_state->m_fontList.size() :
                    m_state->m_paragraphList.size();
-  MSWText::PLC::Type plcType = type == 0 ? MSWText::PLC::Font : MSWText::PLC::Paragraph;
-  std::multimap<long, MSWText::PLC> &plcMap = m_textParser->getFilePLCMap();
+  MsWrdText::PLC::Type plcType = type == 0 ? MsWrdText::PLC::Font : MsWrdText::PLC::Paragraph;
+  std::multimap<long, MsWrdText::PLC> &plcMap = m_textParser->getFilePLCMap();
 
   for (size_t i = 0; i < size_t(N); i++) {
     decal[i] = (int) input->readULong(1);
@@ -695,9 +695,9 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
         if (type == 0) {
           input->seek(dataPos, librevenge::RVNG_SEEK_SET);
           f2 << "F" << id << ":";
-          MSWStruct::Font font;
+          MsWrdStruct::Font font;
           if (!readFont(font, TextZone)) {
-            font = MSWStruct::Font();
+            font = MsWrdStruct::Font();
             f2 << "#";
           }
           else
@@ -705,7 +705,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           m_state->m_fontList.push_back(font);
         }
         else {
-          MSWStruct::Paragraph para(vers);
+          MsWrdStruct::Paragraph para(vers);
           f2 << "P" << id << ":";
 
           input->seek(dataPos, librevenge::RVNG_SEEK_SET);
@@ -718,13 +718,13 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
           else
             endPos = dataPos+2*sz+1;
           if (sz < 4 || endPos > entry.end()) {
-            MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not read plcSz\n"));
+            MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLC: can not read plcSz\n"));
             f2 << "#";
           }
           else {
             int stId = (int) input->readLong(1);
             if (m_state->m_styleParagraphMap.find(stId)==m_state->m_styleParagraphMap.end()) {
-              MWAW_DEBUG_MSG(("MSWTextStyles::readPLC: can not find parent paragraph\n"));
+              MWAW_DEBUG_MSG(("MsWrdTextStyles::readPLC: can not find parent paragraph\n"));
               f2 << "#";
             }
             else
@@ -750,7 +750,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 #endif
               }
               else {
-                para = MSWStruct::Paragraph(vers);
+                para = MsWrdStruct::Paragraph(vers);
                 f2 << "#";
               }
             }
@@ -763,8 +763,8 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
       }
     }
     f << std::hex << filePos[i] << std::dec;
-    MSWText::PLC plc(plcType, id);
-    plcMap.insert(std::multimap<long,MSWText::PLC>::value_type
+    MsWrdText::PLC plc(plcType, id);
+    plcMap.insert(std::multimap<long,MsWrdText::PLC>::value_type
                   (filePos[type == 0 ? i : i+1], plc));
     if (id >= 0) {
       if (type==0) f << ":F" << id;
@@ -779,7 +779,7 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
   ascFile.addPos(entry.end());
   ascFile.addNote("_");
   if (filePos[(size_t)N] != fLimit[1]) {
-    MSWEntry nextEntry(entry);
+    MsWrdEntry nextEntry(entry);
     nextEntry.setBegin(entry.begin()+expectedSize);
     Vec2<long> newLimit(filePos[(size_t)N], fLimit[1]);
     readPLC(nextEntry,type,newLimit);
@@ -790,10 +790,10 @@ bool MSWTextStyles::readPLC(MSWEntry &entry, int type, Vec2<long> const &fLimit)
 ////////////////////////////////////////////////////////////
 // read the text structure
 ////////////////////////////////////////////////////////////
-bool MSWTextStyles::readTextStructList(MSWEntry &entry)
+bool MsWrdTextStyles::readTextStructList(MsWrdEntry &entry)
 {
   if (entry.length() < 19) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readTextStructList: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readTextStructList: the zone seems to short\n"));
     return false;
   }
   int const vers = version();
@@ -804,7 +804,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
   libmwaw::DebugStream f;
   int type = (int) input->readLong(1);
   if (type != 1 && type != 2) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readTextStructList: find odd type %d\n", type));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readTextStructList: find odd type %d\n", type));
     return false;
   }
 
@@ -816,12 +816,12 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     if (endPos > entry.end()) {
       ascFile.addPos(pos);
       ascFile.addNote("TextStruct[paragraph]#");
-      MWAW_DEBUG_MSG(("MSWTextStyles::readTextStructList: zone(paragraph) is too big\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readTextStructList: zone(paragraph) is too big\n"));
       return false;
     }
     f.str("");
     f << "ParagPLC:tP" << num++<< "]:";
-    MSWStruct::Paragraph para(vers);
+    MsWrdStruct::Paragraph para(vers);
     input->seek(-2,librevenge::RVNG_SEEK_CUR);
     if (readParagraph(para) && long(input->tell()) <= endPos) {
 #ifdef DEBUG_WITH_FILES
@@ -829,7 +829,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
 #endif
     }
     else {
-      para = MSWStruct::Paragraph(vers);
+      para = MsWrdStruct::Paragraph(vers);
       f << "#";
     }
     m_state->m_textstructParagraphList.push_back(para);
@@ -841,7 +841,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
     type = (int) input->readULong(1);
     if (type == 2) break;
     if (type != 1) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readTextStructList: find odd type %d\n", type));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readTextStructList: find odd type %d\n", type));
       return false;
     }
   }
@@ -849,7 +849,7 @@ bool MSWTextStyles::readTextStructList(MSWEntry &entry)
   return true;
 }
 
-int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
+int MsWrdTextStyles::readPropertyModifier(bool &complex, std::string &extra)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -865,7 +865,7 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
   }
   int id = -1;
   libmwaw::DebugStream f;
-  MSWStruct::Paragraph para(version());
+  MsWrdStruct::Paragraph para(version());
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
   if (readParagraph(para, 2)) {
     id = int(m_state->m_textstructParagraphList.size());
@@ -888,7 +888,7 @@ int MSWTextStyles::readPropertyModifier(bool &complex, std::string &extra)
 ////////////////////////////////////////////////////////////
 // read/send the section zone
 ////////////////////////////////////////////////////////////
-bool MSWTextStyles::getSection(ZoneType type, int id, MSWStruct::Section &section)
+bool MsWrdTextStyles::getSection(ZoneType type, int id, MsWrdStruct::Section &section)
 {
   switch (type) {
   case TextZone:
@@ -901,28 +901,28 @@ bool MSWTextStyles::getSection(ZoneType type, int id, MSWStruct::Section &sectio
   case TextStructZone:
   case InParagraphDefinition:
   default:
-    MWAW_DEBUG_MSG(("MSWTextStyles:::getSection do not know how to get this type of section\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles:::getSection do not know how to get this type of section\n"));
     return false;
   }
-  MWAW_DEBUG_MSG(("MSWTextStyles:::getSection can not find this section\n"));
+  MWAW_DEBUG_MSG(("MsWrdTextStyles:::getSection can not find this section\n"));
   return false;
 }
 
-bool MSWTextStyles::getSectionParagraph(ZoneType type, int id, MSWStruct::Paragraph &para)
+bool MsWrdTextStyles::getSectionParagraph(ZoneType type, int id, MsWrdStruct::Paragraph &para)
 {
-  MSWStruct::Section sec;
+  MsWrdStruct::Section sec;
   if (!getSection(type, id, sec)) return false;
   if (!sec.m_paragraphId.isSet()) return false;
   return getParagraph(StyleZone, *sec.m_paragraphId, para);
 }
 
-bool MSWTextStyles::getSectionFont(ZoneType type, int id, MSWStruct::Font &font)
+bool MsWrdTextStyles::getSectionFont(ZoneType type, int id, MsWrdStruct::Font &font)
 {
-  MSWStruct::Section sec;
+  MsWrdStruct::Section sec;
   if (!getSection(type, id, sec)) return false;
 
   if (!sec.m_paragraphId.isSet()) return false;
-  MSWStruct::Paragraph para(version());
+  MsWrdStruct::Paragraph para(version());
   if (!getParagraph(StyleZone, *sec.m_paragraphId, para))
     return false;
 
@@ -934,10 +934,10 @@ bool MSWTextStyles::getSectionFont(ZoneType type, int id, MSWStruct::Font &font)
 }
 
 
-bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
+bool MsWrdTextStyles::readSection(MsWrdEntry &entry, std::vector<long> &cLimits)
 {
   if (entry.length() < 14 || (entry.length()%10) != 4) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readSection: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readSection: the zone size seems odd\n"));
     return false;
   }
   long pos = entry.begin();
@@ -951,22 +951,22 @@ bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
   cLimits.resize(N+1);
   for (size_t i = 0; i <= N; i++) cLimits[i] = (long) input->readULong(4);
 
-  MSWText::PLC plc(MSWText::PLC::Section);
-  std::multimap<long, MSWText::PLC> &plcMap = m_textParser->getTextPLCMap();
+  MsWrdText::PLC plc(MsWrdText::PLC::Section);
+  std::multimap<long, MsWrdText::PLC> &plcMap = m_textParser->getTextPLCMap();
   long textLength = m_textParser->getMainTextLength();
   for (size_t i = 0; i < N; i++) {
-    MSWStruct::Section sec;
+    MsWrdStruct::Section sec;
     sec.m_type = (int) input->readULong(1); // 0|40|80|C0
     sec.m_flag = (int) input->readULong(1); // number between 2 and 7
     sec.m_id = int(i);
     unsigned long filePos = input->readULong(4);
     if (textLength && cLimits[i] > textLength) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readSection: text positions is bad...\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readSection: text positions is bad...\n"));
       f << "#";
     }
     else {
       plc.m_id = int(i);
-      plcMap.insert(std::multimap<long,MSWText::PLC>::value_type(cLimits[i],plc));
+      plcMap.insert(std::multimap<long,MsWrdText::PLC>::value_type(cLimits[i],plc));
     }
     f << std::hex << "cPos=" << cLimits[i] << ":[" << sec << ",";
     if (filePos != 0xFFFFFFFFL) {
@@ -987,11 +987,11 @@ bool MSWTextStyles::readSection(MSWEntry &entry, std::vector<long> &cLimits)
   return true;
 }
 
-bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
+bool MsWrdTextStyles::readSection(MsWrdStruct::Section &sec, long debPos)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   if (!input->checkPosition(debPos)) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readSection: can not find section data...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readSection: can not find section data...\n"));
     return false;
   }
   int const vers = version();
@@ -1001,7 +1001,7 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
   int sz = (int) input->readULong(1);
   long endPos = debPos+sz+1;
   if (sz < 1 || sz >= 255) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readSection: data section size seems bad...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readSection: data section size seems bad...\n"));
     f << "Section-" << sec.m_id.get() << ":#" << sec;
     ascFile.addPos(debPos);
     ascFile.addNote(f.str().c_str());
@@ -1028,19 +1028,19 @@ bool MSWTextStyles::readSection(MSWStruct::Section &sec, long debPos)
   return true;
 }
 
-void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
+void MsWrdTextStyles::setProperty(MsWrdStruct::Section const &sec)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
   if (listener->isHeaderFooterOpened()) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: can not open a section in header/footer\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::setProperty: can not open a section in header/footer\n"));
   }
   else {
     int numCols = sec.m_col.get();
     int actCols = listener->getSection().numColumns();
     if (numCols >= 1 && actCols > 1 && sec.m_colBreak.get()) {
       if (!listener->isSectionOpened()) {
-        MWAW_DEBUG_MSG(("MSWTextStyles::setProperty: section is not opened\n"));
+        MWAW_DEBUG_MSG(("MsWrdTextStyles::setProperty: section is not opened\n"));
       }
       else
         listener->insertBreak(MWAWTextListener::ColumnBreak);
@@ -1053,18 +1053,18 @@ void MSWTextStyles::setProperty(MSWStruct::Section const &sec)
   }
 }
 
-bool MSWTextStyles::sendSection(int id, int textStructId)
+bool MsWrdTextStyles::sendSection(int id, int textStructId)
 {
   if (!m_parserState->m_textListener) return true;
 
   if (id < 0 || id >= int(m_state->m_sectionList.size())) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::sendText: can not find new section\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::sendText: can not find new section\n"));
     return false;
   }
-  MSWStruct::Section section=m_state->m_sectionList[(size_t) id];
-  MSWStruct::Paragraph para(version());
+  MsWrdStruct::Section section=m_state->m_sectionList[(size_t) id];
+  MsWrdStruct::Paragraph para(version());
   if (textStructId >= 0 &&
-      getParagraph(MSWTextStyles::TextStructZone, textStructId, para) &&
+      getParagraph(MsWrdTextStyles::TextStructZone, textStructId, para) &&
       para.m_section.isSet()) {
     section.insert(*para.m_section);
   }
@@ -1075,15 +1075,15 @@ bool MSWTextStyles::sendSection(int id, int textStructId)
 ////////////////////////////////////////////////////////////
 // read the styles
 ////////////////////////////////////////////////////////////
-std::map<int,int> const &MSWTextStyles::getNextStyleMap() const
+std::map<int,int> const &MsWrdTextStyles::getNextStyleMap() const
 {
   return m_state->m_nextStyleMap;
 }
 
-bool MSWTextStyles::readStyles(MSWEntry &entry)
+bool MsWrdTextStyles::readStyles(MsWrdEntry &entry)
 {
   if (entry.length() < 6) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readStyles: zone seems to short...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readStyles: zone seems to short...\n"));
     return false;
   }
   m_state->m_styleFontMap.clear();
@@ -1114,12 +1114,12 @@ bool MSWTextStyles::readStyles(MSWEntry &entry)
     if (dataSz < 2+N || endPos > entry.end()+overOk[st]) {
       ascFile.addPos(pos);
       ascFile.addNote("###Styles(bad)");
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStyles: can not read styles(%d)...\n", st));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStyles: can not read styles(%d)...\n", st));
       return false;
     }
     if (endPos > entry.end()) {
       entry.setEnd(endPos+1);
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStyles(%d): size seems incoherent...\n", st));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStyles(%d): size seems incoherent...\n", st));
       f.str("");
       f << "#sz=" << dataSz << ",";
       ascFile.addPos(debPos[st]);
@@ -1134,7 +1134,7 @@ bool MSWTextStyles::readStyles(MSWEntry &entry)
     order=orderStyles(orig);
 
   int N1=0;
-  MSWEntry zone;
+  MsWrdEntry zone;
   zone.setBegin(debPos[0]);
   zone.setEnd(debPos[1]);
   if (!readStylesNames(zone, N, N1)) {
@@ -1159,7 +1159,7 @@ bool MSWTextStyles::readStyles(MSWEntry &entry)
   return true;
 }
 
-bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
+bool MsWrdTextStyles::readStylesNames(MsWrdEntry const &zone, int N, int &Nnamed)
 {
   long pos = zone.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1182,7 +1182,7 @@ bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
     }
     pos = input->tell();
     if (pos+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStylesNames: zone(names) seems to short...\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesNames: zone(names) seems to short...\n"));
       f << "#";
       ascFile.addNote(f.str().c_str());
       input->seek(pos-1, librevenge::RVNG_SEEK_SET);
@@ -1196,7 +1196,7 @@ bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
   }
   Nnamed=actN-N;
   if (Nnamed < 0) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readStylesNames: zone(names) seems to short: stop...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesNames: zone(names) seems to short: stop...\n"));
     f << "#";
   }
   ascFile.addPos(zone.begin());
@@ -1204,8 +1204,8 @@ bool MSWTextStyles::readStylesNames(MSWEntry const &zone, int N, int &Nnamed)
   return Nnamed >= 0;
 }
 
-bool MSWTextStyles::readStylesFont
-(MSWEntry &zone, int N, std::vector<int> const &previous, std::vector<int> const &order)
+bool MsWrdTextStyles::readStylesFont
+(MsWrdEntry &zone, int N, std::vector<int> const &previous, std::vector<int> const &order)
 {
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -1227,7 +1227,7 @@ bool MSWTextStyles::readStylesFont
     if (sz == 0xFF)
       sz = 0;
     else if (pos+1+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStylesFont: can not read a font\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesFont: can not read a font\n"));
       if (i == 0)
         return false;
       numElt = i-1;
@@ -1247,7 +1247,7 @@ bool MSWTextStyles::readStylesFont
     int id = order[i];
     if (id < 0 || id >= int(numElt)) continue;
     int prevId = previous[(size_t)id];
-    MSWStruct::Font font;
+    MsWrdStruct::Font font;
     // osnola:what is the difference between dataSize[(size_t)id]=0|0xFF
     if (prevId >= 0 && m_state->m_styleFontMap.find(prevId-N) != m_state->m_styleFontMap.end())
       font = m_state->m_styleFontMap.find(prevId-N)->second;
@@ -1262,13 +1262,13 @@ bool MSWTextStyles::readStylesFont
       ascFile.addPos(debPos[(size_t)id]);
       ascFile.addNote(f.str().c_str());
     }
-    m_state->m_styleFontMap.insert(std::map<int,MSWStruct::Font>::value_type(id-N,font));
+    m_state->m_styleFontMap.insert(std::map<int,MsWrdStruct::Font>::value_type(id-N,font));
   }
   return true;
 }
 
-bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
-                                        std::vector<int> const &order)
+bool MsWrdTextStyles::readStylesParagraph(MsWrdEntry &zone, int N, std::vector<int> const &previous,
+    std::vector<int> const &order)
 {
   int const vers=version();
   int minSz = vers <= 3 ? 3 : 7;
@@ -1290,7 +1290,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     debPos[i] = pos;
     int sz = dataSize[i] = (int) input->readULong(1);
     if (sz != 0xFF && pos+1+sz > zone.end()) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: can not read a paragraph\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesParagraph: can not read a paragraph\n"));
       if (i == 0)
         return false;
       numElt = i-1;
@@ -1309,7 +1309,7 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     int id = order[i];
     if (id < 0 || id >= int(numElt)) continue;
     int prevId = previous[(size_t) id];
-    MSWStruct::Paragraph para(vers);
+    MsWrdStruct::Paragraph para(vers);
     if (prevId >= 0 && m_state->m_styleParagraphMap.find(prevId-N) != m_state->m_styleParagraphMap.end())
       para = m_state->m_styleParagraphMap.find(prevId-N)->second;
     /** osnola: update the font style here or after reading data ? */
@@ -1319,14 +1319,14 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
       f.str("");
       f << "ParagPLC(sP" << id-N << "):";
       if (dataSize[(size_t) id] < minSz) {
-        MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
+        MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
         f << "#";
       }
       else {
         input->seek(debPos[(size_t) id]+1, librevenge::RVNG_SEEK_SET);
         int pId = (int) input->readLong(1);
         if (id >= N && pId != id-N) {
-          MWAW_DEBUG_MSG(("MSWTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
+          MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesParagraph: zone(paragraph) the id seems bad...\n"));
           f << "#id=" << pId << ",";
         }
         int val = (int) input->readLong(2); // always 0?
@@ -1350,12 +1350,12 @@ bool MSWTextStyles::readStylesParagraph(MSWEntry &zone, int N, std::vector<int> 
     }
     para.m_modFont.setSet(false);
     m_state->m_styleParagraphMap.insert
-    (std::map<int,MSWStruct::Paragraph>::value_type(id-N,para));
+    (std::map<int,MsWrdStruct::Paragraph>::value_type(id-N,para));
   }
   return true;
 }
 
-bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &orig)
+bool MsWrdTextStyles::readStylesHierarchy(MsWrdEntry &entry, int N, std::vector<int> &orig)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1365,7 +1365,7 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
 
   int N2 = (int) input->readULong(2);
   if (N2 < N) {
-    MWAW_DEBUG_MSG(("MSWTextStyles::readStylesHierarchy: N seems too small...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesHierarchy: N seems too small...\n"));
     f << "#N=" << N2 << ",";
     ascFile.addPos(pos);
     ascFile.addNote("Styles(hierarchy):#"); // big problem
@@ -1373,7 +1373,7 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
   }
   if (pos+(N2+1)*2 > entry.end()) {
     if (N2>40) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::readStylesHierarchy: N seems very big...\n"));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::readStylesHierarchy: N seems very big...\n"));
       ascFile.addPos(pos);
       ascFile.addNote("Styles(hierarchy):#"); // big problem
     }
@@ -1421,7 +1421,7 @@ bool MSWTextStyles::readStylesHierarchy(MSWEntry &entry, int N, std::vector<int>
   return true;
 }
 
-std::vector<int> MSWTextStyles::orderStyles(std::vector<int> const &previous)
+std::vector<int> MsWrdTextStyles::orderStyles(std::vector<int> const &previous)
 {
   std::vector<int> order, numChild;
   size_t N = previous.size();
@@ -1429,7 +1429,7 @@ std::vector<int> MSWTextStyles::orderStyles(std::vector<int> const &previous)
   for (size_t i = 0; i < N; i++) {
     if (previous[i] == -1000) continue;
     if (previous[i] < 0 || previous[i] >= int(N)) {
-      MWAW_DEBUG_MSG(("MSWTextStyles::orderStyles: find a bad previous %d\n", previous[i]));
+      MWAW_DEBUG_MSG(("MsWrdTextStyles::orderStyles: find a bad previous %d\n", previous[i]));
       continue;
     }
     numChild[(size_t) previous[i]]++;
@@ -1447,7 +1447,7 @@ std::vector<int> MSWTextStyles::orderStyles(std::vector<int> const &previous)
       numChild[i]=-1;
     }
     if (read) continue;
-    MWAW_DEBUG_MSG(("MSWTextStyles::orderStyles: find a loop, stop...\n"));
+    MWAW_DEBUG_MSG(("MsWrdTextStyles::orderStyles: find a loop, stop...\n"));
     for (size_t i = 0; i < N; i++) {
       if (numChild[i] != -1)
         order[N-(++numElt)]=int(i);

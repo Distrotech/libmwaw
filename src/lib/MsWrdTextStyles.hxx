@@ -35,8 +35,8 @@
  * Class to read/store the text font and paragraph styles
  */
 
-#ifndef MSW_TEXT_STYLES
-#  define MSW_TEXT_STYLES
+#ifndef MS_WRD_TEXT_STYLES
+#  define MS_WRD_TEXT_STYLES
 
 #include <iostream>
 #include <map>
@@ -47,31 +47,31 @@
 #include "MWAWEntry.hxx"
 #include "MWAWParagraph.hxx"
 
-class MSWParser;
-class MSWText;
+class MsWrdParser;
+class MsWrdText;
 
-namespace MSWStruct
+namespace MsWrdStruct
 {
 struct Font;
 struct Paragraph;
 struct Section;
 }
 
-namespace MSWTextStylesInternal
+namespace MsWrdTextStylesInternal
 {
 struct State;
 }
 
 /** \brief the main class to read/store the text font, paragraph, section stylesread */
-class MSWTextStyles
+class MsWrdTextStyles
 {
-  friend class MSWText;
+  friend class MsWrdText;
 public:
   enum ZoneType { TextZone, TextStructZone, StyleZone, InParagraphDefinition };
   //! constructor
-  MSWTextStyles(MSWText &textParser);
+  MsWrdTextStyles(MsWrdText &textParser);
   //! destructor
-  virtual ~MSWTextStyles();
+  virtual ~MsWrdTextStyles();
 
   /** returns the file version */
   int version() const;
@@ -81,62 +81,62 @@ protected:
   //! returns the default font
   MWAWFont const &getDefaultFont() const;
   //! return a font corresponding to an index
-  bool getFont(ZoneType type, int id, MSWStruct::Font &actFont);
+  bool getFont(ZoneType type, int id, MsWrdStruct::Font &actFont);
 
   /* send a font */
-  void setProperty(MSWStruct::Font const &font);
+  void setProperty(MsWrdStruct::Font const &font);
   /** try to read a font.
       \param font : the read font,
       \param type : the zone in which the font is read */
-  bool readFont(MSWStruct::Font &font, ZoneType type);
+  bool readFont(MsWrdStruct::Font &font, ZoneType type);
 
   // pararagraph:
   //! return a paragraph corresponding to an index
-  bool getParagraph(ZoneType type, int id, MSWStruct::Paragraph &para);
+  bool getParagraph(ZoneType type, int id, MsWrdStruct::Paragraph &para);
   //! try to read a paragraph
-  bool readParagraph(MSWStruct::Paragraph &para, int dataSz=-1);
+  bool readParagraph(MsWrdStruct::Paragraph &para, int dataSz=-1);
   //! send a default paragraph
   void sendDefaultParagraph();
 
   //! read the main char/paragraph plc list
-  bool readPLCList(MSWEntry &entry);
+  bool readPLCList(MsWrdEntry &entry);
   //! read the paragraphs at the beginning of the text structure zone
-  bool readTextStructList(MSWEntry &entry);
+  bool readTextStructList(MsWrdEntry &entry);
   /** read the property modifier (2 bytes last bytes of text struct ).
       Returns a textstruct parag id or -1 (PRM) */
   int readPropertyModifier(bool &complex, std::string &extra);
   //! read the char/paragraph plc : type=0: char, type=1: parag
-  bool readPLC(MSWEntry &entry, int type, Vec2<long> const &fileLimit);
+  bool readPLC(MsWrdEntry &entry, int type, Vec2<long> const &fileLimit);
 
   // section:
   //! return a section corresponding to an index
-  bool getSection(ZoneType type, int id, MSWStruct::Section &section);
+  bool getSection(ZoneType type, int id, MsWrdStruct::Section &section);
   //! return a paragraph corresponding to the section
-  bool getSectionParagraph(ZoneType type, int id, MSWStruct::Paragraph &para);
+  bool getSectionParagraph(ZoneType type, int id, MsWrdStruct::Paragraph &para);
   //! return a font corresponding to the section
-  bool getSectionFont(ZoneType type, int id, MSWStruct::Font &font);
+  bool getSectionFont(ZoneType type, int id, MsWrdStruct::Font &font);
   //! read the text section
-  bool readSection(MSWEntry &entry, std::vector<long> &cLimits);
+  bool readSection(MsWrdEntry &entry, std::vector<long> &cLimits);
   //! try to send a section
   bool sendSection(int id, int textStructId);
 
   //! try to read the section data
-  bool readSection(MSWStruct::Section &section, long pos);
+  bool readSection(MsWrdStruct::Section &section, long pos);
   //! send section properties
-  void setProperty(MSWStruct::Section const &sec);
+  void setProperty(MsWrdStruct::Section const &sec);
 
   // style
   //! try to read the styles zone
-  bool readStyles(MSWEntry &entry);
+  bool readStyles(MsWrdEntry &entry);
   //! try to read the styles hierachy
-  bool readStylesHierarchy(MSWEntry &entry, int N, std::vector<int> &orig);
+  bool readStylesHierarchy(MsWrdEntry &entry, int N, std::vector<int> &orig);
   //! try to read the styles names and fill the number of "named" styles...
-  bool readStylesNames(MSWEntry const &zone, int N, int &Nnamed);
+  bool readStylesNames(MsWrdEntry const &zone, int N, int &Nnamed);
   //! try to read the styles fonts
-  bool readStylesFont(MSWEntry &zone, int N, std::vector<int> const &previous,
+  bool readStylesFont(MsWrdEntry &zone, int N, std::vector<int> const &previous,
                       std::vector<int> const &order);
   //! try to read the styles fonts
-  bool readStylesParagraph(MSWEntry &zone, int N, std::vector<int> const &previous,
+  bool readStylesParagraph(MsWrdEntry &zone, int N, std::vector<int> const &previous,
                            std::vector<int> const &order);
   //! returns the style id to next style id map
   std::map<int,int> const &getNextStyleMap() const;
@@ -144,8 +144,8 @@ protected:
   static std::vector<int> orderStyles(std::vector<int> const &previous);
 
 private:
-  MSWTextStyles(MSWTextStyles const &orig);
-  MSWTextStyles &operator=(MSWTextStyles const &orig);
+  MsWrdTextStyles(MsWrdTextStyles const &orig);
+  MsWrdTextStyles &operator=(MsWrdTextStyles const &orig);
 
 protected:
   //
@@ -155,13 +155,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MSWTextStylesInternal::State> m_state;
+  shared_ptr<MsWrdTextStylesInternal::State> m_state;
 
   //! the main parser;
-  MSWParser *m_mainParser;
+  MsWrdParser *m_mainParser;
 
   //! the text parser;
-  MSWText *m_textParser;
+  MsWrdText *m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

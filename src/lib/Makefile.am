@@ -124,16 +124,16 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MsWks4Text.hxx			\
 	MsWks4Zone.cxx			\
 	MsWks4Zone.hxx			\
-	MSW1Parser.cxx			\
-	MSW1Parser.hxx			\
-	MSWParser.cxx			\
-	MSWParser.hxx			\
-	MSWStruct.cxx			\
-	MSWStruct.hxx			\
-	MSWText.cxx			\
-	MSWText.hxx			\
-	MSWTextStyles.cxx		\
-	MSWTextStyles.hxx		\
+	MsWrd1Parser.cxx		\
+	MsWrd1Parser.hxx		\
+	MsWrdParser.cxx			\
+	MsWrdParser.hxx			\
+	MsWrdStruct.cxx			\
+	MsWrdStruct.hxx			\
+	MsWrdText.cxx			\
+	MsWrdText.hxx			\
+	MsWrdTextStyles.cxx		\
+	MsWrdTextStyles.hxx		\
 	MWAWCell.cxx			\
 	MWAWCell.hxx			\
 	MWAWChart.cxx			\

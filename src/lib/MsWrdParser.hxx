@@ -34,8 +34,8 @@
 /*
  * parser for Microsoft Word ( version 3.0-5.1 )
  */
-#ifndef MSW_MWAW_PARSER
-#  define MSW_MWAW_PARSER
+#ifndef MS_WRD_MWAW_PARSER
+#  define MS_WRD_MWAW_PARSER
 
 #include <list>
 #include <map>
@@ -49,19 +49,19 @@
 
 #include "MWAWParser.hxx"
 
-namespace MSWParserInternal
+namespace MsWrdParserInternal
 {
 struct Object;
 struct State;
 class SubDocument;
 }
 
-class MSWText;
-class MSWTextStyles;
+class MsWrdText;
+class MsWrdTextStyles;
 
-//! the entry of MSWParser
-struct MSWEntry : public MWAWEntry {
-  MSWEntry() : MWAWEntry(), m_pictType(-1)
+//! the entry of MsWrdParser
+struct MsWrdEntry : public MWAWEntry {
+  MsWrdEntry() : MWAWEntry(), m_pictType(-1)
   {
   }
   /** \brief returns the text id
@@ -78,7 +78,7 @@ struct MSWEntry : public MWAWEntry {
     m_pictType = newId;
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MSWEntry const &entry);
+  friend std::ostream &operator<<(std::ostream &o, MsWrdEntry const &entry);
   //! the picture identificator
   int m_pictType;
 };
@@ -88,17 +88,17 @@ struct MSWEntry : public MWAWEntry {
  *
  *
  */
-class MSWParser : public MWAWTextParser
+class MsWrdParser : public MWAWTextParser
 {
-  friend class MSWText;
-  friend class MSWTextStyles;
-  friend class MSWParserInternal::SubDocument;
+  friend class MsWrdText;
+  friend class MsWrdTextStyles;
+  friend class MsWrdParserInternal::SubDocument;
 
 public:
   //! constructor
-  MSWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWrdParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MSWParser();
+  virtual ~MsWrdParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -123,40 +123,40 @@ protected:
   bool readZoneList();
 
   //! read the print info zone
-  bool readPrintInfo(MSWEntry &entry);
+  bool readPrintInfo(MsWrdEntry &entry);
 
   //! read the printer name
-  bool readPrinter(MSWEntry &entry);
+  bool readPrinter(MsWrdEntry &entry);
 
   //! read the document sumary
-  bool readDocSum(MSWEntry &entry);
+  bool readDocSum(MsWrdEntry &entry);
 
   //! read a zone which consists in a list of string
-  bool readStringsZone(MSWEntry &entry, std::vector<std::string> &list);
+  bool readStringsZone(MsWrdEntry &entry, std::vector<std::string> &list);
 
   //! read the objects
   bool readObjects();
 
   //! read the object list
-  bool readObjectList(MSWEntry &entry);
+  bool readObjectList(MsWrdEntry &entry);
 
   //! read the object flags
-  bool readObjectFlags(MSWEntry &entry);
+  bool readObjectFlags(MsWrdEntry &entry);
 
   //! read an object
-  bool readObject(MSWParserInternal::Object &obj);
+  bool readObject(MsWrdParserInternal::Object &obj);
 
   //! read the page dimensions + ?
-  bool readDocumentInfo(MSWEntry &entry);
+  bool readDocumentInfo(MsWrdEntry &entry);
 
   //! read the zone 17( some bdbox + text position ?)
-  bool readZone17(MSWEntry &entry);
+  bool readZone17(MsWrdEntry &entry);
 
   //! check if a position corresponds or not to a picture entry
   bool checkPicturePos(long pos, int type);
 
   //! read a picture data
-  bool readPicture(MSWEntry &entry);
+  bool readPicture(MsWrdEntry &entry);
   //! send a picture
   void sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor=MWAWPosition::Char);
 
@@ -185,20 +185,20 @@ protected:
   //
 
   //! read a file entry
-  MSWEntry readEntry(std::string type, int id=-1);
+  MsWrdEntry readEntry(std::string type, int id=-1);
 
 protected:
   //
   // data
   //
   //! the state
-  shared_ptr<MSWParserInternal::State> m_state;
+  shared_ptr<MsWrdParserInternal::State> m_state;
 
   //! the list of entries
-  std::multimap<std::string, MSWEntry> m_entryMap;
+  std::multimap<std::string, MsWrdEntry> m_entryMap;
 
   //! the text parser
-  shared_ptr<MSWText> m_textParser;
+  shared_ptr<MsWrdText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

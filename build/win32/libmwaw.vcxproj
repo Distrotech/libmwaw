@@ -302,23 +302,23 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSW1Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWrd1Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWrdParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWStruct.cxx">
+    <ClCompile Include="..\..\src\lib\MsWrdStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWText.cxx">
+    <ClCompile Include="..\..\src\lib\MsWrdText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWTextStyles.cxx">
+    <ClCompile Include="..\..\src\lib\MsWrdTextStyles.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -548,11 +548,11 @@
     <ClInclude Include="..\..\src\lib\MsWksGraph.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksParser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksTable.hxx" />
-    <ClInclude Include="..\..\src\lib\MSW1Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWTextStyles.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrd1Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdText.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdTextStyles.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWCell.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWChart.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWDebug.hxx" />

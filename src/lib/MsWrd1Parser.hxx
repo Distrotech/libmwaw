@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MSW1_PARSER
-#  define MSW1_PARSER
+#ifndef MS_WRD1_PARSER
+#  define MS_WRD1_PARSER
 
 #include <vector>
 
@@ -41,7 +41,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace MSW1ParserInternal
+namespace MsWrd1ParserInternal
 {
 struct Font;
 struct Paragraph;
@@ -54,14 +54,14 @@ class SubDocument;
  *
  *
  */
-class MSW1Parser : public MWAWTextParser
+class MsWrd1Parser : public MWAWTextParser
 {
-  friend class MSW1ParserInternal::SubDocument;
+  friend class MsWrd1ParserInternal::SubDocument;
 public:
   //! constructor
-  MSW1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWrd1Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MSW1Parser();
+  virtual ~MsWrd1Parser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -93,10 +93,10 @@ protected:
   //
 
   /** try to read a char property */
-  bool readFont(long fPos, MSW1ParserInternal::Font &font);
+  bool readFont(long fPos, MsWrd1ParserInternal::Font &font);
 
   /** try to read a paragraph property */
-  bool readParagraph(long fPos, MSW1ParserInternal::Paragraph &para);
+  bool readParagraph(long fPos, MsWrd1ParserInternal::Paragraph &para);
 
   /** try to read the footnote correspondance ( zone2 ) */
   bool readFootnoteCorrespondance(Vec2i limit);
@@ -121,7 +121,7 @@ protected:
   bool readPLC(Vec2i limits, int wh);
 
   /** send the ruler properties */
-  void setProperty(MSW1ParserInternal::Paragraph const &para);
+  void setProperty(MsWrd1ParserInternal::Paragraph const &para);
 
 
 protected:
@@ -129,7 +129,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MSW1ParserInternal::State> m_state;
+  shared_ptr<MsWrd1ParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
