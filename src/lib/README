@@ -10,8 +10,8 @@
 - EDoc*      : parser of eDOC documents
 - FullWrt*   : parser of FullWrite documents
 - GW*        : parser of GreatWorks documents
-- HMWJ*      : parser of HanMac Word-J documents
-- HMWK*      : parser of HanMac Word-K documents
+- HanMacWrdJ*: parser of HanMac Word-J documents
+- HanMacWrdK*: parser of HanMac Word-K documents
 - LW*        : parser of LightWay Text documents
 - MacDoc*    : parser of MacDoc documents
 - MacWrt*    : parser of MacWrite documents
@@ -107,7 +107,7 @@ These files defined basic structures which must be used by the parsers :
 
 ------------------------------------------------------------
 ---  Acta/BeagleWks/CW/DM/EDoc/FullWrt                   ---
----           GW/LW/MacWrt/MsWks/MacDoc                  ---
+---     GW/HanMacWrd/LW/MacDoc/MacWrt/MsWks              ---
 ---  MDW/MOR/MRW/MSW/NS/TT/WN/WriterPls/ZWrt             ---
 ------------------------------------------------------------
 
@@ -147,17 +147,19 @@ GWParser : parser of GreatWorks : v1-v2
 -   GWGraph : class which reads the picture/graph/frame
 -   GWText : class which reads the text
 
-HMWJParser : parser of HanMac Word-J
--   HMWJGraph : class which reads the picture/graph/frame
--   HMWJText : class which reads the text
+HanMacWrdJParser : parser of HanMac Word-J
+-   HanMacWrdJGraph : class which reads the picture/graph/frame
+-   HanMacWrdJText : class which reads the text
 
-HMWKParser : parser of HanMac Word-K 2.0.5-2.0.6
--   HMWKGraph : class which reads the picture/graph/frame
--   HMWKText : class which reads the text
+HanMacWrdKParser : parser of HanMac Word-K 2.0.5-2.0.6
+-   HanMacWrdKGraph : class which reads the picture/graph/frame
+-   HanMacWrdKText : class which reads the text
 
 LWParser : parser of LightWay Text v4.5
 -   LWGraph : class which reads the picture/graph/frame
 -   LWText : class which reads the text
+
+MacDocParser : parser of MacDoc document: v1.3
 
 MacWrtParser : parser of MacWrite document : v1.0-5.01
 
@@ -172,8 +174,6 @@ MsWksParser: generic parser of Microsoft Works parser
 - MsWks4Parser : parser of Microsoft Works document : v4.0
 -   MsWks4Zone : parser of the text ole 
 -   MsWks4Text : class which reads the text
-
-MacDocParser : parser of MacDoc document: v1.3
 
 MDWParser : parser of MindWrite document: v2.1
 

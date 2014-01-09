@@ -276,27 +276,27 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJGraph.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdJGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJParser.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdJParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJText.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdJText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKGraph.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdKGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKParser.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdKParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKText.cxx"
+				RelativePath="..\..\src\lib\HanMacWrdKText.cxx"
 				>
 			</File>
 			<File
@@ -673,27 +673,27 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJGraph.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdJGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJParser.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdJParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJText.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdJText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKGraph.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdKGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKParser.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdKParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKText.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdKText.hxx"
 				>
 			</File>
 			<File

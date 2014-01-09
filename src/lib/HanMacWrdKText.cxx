@@ -49,14 +49,14 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSection.hxx"
 
-#include "HMWKParser.hxx"
+#include "HanMacWrdKParser.hxx"
 
-#include "HMWKText.hxx"
+#include "HanMacWrdKText.hxx"
 
-/** Internal: the structures of a HMWKText */
-namespace HMWKTextInternal
+/** Internal: the structures of a HanMacWrdKText */
+namespace HanMacWrdKTextInternal
 {
-/** Internal: class to store the paragraph properties of a HMWKText */
+/** Internal: class to store the paragraph properties of a HanMacWrdKText */
 struct Paragraph : public MWAWParagraph {
   //! Constructor
   Paragraph() : MWAWParagraph(), m_type(0), m_addPageBreak(false)
@@ -95,7 +95,7 @@ struct Paragraph : public MWAWParagraph {
   bool m_addPageBreak;
 };
 
-/** Internal: class to store a section of a HMWKText */
+/** Internal: class to store a section of a HanMacWrdKText */
 struct Section {
   //! constructor
   Section() : m_numCols(1), m_colWidth(), m_colSep(), m_id(0), m_extra("")
@@ -106,7 +106,7 @@ struct Section {
   {
     MWAWSection sec;
     if (m_colWidth.size()==0) {
-      MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection can not find any width\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKTextInternal::Section:getSection can not find any width\n"));
       return sec;
     }
     if (m_numCols <= 1)
@@ -124,7 +124,7 @@ struct Section {
     }
     else {
       if (m_colWidth.size()>1) {
-        MWAW_DEBUG_MSG(("HMWKTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKTextInternal::Section:getSection colWidth is not coherent with numCols\n"));
       }
       sec.setColumns(m_numCols, double(m_colWidth[0]), librevenge::RVNG_POINT,
                      hasSep ? double(m_colSep[0])/72.0 : 0);
@@ -159,7 +159,7 @@ struct Section {
   std::string m_extra;
 };
 
-/** Internal: class to store the token properties of a HMWKText */
+/** Internal: class to store the token properties of a HanMacWrdKText */
 struct Token {
   //! Constructor
   Token() : m_type(0), m_id(-1), m_extra("")
@@ -219,7 +219,7 @@ struct Token {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a HMWKText
+//! Internal: the state of a HanMacWrdKText
 struct State {
   //! constructor
   State() : m_version(-1), m_IdTextMaps(), m_IdTypeMaps(), m_tokenIdList(), m_sectionList(), m_numPages(-1), m_actualPage(0),
@@ -230,7 +230,7 @@ struct State {
   //! the file version
   mutable int m_version;
   //! the map of id -> text zone
-  std::multimap<long, shared_ptr<HMWKZone> > m_IdTextMaps;
+  std::multimap<long, shared_ptr<HanMacWrdKZone> > m_IdTextMaps;
   //! the zone frame type if known
   std::map<long,int> m_IdTypeMaps;
   //! the token id list
@@ -248,46 +248,46 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWKText::HMWKText(HMWKParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new HMWKTextInternal::State), m_mainParser(&parser)
+HanMacWrdKText::HanMacWrdKText(HanMacWrdKParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HanMacWrdKTextInternal::State), m_mainParser(&parser)
 {
 }
 
-HMWKText::~HMWKText()
+HanMacWrdKText::~HanMacWrdKText()
 {
 }
 
-int HMWKText::version() const
+int HanMacWrdKText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int HMWKText::numPages() const
+int HanMacWrdKText::numPages() const
 {
   return m_state->m_numPages;
 }
 
-void HMWKText::getHeaderFooterId(long &headerId, long &footerId) const
+void HanMacWrdKText::getHeaderFooterId(long &headerId, long &footerId) const
 {
   headerId=m_state->m_headerId;
   footerId=m_state->m_footerId;
 }
 
-std::vector<long> const &HMWKText::getTokenIdList() const
+std::vector<long> const &HanMacWrdKText::getTokenIdList() const
 {
   return m_state->m_tokenIdList;
 }
 
-void HMWKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
+void HanMacWrdKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
 {
   m_state->m_IdTypeMaps=idTypeMap;
   if (m_state->m_headerId)
     m_state->m_IdTypeMaps[m_state->m_headerId]=1;
   if (m_state->m_footerId)
     m_state->m_IdTypeMaps[m_state->m_footerId]=1;
-  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt;
+  std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt;
   int numUnkns=0;
   for (tIt=m_state->m_IdTextMaps.begin(); tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
     if (m_state->m_IdTypeMaps.find(tIt->first)!=m_state->m_IdTypeMaps.end())
@@ -296,7 +296,7 @@ void HMWKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
     numUnkns++;
   }
   if (numUnkns!=1) {
-    MWAW_DEBUG_MSG(("HMWKText::updateTextZoneTypes: find unexpected number of unknown zone %d\n", numUnkns));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::updateTextZoneTypes: find unexpected number of unknown zone %d\n", numUnkns));
   }
 }
 
@@ -307,14 +307,14 @@ void HMWKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKText::readTextZone(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone || !zone->valid()) {
-    MWAW_DEBUG_MSG(("HMWKText::readTextZone: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readTextZone: called without any zone\n"));
     return false;
   }
   m_state->m_IdTextMaps.insert
-  (std::multimap<long, shared_ptr<HMWKZone> >::value_type(zone->m_id, zone));
+  (std::multimap<long, shared_ptr<HanMacWrdKZone> >::value_type(zone->m_id, zone));
   long dataSz = zone->length();
   MWAWInputStreamPtr input = zone->m_input;
   input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
@@ -330,14 +330,14 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
     bool done=false;
     switch (type) {
     case 2: { // ruler
-      HMWKTextInternal::Paragraph para;
+      HanMacWrdKTextInternal::Paragraph para;
       done=readParagraph(*zone,para);
       if (para.m_addPageBreak)
         actPage++;
       break;
     }
     case 3: { // token
-      HMWKTextInternal::Token token;
+      HanMacWrdKTextInternal::Token token;
       done=readToken(*zone,token);
       if (done)
         m_state->m_tokenIdList.push_back(token.m_id);
@@ -390,39 +390,39 @@ bool HMWKText::readTextZone(shared_ptr<HMWKZone> zone)
   return true;
 }
 
-bool HMWKText::canSendTextAsGraphic(long id, long subId)
+bool HanMacWrdKText::canSendTextAsGraphic(long id, long subId)
 {
-  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
+  std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt
     =m_state->m_IdTextMaps.lower_bound(id);
   if (tIt == m_state->m_IdTextMaps.end() || tIt->first != id)
     return false;
   while (tIt != m_state->m_IdTextMaps.end() && tIt->first == id) {
-    shared_ptr<HMWKZone> zone = (tIt++)->second;
+    shared_ptr<HanMacWrdKZone> zone = (tIt++)->second;
     if (!zone || zone->m_subId != subId) continue;
     return canSendTextAsGraphic(*zone);
   }
   return false;
 }
 
-bool HMWKText::sendText(long id, long subId, bool asGraphic)
+bool HanMacWrdKText::sendText(long id, long subId, bool asGraphic)
 {
-  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
+  std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt
     =m_state->m_IdTextMaps.lower_bound(id);
   if (tIt == m_state->m_IdTextMaps.end() || tIt->first != id) {
-    MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the text zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find the text zone\n"));
     return false;
   }
   while (tIt != m_state->m_IdTextMaps.end() && tIt->first == id) {
-    shared_ptr<HMWKZone> zone = (tIt++)->second;
+    shared_ptr<HanMacWrdKZone> zone = (tIt++)->second;
     if (!zone || zone->m_subId != subId) continue;
     sendText(*zone, asGraphic);
     return true;
   }
-  MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the text zone\n"));
+  MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find the text zone\n"));
   return false;
 }
 
-bool HMWKText::sendMainText()
+bool HanMacWrdKText::sendMainText()
 {
   std::map<long, int>::iterator tIt=m_state->m_IdTypeMaps.begin();
   for (; tIt!=m_state->m_IdTypeMaps.end(); ++tIt) {
@@ -431,11 +431,11 @@ bool HMWKText::sendMainText()
     sendText(tIt->first, 0);
     return true;
   }
-  MWAW_DEBUG_MSG(("HMWKText::sendText: can not find the main zone\n"));
+  MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find the main zone\n"));
   return false;
 }
 
-bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
+bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
 {
   if (!zone.valid()) return false;
 
@@ -462,7 +462,7 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
       done = true;
       break;
     case 2: { // ruler
-      HMWKTextInternal::Paragraph para;
+      HanMacWrdKTextInternal::Paragraph para;
       if (!readParagraph(zone,para))
         return false;
       done = true;
@@ -496,10 +496,10 @@ bool HMWKText::canSendTextAsGraphic(HMWKZone &zone)
   return true;
 }
 
-bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
+bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, bool asGraphic)
 {
   if (!zone.valid()) {
-    MWAW_DEBUG_MSG(("HMWKText::sendText: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: called without any zone\n"));
     return false;
   }
   MWAWBasicListenerPtr listener;
@@ -508,7 +508,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
   else
     listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("HMWKText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find a listener\n"));
     return false;
   }
 
@@ -528,7 +528,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
   if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end())
     isMain = m_state->m_IdTypeMaps.find(zone.m_id)->second == 0;
   if (isMain && asGraphic) {
-    MWAW_DEBUG_MSG(("HMWKText::sendText: can not send main zone has graphic\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not send main zone has graphic\n"));
     isMain=false;
   }
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
@@ -537,10 +537,10 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
   if (isMain)
     m_mainParser->newPage(1);
   if (isMain && !m_state->m_sectionList.size()) {
-    MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section 0\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find section 0\n"));
   }
   else if (isMain) {
-    HMWKTextInternal::Section sec = m_state->m_sectionList[0];
+    HanMacWrdKTextInternal::Section sec = m_state->m_sectionList[0];
     if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0) {
       if (listener->isSectionOpened())
         listener->closeSection();
@@ -575,7 +575,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     }
     case 2: { // ruler
       f << "ruler,";
-      HMWKTextInternal::Paragraph para;
+      HanMacWrdKTextInternal::Paragraph para;
       if (!readParagraph(zone,para))
         break;
       if (para.m_addPageBreak) {
@@ -588,7 +588,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     }
     case 3: { // footnote, attachment
       f << "token,";
-      HMWKTextInternal::Token token;
+      HanMacWrdKTextInternal::Token token;
       done=readToken(zone,token);
       if (!done) break;
       switch (token.m_type) {
@@ -602,7 +602,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
         m_mainParser->sendZone(token.m_id);
         break;
       default:
-        MWAW_DEBUG_MSG(("HMWKText::sendText: do not send how to send token with type: %d\n", token.m_type));
+        MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: do not send how to send token with type: %d\n", token.m_type));
         break;
       }
       break;
@@ -610,15 +610,15 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
     case 4:
       f << "section[new],";
       if (!isMain) {
-        MWAW_DEBUG_MSG(("HMWKText::sendText: find section in auxilliary block\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: find section in auxilliary block\n"));
         break;
       }
       if (size_t(actSection) >= m_state->m_sectionList.size()) {
-        MWAW_DEBUG_MSG(("HMWKText::sendText: can not find section %d\n", actSection));
+        MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find section %d\n", actSection));
         break;
       }
       else {
-        HMWKTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
+        HanMacWrdKTextInternal::Section sec = m_state->m_sectionList[size_t(actSection++)];
         actCol = 0;
         if (listener->isSectionOpened())
           listener->closeSection();
@@ -663,7 +663,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       asciiFile.addNote(f.str().c_str());
     }
     if (!ok) {
-      MWAW_DEBUG_MSG(("HMWKText::sendText: can not read a zone\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not read a zone\n"));
       break;
     }
 
@@ -720,7 +720,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       case 2:
         f << "[colBreak]";
         if (!isMain) {
-          MWAW_DEBUG_MSG(("HMWKText::sendText: find column break in auxilliary block\n"));
+          MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: find column break in auxilliary block\n"));
           break;
         }
         if (actCol < numCol-1 && numCol > 1) {
@@ -750,7 +750,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       default: {
         if (c <= 0x1f || c >= 0x100) {
           f << "###" << std::hex << c << std::dec;
-          MWAW_DEBUG_MSG(("HMWKText::sendText: find a odd char %x\n", c));
+          MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: find a odd char %x\n", c));
           break;
         }
         f << char(c);
@@ -764,7 +764,7 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
       asciiFile.addNote(f.str().c_str());
     }
     if (!ok) {
-      MWAW_DEBUG_MSG(("HMWKText::sendText: can not read a text zone\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not read a text zone\n"));
       break;
     }
   }
@@ -778,21 +778,21 @@ bool HMWKText::sendText(HMWKZone &zone, bool asGraphic)
 ////////////////////////////////////////////////////////////
 
 // a font in the text zone
-bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
+bool HanMacWrdKText::readFont(HanMacWrdKZone &zone, MWAWFont &font)
 {
   font = MWAWFont(-1,-1);
 
   MWAWInputStreamPtr input = zone.m_input;
   long pos = input->tell();
   if (pos+30 > zone.length()) {
-    MWAW_DEBUG_MSG(("HMWKText::readFont: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readFont: the zone is too short\n"));
     return false;
   }
 
   libmwaw::DebugStream f;
   int val = (int) input->readLong(2);
   if (val!=28) {
-    MWAW_DEBUG_MSG(("HMWKText::readFont: the data size seems bad\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readFont: the data size seems bad\n"));
     f << "##dataSz=" << val << ",";
   }
   font.setId((int) input->readLong(2));
@@ -903,15 +903,15 @@ bool HMWKText::readFont(HMWKZone &zone, MWAWFont &font)
 }
 
 // the list of fonts
-bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKText::readFontNames(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKText::readFontNames: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readFontNames: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 2) {
-    MWAW_DEBUG_MSG(("HMWKText::readFontNames: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readFontNames: the zone seems too short\n"));
     return false;
   }
   MWAWInputStreamPtr input = zone->m_input;
@@ -927,7 +927,7 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
   f << "N=" << N << ",";
   long expectedSz = N*68+2;
   if (expectedSz != dataSz && expectedSz+1 != dataSz) {
-    MWAW_DEBUG_MSG(("HMWKText::readFontNames: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readFontNames: the zone size seems odd\n"));
     return false;
   }
   asciiFile.addPos(pos);
@@ -945,7 +945,7 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
     int fSz = (int) input->readULong(1);
     if (fSz+5 > 68) {
       f << "###fSz";
-      MWAW_DEBUG_MSG(("HMWKText::readFontNames: can not read a font\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKText::readFontNames: can not read a font\n"));
     }
     else {
       std::string name("");
@@ -964,16 +964,16 @@ bool HMWKText::readFontNames(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 //     Style
 ////////////////////////////////////////////////////////////
-bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKText::readStyles(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKText::readStyles: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readStyles: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 24) {
-    MWAW_DEBUG_MSG(("HMWKText::readStyles: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readStyles: the zone seems too short\n"));
     return false;
   }
   MWAWInputStreamPtr input = zone->m_input;
@@ -990,7 +990,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
   f << "N=" << N << ",";
   long expectedSz = N*fieldSz+2;
   if (expectedSz != dataSz && expectedSz+1 != dataSz) {
-    MWAW_DEBUG_MSG(("HMWKText::readStyles: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readStyles: the zone size seems odd\n"));
     return false;
   }
   asciiFile.addPos(pos);
@@ -1064,7 +1064,7 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
     if (val != i) f << "#id" << val << ",";
     int fSz = (int) input->readULong(1);
     if (input->tell()+fSz > pos+fieldSz) {
-      MWAW_DEBUG_MSG(("HMWKText::readStyles: can not read styleName\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKText::readStyles: can not read styleName\n"));
       f << "###";
     }
     else {
@@ -1091,21 +1091,21 @@ bool HMWKText::readStyles(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 //     Paragraph
 ////////////////////////////////////////////////////////////
-void HMWKText::setProperty(HMWKTextInternal::Paragraph const &para, float)
+void HanMacWrdKText::setProperty(HanMacWrdKTextInternal::Paragraph const &para, float)
 {
   if (!m_parserState->m_textListener) return;
   m_parserState->m_textListener->setParagraph(para);
 }
 
-bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
+bool HanMacWrdKText::readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Paragraph &para)
 {
-  para = HMWKTextInternal::Paragraph();
+  para = HanMacWrdKTextInternal::Paragraph();
 
   MWAWInputStreamPtr input = zone.m_input;
   long pos = input->tell();
   long dataSz = zone.length();
   if (pos+102 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKText::readParagraph: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readParagraph: the zone is too short\n"));
     return false;
   }
 
@@ -1113,7 +1113,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   libmwaw::DebugFile &asciiFile = zone.ascii();
   int val = (int) input->readLong(2);
   if (val!=100) {
-    MWAW_DEBUG_MSG(("HMWKText::readParagraph: the data size seems bad\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readParagraph: the data size seems bad\n"));
     f << "##dataSz=" << val << ",";
   }
   int flags = (int) input->readULong(1);
@@ -1243,7 +1243,7 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
   }
   int nTabs = (int) input->readULong(1);
   if (pos+102+nTabs*12 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKText::readParagraph: can not read numbers of tab\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readParagraph: can not read numbers of tab\n"));
     return false;
   }
   val = (int) input->readULong(2); // always 0
@@ -1322,15 +1322,15 @@ bool HMWKText::readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para)
 ////////////////////////////////////////////////////////////
 //     the token
 ////////////////////////////////////////////////////////////
-bool HMWKText::readToken(HMWKZone &zone, HMWKTextInternal::Token &token)
+bool HanMacWrdKText::readToken(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Token &token)
 {
-  token = HMWKTextInternal::Token();
+  token = HanMacWrdKTextInternal::Token();
 
   MWAWInputStreamPtr input = zone.m_input;
   long pos = input->tell();
   long dataSz = zone.length();
   if (pos+10 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKText::readToken: the zone is too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readToken: the zone is too short\n"));
     return false;
   }
 
@@ -1338,7 +1338,7 @@ bool HMWKText::readToken(HMWKZone &zone, HMWKTextInternal::Token &token)
   libmwaw::DebugFile &asciiFile = zone.ascii();
   int val = (int) input->readLong(2);
   if (val!=8) {
-    MWAW_DEBUG_MSG(("HMWKText::readToken: the data size seems bad\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readToken: the data size seems bad\n"));
     f << "##dataSz=" << val << ",";
   }
 
@@ -1367,15 +1367,15 @@ bool HMWKText::readToken(HMWKZone &zone, HMWKTextInternal::Token &token)
 ////////////////////////////////////////////////////////////
 //     the sections
 ////////////////////////////////////////////////////////////
-bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKText::readSections(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKText::readSections: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readSections: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 160) {
-    MWAW_DEBUG_MSG(("HMWKText::readSections: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readSections: the zone seems too short\n"));
     return false;
   }
 
@@ -1384,7 +1384,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  HMWKTextInternal::Section sec;
+  HanMacWrdKTextInternal::Section sec;
   long pos=0;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   long val = input->readLong(2);
@@ -1392,7 +1392,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
     f << "f0=" << val << ",";
   int numColumns = (int) input->readLong(2);
   if (numColumns <= 0 || numColumns > 8) {
-    MWAW_DEBUG_MSG(("HMWKText::readSections: numColumns seems bad\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readSections: numColumns seems bad\n"));
     f << "###nCols=" << numColumns << ",";
     numColumns = 1;
   }
@@ -1441,7 +1441,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
       if (!m_state->m_headerId)
         m_state->m_headerId = id;
       else if (m_state->m_headerId != id) {
-        MWAW_DEBUG_MSG(("HMWKText::readSections: headerid is already defined\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKText::readSections: headerid is already defined\n"));
         f << "###";
       }
       f << "headerId=" << std::hex << id << std::dec << ",";
@@ -1450,7 +1450,7 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
       if (!m_state->m_footerId)
         m_state->m_footerId = id;
       else if (m_state->m_footerId != id) {
-        MWAW_DEBUG_MSG(("HMWKText::readSections: footerid is already defined\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKText::readSections: footerid is already defined\n"));
         f << "###";
       }
       f << "footerId=" << std::hex << id << std::dec << ",";
@@ -1472,14 +1472,14 @@ bool HMWKText::readSections(shared_ptr<HMWKZone> zone)
 }
 
 //! send data to the listener
-void HMWKText::flushExtra()
+void HanMacWrdKText::flushExtra()
 {
   if (!m_parserState->m_textListener) return;
-  std::multimap<long, shared_ptr<HMWKZone> >::iterator tIt
+  std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt
     =m_state->m_IdTextMaps.begin();
   for (; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
     if (!tIt->second) continue;
-    HMWKZone &zone = *tIt->second;
+    HanMacWrdKZone &zone = *tIt->second;
     if (zone.m_parsed) continue;
     sendText(zone);
   }

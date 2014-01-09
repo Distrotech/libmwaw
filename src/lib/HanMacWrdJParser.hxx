@@ -34,8 +34,8 @@
 /*
  * Parser to convert HanMac Word-J document
  */
-#ifndef HMWJ_PARSER
-#  define HMWJ_PARSER
+#ifndef HAN_MAC_WRD_J_PARSER
+#  define HAN_MAC_WRD_J_PARSER
 
 #include <iostream>
 #include <string>
@@ -47,25 +47,25 @@
 
 #include "MWAWParser.hxx"
 
-namespace HMWJParserInternal
+namespace HanMacWrdJParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class HMWJGraph;
-class HMWJText;
+class HanMacWrdJGraph;
+class HanMacWrdJText;
 
 /** a class use to store the classic header find before file zone */
-struct HMWJZoneHeader {
+struct HanMacWrdJZoneHeader {
   //! constructor
-  HMWJZoneHeader(bool isMain) : m_length(0), m_n(0), m_fieldSize(0), m_id(0), m_isMain(isMain)
+  HanMacWrdJZoneHeader(bool isMain) : m_length(0), m_n(0), m_fieldSize(0), m_id(0), m_isMain(isMain)
   {
     for (int i=0; i < 4; i++) m_values[i] = 0;
   }
 
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, HMWJZoneHeader const &h)
+  friend std::ostream &operator<<(std::ostream &o, HanMacWrdJZoneHeader const &h)
   {
     if (h.m_n) o << "N=" << h.m_n << ",";
     if (h.m_id) o << "zId=" << std::hex << h.m_id << std::dec << ",";
@@ -101,17 +101,17 @@ struct HMWJZoneHeader {
  *
  *
  */
-class HMWJParser : public MWAWTextParser
+class HanMacWrdJParser : public MWAWTextParser
 {
-  friend class HMWJGraph;
-  friend class HMWJText;
-  friend class HMWJParserInternal::SubDocument;
+  friend class HanMacWrdJGraph;
+  friend class HanMacWrdJText;
+  friend class HanMacWrdJParserInternal::SubDocument;
 
 public:
   //! constructor
-  HMWJParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  HanMacWrdJParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~HMWJParser();
+  virtual ~HanMacWrdJParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -163,13 +163,13 @@ protected:
   bool readZone(MWAWEntry &entry);
 
   /** try to read a header of classic zone */
-  bool readClassicHeader(HMWJZoneHeader &header, long endPos=-1);
+  bool readClassicHeader(HanMacWrdJZoneHeader &header, long endPos=-1);
   /** try to decode a zone */
   bool decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &data);
 
   /** try to read a printinfo zone*/
   bool readPrintInfo(MWAWEntry const &entry);
-  /** try to read a unknown zone, just after the header (simillar to HMW Zoneb) */
+  /** try to read a unknown zone, just after the header (simillar to HanMacWrd Zoneb) */
   bool readHeaderEnd();
 #ifdef DEBUG
   /** try to read a unknown zones with header data */
@@ -185,13 +185,13 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<HMWJParserInternal::State> m_state;
+  shared_ptr<HanMacWrdJParserInternal::State> m_state;
 
   //! the graph parser
-  shared_ptr<HMWJGraph> m_graphParser;
+  shared_ptr<HanMacWrdJGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<HMWJText> m_textParser;
+  shared_ptr<HanMacWrdJText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

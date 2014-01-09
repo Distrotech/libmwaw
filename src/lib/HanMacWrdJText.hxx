@@ -35,8 +35,8 @@
  * Parser to HanMac Word-J text document
  *
  */
-#ifndef HMWJ_TEXT
-#  define HMWJ_TEXT
+#ifndef HAN_MAC_WRD_J_TEXT
+#  define HAN_MAC_WRD_J_TEXT
 
 #include <map>
 #include <vector>
@@ -44,7 +44,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace HMWJTextInternal
+namespace HanMacWrdJTextInternal
 {
 struct Paragraph;
 class SubDocument;
@@ -52,22 +52,22 @@ struct TextZone;
 struct State;
 }
 
-class HMWJParser;
+class HanMacWrdJParser;
 
 /** \brief the main class to read the text part of HanMac Word-J file
  *
  *
  *
  */
-class HMWJText
+class HanMacWrdJText
 {
-  friend class HMWJTextInternal::SubDocument;
-  friend class HMWJParser;
+  friend class HanMacWrdJTextInternal::SubDocument;
+  friend class HanMacWrdJParser;
 public:
   //! constructor
-  HMWJText(HMWJParser &parser);
+  HanMacWrdJText(HanMacWrdJParser &parser);
   //! destructor
-  virtual ~HMWJText();
+  virtual ~HanMacWrdJText();
 
   /** returns the file version */
   int version() const;
@@ -83,14 +83,14 @@ protected:
   //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long cPos);
   //! send a text zone
-  bool sendText(HMWJTextInternal::TextZone const &zone, long cPos, bool asGraphic);
+  bool sendText(HanMacWrdJTextInternal::TextZone const &zone, long cPos, bool asGraphic);
   //! check if we can send a textzone has graphic
-  bool canSendTextAsGraphic(HMWJTextInternal::TextZone const &zone, long cPos);
+  bool canSendTextAsGraphic(HanMacWrdJTextInternal::TextZone const &zone, long cPos);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
   //! compute the number of pages present in a zone
-  int computeNumPages(HMWJTextInternal::TextZone const &zone);
+  int computeNumPages(HanMacWrdJTextInternal::TextZone const &zone);
   //! returns the list of zoneId which corresponds to the token
   std::vector<long> getTokenIdList() const;
   //! update the text zone type with map id->type
@@ -111,7 +111,7 @@ protected:
   /** try to read the paragraphs zone (type 1)*/
   bool readParagraphs(MWAWEntry const &entry);
   /** try to read a paragraph  ( reading up to endPos if endPos is defined ) */
-  bool readParagraph(HMWJTextInternal::Paragraph &para, long endPos=-1);
+  bool readParagraph(HanMacWrdJTextInternal::Paragraph &para, long endPos=-1);
   /** try to read the style zone (type 2) */
   bool readStyles(MWAWEntry const &entry);
   /** try to read the list of textzones ( type 4) */
@@ -119,7 +119,7 @@ protected:
   /** try to read a text zone ( type 5 ) */
   bool readTextZone(MWAWEntry const &entry, int actZone);
   /** try to read the token in the text zone */
-  bool readTextToken(long endPos, HMWJTextInternal::TextZone &zone);
+  bool readTextToken(long endPos, HanMacWrdJTextInternal::TextZone &zone);
   /** try to read the different sections*/
   bool readSections(MWAWEntry const &entry);
   /** try to read the footnote position*/
@@ -130,8 +130,8 @@ protected:
   //
 
 private:
-  HMWJText(HMWJText const &orig);
-  HMWJText &operator=(HMWJText const &orig);
+  HanMacWrdJText(HanMacWrdJText const &orig);
+  HanMacWrdJText &operator=(HanMacWrdJText const &orig);
 
 protected:
   //
@@ -141,10 +141,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWJTextInternal::State> m_state;
+  shared_ptr<HanMacWrdJTextInternal::State> m_state;
 
   //! the main parser;
-  HMWJParser *m_mainParser;
+  HanMacWrdJParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

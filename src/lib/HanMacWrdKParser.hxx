@@ -34,8 +34,8 @@
 /*
  * Parser to convert HanMac Word-K document
  */
-#ifndef HMWK_PARSER
-#  define HMWK_PARSER
+#ifndef HAN_MAC_WRD_K_PARSER
+#  define HAN_MAC_WRD_K_PARSER
 
 #include <iostream>
 #include <string>
@@ -48,20 +48,20 @@
 
 #include "MWAWParser.hxx"
 
-namespace HMWKParserInternal
+namespace HanMacWrdKParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-//! Small class used to store the decoded zone of HMWKParser
-struct HMWKZone {
+//! Small class used to store the decoded zone of HanMacWrdKParser
+struct HanMacWrdKZone {
   //! constructor given an input and an asciiFile
-  HMWKZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile);
+  HanMacWrdKZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile);
   //! constructor given an asciiFile (used for compressed zone)
-  HMWKZone(shared_ptr<libmwaw::DebugFile> asciiFile);
+  HanMacWrdKZone(shared_ptr<libmwaw::DebugFile> asciiFile);
   //! destructor
-  ~HMWKZone();
+  ~HanMacWrdKZone();
 
   //! returns the first position in the input
   long begin() const
@@ -127,7 +127,7 @@ struct HMWKZone {
   static std::string name(int type);
 
   //! operator <<
-  friend std::ostream &operator<<(std::ostream &o, HMWKZone const &zone);
+  friend std::ostream &operator<<(std::ostream &o, HanMacWrdKZone const &zone);
 
   //! returns the debug file
   libmwaw::DebugFile &ascii()
@@ -170,29 +170,29 @@ protected:
   shared_ptr<libmwaw::DebugFile> m_asciiFilePtr;
 
 private:
-  HMWKZone(HMWKZone const &orig);
-  HMWKZone &operator=(HMWKZone const &orig);
+  HanMacWrdKZone(HanMacWrdKZone const &orig);
+  HanMacWrdKZone &operator=(HanMacWrdKZone const &orig);
 };
 
-class HMWKGraph;
-class HMWKText;
+class HanMacWrdKGraph;
+class HanMacWrdKText;
 
 /** \brief the main class to read a HanMac Word-K file
  *
  *
  *
  */
-class HMWKParser : public MWAWTextParser
+class HanMacWrdKParser : public MWAWTextParser
 {
-  friend class HMWKGraph;
-  friend class HMWKText;
-  friend class HMWKParserInternal::SubDocument;
+  friend class HanMacWrdKGraph;
+  friend class HanMacWrdKText;
+  friend class HanMacWrdKParserInternal::SubDocument;
 
 public:
   //! constructor
-  HMWKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  HanMacWrdKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~HMWKParser();
+  virtual ~HanMacWrdKParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -238,36 +238,36 @@ protected:
   /** try to read the zones list */
   bool readZonesList();
   /** try to read a generic zone */
-  bool readZone(shared_ptr<HMWKZone> zone);
+  bool readZone(shared_ptr<HanMacWrdKZone> zone);
   /** try to decode a zone */
-  shared_ptr<HMWKZone> decodeZone(shared_ptr<HMWKZone> zone);
+  shared_ptr<HanMacWrdKZone> decodeZone(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a zone storing a list of ?, frameType*/
-  bool readFramesUnkn(shared_ptr<HMWKZone> zone);
+  bool readFramesUnkn(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a printinfo zone (type 7)*/
-  bool readPrintInfo(HMWKZone &zone);
+  bool readPrintInfo(HanMacWrdKZone &zone);
   /** try to read a unknown zone of type 6*/
-  bool readZone6(shared_ptr<HMWKZone> zone);
+  bool readZone6(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a unknown zone of type 8*/
-  bool readZone8(shared_ptr<HMWKZone> zone);
+  bool readZone8(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a unknown zone of type a*/
-  bool readZonea(shared_ptr<HMWKZone> zone);
+  bool readZonea(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a unknown zone of type b*/
-  bool readZoneb(HMWKZone &zone);
+  bool readZoneb(HanMacWrdKZone &zone);
   /** try to read a unknown zone of type c*/
-  bool readZonec(shared_ptr<HMWKZone> zone);
+  bool readZonec(shared_ptr<HanMacWrdKZone> zone);
 
 protected:
   //
   // data
   //
   //! the state
-  shared_ptr<HMWKParserInternal::State> m_state;
+  shared_ptr<HanMacWrdKParserInternal::State> m_state;
 
   //! the graph parser
-  shared_ptr<HMWKGraph> m_graphParser;
+  shared_ptr<HanMacWrdKGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<HMWKText> m_textParser;
+  shared_ptr<HanMacWrdKText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

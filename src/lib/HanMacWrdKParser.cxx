@@ -53,16 +53,16 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "HMWKGraph.hxx"
-#include "HMWKText.hxx"
+#include "HanMacWrdKGraph.hxx"
+#include "HanMacWrdKText.hxx"
 
-#include "HMWKParser.hxx"
+#include "HanMacWrdKParser.hxx"
 
-/** Internal: the structures of a HMWKParser */
-namespace HMWKParserInternal
+/** Internal: the structures of a HanMacWrdKParser */
+namespace HanMacWrdKParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a HMWKParser
+//! Internal: the state of a HanMacWrdKParser
 struct State {
   //! constructor
   State() : m_zonesListBegin(-1), m_zonesMap(),
@@ -73,7 +73,7 @@ struct State {
   //! the list of zone begin
   long m_zonesListBegin;
   //! a map of entry: zoneId->zone
-  std::multimap<long,shared_ptr<HMWKZone> > m_zonesMap;
+  std::multimap<long,shared_ptr<HanMacWrdKZone> > m_zonesMap;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
   int m_headerHeight /** the header height if known */,
@@ -81,11 +81,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a HMWKParser
+//! Internal: the subdocument of a HanMacWrdKParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(HMWKParser &pars, MWAWInputStreamPtr input, long zoneId) :
+  SubDocument(HanMacWrdKParser &pars, MWAWInputStreamPtr input, long zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -118,17 +118,17 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWKParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (type != libmwaw::DOC_HEADER_FOOTER) {
-    MWAW_DEBUG_MSG(("HMWKParserInternal::SubDocument::parse: unexpected document type\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParserInternal::SubDocument::parse: unexpected document type\n"));
     return;
   }
 
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<HMWKParser *>(m_parser)->sendText(m_id, 0);
+  reinterpret_cast<HanMacWrdKParser *>(m_parser)->sendText(m_id, 0);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -136,22 +136,22 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
 ////////////////////////////////////////////////////////////
 // constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
-HMWKParser::HMWKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+HanMacWrdKParser::HanMacWrdKParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
 
-HMWKParser::~HMWKParser()
+HanMacWrdKParser::~HanMacWrdKParser()
 {
 }
 
-void HMWKParser::init()
+void HanMacWrdKParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new HMWKParserInternal::State);
+  m_state.reset(new HanMacWrdKParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMarginTop(0.1);
@@ -159,28 +159,28 @@ void HMWKParser::init()
   getPageSpan().setMarginLeft(0.1);
   getPageSpan().setMarginRight(0.1);
 
-  m_graphParser.reset(new HMWKGraph(*this));
-  m_textParser.reset(new HMWKText(*this));
+  m_graphParser.reset(new HanMacWrdKGraph(*this));
+  m_textParser.reset(new HanMacWrdKText(*this));
 }
 
-bool HMWKParser::sendText(long id, long subId, bool asGraphic)
+bool HanMacWrdKParser::sendText(long id, long subId, bool asGraphic)
 {
   return m_textParser->sendText(id, subId, asGraphic);
 }
 
-bool HMWKParser::canSendTextAsGraphic(long id, long subId)
+bool HanMacWrdKParser::canSendTextAsGraphic(long id, long subId)
 {
   return m_textParser->canSendTextAsGraphic(id, subId);
 }
 
-bool HMWKParser::sendZone(long zId)
+bool HanMacWrdKParser::sendZone(long zId)
 {
   MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   return m_graphParser->sendFrame(zId, pos);
 }
 
-bool HMWKParser::getColor(int colId, int patternId, MWAWColor &color) const
+bool HanMacWrdKParser::getColor(int colId, int patternId, MWAWColor &color) const
 {
   return m_graphParser->getColor(colId, patternId, color);
 }
@@ -188,7 +188,7 @@ bool HMWKParser::getColor(int colId, int patternId, MWAWColor &color) const
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f HMWKParser::getPageLeftTop() const
+Vec2f HanMacWrdKParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -197,7 +197,7 @@ Vec2f HMWKParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void HMWKParser::newPage(int number)
+void HanMacWrdKParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -213,7 +213,7 @@ void HMWKParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void HMWKParser::parse(librevenge::RVNGTextInterface *docInterface)
+void HanMacWrdKParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -240,7 +240,7 @@ void HMWKParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("HMWKParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -251,11 +251,11 @@ void HMWKParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void HMWKParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void HanMacWrdKParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("HMWKParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -273,13 +273,13 @@ void HMWKParser::createDocument(librevenge::RVNGTextInterface *documentInterface
   m_textParser->getHeaderFooterId(headerId, footerId);
   if (headerId) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset(new HMWKParserInternal::SubDocument
+    header.m_subDocument.reset(new HanMacWrdKParserInternal::SubDocument
                                (*this, getInput(), headerId));
     ps.setHeaderFooter(header);
   }
   if (footerId) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset(new HMWKParserInternal::SubDocument
+    footer.m_subDocument.reset(new HanMacWrdKParserInternal::SubDocument
                                (*this, getInput(), footerId));
     ps.setHeaderFooter(footer);
   }
@@ -298,17 +298,17 @@ void HMWKParser::createDocument(librevenge::RVNGTextInterface *documentInterface
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool HMWKParser::createZones()
+bool HanMacWrdKParser::createZones()
 {
-  if (!HMWKParser::readZonesList())
+  if (!HanMacWrdKParser::readZonesList())
     return false;
 
   libmwaw::DebugStream f;
-  std::multimap<long,shared_ptr<HMWKZone> >::iterator it;
+  std::multimap<long,shared_ptr<HanMacWrdKZone> >::iterator it;
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it)
     readZone(it->second);
   for (it = m_state->m_zonesMap.begin(); it !=m_state->m_zonesMap.end(); ++it) {
-    shared_ptr<HMWKZone> &zone = it->second;
+    shared_ptr<HanMacWrdKZone> &zone = it->second;
     if (!zone || !zone->valid() || zone->m_parsed)
       continue;
     f.str("");
@@ -330,11 +330,11 @@ bool HMWKParser::createZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool HMWKParser::readZonesList()
+bool HanMacWrdKParser::readZonesList()
 {
   MWAWInputStreamPtr input = getInput();
   if (m_state->m_zonesListBegin <= 0 || !input->checkPosition(m_state->m_zonesListBegin)) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZonesList: the list entry is not set \n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: the list entry is not set \n"));
     return false;
   }
   libmwaw::DebugStream f;
@@ -343,7 +343,7 @@ bool HMWKParser::readZonesList()
   std::set<long> seeDebZone;
   while (debZone) {
     if (seeDebZone.find(debZone) != seeDebZone.end()) {
-      MWAW_DEBUG_MSG(("HMWKParser::readZonesList: oops, we have already see this zone\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: oops, we have already see this zone\n"));
       break;
     }
     seeDebZone.insert(debZone);
@@ -354,7 +354,7 @@ bool HMWKParser::readZonesList()
     f << "Entries(Zones):";
     f << "N=" << numZones << ",";
     if (!numZones || !input->checkPosition(pos+16*(numZones+1))) {
-      MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the number of zones\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: can not read the number of zones\n"));
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       break;
@@ -366,7 +366,7 @@ bool HMWKParser::readZonesList()
     }
     long ptr = long(input->readULong(4));
     if (ptr != debZone) {
-      MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the zone begin ptr\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: can not read the zone begin ptr\n"));
       f << "#ptr=" << std::hex << ptr << std::dec << ",";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -376,7 +376,7 @@ bool HMWKParser::readZonesList()
     if (nextPtr) {
       f << "nextPtr=" << std::hex << nextPtr << std::dec;
       if (!input->checkPosition(nextPtr)) {
-        MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the next zone begin ptr\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: can not read the next zone begin ptr\n"));
         nextPtr = 0;
         f << "###";
       }
@@ -393,7 +393,7 @@ bool HMWKParser::readZonesList()
     for (int i = 0; i < numZones; i++) {
       pos = input->tell();
       f.str("");
-      shared_ptr<HMWKZone> zone(new HMWKZone(shared_ptr<libmwaw::DebugFile>(new libmwaw::DebugFile)));
+      shared_ptr<HanMacWrdKZone> zone(new HanMacWrdKZone(shared_ptr<libmwaw::DebugFile>(new libmwaw::DebugFile)));
       zone->m_type = int(input->readLong(2));
       val = int(input->readLong(2));
       if (val) f << "f0=" << val << ",";
@@ -404,12 +404,12 @@ bool HMWKParser::readZonesList()
       f.str("");
       f << "Zones-" << i << ":" << *zone;
       if (!input->checkPosition(ptr)) {
-        MWAW_DEBUG_MSG(("HMWKParser::readZonesList: can not read the %d zone address\n", i));
+        MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonesList: can not read the %d zone address\n", i));
         f << ",#Ptr";
       }
       else
         m_state->m_zonesMap.insert
-        (std::multimap<long,shared_ptr<HMWKZone> >::value_type(zone->m_id,zone));
+        (std::multimap<long,shared_ptr<HanMacWrdKZone> >::value_type(zone->m_id,zone));
       ascii().addDelimiter(input->tell(), '|');
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -424,10 +424,10 @@ bool HMWKParser::readZonesList()
   return m_state->m_zonesMap.size();
 }
 
-bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readZone(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone: can not find the zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone: can not find the zone\n"));
     return false;
   }
 
@@ -444,7 +444,7 @@ bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
   long totalSz = (long) input->readULong(4);
   long dataSz = (long) input->readULong(4);
   if (totalSz != dataSz+12 || !input->checkPosition(pos+totalSz)) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone: can not read the zone size\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone: can not read the zone size\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -523,7 +523,7 @@ bool HMWKParser::readZone(shared_ptr<HMWKZone> zone)
 }
 
 // read the print info data
-bool HMWKParser::readPrintInfo(HMWKZone &zone)
+bool HanMacWrdKParser::readPrintInfo(HanMacWrdKZone &zone)
 {
   long dataSz = zone.length();
   MWAWInputStreamPtr input = zone.m_input;
@@ -531,7 +531,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
   long pos = zone.begin();
 
   if (dataSz < 192 || !input->checkPosition(zone.end())) {
-    MWAW_DEBUG_MSG(("HMWKParser::readPrintInfo: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readPrintInfo: the zone seems too short\n"));
     return false;
   }
 
@@ -566,7 +566,7 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
   f << zone.name() << "(B):";
   long sz = (long) input->readULong(4);
   if (sz < 0x78) {
-    MWAW_DEBUG_MSG(("HMWKParser::readPrintInfo: the print info data zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readPrintInfo: the print info data zone seems too short\n"));
     f << "###";
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -634,15 +634,15 @@ bool HMWKParser::readPrintInfo(HMWKZone &zone)
 }
 
 // a small unknown zone: link to table, frame?
-bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readFramesUnkn(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readFramesUnkn: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readFramesUnkn: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 2) {
-    MWAW_DEBUG_MSG(("HMWKParser::readFramesUnkn: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readFramesUnkn: the zone seems too short\n"));
     return false;
   }
 
@@ -657,7 +657,7 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
   f << "N?=" << N << ",";
   long expectedSz = N*6+2;
   if (expectedSz != dataSz && expectedSz+1 != dataSz) {
-    MWAW_DEBUG_MSG(("HMWKParser::readFramesUnkn: the zone size seems odd\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readFramesUnkn: the zone size seems odd\n"));
     return false;
   }
   asciiFile.addPos(0);
@@ -703,16 +703,16 @@ bool HMWKParser::readFramesUnkn(shared_ptr<HMWKZone> zone)
 }
 
 // a unknown zone
-bool HMWKParser::readZone6(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readZone6(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone6: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone6: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 8) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone6: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone6: the zone seems too short\n"));
     return false;
   }
 
@@ -728,7 +728,7 @@ bool HMWKParser::readZone6(shared_ptr<HMWKZone> zone)
     pos = input->tell();
     long sz = (long) input->readULong(4);
     if (pos+sz+4 > dataSz) {
-      MWAW_DEBUG_MSG(("HMWKParser::readZone6: zone%d ptr seems bad\n", st));
+      MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone6: zone%d ptr seems bad\n", st));
       return false;
     }
 
@@ -747,15 +747,15 @@ bool HMWKParser::readZone6(shared_ptr<HMWKZone> zone)
 }
 
 // a small unknown zone
-bool HMWKParser::readZone8(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readZone8(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone8: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone8: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 78) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZone8: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZone8: the zone seems too short\n"));
     return false;
   }
 
@@ -780,15 +780,15 @@ bool HMWKParser::readZone8(shared_ptr<HMWKZone> zone)
 }
 
 // a small unknown zone
-bool HMWKParser::readZonea(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readZonea(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZonea: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonea: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 114) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZonea: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonea: the zone seems too short\n"));
     return false;
   }
 
@@ -824,7 +824,7 @@ bool HMWKParser::readZonea(shared_ptr<HMWKZone> zone)
 }
 
 // a small unknown zone
-bool HMWKParser::readZoneb(HMWKZone &zone)
+bool HanMacWrdKParser::readZoneb(HanMacWrdKZone &zone)
 {
   long dataSz = zone.length();
   MWAWInputStreamPtr input = zone.m_input;
@@ -832,7 +832,7 @@ bool HMWKParser::readZoneb(HMWKZone &zone)
   long pos=zone.begin();
 
   if (dataSz < 34 || !input->checkPosition(zone.end())) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZoneb: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZoneb: the zone seems too short\n"));
     return false;
   }
 
@@ -882,15 +882,15 @@ bool HMWKParser::readZoneb(HMWKZone &zone)
 }
 
 // a small unknown zone
-bool HMWKParser::readZonec(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKParser::readZonec(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZonec: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonec: called without any zone\n"));
     return false;
   }
   long dataSz = zone->length();
   if (dataSz < 52) {
-    MWAW_DEBUG_MSG(("HMWKParser::readZonec: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::readZonec: the zone seems too short\n"));
     return false;
   }
 
@@ -965,10 +965,10 @@ bool HMWKParser::readZonec(shared_ptr<HMWKZone> zone)
           "Applications of Splay Trees to Data Compression" by Douglas W. Jones
           in Communications of the ACM, Aug. 1988, pages 996-1007.
 */
-shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
+shared_ptr<HanMacWrdKZone> HanMacWrdKParser::decodeZone(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone || zone->fileBeginPos()+12 >= zone->fileEndPos()) {
-    MWAW_DEBUG_MSG(("HMWKParser::decodeZone: called with an invalid zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: called with an invalid zone\n"));
     return zone;
   }
   short const maxChar=256;
@@ -1003,7 +1003,7 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
     do {  /* once for each bit on path */
       if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= zone->fileEndPos()) {
-          MWAW_DEBUG_MSG(("HMWKParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
+          MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
           dt.append((unsigned char)a);
           ok = false;
           break;
@@ -1050,14 +1050,14 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
     while (a != root);
   }
   if (dt.size()==0) {
-    MWAW_DEBUG_MSG(("HMWKParser::decodeZone: oops an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: oops an empty zone\n"));
     zone.reset();
     return zone;
   }
 
   zone->m_input=MWAWInputStream::get(zone->getBinaryData(), false);
   if (!zone->m_input) {
-    MWAW_DEBUG_MSG(("HMWKParser::decodeZone: can not find my input\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: can not find my input\n"));
     zone.reset();
     return zone;
   }
@@ -1076,9 +1076,9 @@ shared_ptr<HMWKZone> HMWKParser::decodeZone(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
+bool HanMacWrdKParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = HMWKParserInternal::State();
+  *m_state = HanMacWrdKParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -1087,7 +1087,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   f << "FileHeader:";
   long const headerSize=0x33c;
   if (!input->checkPosition(headerSize)) {
-    MWAW_DEBUG_MSG(("HMWKParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -1112,7 +1112,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
   if (m_state->m_zonesListBegin<0x14 || !input->checkPosition(m_state->m_zonesListBegin))
     return false;
   if (m_state->m_zonesListBegin < 0x33c) {
-    MWAW_DEBUG_MSG(("HMWKParser::checkHeader: the header size seems short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::checkHeader: the header size seems short\n"));
   }
   f << "zonesBeg=" << std::hex << m_state->m_zonesListBegin << std::dec << ",";
   long fLength = long(input->readULong(4));
@@ -1120,7 +1120,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   if (!input->checkPosition(fLength)) {
     if (!input->checkPosition(fLength/2)) return false;
-    MWAW_DEBUG_MSG(("HMWKParser::checkHeader: file seems incomplete, try to continue\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKParser::checkHeader: file seems incomplete, try to continue\n"));
     f << "#len=" << std::hex << fLength << std::dec << ",";
   }
   long tLength = long(input->readULong(4));
@@ -1143,7 +1143,7 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
     if (fSz >= fieldSizes[i]) {
       if (strict)
         return false;
-      MWAW_DEBUG_MSG(("HMWKParser::checkHeader: can not read field size %i\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdKParser::checkHeader: can not read field size %i\n", i));
       ascii().addPos(pos);
       ascii().addNote("FileHeader#");
       input->seek(pos+fieldSizes[i], librevenge::RVNG_SEEK_SET);
@@ -1177,25 +1177,25 @@ bool HMWKParser::checkHeader(MWAWHeader *header, bool strict)
 }
 
 ////////////////////////////////////////////////////////////
-// HMWKZone
+// HanMacWrdKZone
 ////////////////////////////////////////////////////////////
-HMWKZone::HMWKZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile) : m_type(-1), m_id(-1), m_subId(-1), m_input(input), m_extra(""), m_parsed(false),
+HanMacWrdKZone::HanMacWrdKZone(MWAWInputStreamPtr input, libmwaw::DebugFile &asciiFile) : m_type(-1), m_id(-1), m_subId(-1), m_input(input), m_extra(""), m_parsed(false),
   m_filePos(-1), m_endFilePos(-1), m_data(), m_asciiFile(&asciiFile), m_asciiFilePtr()
 {
 }
 
-HMWKZone::HMWKZone(shared_ptr<libmwaw::DebugFile> asciiFile) : m_type(-1), m_id(-1), m_subId(-1), m_input(), m_extra(""), m_parsed(false),
+HanMacWrdKZone::HanMacWrdKZone(shared_ptr<libmwaw::DebugFile> asciiFile) : m_type(-1), m_id(-1), m_subId(-1), m_input(), m_extra(""), m_parsed(false),
   m_filePos(-1), m_endFilePos(-1), m_data(), m_asciiFile(asciiFile.get()), m_asciiFilePtr(asciiFile)
 {
 }
 
-HMWKZone::~HMWKZone()
+HanMacWrdKZone::~HanMacWrdKZone()
 {
   if (m_asciiFilePtr)
     ascii().reset();
 }
 
-std::ostream &operator<<(std::ostream &o, HMWKZone const &zone)
+std::ostream &operator<<(std::ostream &o, HanMacWrdKZone const &zone)
 {
   o << zone.name();
   if (zone.m_id > 0) o << "[" << std::hex << zone.m_id << std::dec << "]";
@@ -1204,7 +1204,7 @@ std::ostream &operator<<(std::ostream &o, HMWKZone const &zone)
   return o;
 }
 
-std::string HMWKZone::name(int type)
+std::string HanMacWrdKZone::name(int type)
 {
   switch (type) {
   case 1:

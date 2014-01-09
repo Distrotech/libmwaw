@@ -53,16 +53,16 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "HMWJGraph.hxx"
-#include "HMWJText.hxx"
+#include "HanMacWrdJGraph.hxx"
+#include "HanMacWrdJText.hxx"
 
-#include "HMWJParser.hxx"
+#include "HanMacWrdJParser.hxx"
 
-/** Internal: the structures of a HMWJParser */
-namespace HMWJParserInternal
+/** Internal: the structures of a HanMacWrdJParser */
+namespace HanMacWrdJParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a HMWJParser
+//! Internal: the state of a HanMacWrdJParser
 struct State {
   //! constructor
   State() : m_zonesListBegin(-1), m_zonesMap(), m_zonesIdList(),
@@ -88,11 +88,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a HMWJParser
+//! Internal: the subdocument of a HanMacWrdJParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(HMWJParser &pars, MWAWInputStreamPtr input, long zoneId) :
+  SubDocument(HanMacWrdJParser &pars, MWAWInputStreamPtr input, long zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -136,17 +136,17 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWJParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (type != libmwaw::DOC_HEADER_FOOTER) {
-    MWAW_DEBUG_MSG(("HMWJParserInternal::SubDocument::parse: unexpected document type\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParserInternal::SubDocument::parse: unexpected document type\n"));
     return;
   }
 
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<HMWJParser *>(m_parser)->sendText(m_id, 0);
+  reinterpret_cast<HanMacWrdJParser *>(m_parser)->sendText(m_id, 0);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -154,48 +154,48 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
 ////////////////////////////////////////////////////////////
 // constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
-HMWJParser::HMWJParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+HanMacWrdJParser::HanMacWrdJParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
 
-HMWJParser::~HMWJParser()
+HanMacWrdJParser::~HanMacWrdJParser()
 {
 }
 
-void HMWJParser::init()
+void HanMacWrdJParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new HMWJParserInternal::State);
+  m_state.reset(new HanMacWrdJParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_graphParser.reset(new HMWJGraph(*this));
-  m_textParser.reset(new HMWJText(*this));
+  m_graphParser.reset(new HanMacWrdJGraph(*this));
+  m_textParser.reset(new HanMacWrdJText(*this));
 }
 
-bool HMWJParser::sendText(long id, long cPos, bool asGraphic)
+bool HanMacWrdJParser::sendText(long id, long cPos, bool asGraphic)
 {
   return m_textParser->sendText(id, cPos, asGraphic);
 }
 
-bool HMWJParser::canSendTextAsGraphic(long id, long cPos)
+bool HanMacWrdJParser::canSendTextAsGraphic(long id, long cPos)
 {
   return m_textParser->canSendTextAsGraphic(id, cPos);
 }
 
-bool HMWJParser::sendZone(long zId)
+bool HanMacWrdJParser::sendZone(long zId)
 {
   MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   return m_graphParser->sendFrame(zId, pos);
 }
 
-bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const
+bool HanMacWrdJParser::getColor(int colId, int patternId, MWAWColor &color) const
 {
   return m_graphParser->getColor(colId, patternId, color);
 }
@@ -203,7 +203,7 @@ bool HMWJParser::getColor(int colId, int patternId, MWAWColor &color) const
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f HMWJParser::getPageLeftTop() const
+Vec2f HanMacWrdJParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
@@ -212,7 +212,7 @@ Vec2f HMWJParser::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void HMWJParser::newPage(int number)
+void HanMacWrdJParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -225,9 +225,9 @@ void HMWJParser::newPage(int number)
   }
 }
 
-bool HMWJParser::readClassicHeader(HMWJZoneHeader &header, long endPos)
+bool HanMacWrdJParser::readClassicHeader(HanMacWrdJZoneHeader &header, long endPos)
 {
-  header=HMWJZoneHeader(header.m_isMain);
+  header=HanMacWrdJZoneHeader(header.m_isMain);
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   header.m_length = (long) input->readULong(4);
@@ -249,7 +249,7 @@ bool HMWJParser::readClassicHeader(HMWJZoneHeader &header, long endPos)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void HMWJParser::parse(librevenge::RVNGTextInterface *docInterface)
+void HanMacWrdJParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -275,7 +275,7 @@ void HMWJParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("HMWJParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -286,11 +286,11 @@ void HMWJParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void HMWJParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void HanMacWrdJParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("HMWJParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -306,12 +306,12 @@ void HMWJParser::createDocument(librevenge::RVNGTextInterface *documentInterface
   MWAWPageSpan ps(getPageSpan());
   if (m_state->m_headerId) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
+    header.m_subDocument.reset(new HanMacWrdJParserInternal::SubDocument(*this, getInput(), m_state->m_headerId));
     ps.setHeaderFooter(header);
   }
   if (m_state->m_footerId) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset(new HMWJParserInternal::SubDocument(*this, getInput(), m_state->m_footerId));
+    footer.m_subDocument.reset(new HanMacWrdJParserInternal::SubDocument(*this, getInput(), m_state->m_footerId));
     ps.setHeaderFooter(footer);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -329,7 +329,7 @@ void HMWJParser::createDocument(librevenge::RVNGTextInterface *documentInterface
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool HMWJParser::createZones()
+bool HanMacWrdJParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -414,7 +414,7 @@ bool HMWJParser::createZones()
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool HMWJParser::checkEntry(MWAWEntry &entry)
+bool HanMacWrdJParser::checkEntry(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   if (entry.begin()<=0 || !input->checkPosition(entry.begin()))
@@ -455,7 +455,7 @@ bool HMWJParser::checkEntry(MWAWEntry &entry)
   return true;
 }
 
-bool HMWJParser::readZonesList()
+bool HanMacWrdJParser::readZonesList()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -501,10 +501,10 @@ bool HMWJParser::readZonesList()
   return m_state->m_zonesMap.size();
 }
 
-bool HMWJParser::readZone(MWAWEntry &entry)
+bool HanMacWrdJParser::readZone(MWAWEntry &entry)
 {
   if (entry.begin()<=0) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone: can not find the zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZone: can not find the zone\n"));
     return false;
   }
 
@@ -523,7 +523,7 @@ bool HMWJParser::readZone(MWAWEntry &entry)
   if (val) f << "f0=" << val << ",";
   entry.setLength((long) input->readULong(4));
   if (entry.length() < 12 || !input->checkPosition(entry.end())) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZone: header seems to short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZone: header seems to short\n"));
     return false;
   }
   entry.setParsed(true);
@@ -594,14 +594,14 @@ bool HMWJParser::readZone(MWAWEntry &entry)
 
 
 // read the print info data
-bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
+bool HanMacWrdJParser::readPrintInfo(MWAWEntry const &entry)
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugFile &asciiFile = ascii();
   long pos = entry.begin();
 
   if (!input->checkPosition(entry.end())) {
-    MWAW_DEBUG_MSG(("HMWJParser::readPrintInfo: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readPrintInfo: the zone seems too short\n"));
     return false;
   }
 
@@ -697,19 +697,19 @@ bool HMWJParser::readPrintInfo(MWAWEntry const &entry)
 }
 
 /* a unknown zone find always with N=0, so probably bad when N\neq 0 */
-bool HMWJParser::readZoneA(MWAWEntry const &entry)
+bool HanMacWrdJParser::readZoneA(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: called without any entry\n"));
     return false;
   }
   if (entry.length() == 8) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: find an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: find an empty zone\n"));
     entry.setParsed(true);
     return true;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: the entry seems too short\n"));
     return false;
   }
   long pos = entry.begin()+8; // skip header
@@ -722,17 +722,17 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header (supposing that fieldSize=4)
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
+  HanMacWrdJZoneHeader mainHeader(true);
   if (!readClassicHeader(mainHeader,endPos) ||
       (mainHeader.m_n && mainHeader.m_fieldSize!=4)) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: can not read an entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: can not read an entry\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
     return false;
   }
   if (mainHeader.m_n != 0) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: Arggh, find unexpected N\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: Arggh, find unexpected N\n"));
     f << "###";
   }
   long headerEnd=pos+4+mainHeader.m_length;
@@ -770,14 +770,14 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
     long zoneEnd=pos+4+dataSz;
 
     if (zoneEnd>endPos) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZoneA: can not read an entry\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: can not read an entry\n"));
       f << "###sz=" << dataSz;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       return false;
     }
     if (dataSz != expectedSize[i] && dataSz!=0) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZoneA: find unexpected size for zone %d\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: find unexpected size for zone %d\n", i));
       f << "###sz=" << dataSz;
     }
     asciiFile.addPos(pos);
@@ -786,7 +786,7 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
   }
   pos = input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneA: find unexpected end data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneA: find unexpected end data\n"));
     f.str("");
     f << entry.name() << "###:";
     asciiFile.addPos(pos);
@@ -797,19 +797,19 @@ bool HMWJParser::readZoneA(MWAWEntry const &entry)
 }
 
 /* a unknown zone */
-bool HMWJParser::readZoneB(MWAWEntry const &entry)
+bool HanMacWrdJParser::readZoneB(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneB: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: called without any entry\n"));
     return false;
   }
   if (entry.length() == 8) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneB: find an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: find an empty zone\n"));
     entry.setParsed(true);
     return true;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneB: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: the entry seems too short\n"));
     return false;
   }
   long pos = entry.begin()+8; // skip header
@@ -822,10 +822,10 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header (supposing that fieldSize=4)
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
+  HanMacWrdJZoneHeader mainHeader(true);
   if (!readClassicHeader(mainHeader,endPos) ||
       (mainHeader.m_n && mainHeader.m_fieldSize!=44)) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneB: can not read an entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: can not read an entry\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -855,7 +855,7 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
     f << entry.name() << "-" << i << ":";
     long dataSz = (long) input->readULong(4);
     if (pos+4+dataSz>endPos) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZoneB: can not read an entry\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: can not read an entry\n"));
       f << "###sz=" << dataSz;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -867,7 +867,7 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
   }
   pos = input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneB: find unexpected end data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneB: find unexpected end data\n"));
     f.str("");
     f << entry.name() << "###:";
     asciiFile.addPos(pos);
@@ -877,7 +877,7 @@ bool HMWJParser::readZoneB(MWAWEntry const &entry)
 }
 
 // a small unknown zone
-bool HMWJParser::readHeaderEnd()
+bool HanMacWrdJParser::readHeaderEnd()
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugFile &asciiFile = ascii();
@@ -885,7 +885,7 @@ bool HMWJParser::readHeaderEnd()
   long endPos=pos+34;
 
   if (!input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("HMWJParser::readHeaderEnd: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readHeaderEnd: the zone seems too short\n"));
     return false;
   }
 
@@ -928,14 +928,14 @@ bool HMWJParser::readHeaderEnd()
 }
 
 #ifdef DEBUG
-bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
+bool HanMacWrdJParser::readZoneWithHeader(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneWithHeader: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneWithHeader: called without any entry\n"));
     return false;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneWithHeader: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneWithHeader: the entry seems too short\n"));
     return false;
   }
 
@@ -950,9 +950,9 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
 
   // first read the header
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(false);
+  HanMacWrdJZoneHeader mainHeader(false);
   if (!readClassicHeader(mainHeader,endPos)) {
-    MWAW_DEBUG_MSG(("HMWJParser::readZoneWithHeader: can not read an entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneWithHeader: can not read an entry\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -986,7 +986,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
     f << entry.name() << "-" << i << ":";
     long dataSz = (long) input->readULong(4);
     if (pos+4+dataSz>endPos) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZoneWithHeader: can not read an entry\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneWithHeader: can not read an entry\n"));
       f << "###sz=" << dataSz;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1011,7 +1011,7 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
     f << entry.name() << "-A" << i++ << ":";
     long dataSz = (long) input->readULong(4);
     if (pos+4+dataSz>endPos) {
-      MWAW_DEBUG_MSG(("HMWJParser::readZoneWithHeader: can not read an entry\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::readZoneWithHeader: can not read an entry\n"));
       f << "###sz=" << dataSz;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1028,9 +1028,9 @@ bool HMWJParser::readZoneWithHeader(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
+bool HanMacWrdJParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = HMWJParserInternal::State();
+  *m_state = HanMacWrdJParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -1039,7 +1039,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
   f << "FileHeader:";
   long const headerSize=0x33c;
   if (!input->checkPosition(headerSize)) {
-    MWAW_DEBUG_MSG(("HMWJParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -1094,7 +1094,7 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
     if (fSz >= fieldSizes[i]) {
       if (strict)
         return false;
-      MWAW_DEBUG_MSG(("HMWJParser::checkHeader: can not read field size %i\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdJParser::checkHeader: can not read field size %i\n", i));
       ascii().addPos(pos);
       ascii().addNote("FileHeader#");
       input->seek(pos+fieldSizes[i], librevenge::RVNG_SEEK_SET);
@@ -1161,10 +1161,10 @@ bool HMWJParser::checkHeader(MWAWHeader *header, bool strict)
           "Applications of Splay Trees to Data Compression" by Douglas W. Jones
           in Communications of the ACM, Aug. 1988, pages 996-1007.
 */
-bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &dt)
+bool HanMacWrdJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &dt)
 {
   if (!entry.valid() || entry.length() <= 4) {
-    MWAW_DEBUG_MSG(("HMWJParser::decodeZone: called with an invalid zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: called with an invalid zone\n"));
     return false;
   }
   short const maxChar=256;
@@ -1199,7 +1199,7 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
     do {  /* once for each bit on path */
       if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= entry.end()) {
-          MWAW_DEBUG_MSG(("HMWJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
+          MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
           dt.append((unsigned char)a);
           ok = false;
           break;
@@ -1246,7 +1246,7 @@ bool HMWJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
     while (a != root);
   }
   if (dt.size()==0) {
-    MWAW_DEBUG_MSG(("HMWJParser::decodeZone: oops an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: oops an empty zone\n"));
     return false;
   }
 

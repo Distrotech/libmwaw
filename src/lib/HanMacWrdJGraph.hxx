@@ -35,8 +35,8 @@
  * Parser to HanMac Word-J text document ( graphic part )
  *
  */
-#ifndef HMWJ_GRAPH
-#  define HMWJ_GRAPH
+#ifndef HAN_MAC_WRD_J_GRAPH
+#  define HAN_MAC_WRD_J_GRAPH
 
 #include <map>
 #include <set>
@@ -50,7 +50,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-namespace HMWJGraphInternal
+namespace HanMacWrdJGraphInternal
 {
 struct CellFormat;
 struct Frame;
@@ -68,24 +68,24 @@ struct State;
 class SubDocument;
 }
 
-class HMWJParser;
+class HanMacWrdJParser;
 
 /** \brief the main class to read the graphic part of a HanMac Word-J file
  *
  *
  *
  */
-class HMWJGraph
+class HanMacWrdJGraph
 {
-  friend class HMWJParser;
-  friend struct HMWJGraphInternal::Table;
-  friend class HMWJGraphInternal::SubDocument;
+  friend class HanMacWrdJParser;
+  friend struct HanMacWrdJGraphInternal::Table;
+  friend class HanMacWrdJGraphInternal::SubDocument;
 
 public:
   //! constructor
-  HMWJGraph(HMWJParser &parser);
+  HanMacWrdJGraph(HanMacWrdJParser &parser);
   //! destructor
-  virtual ~HMWJGraph();
+  virtual ~HanMacWrdJGraph();
 
   /** returns the file version */
   int version() const;
@@ -111,19 +111,19 @@ protected:
   /** try to read the frames definition (type 3)*/
   bool readFrames(MWAWEntry const &entry);
   /** try to read a frame*/
-  shared_ptr<HMWJGraphInternal::Frame> readFrame(int id);
+  shared_ptr<HanMacWrdJGraphInternal::Frame> readFrame(int id);
   /** try to read the basic graph data */
-  shared_ptr<HMWJGraphInternal::ShapeGraph> readShapeGraph(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> readShapeGraph(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read the comment data  */
-  shared_ptr<HMWJGraphInternal::CommentFrame> readCommentData(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::CommentFrame> readCommentData(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read the picture data  */
-  shared_ptr<HMWJGraphInternal::PictureFrame> readPictureData(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::PictureFrame> readPictureData(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read the table data  */
-  shared_ptr<HMWJGraphInternal::TableFrame> readTableData(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::TableFrame> readTableData(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read a textbox data */
-  shared_ptr<HMWJGraphInternal::TextboxFrame> readTextboxData(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::TextboxFrame> readTextboxData(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read a text data (text, header/footer, footnote)  */
-  shared_ptr<HMWJGraphInternal::TextFrame> readTextData(HMWJGraphInternal::Frame const &header, long endPos);
+  shared_ptr<HanMacWrdJGraphInternal::TextFrame> readTextData(HanMacWrdJGraphInternal::Frame const &header, long endPos);
   /** try to read the groupd data ( type 9 )*/
   bool readGroupData(MWAWEntry const &entry, int actZone);
   /** try to read the graph data (zone 8)*/
@@ -133,34 +133,34 @@ protected:
   /** try to read a table (zone 7)*/
   bool readTable(MWAWEntry const &entry, int actZone);
   /** try to read a list of format */
-  bool readTableFormatsList(HMWJGraphInternal::Table &table, long endPos);
+  bool readTableFormatsList(HanMacWrdJGraphInternal::Table &table, long endPos);
 
 
   /** try to send a frame to the listener */
-  bool sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a basic picture to the listener */
-  bool sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
+  bool sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
   /** try to send a comment box to the listener */
-  bool sendComment(HMWJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendComment(HanMacWrdJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a picture frame */
-  bool sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
-  bool sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendTextbox(HanMacWrdJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long zId);
 
   /** try to send a group to the listener */
   bool sendGroup(long zId, MWAWPosition pos);
   /** try to send a group to the listener */
-  bool sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition pos);
+  bool sendGroup(HanMacWrdJGraphInternal::Group const &group, MWAWPosition pos);
   //! check if we can send a group as graphic
-  bool canCreateGraphic(HMWJGraphInternal::Group const &group);
+  bool canCreateGraphic(HanMacWrdJGraphInternal::Group const &group);
   /** try to send a group elements by elements */
-  void sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPosition const &pos);
+  void sendGroupChild(HanMacWrdJGraphInternal::Group const &group, MWAWPosition const &pos);
   /** send the group as a graphic zone */
-  void sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
+  void sendGroup(HanMacWrdJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
 
   // interface with mainParser
 
@@ -182,8 +182,8 @@ protected:
 
 
 private:
-  HMWJGraph(HMWJGraph const &orig);
-  HMWJGraph &operator=(HMWJGraph const &orig);
+  HanMacWrdJGraph(HanMacWrdJGraph const &orig);
+  HanMacWrdJGraph &operator=(HanMacWrdJGraph const &orig);
 
 protected:
   //
@@ -193,10 +193,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWJGraphInternal::State> m_state;
+  shared_ptr<HanMacWrdJGraphInternal::State> m_state;
 
   //! the main parser;
-  HMWJParser *m_mainParser;
+  HanMacWrdJParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

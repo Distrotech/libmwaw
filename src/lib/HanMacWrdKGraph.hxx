@@ -35,8 +35,8 @@
  * Parser to HanMac Word text document ( graphic part )
  *
  */
-#ifndef HMWK_GRAPH
-#  define HMWK_GRAPH
+#ifndef HAN_MAC_WRD_K_GRAPH
+#  define HAN_MAC_WRD_K_GRAPH
 
 #include <map>
 #include <string>
@@ -49,7 +49,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-namespace HMWKGraphInternal
+namespace HanMacWrdKGraphInternal
 {
 struct Frame;
 struct ShapeGraph;
@@ -66,25 +66,25 @@ struct State;
 class SubDocument;
 }
 
-struct HMWKZone;
-class HMWKParser;
+struct HanMacWrdKZone;
+class HanMacWrdKParser;
 
 /** \brief the main class to read the graphic part of a HanMac Word file
  *
  *
  *
  */
-class HMWKGraph
+class HanMacWrdKGraph
 {
-  friend class HMWKParser;
-  friend class HMWKGraphInternal::SubDocument;
-  friend struct HMWKGraphInternal::Table;
+  friend class HanMacWrdKParser;
+  friend class HanMacWrdKGraphInternal::SubDocument;
+  friend struct HanMacWrdKGraphInternal::Table;
 
 public:
   //! constructor
-  HMWKGraph(HMWKParser &parser);
+  HanMacWrdKGraph(HanMacWrdKParser &parser);
   //! destructor
-  virtual ~HMWKGraph();
+  virtual ~HanMacWrdKGraph();
 
   /** returns the file version */
   int version() const;
@@ -108,9 +108,9 @@ protected:
   //
 
   /** try to read the frame definition (type 2)*/
-  bool readFrames(shared_ptr<HMWKZone> zone);
+  bool readFrames(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a picture zone (type d)*/
-  bool readPicture(shared_ptr<HMWKZone> zone);
+  bool readPicture(shared_ptr<HanMacWrdKZone> zone);
   /** check the group structures, the linked textbox */
   void prepareStructures();
 
@@ -135,47 +135,47 @@ protected:
   bool checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup);
 
   /** try to send a picture to the listener */
-  bool sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a frame to the listener */
-  bool sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a basic picture to the listener */
-  bool sendShapeGraph(HMWKGraphInternal::ShapeGraph const &shape, MWAWPosition pos);
+  bool sendShapeGraph(HanMacWrdKGraphInternal::ShapeGraph const &shape, MWAWPosition pos);
   /** try to send a picture frame */
-  bool sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
-  bool sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
 
   /** try to send a group to the listener */
   bool sendGroup(long fId, MWAWPosition pos);
   /** try to send a group to the listener */
-  bool sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos);
+  bool sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWPosition pos);
   //! check if we can send a group as graphic
-  bool canCreateGraphic(HMWKGraphInternal::Group const &group);
+  bool canCreateGraphic(HanMacWrdKGraphInternal::Group const &group);
   /** try to send a group elements by elements */
-  void sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPosition const &pos);
+  void sendGroupChild(HanMacWrdKGraphInternal::Group const &group, MWAWPosition const &pos);
   /** send the group as a graphic zone */
-  void sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
+  void sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener);
 
   /** try to read the basic graph data */
-  shared_ptr<HMWKGraphInternal::ShapeGraph> readShapeGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> readShapeGraph(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header);
   /** try to read the footnote data */
-  shared_ptr<HMWKGraphInternal::FootnoteFrame> readFootnoteFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HanMacWrdKGraphInternal::FootnoteFrame> readFootnoteFrame(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header);
   /** try to read the group data */
-  shared_ptr<HMWKGraphInternal::Group> readGroup(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HanMacWrdKGraphInternal::Group> readGroup(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header);
   /** try to read the picture data */
-  shared_ptr<HMWKGraphInternal::PictureFrame> readPictureFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HanMacWrdKGraphInternal::PictureFrame> readPictureFrame(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header);
   /** try to read the table data */
-  shared_ptr<HMWKGraphInternal::Table> readTable(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header);
+  shared_ptr<HanMacWrdKGraphInternal::Table> readTable(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header);
   /** try to read the textbox data */
-  shared_ptr<HMWKGraphInternal::TextBox> readTextBox(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header, bool isMemo);
+  shared_ptr<HanMacWrdKGraphInternal::TextBox> readTextBox(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header, bool isMemo);
 
 private:
-  HMWKGraph(HMWKGraph const &orig);
-  HMWKGraph &operator=(HMWKGraph const &orig);
+  HanMacWrdKGraph(HanMacWrdKGraph const &orig);
+  HanMacWrdKGraph &operator=(HanMacWrdKGraph const &orig);
 
 protected:
   //
@@ -185,10 +185,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWKGraphInternal::State> m_state;
+  shared_ptr<HanMacWrdKGraphInternal::State> m_state;
 
   //! the main parser;
-  HMWKParser *m_mainParser;
+  HanMacWrdKParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

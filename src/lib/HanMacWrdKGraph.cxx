@@ -53,17 +53,17 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "HMWKParser.hxx"
+#include "HanMacWrdKParser.hxx"
 
-#include "HMWKGraph.hxx"
+#include "HanMacWrdKGraph.hxx"
 
 #include "libmwaw_internal.hxx"
 
-/** Internal: the structures of a HMWKGraph */
-namespace HMWKGraphInternal
+/** Internal: the structures of a HanMacWrdKGraph */
+namespace HanMacWrdKGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the frame header of a HMWKGraph
+//! Internal: the frame header of a HanMacWrdKGraph
 struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_fileSubId(-1), m_id(-1), m_page(0),
@@ -179,7 +179,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 }
 
 ////////////////////////////////////////
-//! Internal: the geometrical graph of a HMWKGraph
+//! Internal: the geometrical graph of a HanMacWrdKGraph
 struct ShapeGraph : public Frame {
   //! constructor
   ShapeGraph(Frame const &orig) : Frame(orig), m_shape()
@@ -215,7 +215,7 @@ struct ShapeGraph : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the footnote of a HMWKGraph
+//! Internal: the footnote of a HanMacWrdKGraph
 struct FootnoteFrame : public Frame {
   //! constructor
   FootnoteFrame(Frame const &orig) : Frame(orig), m_textFileId(-1), m_textFileSubId(0)
@@ -248,7 +248,7 @@ struct FootnoteFrame : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the group of a HMWKGraph
+//! Internal: the group of a HanMacWrdKGraph
 struct Group : public Frame {
   struct Child;
   //! constructor
@@ -270,7 +270,7 @@ struct Group : public Frame {
   std::string print() const;
   //! the list of child
   std::vector<Child> m_childsList;
-  //! struct to store child data in HMWKGraphInternal::Group
+  //! struct to store child data in HanMacWrdKGraphInternal::Group
   struct Child {
     //! constructor
     Child() : m_fileId(-1)
@@ -305,7 +305,7 @@ std::string Group::print() const
 }
 
 ////////////////////////////////////////
-//! Internal: the picture of a HMWKGraph
+//! Internal: the picture of a HanMacWrdKGraph
 struct PictureFrame : public Frame {
   //! constructor
   PictureFrame(Frame const &orig) : Frame(orig), m_pictureType(0), m_dim(0,0), m_borderDim(0,0)
@@ -349,7 +349,7 @@ struct PictureFrame : public Frame {
 };
 
 ////////////////////////////////////////
-//! a table cell in a table in HMWKGraph
+//! a table cell in a table in HanMacWrdKGraph
 struct TableCell : public MWAWCell {
   //! constructor
   TableCell(): MWAWCell(), m_id(-1), m_fileId(-1), m_flags(0), m_extra("")
@@ -384,10 +384,10 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 }
 
 ////////////////////////////////////////
-//! Internal: the table of a HMWKGraph
+//! Internal: the table of a HanMacWrdKGraph
 struct Table : public Frame, public MWAWTable {
   //! constructor
-  Table(Frame const &orig, HMWKGraph &parser) :
+  Table(Frame const &orig, HanMacWrdKGraph &parser) :
     Frame(orig), MWAWTable(MWAWTable::CellPositionBit|MWAWTable::SizeBit),
     m_parser(&parser), m_rows(0), m_columns(0), m_numCells(0), m_textFileId(-1)
   {
@@ -431,7 +431,7 @@ struct Table : public Frame, public MWAWTable {
     return s.str();
   }
   //! the graph parser
-  HMWKGraph *m_parser;
+  HanMacWrdKGraph *m_parser;
   //! the number of row
   int m_rows;
   //! the number of columns
@@ -446,7 +446,7 @@ private:
 };
 
 ////////////////////////////////////////
-//! Internal: the textbox of a HMWKGraph
+//! Internal: the textbox of a HanMacWrdKGraph
 struct TextBox : public Frame {
   //! constructor
   TextBox(Frame const &orig, bool isComment)
@@ -499,7 +499,7 @@ struct TextBox : public Frame {
         border.m_widthsList[2]=2.0;
         break;
       default:
-        MWAW_DEBUG_MSG(("HMWKGraphInternal::TextBox::addTo: unexpected type\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::TextBox::addTo: unexpected type\n"));
         break;
       }
       border.addTo(frames, "");
@@ -564,10 +564,10 @@ bool TableCell::sendContent(MWAWListenerPtr, MWAWTable &table)
 }
 
 ////////////////////////////////////////
-//! Internal: the picture of a HMWKGraph
+//! Internal: the picture of a HanMacWrdKGraph
 struct Picture {
   //! constructor
-  Picture(shared_ptr<HMWKZone> zone) : m_zone(zone), m_fileId(-1), m_fileSubId(-1), m_parsed(false), m_extra("")
+  Picture(shared_ptr<HanMacWrdKZone> zone) : m_zone(zone), m_fileId(-1), m_fileSubId(-1), m_parsed(false), m_extra("")
   {
     m_pos[0] = m_pos[1] = 0;
   }
@@ -584,7 +584,7 @@ struct Picture {
     return o;
   }
   //! the main zone
-  shared_ptr<HMWKZone> m_zone;
+  shared_ptr<HanMacWrdKZone> m_zone;
   //! the first and last position of the picture data in the zone
   long m_pos[2];
   //! the file id
@@ -598,7 +598,7 @@ struct Picture {
 };
 
 ////////////////////////////////////////
-//! Internal: the pattern of a HMWKGraph
+//! Internal: the pattern of a HanMacWrdKGraph
 struct Pattern : public MWAWGraphicStyle::Pattern {
   //! constructor ( 4 int by patterns )
   Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
@@ -628,7 +628,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a HMWKGraph
+//! Internal: the state of a HanMacWrdKGraph
 struct State {
   //! constructor
   State() : m_numPages(0), m_framesMap(), m_picturesMap(), m_colorList(), m_patternList() { }
@@ -637,7 +637,7 @@ struct State {
   {
     initColors();
     if (id < 0 || id >= int(m_colorList.size())) {
-      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getColor: can not find color %d\n", id));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::State::getColor: can not find color %d\n", id));
       return false;
     }
     col = m_colorList[size_t(id)];
@@ -648,7 +648,7 @@ struct State {
   {
     initPatterns();
     if (id < 0 || id >= int(m_patternList.size())) {
-      MWAW_DEBUG_MSG(("HMWKGraphInternal::State::getPattern: can not find pattern %d\n", id));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::State::getPattern: can not find pattern %d\n", id));
       return false;
     }
     pattern = m_patternList[size_t(id)];
@@ -747,18 +747,18 @@ void State::initColors()
 }
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a HMWKGraph
+//! Internal: the subdocument of a HanMacWrdKGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! the document type
   enum Type { Picture, FrameInFrame, Group, Text, UnformattedTable, EmptyPicture };
   //! constructor
-  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
+  SubDocument(HanMacWrdKGraph &pars, MWAWInputStreamPtr input, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos() {}
 
   //! constructor
-  SubDocument(HMWKGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, long subId=0) :
+  SubDocument(HanMacWrdKGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, long subId=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_subId(subId), m_pos(pos) {}
 
   //! destructor
@@ -779,7 +779,7 @@ public:
 
 protected:
   /** the graph parser */
-  HMWKGraph *m_graphParser;
+  HanMacWrdKGraph *m_graphParser;
   //! the zone type
   Type m_type;
   //! the zone id
@@ -797,7 +797,7 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -823,7 +823,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     m_graphParser->sendEmptyPicture(m_pos);
     break;
   default:
-    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -831,12 +831,12 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
   if (m_type!=Text) {
-    MWAW_DEBUG_MSG(("HMWKGraphInternal::SubDocument::parse: unexpected type\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: unexpected type\n"));
     return;
   }
   long pos = m_input->tell();
@@ -861,43 +861,43 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWKGraph::HMWKGraph(HMWKParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new HMWKGraphInternal::State),
+HanMacWrdKGraph::HanMacWrdKGraph(HanMacWrdKParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HanMacWrdKGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-HMWKGraph::~HMWKGraph()
+HanMacWrdKGraph::~HanMacWrdKGraph()
 { }
 
-int HMWKGraph::version() const
+int HanMacWrdKGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-bool HMWKGraph::getColor(int colId, int patternId, MWAWColor &color) const
+bool HanMacWrdKGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
   if (patternId==0) // ie. the empty pattern
     return false;
   if (!m_state->getColor(colId, color)) {
-    MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find color for id=%d\n", colId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::getColor: can not find color for id=%d\n", colId));
     return false;
   }
-  HMWKGraphInternal::Pattern pattern;
+  HanMacWrdKGraphInternal::Pattern pattern;
   if (!m_state->getPattern(patternId, pattern)) {
-    MWAW_DEBUG_MSG(("HMWKGraph::getColor: can not find pattern for id=%d\n", patternId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
   color = m_state->getColor(color, pattern.m_percent);
   return true;
 }
 
-int HMWKGraph::numPages() const
+int HanMacWrdKGraph::numPages() const
 {
   if (m_state->m_numPages)
     return m_state->m_numPages;
   int nPages = 0;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
@@ -910,35 +910,35 @@ int HMWKGraph::numPages() const
   return nPages;
 }
 
-bool HMWKGraph::sendText(long textId, long id, bool asGraphic)
+bool HanMacWrdKGraph::sendText(long textId, long id, bool asGraphic)
 {
   return m_mainParser->sendText(textId, id, asGraphic);
 }
 
-std::map<long,int> HMWKGraph::getTextFrameInformations() const
+std::map<long,int> HanMacWrdKGraph::getTextFrameInformations() const
 {
   std::map<long,int> mapIdType;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
-    HMWKGraphInternal::Frame const &frame = *fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame = *fIt->second;
     std::vector<long> listId;
 
     if (frame.m_type!=3 && frame.m_type!=4 && frame.m_type != 9 && frame.m_type!=10)
       continue;
     switch (frame.m_type) {
     case 3:
-      listId.push_back(static_cast<HMWKGraphInternal::FootnoteFrame const &>(frame).m_textFileId);
+      listId.push_back(static_cast<HanMacWrdKGraphInternal::FootnoteFrame const &>(frame).m_textFileId);
       break;
     case 4:
     case 10:
-      listId.push_back(static_cast<HMWKGraphInternal::TextBox const &>(frame).m_textFileId);
+      listId.push_back(static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame).m_textFileId);
       break;
     case 9: {
-      HMWKGraphInternal::Table &table =
-        const_cast<HMWKGraphInternal::Table &>
-        (static_cast<HMWKGraphInternal::Table const &>(frame));
+      HanMacWrdKGraphInternal::Table &table =
+        const_cast<HanMacWrdKGraphInternal::Table &>
+        (static_cast<HanMacWrdKGraphInternal::Table const &>(frame));
       for (int c=0; c < table.numCells(); ++c) {
         if (table.get(c))
           listId.push_back(table.get(c)->m_fileId);
@@ -954,7 +954,7 @@ std::map<long,int> HMWKGraph::getTextFrameInformations() const
       if (mapIdType.find(zId) == mapIdType.end())
         mapIdType[zId] = frame.m_type;
       else if (mapIdType.find(zId)->second != frame.m_type) {
-        MWAW_DEBUG_MSG(("HMWKGraph::getTextFrameInformations: id %lx already set\n", zId));
+        MWAW_DEBUG_MSG(("HanMacWrdKGraph::getTextFrameInformations: id %lx already set\n", zId));
       }
     }
   }
@@ -967,16 +967,16 @@ std::map<long,int> HMWKGraph::getTextFrameInformations() const
 ////////////////////////////////////////////////////////////
 
 // a small zone: related to frame pos + data?
-bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKGraph::readFrames(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readFrames: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readFrames: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 70) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readFrames: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readFrames: the zone seems too short\n"));
     return false;
   }
 
@@ -987,7 +987,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   long pos=0;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   long val;
-  HMWKGraphInternal::Frame graph;
+  HanMacWrdKGraphInternal::Frame graph;
   graph.m_type = (int) input->readULong(1);
   val = (long) input->readULong(1);
   if (val) f << "#f0=" << std::hex << val << std::dec << ",";
@@ -1026,7 +1026,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
         style.m_surfaceOpacity=0;
       continue;
     }
-    HMWKGraphInternal::Pattern pat;
+    HanMacWrdKGraphInternal::Pattern pat;
     if (m_state->getPattern(pattern, pat)) {
       pat.m_colors[1]=col;
       if (!pat.getUniqueColor(col)) {
@@ -1057,7 +1057,7 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   asciiFile.addDelimiter(input->tell(),'|');
   asciiFile.addPos(pos);
   asciiFile.addNote(f.str().c_str());
-  shared_ptr<HMWKGraphInternal::Frame> frame;
+  shared_ptr<HanMacWrdKGraphInternal::Frame> frame;
   switch (graph.m_type) {
   case 3:
     frame = readFootnoteFrame(zone, graph);
@@ -1083,22 +1083,22 @@ bool HMWKGraph::readFrames(shared_ptr<HMWKZone> zone)
   }
   if (frame)
     m_state->m_framesMap.insert
-    (std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::value_type
+    (std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::value_type
      (zone->m_id, frame));
   return true;
 }
 
 // read a picture
-bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
+bool HanMacWrdKGraph::readPicture(shared_ptr<HanMacWrdKZone> zone)
 {
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: called without any zone\n"));
     return false;
   }
 
   long dataSz = zone->length();
   if (dataSz < 86) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: the zone seems too short\n"));
     return false;
   }
 
@@ -1107,7 +1107,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   libmwaw::DebugStream f;
   zone->m_parsed = true;
 
-  shared_ptr<HMWKGraphInternal::Picture> picture(new HMWKGraphInternal::Picture(zone));
+  shared_ptr<HanMacWrdKGraphInternal::Picture> picture(new HanMacWrdKGraphInternal::Picture(zone));
 
   long pos=0;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1118,7 +1118,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   }
   long pictSz = (long) input->readULong(4);
   if (pictSz < 0 || pictSz+86 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: problem reading the picture size\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: problem reading the picture size\n"));
     return false;
   }
   picture->m_pos[0] = input->tell();
@@ -1128,7 +1128,7 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
   if (!fId) fId = zone->m_id;
   picture->m_fileSubId = zone->m_subId;
   if (m_state->m_picturesMap.find(fId) != m_state->m_picturesMap.end())
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: oops I already find a picture for %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: oops I already find a picture for %lx\n", fId));
   else
     m_state->m_picturesMap[fId] = picture;
 
@@ -1146,21 +1146,21 @@ bool HMWKGraph::readPicture(shared_ptr<HMWKZone> zone)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-bool HMWKGraph::sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
-  std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt
+  std::map<long, shared_ptr<HanMacWrdKGraphInternal::Picture> >::const_iterator pIt
     = m_state->m_picturesMap.find(pictId);
 
   if (pIt == m_state->m_picturesMap.end() || !pIt->second) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendPicture: can not find the picture %lx\n", pictId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendPicture: can not find the picture %lx\n", pictId));
     return false;
   }
   sendPicture(*pIt->second, pos, extras);
   return true;
 }
 
-bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
 #ifdef DEBUG_WITH_FILES
   bool firstTime = picture.m_parsed == false;
@@ -1169,7 +1169,7 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
   if (!m_parserState->m_textListener) return true;
 
   if (!picture.m_zone || picture.m_pos[0] >= picture.m_pos[1]) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendPicture: can not find the picture\n"));
     return false;
   }
 
@@ -1191,13 +1191,13 @@ bool HMWKGraph::sendPicture(HMWKGraphInternal::Picture const &picture, MWAWPosit
   return true;
 }
 
-bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find frame %lx\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendFrame: can not find frame %lx\n", frameId));
     return false;
   }
   if (pos.size()[0]<=0 || pos.size()[1]<=0)
@@ -1205,7 +1205,7 @@ bool HMWKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGProper
   return sendFrame(*fIt->second, pos, extras);
 }
 
-bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
@@ -1214,25 +1214,25 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
   MWAWInputStreamPtr &input= m_parserState->m_input;
   switch (frame.m_type) {
   case 3: {
-    HMWKGraphInternal::FootnoteFrame const &ftnote=
-      reinterpret_cast<HMWKGraphInternal::FootnoteFrame const &>(frame);
+    HanMacWrdKGraphInternal::FootnoteFrame const &ftnote=
+      reinterpret_cast<HanMacWrdKGraphInternal::FootnoteFrame const &>(frame);
     MWAWSubDocumentPtr subdoc
-    (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text,
-                                        ftnote.m_textFileId, ftnote.m_textFileSubId));
+    (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text,
+        ftnote.m_textFileId, ftnote.m_textFileSubId));
     listener->insertNote(MWAWNote(MWAWNote::FootNote),subdoc);
     break;
   }
   case 4:
     // fixme: check also for border
     if (frame.m_style.hasPattern()) {
-      HMWKGraphInternal::TextBox const &textbox=
-        reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      HanMacWrdKGraphInternal::TextBox const &textbox=
+        reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
           graphicListener && !graphicListener->isDocumentStarted()) {
         textbox.m_parsed=true;
         MWAWSubDocumentPtr subdoc
-        (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+        (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
         Box2f box(Vec2f(0,0),pos.size());
         graphicListener->startGraphic(box);
         librevenge::RVNGBinaryData data;
@@ -1245,10 +1245,10 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       }
     }
   case 10:
-    return sendTextBox(reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame), pos, extras);
+    return sendTextBox(reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame), pos, extras);
   case 6: {
-    HMWKGraphInternal::PictureFrame const &pict =
-      reinterpret_cast<HMWKGraphInternal::PictureFrame const &>(frame);
+    HanMacWrdKGraphInternal::PictureFrame const &pict =
+      reinterpret_cast<HanMacWrdKGraphInternal::PictureFrame const &>(frame);
     if (pict.m_fileId==0) {
       if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
         pos.setSize(pict.getBdBox().size());
@@ -1258,24 +1258,24 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWKGraphInternal::SubDocument
-       (*this, input, framePos, HMWKGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
+      (new HanMacWrdKGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
     return sendPictureFrame(pict, pos, extras);
   }
   case 8:
-    return sendShapeGraph(reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame), pos);
+    return sendShapeGraph(reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame), pos);
   case 9: {
-    HMWKGraphInternal::Table &table =
-      const_cast<HMWKGraphInternal::Table &>
-      (static_cast<HMWKGraphInternal::Table const &>(frame));
+    HanMacWrdKGraphInternal::Table &table =
+      const_cast<HanMacWrdKGraphInternal::Table &>
+      (static_cast<HanMacWrdKGraphInternal::Table const &>(frame));
     if (!table.updateTable()) {
-      MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: can not find the table structure\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
-      (new HMWKGraphInternal::SubDocument
-       (*this, input, HMWKGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      (new HanMacWrdKGraphInternal::SubDocument
+       (*this, input, HanMacWrdKGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -1286,8 +1286,8 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWKGraphInternal::SubDocument
-       (*this, input, framePos, HMWKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      (new HanMacWrdKGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
       pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc, extras);
       return true;
@@ -1297,7 +1297,7 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     return table.sendAsText(listener);
   }
   case 11: {
-    HMWKGraphInternal::Group const &group=reinterpret_cast<HMWKGraphInternal::Group const &>(frame);
+    HanMacWrdKGraphInternal::Group const &group=reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame);
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
         (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
@@ -1305,8 +1305,8 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
       framePos.m_anchorTo = MWAWPosition::Frame;
       framePos.setOrigin(Vec2f(0,0));
       MWAWSubDocumentPtr subdoc
-      (new HMWKGraphInternal::SubDocument
-       (*this, input, framePos, HMWKGraphInternal::SubDocument::Group, frame.m_fileId));
+      (new HanMacWrdKGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::Group, frame.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -1314,13 +1314,13 @@ bool HMWKGraph::sendFrame(HMWKGraphInternal::Frame const &frame, MWAWPosition po
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("HMWKGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
   }
   return false;
 }
 
-bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
+bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
@@ -1332,7 +1332,7 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
 
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
   if (!graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendEmptyPicture: can not use the graphic listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendEmptyPicture: can not use the graphic listener\n"));
     return false;
   }
   Box2f box=Box2f(Vec2f(0,0),pictSz);
@@ -1348,7 +1348,7 @@ bool HMWKGraph::sendEmptyPicture(MWAWPosition pos)
   return true;
 }
 
-bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
@@ -1358,7 +1358,7 @@ bool HMWKGraph::sendPictureFrame(HMWKGraphInternal::PictureFrame const &pict, MW
   return true;
 }
 
-bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
   Vec2f textboxSz = textbox.getBdBox().size();
@@ -1375,13 +1375,13 @@ bool HMWKGraph::sendTextBox(HMWKGraphInternal::TextBox const &textbox, MWAWPosit
   textbox.addTo(pList, tbExtra);
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
-    subdoc.reset(new HMWKGraphInternal::SubDocument(*this, m_parserState->m_input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+    subdoc.reset(new HanMacWrdKGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
   m_parserState->m_textListener->insertTextBox(pos, subdoc, pList, tbExtra);
 
   return true;
 }
 
-bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
+bool HanMacWrdKGraph::sendShapeGraph(HanMacWrdKGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
@@ -1393,17 +1393,17 @@ bool HMWKGraph::sendShapeGraph(HMWKGraphInternal::ShapeGraph const &pict, MWAWPo
 }
 
 // ----- table
-bool HMWKGraph::sendTableUnformatted(long fId)
+bool HanMacWrdKGraph::sendTableUnformatted(long fId)
 {
   if (!m_parserState->m_textListener)
     return true;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::iterator fIt
     = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second || fIt->second->m_type != 9) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
-  HMWKGraphInternal::Table &table = reinterpret_cast<HMWKGraphInternal::Table &>(*fIt->second);
+  HanMacWrdKGraphInternal::Table &table = reinterpret_cast<HanMacWrdKGraphInternal::Table &>(*fIt->second);
   return table.sendAsText(m_parserState->m_textListener);
 }
 
@@ -1412,11 +1412,11 @@ bool HMWKGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 
 // try to read a small graphic
-shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> HanMacWrdKGraph::readShapeGraph(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::ShapeGraph> graph;
+  shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> graph;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readShapeGraph: called without any zone\n"));
     return graph;
   }
 
@@ -1424,11 +1424,11 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+26 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readShapeGraph: the zone seems too short\n"));
     return graph;
   }
 
-  graph.reset(new HMWKGraphInternal::ShapeGraph(header));
+  graph.reset(new HanMacWrdKGraphInternal::ShapeGraph(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   int graphType = (int) input->readLong(1);
@@ -1509,7 +1509,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
     }
     else {
       f << "#transf=" << transf << ",";
-      MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected transformation for arc\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::readShapeGraph: find unexpected transformation for arc\n"));
       ok = false;
       break;
     }
@@ -1550,7 +1550,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
     }
     int numPt = (int) input->readLong(2);
     if (numPt < 0 || 28+8*numPt > dataSz) {
-      MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected number of points\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::readShapeGraph: find unexpected number of points\n"));
       f << "#pt=" << numPt << ",";
       ok = false;
       break;
@@ -1571,7 +1571,7 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("HMWKGraph::readShapeGraph: find unexpected graphic subType\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readShapeGraph: find unexpected graphic subType\n"));
     f << "###type=" << graphType << ",";
     ok = false;
     break;
@@ -1592,11 +1592,11 @@ shared_ptr<HMWKGraphInternal::ShapeGraph> HMWKGraph::readShapeGraph(shared_ptr<H
 }
 
 // try to read the group data
-shared_ptr<HMWKGraphInternal::Group> HMWKGraph::readGroup(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HanMacWrdKGraphInternal::Group> HanMacWrdKGraph::readGroup(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::Group> group;
+  shared_ptr<HanMacWrdKGraphInternal::Group> group;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readGroup: called without any zone\n"));
     return group;
   }
 
@@ -1604,19 +1604,19 @@ shared_ptr<HMWKGraphInternal::Group> HMWKGraph::readGroup(shared_ptr<HMWKZone> z
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+2 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readGroup: the zone seems too short\n"));
     return group;
   }
   int N = (int) input->readULong(2);
   if (pos+2+8*N > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readGroup: can not read N\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readGroup: can not read N\n"));
     return group;
   }
-  group.reset(new HMWKGraphInternal::Group(header));
+  group.reset(new HanMacWrdKGraphInternal::Group(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < N; ++i) {
-    HMWKGraphInternal::Group::Child child;
+    HanMacWrdKGraphInternal::Group::Child child;
     child.m_fileId = (long) input->readULong(4);
     for (int j = 0; j < 2; ++j) // f0=4|6|8, f1=0
       child.m_values[j] = (int) input->readLong(2);
@@ -1630,11 +1630,11 @@ shared_ptr<HMWKGraphInternal::Group> HMWKGraph::readGroup(shared_ptr<HMWKZone> z
 }
 
 // try to read a picture frame
-shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HanMacWrdKGraphInternal::PictureFrame> HanMacWrdKGraph::readPictureFrame(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::PictureFrame> picture;
+  shared_ptr<HanMacWrdKGraphInternal::PictureFrame> picture;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: called without any zone\n"));
     return picture;
   }
 
@@ -1642,11 +1642,11 @@ shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_p
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+32 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readPicture: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: the zone seems too short\n"));
     return picture;
   }
 
-  picture.reset(new HMWKGraphInternal::PictureFrame(header));
+  picture.reset(new HanMacWrdKGraphInternal::PictureFrame(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   picture->m_pictureType = (int) input->readLong(2); // 0 or 4 : or maybe wrapping
@@ -1674,11 +1674,11 @@ shared_ptr<HMWKGraphInternal::PictureFrame> HMWKGraph::readPictureFrame(shared_p
 }
 
 // try to read the footnote data
-shared_ptr<HMWKGraphInternal::FootnoteFrame> HMWKGraph::readFootnoteFrame(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HanMacWrdKGraphInternal::FootnoteFrame> HanMacWrdKGraph::readFootnoteFrame(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::FootnoteFrame> ftn;
+  shared_ptr<HanMacWrdKGraphInternal::FootnoteFrame> ftn;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readFootnoteFrame: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readFootnoteFrame: called without any zone\n"));
     return ftn;
   }
 
@@ -1686,11 +1686,11 @@ shared_ptr<HMWKGraphInternal::FootnoteFrame> HMWKGraph::readFootnoteFrame(shared
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+24 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readFootnoteFrame: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readFootnoteFrame: the zone seems too short\n"));
     return ftn;
   }
 
-  ftn.reset(new HMWKGraphInternal::FootnoteFrame(header));
+  ftn.reset(new HanMacWrdKGraphInternal::FootnoteFrame(header));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < 9; ++i) { // always 0?
@@ -1710,11 +1710,11 @@ shared_ptr<HMWKGraphInternal::FootnoteFrame> HMWKGraph::readFootnoteFrame(shared
 }
 
 // try to read the textbox data
-shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header, bool isMemo)
+shared_ptr<HanMacWrdKGraphInternal::TextBox> HanMacWrdKGraph::readTextBox(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header, bool isMemo)
 {
-  shared_ptr<HMWKGraphInternal::TextBox> textbox;
+  shared_ptr<HanMacWrdKGraphInternal::TextBox> textbox;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readTextBox: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTextBox: called without any zone\n"));
     return textbox;
   }
 
@@ -1723,11 +1723,11 @@ shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZon
   long pos = input->tell();
   int expectedSize = isMemo ? 20 : 12;
   if (pos+expectedSize > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readTextBox: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTextBox: the zone seems too short\n"));
     return textbox;
   }
 
-  textbox.reset(new HMWKGraphInternal::TextBox(header, isMemo));
+  textbox.reset(new HanMacWrdKGraphInternal::TextBox(header, isMemo));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f;
   for (int i = 0; i < 3; ++i) { // 0|1,0|1,0|1,numtextbox linked
@@ -1757,11 +1757,11 @@ shared_ptr<HMWKGraphInternal::TextBox> HMWKGraph::readTextBox(shared_ptr<HMWKZon
 }
 
 // try to read the table data
-shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> zone, HMWKGraphInternal::Frame const &header)
+shared_ptr<HanMacWrdKGraphInternal::Table> HanMacWrdKGraph::readTable(shared_ptr<HanMacWrdKZone> zone, HanMacWrdKGraphInternal::Frame const &header)
 {
-  shared_ptr<HMWKGraphInternal::Table> table;
+  shared_ptr<HanMacWrdKGraphInternal::Table> table;
   if (!zone) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readTable: called without any zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTable: called without any zone\n"));
     return table;
   }
 
@@ -1769,11 +1769,11 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
   long dataSz = zone->length();
   long pos = input->tell();
   if (pos+20 > dataSz) {
-    MWAW_DEBUG_MSG(("HMWKGraph::readTable: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTable: the zone seems too short\n"));
     return table;
   }
 
-  table.reset(new HMWKGraphInternal::Table(header, *this));
+  table.reset(new HanMacWrdKGraphInternal::Table(header, *this));
   libmwaw::DebugFile &asciiFile = zone->ascii();
   libmwaw::DebugStream f, f2;
   long val;
@@ -1803,13 +1803,13 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     pos = input->tell();
     f.str("");
     if (pos+80 > dataSz) {
-      MWAW_DEBUG_MSG(("HMWKGraph::readTable: can not read cell %d\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTable: can not read cell %d\n", i));
       f <<  "FrameDef(tableCell-" << i << "):###";
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
       break;
     }
-    shared_ptr<HMWKGraphInternal::TableCell> cell(new HMWKGraphInternal::TableCell);
+    shared_ptr<HanMacWrdKGraphInternal::TableCell> cell(new HanMacWrdKGraphInternal::TableCell);
     int posi[2];
     for (int j = 0; j < 2; ++j)
       posi[j] = (int) input->readLong(2);
@@ -1820,7 +1820,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     if (span[0]>=1 && span[1]>=1)
       cell->setNumSpannedCells(Vec2i(span[1], span[0]));
     else {
-      MWAW_DEBUG_MSG(("HMWKGraph::readTable: can not read cell span\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTable: can not read cell span\n"));
       f << "##span=" << span[1] << "x" << span[0] << ",";
     }
     float dim[2];
@@ -1833,7 +1833,7 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
     if (!m_state->getColor(color, backCol))
       f << "#backcolor=" << color << ",";
     int pattern = (int) input->readULong(2);
-    HMWKGraphInternal::Pattern pat;
+    HanMacWrdKGraphInternal::Pattern pat;
     if (pattern && m_state->getPattern(pattern, pat))
       cell->setBackgroundColor(m_state->getColor(backCol, pat.m_percent));
     else if (pattern)
@@ -1933,28 +1933,28 @@ shared_ptr<HMWKGraphInternal::Table> HMWKGraph::readTable(shared_ptr<HMWKZone> z
 ////////////////////////////////////////////////////////////
 // group
 ////////////////////////////////////////////////////////////
-bool HMWKGraph::sendGroup(long groupId, MWAWPosition pos)
+bool HanMacWrdKGraph::sendGroup(long groupId, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt=
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(groupId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find group %lx\n", groupId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find group %lx\n", groupId));
     return false;
   }
-  shared_ptr<HMWKGraphInternal::Frame> frame=fIt->second;
+  shared_ptr<HanMacWrdKGraphInternal::Frame> frame=fIt->second;
   if (!frame || frame->m_type!=11) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: %lx seems bad\n", groupId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: %lx seems bad\n", groupId));
     return false;
   }
-  return sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(*frame), pos);
+  return sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(*frame), pos);
 }
 
-bool HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition pos)
+bool HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWPosition pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find the listener\n"));
     return true;
   }
   group.m_parsed=true;
@@ -1963,37 +1963,37 @@ bool HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWPosition po
     sendGroupChild(group,pos);
     return true;
   }
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt;
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
     long fId=group.m_childsList[c].m_fileId;
     fIt=m_state->m_framesMap.find(fId);
     if (fIt != m_state->m_framesMap.end() && fIt->first==fId && fIt->second) {
-      HMWKGraphInternal::Frame const &frame=*fIt->second;
+      HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
       MWAWPosition fPos(pos);
       fPos.setOrigin(frame.m_pos[0]-group.m_pos[0]+pos.origin());
       fPos.setSize(frame.m_pos.size());
       sendFrame(frame, fPos);
       continue;
     }
-    MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: can not find child %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find child %lx\n", fId));
   }
   return true;
 }
 
-bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
+bool HanMacWrdKGraph::canCreateGraphic(HanMacWrdKGraphInternal::Group const &group)
 {
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt;
   int page = group.m_page;
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
     long fId=group.m_childsList[c].m_fileId;
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second)
       continue;
-    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
     if (frame.m_page!=page) return false;
     switch (frame.m_type) {
     case 4: {
-      HMWKGraphInternal::TextBox const &text=reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      HanMacWrdKGraphInternal::TextBox const &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_textFileId,0))
         return false;
       break;
@@ -2001,7 +2001,7 @@ bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
     case 8: // shape
       break;
     case 11:
-      if (!canCreateGraphic(reinterpret_cast<HMWKGraphInternal::Group const &>(frame)))
+      if (!canCreateGraphic(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame)))
         return false;
       break;
     default:
@@ -2011,52 +2011,52 @@ bool HMWKGraph::canCreateGraphic(HMWKGraphInternal::Group const &group)
   return true;
 }
 
-void HMWKGraph::sendGroup(HMWKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
+void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
 {
   if (!listener) return;
   group.m_parsed=true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt;
   for (size_t c=0; c<group.m_childsList.size(); ++c) {
     long fId=group.m_childsList[c].m_fileId;
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second)
       continue;
-    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
     Box2f box=frame.getBdBox();
     switch (frame.m_type) {
     case 4: {
       frame.m_parsed=true;
-      HMWKGraphInternal::TextBox const &textbox=
-        reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+      HanMacWrdKGraphInternal::TextBox const &textbox=
+        reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       MWAWSubDocumentPtr subdoc
-      (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+      (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
       listener->insertTextBox(box, subdoc, textbox.m_style);
       break;
     }
     case 8: {
       frame.m_parsed=true;
-      HMWKGraphInternal::ShapeGraph const &shape=
-        reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(frame);
+      HanMacWrdKGraphInternal::ShapeGraph const &shape=
+        reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame);
       listener->insertPicture(box, shape.m_shape, shape.getStyle());
       break;
     }
     case 11:
-      sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(frame), listener);
+      sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame), listener);
       break;
     default:
-      MWAW_DEBUG_MSG(("HMWKGraph::sendGroup: unexpected type %d\n", frame.m_type));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: unexpected type %d\n", frame.m_type));
       break;
     }
   }
 }
 
-void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPosition const &pos)
+void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find the listeners\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find the listeners\n"));
     return;
   }
   size_t numChilds=group.m_childsList.size(), childNotSent=0;
@@ -2066,20 +2066,20 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
   Box2f partialBdBox;
   MWAWPosition partialPos(pos);
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt;
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt;
   for (size_t c=0; c<numChilds; ++c) {
     long fId=group.m_childsList[c].m_fileId;
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second) {
-      MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find child %lx\n", fId));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", fId));
       continue;
     }
-    HMWKGraphInternal::Frame const &frame=*fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
     bool canMerge=false;
     if (frame.m_page==group.m_page) {
       switch (frame.m_type) {
       case 4: {
-        HMWKGraphInternal::TextBox const &text=reinterpret_cast<HMWKGraphInternal::TextBox const &>(frame);
+        HanMacWrdKGraphInternal::TextBox const &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
         canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_textFileId,0);
         break;
       }
@@ -2087,7 +2087,7 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
         canMerge = true;
         break;
       case 11:
-        canMerge = canCreateGraphic(reinterpret_cast<HMWKGraphInternal::Group const &>(frame));
+        canMerge = canCreateGraphic(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame));
         break;
       default:
         break;
@@ -2115,30 +2115,30 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
         fIt=m_state->m_framesMap.find(localFId);
         if (fIt == m_state->m_framesMap.end() || fIt->first!=localFId || !fIt->second)
           continue;
-        HMWKGraphInternal::Frame const &child=*fIt->second;
+        HanMacWrdKGraphInternal::Frame const &child=*fIt->second;
         Box2f box=child.getBdBox();
         switch (child.m_type) {
         case 4: {
           child.m_parsed=true;
-          HMWKGraphInternal::TextBox const &textbox=
-            reinterpret_cast<HMWKGraphInternal::TextBox const &>(child);
+          HanMacWrdKGraphInternal::TextBox const &textbox=
+            reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(child);
           MWAWSubDocumentPtr subdoc
-          (new HMWKGraphInternal::SubDocument(*this, input, HMWKGraphInternal::SubDocument::Text, textbox.m_textFileId));
+          (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
           graphicListener->insertTextBox(box, subdoc, textbox.m_style);
           break;
         }
         case 8: {
           child.m_parsed=true;
-          HMWKGraphInternal::ShapeGraph const &shape=
-            reinterpret_cast<HMWKGraphInternal::ShapeGraph const &>(child);
+          HanMacWrdKGraphInternal::ShapeGraph const &shape=
+            reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(child);
           graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
           break;
         }
         case 11:
-          sendGroup(reinterpret_cast<HMWKGraphInternal::Group const &>(child), graphicListener);
+          sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(child), graphicListener);
           break;
         default:
-          MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: unexpected type %d\n", child.m_type));
+          MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: unexpected type %d\n", child.m_type));
           break;
         }
       }
@@ -2159,41 +2159,41 @@ void HMWKGraph::sendGroupChild(HMWKGraphInternal::Group const &group, MWAWPositi
       long localFId=group.m_childsList[childNotSent].m_fileId;
       fIt=m_state->m_framesMap.find(localFId);
       if (fIt != m_state->m_framesMap.end() && fIt->first==localFId && fIt->second) {
-        HMWKGraphInternal::Frame const &childFrame=*fIt->second;
+        HanMacWrdKGraphInternal::Frame const &childFrame=*fIt->second;
         MWAWPosition fPos(pos);
         fPos.setOrigin(childFrame.m_pos[0]-group.m_pos[0]+pos.origin());
         fPos.setSize(childFrame.m_pos.size());
         sendFrame(childFrame, fPos);
         continue;
       }
-      MWAW_DEBUG_MSG(("HMWKGraph::sendGroupChild: can not find child %lx\n", localFId));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", localFId));
     }
     numDataToMerge=0;
   }
 }
 
-void HMWKGraph::prepareStructures()
+void HanMacWrdKGraph::prepareStructures()
 {
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::iterator fIt =
     m_state->m_framesMap.begin(), fIt2;
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
-    HMWKGraphInternal::Frame &frame = *fIt->second;
+    HanMacWrdKGraphInternal::Frame &frame = *fIt->second;
     if (frame.m_type==11 && !frame.m_inGroup) {
       std::multimap<long, long> seens;
       checkGroupStructures(fIt->first, frame.m_fileSubId, seens, false);
     }
     if (frame.m_type==4) {
-      HMWKGraphInternal::TextBox &text=reinterpret_cast<HMWKGraphInternal::TextBox &>(frame);
+      HanMacWrdKGraphInternal::TextBox &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox &>(frame);
       size_t numLink=text.m_linkedIdList.size();
       for (size_t l=0; l < numLink; ++l) {
         fIt2=m_state->m_framesMap.find(text.m_linkedIdList[l]);
         if (fIt2==m_state->m_framesMap.end() || fIt2->first!=text.m_linkedIdList[l] || !fIt2->second || fIt2->second->m_type!=4) {
-          MWAW_DEBUG_MSG(("HMWKGraph::prepareStructures: can not find frame %lx\n", text.m_linkedIdList[l]));
+          MWAW_DEBUG_MSG(("HanMacWrdKGraph::prepareStructures: can not find frame %lx\n", text.m_linkedIdList[l]));
           text.m_linkedIdList.resize(l);
           break;
         }
-        HMWKGraphInternal::TextBox &follow=reinterpret_cast<HMWKGraphInternal::TextBox &>(*fIt2->second);
+        HanMacWrdKGraphInternal::TextBox &follow=reinterpret_cast<HanMacWrdKGraphInternal::TextBox &>(*fIt2->second);
         follow.m_isLinked=true;
         if (l+1!=numLink)
           follow.m_linkedIdList.push_back(text.m_linkedIdList[l+1]);
@@ -2202,26 +2202,26 @@ void HMWKGraph::prepareStructures()
   }
 }
 
-bool HMWKGraph::checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup)
+bool HanMacWrdKGraph::checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup)
 {
   std::multimap<long, long>::const_iterator it=seens.lower_bound(fileId);
   while (it!=seens.end() && it->first==fileId) {
     if (it->second != fileSubId)
       continue;
-    MWAW_DEBUG_MSG(("HMWKGraph::checkGroupStructures: zone %ld[%ld] already find\n", fileId, fileSubId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::checkGroupStructures: zone %ld[%ld] already find\n", fileId, fileSubId));
     return false;
   }
   seens.insert(std::multimap<long, long>::value_type(fileId, fileSubId));
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::iterator fIt =
     m_state->m_framesMap.lower_bound(fileId);
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (fIt->first!=fileId) break;
     if (!fIt->second) continue;
-    HMWKGraphInternal::Frame &frame = *fIt->second;
+    HanMacWrdKGraphInternal::Frame &frame = *fIt->second;
     frame.m_inGroup=inGroup;
     if (frame.m_fileSubId != fileSubId) continue;
     if (frame.m_type==11) {
-      HMWKGraphInternal::Group &group=reinterpret_cast<HMWKGraphInternal::Group &>(frame);
+      HanMacWrdKGraphInternal::Group &group=reinterpret_cast<HanMacWrdKGraphInternal::Group &>(frame);
       for (size_t c=0; c < group.m_childsList.size(); ++c) {
         if (checkGroupStructures(group.m_childsList[c].m_fileId, 0, seens, true))
           continue;
@@ -2231,23 +2231,23 @@ bool HMWKGraph::checkGroupStructures(long fileId, long fileSubId, std::multimap<
     }
     return true;
   }
-  MWAW_DEBUG_MSG(("HMWKGraph::checkGroupStructures: can not find zone %ld[%ld]\n", fileId, fileSubId));
+  MWAW_DEBUG_MSG(("HanMacWrdKGraph::checkGroupStructures: can not find zone %ld[%ld]\n", fileId, fileSubId));
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
+bool HanMacWrdKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
   std::set<long> notSend;
   for (size_t i=0; i < doNotSendIds.size(); ++i)
     notSend.insert(doNotSendIds[i]);
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (notSend.find(fIt->first) != notSend.end() || !fIt->second) continue;
-    HMWKGraphInternal::Frame const &frame = *fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3 || frame.m_inGroup)
       continue;
     MWAWPosition pos(frame.m_pos[0],frame.m_pos.size(),librevenge::RVNG_POINT);
@@ -2258,23 +2258,23 @@ bool HMWKGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
   return true;
 }
 
-void HMWKGraph::flushExtra()
+void HanMacWrdKGraph::flushExtra()
 {
-  std::multimap<long, shared_ptr<HMWKGraphInternal::Frame> >::const_iterator fIt =
+  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt =
     m_state->m_framesMap.begin();
   for (; fIt != m_state->m_framesMap.end(); ++fIt) {
     if (!fIt->second) continue;
-    HMWKGraphInternal::Frame const &frame = *fIt->second;
+    HanMacWrdKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }
-  std::map<long, shared_ptr<HMWKGraphInternal::Picture> >::const_iterator pIt;
+  std::map<long, shared_ptr<HanMacWrdKGraphInternal::Picture> >::const_iterator pIt;
   for (pIt = m_state->m_picturesMap.begin(); pIt != m_state->m_picturesMap.end(); ++pIt) {
     if (!pIt->second) continue;
-    HMWKGraphInternal::Picture const &picture = *pIt->second;
+    HanMacWrdKGraphInternal::Picture const &picture = *pIt->second;
     if (picture.m_parsed)
       continue;
     MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),librevenge::RVNG_POINT);

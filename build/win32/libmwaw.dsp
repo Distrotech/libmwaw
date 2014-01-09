@@ -191,27 +191,27 @@ SOURCE=..\..\src\lib\GWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJGraph.cxx
+SOURCE=..\..\src\lib\HanMacWrdJGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJParser.cxx
+SOURCE=..\..\src\lib\HanMacWrdJParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJText.cxx
+SOURCE=..\..\src\lib\HanMacWrdJText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKGraph.cxx
+SOURCE=..\..\src\lib\HanMacWrdKGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKParser.cxx
+SOURCE=..\..\src\lib\HanMacWrdKParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKText.cxx
+SOURCE=..\..\src\lib\HanMacWrdKText.cxx
 # End Source File
 # Begin Source File
 
@@ -587,27 +587,27 @@ SOURCE=..\..\src\lib\GWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJGraph.hxx
+SOURCE=..\..\src\lib\HanMacWrdJGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJParser.hxx
+SOURCE=..\..\src\lib\HanMacWrdJParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJText.hxx
+SOURCE=..\..\src\lib\HanMacWrdJText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKGraph.hxx
+SOURCE=..\..\src\lib\HanMacWrdKGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKParser.hxx
+SOURCE=..\..\src\lib\HanMacWrdKParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKText.hxx
+SOURCE=..\..\src\lib\HanMacWrdKText.hxx
 # End Source File
 # Begin Source File
 

@@ -52,8 +52,8 @@
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
 #include "GWParser.hxx"
-#include "HMWJParser.hxx"
-#include "HMWKParser.hxx"
+#include "HanMacWrdJParser.hxx"
+#include "HanMacWrdKParser.hxx"
 #include "LWParser.hxx"
 #include "MacDocParser.hxx"
 #include "MDWParser.hxx"
@@ -414,10 +414,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new GWParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_HANMACWORDJ:
-      parser.reset(new HMWJParser(input, rsrcParser, header));
+      parser.reset(new HanMacWrdJParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_HANMACWORDK:
-      parser.reset(new HMWKParser(input, rsrcParser, header));
+      parser.reset(new HanMacWrdKParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
       parser.reset(new LWParser(input, rsrcParser, header));

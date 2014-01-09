@@ -35,37 +35,37 @@
  * Parser to HanMac Word text document
  *
  */
-#ifndef HMWK_TEXT
-#  define HMWK_TEXT
+#ifndef HAN_MAC_WRD_K_TEXT
+#  define HAN_MAC_WRD_K_TEXT
 
 #include <map>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace HMWKTextInternal
+namespace HanMacWrdKTextInternal
 {
 struct Paragraph;
 struct Token;
 struct State;
 }
 
-struct HMWKZone;
-class HMWKParser;
+struct HanMacWrdKZone;
+class HanMacWrdKParser;
 
 /** \brief the main class to read the text part of HanMac Word file
  *
  *
  *
  */
-class HMWKText
+class HanMacWrdKText
 {
-  friend class HMWKParser;
+  friend class HanMacWrdKParser;
 public:
   //! constructor
-  HMWKText(HMWKParser &parser);
+  HanMacWrdKText(HanMacWrdKParser &parser);
   //! destructor
-  virtual ~HMWKText();
+  virtual ~HanMacWrdKText();
 
   /** returns the file version */
   int version() const;
@@ -94,36 +94,36 @@ protected:
   //
 
   /** try to read a text zone (type 1)*/
-  bool readTextZone(shared_ptr<HMWKZone> zone);
+  bool readTextZone(shared_ptr<HanMacWrdKZone> zone);
   /** try to read the fonts name zone (type 5)*/
-  bool readFontNames(shared_ptr<HMWKZone> zone);
+  bool readFontNames(shared_ptr<HanMacWrdKZone> zone);
   /** try to read the style zone (type 3) */
-  bool readStyles(shared_ptr<HMWKZone> zone);
+  bool readStyles(shared_ptr<HanMacWrdKZone> zone);
   /** try to read a section info zone (type 4)*/
-  bool readSections(shared_ptr<HMWKZone> zone);
+  bool readSections(shared_ptr<HanMacWrdKZone> zone);
 
   /** try to send a text zone (type 1)*/
-  bool sendText(HMWKZone &zone, bool asGraphic=false);
+  bool sendText(HanMacWrdKZone &zone, bool asGraphic=false);
   /** check if we can send a textzone has graphic */
-  bool canSendTextAsGraphic(HMWKZone &zone);
+  bool canSendTextAsGraphic(HanMacWrdKZone &zone);
 
   //
   // low level
   //
   /** try to read a font in a text zone */
-  bool readFont(HMWKZone &zone, MWAWFont &font);
+  bool readFont(HanMacWrdKZone &zone, MWAWFont &font);
 
   /** try to read a paragraph in a text zone */
-  bool readParagraph(HMWKZone &zone, HMWKTextInternal::Paragraph &para);
+  bool readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Paragraph &para);
   /** send the ruler properties */
-  void setProperty(HMWKTextInternal::Paragraph const &para, float width);
+  void setProperty(HanMacWrdKTextInternal::Paragraph const &para, float width);
 
   /** try to read an token in a text zone */
-  bool readToken(HMWKZone &zone, HMWKTextInternal::Token &token);
+  bool readToken(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Token &token);
 
 private:
-  HMWKText(HMWKText const &orig);
-  HMWKText &operator=(HMWKText const &orig);
+  HanMacWrdKText(HanMacWrdKText const &orig);
+  HanMacWrdKText &operator=(HanMacWrdKText const &orig);
 
 protected:
   //
@@ -133,10 +133,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<HMWKTextInternal::State> m_state;
+  shared_ptr<HanMacWrdKTextInternal::State> m_state;
 
   //! the main parser;
-  HMWKParser *m_mainParser;
+  HanMacWrdKParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -206,27 +206,27 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJGraph.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJParser.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJText.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKGraph.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKParser.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKText.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -524,12 +524,12 @@
     <ClInclude Include="..\..\src\lib\GWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\GWParser.hxx" />
     <ClInclude Include="..\..\src\lib\GWText.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJParser.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJText.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKParser.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKText.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJParser.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJText.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKParser.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKText.hxx" />
     <ClInclude Include="..\..\src\lib\LWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\LWParser.hxx" />
     <ClInclude Include="..\..\src\lib\LWText.hxx" />

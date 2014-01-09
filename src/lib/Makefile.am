@@ -70,18 +70,18 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	GWParser.hxx			\
 	GWText.cxx			\
 	GWText.hxx			\
-	HMWJGraph.cxx			\
-	HMWJGraph.hxx			\
-	HMWJParser.cxx			\
-	HMWJParser.hxx			\
-	HMWJText.cxx			\
-	HMWJText.hxx			\
-	HMWKGraph.cxx			\
-	HMWKGraph.hxx			\
-	HMWKParser.cxx			\
-	HMWKParser.hxx			\
-	HMWKText.cxx			\
-	HMWKText.hxx			\
+	HanMacWrdJGraph.cxx		\
+	HanMacWrdJGraph.hxx		\
+	HanMacWrdJParser.cxx		\
+	HanMacWrdJParser.hxx		\
+	HanMacWrdJText.cxx		\
+	HanMacWrdJText.hxx		\
+	HanMacWrdKGraph.cxx		\
+	HanMacWrdKGraph.hxx		\
+	HanMacWrdKParser.cxx		\
+	HanMacWrdKParser.hxx		\
+	HanMacWrdKText.cxx		\
+	HanMacWrdKText.hxx		\
 	LWGraph.cxx			\
 	LWGraph.hxx			\
 	LWParser.cxx			\

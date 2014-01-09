@@ -53,15 +53,15 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "HMWJParser.hxx"
+#include "HanMacWrdJParser.hxx"
 
-#include "HMWJGraph.hxx"
+#include "HanMacWrdJGraph.hxx"
 
-/** Internal: the structures of a HMWJGraph */
-namespace HMWJGraphInternal
+/** Internal: the structures of a HanMacWrdJGraph */
+namespace HanMacWrdJGraphInternal
 {
 ////////////////////////////////////////
-//! a cell format in HMWJGraph
+//! a cell format in HanMacWrdJGraph
 struct CellFormat {
 public:
   //! constructor
@@ -88,7 +88,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! a table cell in a table in HMWJGraph
+//! a table cell in a table in HanMacWrdJGraph
 struct TableCell : public MWAWCell {
   //! constructor
   TableCell(long tId): MWAWCell(), m_zId(0), m_tId(tId), m_cPos(-1), m_fileId(0), m_formatId(0), m_flags(0), m_extra("")
@@ -149,10 +149,10 @@ std::ostream &operator<<(std::ostream &o, TableCell const &cell)
 }
 
 ////////////////////////////////////////
-//! Internal: the table of a HMWJGraph
+//! Internal: the table of a HanMacWrdJGraph
 struct Table: public MWAWTable {
   //! constructor
-  Table(HMWJGraph &parser) : MWAWTable(MWAWTable::CellPositionBit|MWAWTable::TableDimBit), m_parser(&parser),
+  Table(HanMacWrdJGraph &parser) : MWAWTable(MWAWTable::CellPositionBit|MWAWTable::TableDimBit), m_parser(&parser),
     m_rows(1), m_columns(1), m_height(0), m_textFileId(0), m_formatsList()
   {
   }
@@ -168,7 +168,7 @@ struct Table: public MWAWTable {
     return m_parser->sendText(id, cPos);
   }
   //! the graph parser
-  HMWJGraph *m_parser;
+  HanMacWrdJGraph *m_parser;
   //! the number of row
   int m_rows;
   //! the number of columns
@@ -201,7 +201,7 @@ void Table::updateCells()
     if (cell.m_formatId < 0 || cell.m_formatId>=numFormats) {
       static bool first = true;
       if (first) {
-        MWAW_DEBUG_MSG(("HMWJGraphInternal::Table::updateCells: can not find the format\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::Table::updateCells: can not find the format\n"));
         first = false;
       }
       continue;
@@ -211,7 +211,7 @@ void Table::updateCells()
 }
 
 ////////////////////////////////////////
-//! a frame format in HMWJGraph
+//! a frame format in HanMacWrdJGraph
 struct FrameFormat {
 public:
   //! constructor
@@ -245,7 +245,7 @@ public:
         border.m_widthsList[2]=2.0;
         break;
       default:
-        MWAW_DEBUG_MSG(("HMWJGraphInternal::FrameFormat::addTo: unexpected type\n"));
+        MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::FrameFormat::addTo: unexpected type\n"));
         break;
       }
       border.addTo(frames, "");
@@ -295,7 +295,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the frame header of a HMWJGraph
+//! Internal: the frame header of a HanMacWrdJGraph
 struct Frame {
   //! constructor
   Frame() : m_type(-1), m_fileId(-1), m_id(-1), m_formatId(0), m_page(0),
@@ -402,7 +402,7 @@ std::ostream &operator<<(std::ostream &o, Frame const &grph)
 }
 
 ////////////////////////////////////////
-//! Internal: the comment frame of a HMWJGraph
+//! Internal: the comment frame of a HanMacWrdJGraph
 struct CommentFrame :  public Frame {
 public:
   //! constructor
@@ -438,7 +438,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: a group of a HMWJGraph
+//! Internal: a group of a HanMacWrdJGraph
 struct Group :  public Frame {
 public:
   //! constructor
@@ -457,7 +457,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the picture frame of a HMWJGraph
+//! Internal: the picture frame of a HanMacWrdJGraph
 struct PictureFrame :  public Frame {
 public:
   //! constructor
@@ -489,7 +489,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: a footnote separator of a HMWJGraph
+//! Internal: a footnote separator of a HanMacWrdJGraph
 struct SeparatorFrame :  public Frame {
 public:
   //! constructor
@@ -504,7 +504,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the table frame of a HMWJGraph
+//! Internal: the table frame of a HanMacWrdJGraph
 struct TableFrame :  public Frame {
 public:
   //! constructor
@@ -538,7 +538,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the textbox frame of a HMWJGraph
+//! Internal: the textbox frame of a HanMacWrdJGraph
 struct TextboxFrame :  public Frame {
 public:
   //! constructor
@@ -579,7 +579,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the text frame (basic, header, footer, footnote) of a HMWJGraph
+//! Internal: the text frame (basic, header, footer, footnote) of a HanMacWrdJGraph
 struct TextFrame :  public Frame {
 public:
   //! constructor
@@ -611,7 +611,7 @@ public:
 };
 
 ////////////////////////////////////////
-//! Internal: the geometrical graph of a HMWJGraph
+//! Internal: the geometrical graph of a HanMacWrdJGraph
 struct ShapeGraph : public Frame {
   //! constructor
   ShapeGraph(Frame const &orig) : Frame(orig), m_shape(), m_arrowsFlag(0)
@@ -646,7 +646,7 @@ struct ShapeGraph : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the pattern of a HMWJGraph
+//! Internal: the pattern of a HanMacWrdJGraph
 struct Pattern : public MWAWGraphicStyle::Pattern {
   //! constructor ( 4 int by patterns )
   Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
@@ -676,7 +676,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a HMWJGraph
+//! Internal: the state of a HanMacWrdJGraph
 struct State {
   //! constructor
   State() : m_framesList(), m_framesMap(), m_frameFormatsList(), m_numPages(0), m_colorList(), m_patternList() { }
@@ -701,7 +701,7 @@ struct State {
     if (id >= 0 && id < (int) m_frameFormatsList.size())
       return m_frameFormatsList[size_t(id)];
     static FrameFormat defFormat;
-    MWAW_DEBUG_MSG(("HMWJGraphInternal::State::getFrameFormat: can not find format %d\n", id));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::State::getFrameFormat: can not find format %d\n", id));
     return defFormat;
   }
   //! returns a color correspond to an id
@@ -709,7 +709,7 @@ struct State {
   {
     initColors();
     if (id < 0 || id >= int(m_colorList.size())) {
-      MWAW_DEBUG_MSG(("HMWJGraphInternal::State::getColor: can not find color %d\n", id));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::State::getColor: can not find color %d\n", id));
       return false;
     }
     col = m_colorList[size_t(id)];
@@ -720,7 +720,7 @@ struct State {
   {
     initPatterns();
     if (id < 0 || id >= int(m_patternList.size())) {
-      MWAW_DEBUG_MSG(("HMWJGraphInternal::State::getPattern: can not find pattern %d\n", id));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::State::getPattern: can not find pattern %d\n", id));
       return false;
     }
     pattern = m_patternList[size_t(id)];
@@ -821,18 +821,18 @@ void State::initColors()
 
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a HMWJGraph
+//! Internal: the subdocument of a HanMacWrdJGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! the document type
   enum Type { FrameInFrame, Group, Text, UnformattedTable, EmptyPicture };
   //! constructor
-  SubDocument(HMWJGraph &pars, MWAWInputStreamPtr input, Type type, long id, long firstChar=0) :
+  SubDocument(HanMacWrdJGraph &pars, MWAWInputStreamPtr input, Type type, long id, long firstChar=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_firstChar(firstChar), m_pos() {}
 
   //! constructor
-  SubDocument(HMWJGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int firstChar=0) :
+  SubDocument(HanMacWrdJGraph &pars, MWAWInputStreamPtr input, MWAWPosition pos, Type type, long id, int firstChar=0) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_type(type), m_id(id), m_firstChar(firstChar), m_pos(pos) {}
 
   //! destructor
@@ -854,7 +854,7 @@ public:
 
 protected:
   /** the graph parser */
-  HMWJGraph *m_graphParser;
+  HanMacWrdJGraph *m_graphParser;
   //! the zone type
   Type m_type;
   //! the zone id
@@ -872,7 +872,7 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -895,7 +895,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     m_graphParser->sendTableUnformatted(m_id);
     break;
   default:
-    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
     break;
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -904,7 +904,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parseGraphic: no listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parseGraphic: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -913,7 +913,7 @@ void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDoc
   if (m_type==Text)
     m_graphParser->sendText(m_id, m_firstChar, true);
   else {
-    MWAW_DEBUG_MSG(("HMWJGraphInternal::SubDocument::parseGraphic: send type %d is not implemented\n", m_type));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parseGraphic: send type %d is not implemented\n", m_type));
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
@@ -935,43 +935,43 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-HMWJGraph::HMWJGraph(HMWJParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new HMWJGraphInternal::State),
+HanMacWrdJGraph::HanMacWrdJGraph(HanMacWrdJParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new HanMacWrdJGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-HMWJGraph::~HMWJGraph()
+HanMacWrdJGraph::~HanMacWrdJGraph()
 { }
 
-int HMWJGraph::version() const
+int HanMacWrdJGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-bool HMWJGraph::getColor(int colId, int patternId, MWAWColor &color) const
+bool HanMacWrdJGraph::getColor(int colId, int patternId, MWAWColor &color) const
 {
   if (!m_state->getColor(colId, color)) {
-    MWAW_DEBUG_MSG(("HMWJGraph::getColor: can not find color for id=%d\n", colId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::getColor: can not find color for id=%d\n", colId));
     return false;
   }
-  HMWJGraphInternal::Pattern pattern;
+  HanMacWrdJGraphInternal::Pattern pattern;
   if (!m_state->getPattern(patternId, pattern)) {
-    MWAW_DEBUG_MSG(("HMWJGraph::getColor: can not find pattern for id=%d\n", patternId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::getColor: can not find pattern for id=%d\n", patternId));
     return false;
   }
   color = m_state->getColor(color, pattern.m_percent);
   return true;
 }
 
-int HMWJGraph::numPages() const
+int HanMacWrdJGraph::numPages() const
 {
   if (m_state->m_numPages)
     return m_state->m_numPages;
   int nPages = 0;
   for (size_t f=0 ; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
     if (!frame.valid()) continue;
     int page = frame.m_page+1;
     if (page <= nPages) continue;
@@ -982,17 +982,17 @@ int HMWJGraph::numPages() const
   return nPages;
 }
 
-bool HMWJGraph::sendText(long textId, long fPos, bool asGraphic)
+bool HanMacWrdJGraph::sendText(long textId, long fPos, bool asGraphic)
 {
   return m_mainParser->sendText(textId, fPos, asGraphic);
 }
 
-std::map<long,int> HMWJGraph::getTextFrameInformations() const
+std::map<long,int> HanMacWrdJGraph::getTextFrameInformations() const
 {
   std::map<long,int> mapIdType;
   for (size_t f=0; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
     if (!frame.valid())
       continue;
     long zId=0;
@@ -1001,16 +1001,16 @@ std::map<long,int> HMWJGraph::getTextFrameInformations() const
     case 1:
     case 2:
     case 3:
-      zId=static_cast<HMWJGraphInternal::TextFrame const &>(frame).m_zId;
+      zId=static_cast<HanMacWrdJGraphInternal::TextFrame const &>(frame).m_zId;
       break;
     case 4:
-      zId=static_cast<HMWJGraphInternal::TextboxFrame const &>(frame).m_zId;
+      zId=static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame).m_zId;
       break;
     case 9:
-      zId=static_cast<HMWJGraphInternal::TableFrame const &>(frame).m_zId;
+      zId=static_cast<HanMacWrdJGraphInternal::TableFrame const &>(frame).m_zId;
       break;
     case 10:
-      zId=static_cast<HMWJGraphInternal::CommentFrame const &>(frame).m_zId;
+      zId=static_cast<HanMacWrdJGraphInternal::CommentFrame const &>(frame).m_zId;
       break;
     default:
       break;
@@ -1019,24 +1019,24 @@ std::map<long,int> HMWJGraph::getTextFrameInformations() const
     if (mapIdType.find(zId) == mapIdType.end())
       mapIdType[zId] = frame.m_type;
     else if (mapIdType.find(zId)->second != frame.m_type) {
-      MWAW_DEBUG_MSG(("HMWJGraph::getTextFrameInformations: id %lx already set\n", zId));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::getTextFrameInformations: id %lx already set\n", zId));
     }
   }
   return mapIdType;
 }
 
-bool HMWJGraph::getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const
+bool HanMacWrdJGraph::getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const
 {
   fPosList.clear();
   textZId = 0;
   for (size_t f=0; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
     if (!frame.valid() || frame.m_type != 3)
       continue;
-    HMWJGraphInternal::TextFrame const &text=static_cast<HMWJGraphInternal::TextFrame const &>(frame);
+    HanMacWrdJGraphInternal::TextFrame const &text=static_cast<HanMacWrdJGraphInternal::TextFrame const &>(frame);
     if (textZId && text.m_zId != textZId) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readFrames: find different textIds\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: find different textIds\n"));
     }
     else if (!textZId)
       textZId = text.m_zId;
@@ -1050,14 +1050,14 @@ bool HMWJGraph::getFootnoteInformations(long &textZId, std::vector<long> &fPosLi
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool HMWJGraph::readFrames(MWAWEntry const &entry)
+bool HanMacWrdJGraph::readFrames(MWAWEntry const &entry)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: called without any entry\n"));
     return false;
   }
   if (entry.length() <= 8) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: the entry seems too short\n"));
     return false;
   }
 
@@ -1072,10 +1072,10 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
 
   // first read the header
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
+  HanMacWrdJZoneHeader mainHeader(true);
   if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize != 4 ||
       16+12+mainHeader.m_n*4 > mainHeader.m_length) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: can not read the header\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: can not read the header\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1111,7 +1111,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   m_state->m_framesList.resize(size_t(mainHeader.m_n));
   for (int i = 0; i < mainHeader.m_n; ++i) {
     pos = input->tell();
-    shared_ptr<HMWJGraphInternal::Frame> frame=readFrame(i);
+    shared_ptr<HanMacWrdJGraphInternal::Frame> frame=readFrame(i);
     if (!frame) {
       f << "###";
       asciiFile.addPos(pos);
@@ -1128,9 +1128,9 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   pos = input->tell();
   f.str("");
   f << entry.name() << "-Format:";
-  HMWJZoneHeader header(false);
+  HanMacWrdJZoneHeader header(false);
   if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=48) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: can not read auxilliary block A\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: can not read auxilliary block A\n"));
     f << "###" << header;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1142,7 +1142,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   asciiFile.addNote(f.str().c_str());
 
   for (int i = 0; i < header.m_n; ++i) {
-    HMWJGraphInternal::FrameFormat format;
+    HanMacWrdJGraphInternal::FrameFormat format;
     MWAWGraphicStyle &style=format.m_style;
     pos=input->tell();
     f.str("");
@@ -1169,7 +1169,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
         else style.m_surfaceOpacity=0;
         continue;
       }
-      HMWJGraphInternal::Pattern pat;
+      HanMacWrdJGraphInternal::Pattern pat;
       if (m_state->getPattern(pattern, pat)) {
         pat.m_colors[1]=col;
         if (!pat.getUniqueColor(col)) {
@@ -1202,10 +1202,10 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   pos = input->tell();
   f.str("");
   f << entry.name() << "-B:";
-  header=HMWJZoneHeader(false);
+  header=HanMacWrdJZoneHeader(false);
   if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=8 ||
       16+2+header.m_n*8 > header.m_length) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: can not read auxilliary block B\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: can not read auxilliary block B\n"));
     f << "###" << header;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1237,9 +1237,9 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
     pos = input->tell();
     f.str("");
     f << entry.name() << "-B" << i << ":";
-    HMWJZoneHeader lHeader(false);
+    HanMacWrdJZoneHeader lHeader(false);
     if (!m_mainParser->readClassicHeader(lHeader,endPos) || lHeader.m_fieldSize!=4) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readFrames: can not read auxilliary block B%d\n",i));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: can not read auxilliary block B%d\n",i));
       f << "###" << lHeader;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1263,7 +1263,7 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   asciiFile.addNote("_");
   pos = input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrames: find unexpected end data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrames: find unexpected end data\n"));
     f.str("");
     f << entry.name() << "###:";
     asciiFile.addPos(pos);
@@ -1272,10 +1272,10 @@ bool HMWJGraph::readFrames(MWAWEntry const &entry)
   return true;
 }
 
-shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
+shared_ptr<HanMacWrdJGraphInternal::Frame> HanMacWrdJGraph::readFrame(int id)
 {
-  shared_ptr<HMWJGraphInternal::Frame> res;
-  HMWJGraphInternal::Frame graph;
+  shared_ptr<HanMacWrdJGraphInternal::Frame> res;
+  HanMacWrdJGraphInternal::Frame graph;
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -1284,7 +1284,7 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
   long len = (long) input->readULong(4);
   long endPos = pos+4+len;
   if (len < 32 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the frame length\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrame: can not read the frame length\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return res;
   }
@@ -1340,12 +1340,12 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
     break;
   case 11:
     if (len < 36) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the group id\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrame: can not read the group id\n"));
       break;
     }
     else {
-      HMWJGraphInternal::Group *group =
-        new HMWJGraphInternal::Group(graph);
+      HanMacWrdJGraphInternal::Group *group =
+        new HanMacWrdJGraphInternal::Group(graph);
       res.reset(group);
       pos =input->tell();
       group->m_zId = (long) input->readULong(4);
@@ -1357,11 +1357,11 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
     }
   case 12:
     if (len < 52) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readFrame: can not read the footnote[sep] data\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readFrame: can not read the footnote[sep] data\n"));
       break;
     }
     else {
-      HMWJGraphInternal::SeparatorFrame *sep = new HMWJGraphInternal::SeparatorFrame(graph);
+      HanMacWrdJGraphInternal::SeparatorFrame *sep = new HanMacWrdJGraphInternal::SeparatorFrame(graph);
       res.reset(sep);
       pos =input->tell();
       f.str("");
@@ -1379,39 +1379,39 @@ shared_ptr<HMWJGraphInternal::Frame> HMWJGraph::readFrame(int id)
     break;
   }
   if (!res)
-    res.reset(new HMWJGraphInternal::Frame(graph));
+    res.reset(new HanMacWrdJGraphInternal::Frame(graph));
   if (input->tell() != endPos)
     asciiFile.addDelimiter(input->tell(),'|');
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return res;
 }
 
-bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
+bool HanMacWrdJGraph::readGroupData(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: called without any entry\n"));
     return false;
   }
   if (entry.length() == 8) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: find an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: find an empty zone\n"));
     entry.setParsed(true);
     return true;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: the entry seems too short\n"));
     return false;
   }
 
-  shared_ptr<HMWJGraphInternal::Frame> frame =
+  shared_ptr<HanMacWrdJGraphInternal::Frame> frame =
     m_state->findFrame(11, actZone);
   std::vector<long> dummyList;
   std::vector<long> *idsList=&dummyList;
   if (!frame) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: can not find group %d\n", actZone));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: can not find group %d\n", actZone));
   }
   else {
-    HMWJGraphInternal::Group *group =
-      static_cast<HMWJGraphInternal::Group *>(frame.get());
+    HanMacWrdJGraphInternal::Group *group =
+      static_cast<HanMacWrdJGraphInternal::Group *>(frame.get());
     idsList = &group->m_childsList;
   }
 
@@ -1425,9 +1425,9 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
+  HanMacWrdJZoneHeader mainHeader(true);
   if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=4) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: can not read an entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: can not read an entry\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1454,7 +1454,7 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
   if (pos!=endPos) {
     f.str("");
     f << entry.name() << "[last]:###";
-    MWAW_DEBUG_MSG(("HMWJGraph::readGroupData: find unexpected end of data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGroupData: find unexpected end of data\n"));
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
   }
@@ -1463,14 +1463,14 @@ bool HMWJGraph::readGroupData(MWAWEntry const &entry, int actZone)
 }
 
 // try to read the graph data
-bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
+bool HanMacWrdJGraph::readGraphData(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: called without any entry\n"));
     return false;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: the entry seems too short\n"));
     return false;
   }
 
@@ -1484,11 +1484,11 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(false);
+  HanMacWrdJZoneHeader mainHeader(false);
   if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=8) {
     // sz=12 is ok, means no data
     if (entry.length() != 12) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: can not read an entry\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: can not read an entry\n"));
       f << "###sz=" << mainHeader.m_length;
     }
     asciiFile.addPos(pos);
@@ -1510,15 +1510,15 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
   }
   f << "],";
 
-  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(8, actZone);
+  shared_ptr<HanMacWrdJGraphInternal::Frame> frame = m_state->findFrame(8, actZone);
   if (!frame) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: can not find basic graph %d\n", actZone));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: can not find basic graph %d\n", actZone));
   }
   else {
-    HMWJGraphInternal::ShapeGraph *graph =
-      static_cast<HMWJGraphInternal::ShapeGraph *>(frame.get());
+    HanMacWrdJGraphInternal::ShapeGraph *graph =
+      static_cast<HanMacWrdJGraphInternal::ShapeGraph *>(frame.get());
     if (graph->m_shape.m_type != MWAWGraphicShape::Polygon) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: basic graph %d is not a polygon\n", actZone));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: basic graph %d is not a polygon\n", actZone));
     }
     else {
       graph->m_shape.m_vertices = lVertices;
@@ -1533,7 +1533,7 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
   if (headerEnd!=endPos) {
     f.str("");
     f << entry.name() << "[last]:###";
-    MWAW_DEBUG_MSG(("HMWJGraph::readGraphData: find unexpected end of data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readGraphData: find unexpected end of data\n"));
     asciiFile.addPos(headerEnd);
     asciiFile.addNote(f.str().c_str());
   }
@@ -1542,14 +1542,14 @@ bool HMWJGraph::readGraphData(MWAWEntry const &entry, int actZone)
 }
 
 // try to read the picture
-bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
+bool HanMacWrdJGraph::readPicture(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readPicture: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readPicture: called without any entry\n"));
     return false;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readPicture: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readPicture: the entry seems too short\n"));
     return false;
   }
 
@@ -1562,7 +1562,7 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   long sz=(long) input->readULong(4);
   if (sz+12 != entry.length()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readPicture: the entry sz seems bad\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readPicture: the entry sz seems bad\n"));
     return false;
   }
   f << "Picture:pictSz=" << sz;
@@ -1570,13 +1570,13 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
   asciiFile.addNote(f.str().c_str());
   asciiFile.skipZone(entry.begin()+12, entry.end()-1);
 
-  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(6, actZone);
+  shared_ptr<HanMacWrdJGraphInternal::Frame> frame = m_state->findFrame(6, actZone);
   if (!frame) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readPicture: can not find picture %d\n", actZone));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readPicture: can not find picture %d\n", actZone));
   }
   else {
-    HMWJGraphInternal::PictureFrame *picture =
-      static_cast<HMWJGraphInternal::PictureFrame *>(frame.get());
+    HanMacWrdJGraphInternal::PictureFrame *picture =
+      static_cast<HanMacWrdJGraphInternal::PictureFrame *>(frame.get());
     picture->m_entry.setBegin(pos+4);
     picture->m_entry.setLength(sz);
   }
@@ -1585,19 +1585,19 @@ bool HMWJGraph::readPicture(MWAWEntry const &entry, int actZone)
 }
 
 // table
-bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
+bool HanMacWrdJGraph::readTable(MWAWEntry const &entry, int actZone)
 {
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: called without any entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: called without any entry\n"));
     return false;
   }
   if (entry.length() == 8) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: find an empty zone\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: find an empty zone\n"));
     entry.setParsed(true);
     return true;
   }
   if (entry.length() < 12) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: the entry seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: the entry seems too short\n"));
     return false;
   }
   long pos = entry.begin()+8; // skip header
@@ -1610,10 +1610,10 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   // first read the header
   f << entry.name() << "[header]:";
-  HMWJZoneHeader mainHeader(true);
+  HanMacWrdJZoneHeader mainHeader(true);
   if (!m_mainParser->readClassicHeader(mainHeader,endPos) || mainHeader.m_fieldSize!=4 ||
       mainHeader.m_length < 16+12+4*mainHeader.m_n) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not read an entry\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: can not read an entry\n"));
     f << "###sz=" << mainHeader.m_length;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1621,16 +1621,16 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   }
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
-  shared_ptr<HMWJGraphInternal::Table> table(new HMWJGraphInternal::Table(*this));
+  shared_ptr<HanMacWrdJGraphInternal::Table> table(new HanMacWrdJGraphInternal::Table(*this));
 
   long textId = 0;
-  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->findFrame(9, actZone);
+  shared_ptr<HanMacWrdJGraphInternal::Frame> frame = m_state->findFrame(9, actZone);
   if (!frame || !frame->valid()) {
-    MWAW_DEBUG_MSG(("HMWJTable::readTable: can not find basic table %d\n", actZone));
+    MWAW_DEBUG_MSG(("HanMacWrdJTable::readTable: can not find basic table %d\n", actZone));
   }
   else {
-    HMWJGraphInternal::TableFrame *tableFrame =
-      static_cast<HMWJGraphInternal::TableFrame *>(frame.get());
+    HanMacWrdJGraphInternal::TableFrame *tableFrame =
+      static_cast<HanMacWrdJGraphInternal::TableFrame *>(frame.get());
     tableFrame->m_table = table;
     textId = tableFrame->m_zId;
   }
@@ -1665,9 +1665,9 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     pos = input->tell();
     f.str("");
     f << entry.name() << "-row" << i << ":";
-    HMWJZoneHeader header(false);
+    HanMacWrdJZoneHeader header(false);
     if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize!=16) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not read zone %d\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: can not read zone %d\n", i));
       f << "###" << header;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1686,7 +1686,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     for (int j = 0; j < header.m_n; j++) {
       pos = input->tell();
       f.str("");
-      shared_ptr<HMWJGraphInternal::TableCell> cell(new HMWJGraphInternal::TableCell(textId));
+      shared_ptr<HanMacWrdJGraphInternal::TableCell> cell(new HanMacWrdJGraphInternal::TableCell(textId));
       cell->setPosition(Vec2i(j,i));
       cell->m_cPos = (long) input->readULong(4);
       cell->m_zId = (long) input->readULong(4);
@@ -1719,7 +1719,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
         else {
           static bool first = true;
           if (first) {
-            MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not determine the span\n"));
+            MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: can not determine the span\n"));
             first = false;
           }
           f << "##span=" << dim[1]+1-j << "x" << dim[0]+1-i << ",";
@@ -1744,7 +1744,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   asciiFile.addPos(endPos);
   asciiFile.addNote("_");
   if (input->tell()==endPos) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not find the 3 last blocks\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: can not find the 3 last blocks\n"));
     return true;
   }
 
@@ -1752,9 +1752,9 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
     pos = input->tell();
     f.str("");
     f << entry.name() << "-" << (i==0 ? "rowY" : "colX") << ":";
-    HMWJZoneHeader header(false);
+    HanMacWrdJZoneHeader header(false);
     if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize != 4) {
-      MWAW_DEBUG_MSG(("HMWJGraph::readTable: can not read zone %d\n", i));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: can not read zone %d\n", i));
       f << "###" << header;
       asciiFile.addPos(pos);
       asciiFile.addNote(f.str().c_str());
@@ -1791,7 +1791,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   table->updateCells();
 
   if (input->tell() != endPos) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTable: find unexpected last block\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTable: find unexpected last block\n"));
     pos = input->tell();
     f.str("");
     f << entry.name() << "-###:";
@@ -1802,7 +1802,7 @@ bool HMWJGraph::readTable(MWAWEntry const &entry, int actZone)
   return true;
 }
 
-bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPos)
+bool HanMacWrdJGraph::readTableFormatsList(HanMacWrdJGraphInternal::Table &table, long endPos)
 {
   table.m_formatsList.clear();
 
@@ -1813,9 +1813,9 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
   long pos = input->tell();
   f.str("");
   f << "Table-format:";
-  HMWJZoneHeader header(false);
+  HanMacWrdJZoneHeader header(false);
   if (!m_mainParser->readClassicHeader(header,endPos) || header.m_fieldSize != 40) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTableFormatsList: can not read format\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTableFormatsList: can not read format\n"));
     f << "###" << header;
     asciiFile.addPos(pos);
     asciiFile.addNote(f.str().c_str());
@@ -1828,7 +1828,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
   asciiFile.addNote(f.str().c_str());
   table.m_formatsList.resize(size_t(header.m_n));
   for (int i = 0; i < header.m_n; ++i) {
-    HMWJGraphInternal::CellFormat format;
+    HanMacWrdJGraphInternal::CellFormat format;
     pos = input->tell();
     f.str("");
     long val = input->readLong(2); // always -2
@@ -1872,7 +1872,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
       if (!m_state->getColor(color, col))
         f2 << "#color=" << color << ",";
       pattern = (int) input->readULong(1);
-      HMWJGraphInternal::Pattern pat;
+      HanMacWrdJGraphInternal::Pattern pat;
       if (pattern==0) border.m_style=MWAWBorder::None;
       else {
         if (!m_state->getPattern(pattern, pat)) {
@@ -1894,7 +1894,7 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
     if (!m_state->getColor(color, backCol))
       f << "#backcolor=" << color << ",";
     pattern = (int) input->readULong(1);
-    HMWJGraphInternal::Pattern pat;
+    HanMacWrdJGraphInternal::Pattern pat;
     if (!m_state->getPattern(pattern, pat))
       f << "#backPattern=" << pattern << ",";
     else
@@ -1917,32 +1917,32 @@ bool HMWJGraph::readTableFormatsList(HMWJGraphInternal::Table &table, long endPo
 // send data to a listener
 ////////////////////////////////////////////////////////////
 
-bool HMWJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
 
   std::map<long, int >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= int(m_state->m_framesList.size())) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find frame %lx\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: can not find frame %lx\n", frameId));
     return false;
   }
-  shared_ptr<HMWJGraphInternal::Frame> frame = m_state->m_framesList[size_t(fIt->second)];
+  shared_ptr<HanMacWrdJGraphInternal::Frame> frame = m_state->m_framesList[size_t(fIt->second)];
   if (!frame || !frame->valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: frame %lx is not initialized\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: frame %lx is not initialized\n", frameId));
     return false;
   }
   return sendFrame(*frame, pos, extras);
 }
 
 // --- basic shape
-bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
+bool HanMacWrdJGraph::sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
 
-  HMWJGraphInternal::FrameFormat const &format=
+  HanMacWrdJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(pict.m_formatId);
 
   MWAWGraphicStyle style(format.m_style);;
@@ -1958,7 +1958,7 @@ bool HMWJGraph::sendShapeGraph(HMWJGraphInternal::ShapeGraph const &pict, MWAWPo
 }
 
 // picture
-bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
 #ifdef DEBUG_WITH_FILES
@@ -1969,7 +1969,7 @@ bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MW
     pos.setSize(pict.getBdBox().size());
 
   if (!pict.m_entry.valid()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendPictureFrame: can not find picture data\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendPictureFrame: can not find picture data\n"));
     sendEmptyPicture(pos);
     return true;
   }
@@ -1996,7 +1996,7 @@ bool HMWJGraph::sendPictureFrame(HMWJGraphInternal::PictureFrame const &pict, MW
   return true;
 }
 
-bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
+bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
@@ -2008,7 +2008,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
 
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
   if (!graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendEmptyPicture: can not use the graphic listener\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendEmptyPicture: can not use the graphic listener\n"));
     return false;
   }
   Box2f box=Box2f(Vec2f(0,0),pictSz);
@@ -2025,7 +2025,7 @@ bool HMWJGraph::sendEmptyPicture(MWAWPosition pos)
 }
 
 // ----- comment box
-bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendComment(HanMacWrdJGraphInternal::CommentFrame const &comment, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
   Vec2f commentSz = comment.getBdBox().size();
@@ -2035,7 +2035,7 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
 
   librevenge::RVNGPropertyList pList(extras);
 
-  HMWJGraphInternal::FrameFormat const &format=
+  HanMacWrdJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(comment.m_formatId);
 
   MWAWGraphicStyle const &style=format.m_style;
@@ -2052,26 +2052,26 @@ bool HMWJGraph::sendComment(HMWJGraphInternal::CommentFrame const &comment, MWAW
   if (style.hasSurfaceColor())
     pList.insert("fo:background-color", style.m_surfaceColor.str().c_str());
 
-  MWAWSubDocumentPtr subdoc(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, comment.m_zId));
+  MWAWSubDocumentPtr subdoc(new HanMacWrdJGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdJGraphInternal::SubDocument::Text, comment.m_zId));
   m_parserState->m_textListener->insertTextBox(pos, subdoc, pList);
 
   return true;
 }
 
 // ----- textbox
-bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendTextbox(HanMacWrdJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textbox.getBdBox().size());
   librevenge::RVNGPropertyList pList(extras), tbExtras;
 
-  HMWJGraphInternal::FrameFormat const &format=
+  HanMacWrdJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(textbox.m_formatId);
   format.addTo(pList);
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
-    subdoc.reset(new HMWJGraphInternal::SubDocument(*this, m_parserState->m_input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+    subdoc.reset(new HanMacWrdJGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
   else {
     librevenge::RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_fileId);
@@ -2088,24 +2088,24 @@ bool HMWJGraph::sendTextbox(HMWJGraphInternal::TextboxFrame const &textbox, MWAW
 }
 
 // ----- table
-bool HMWJGraph::sendTableUnformatted(long fId)
+bool HanMacWrdJGraph::sendTableUnformatted(long fId)
 {
   if (!m_parserState->m_textListener)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
   int id = fIt->second;
   if (id < 0 || id >= (int) m_state->m_framesList.size())
     return false;
-  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
+  HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 9) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendTableUnformatted: can not find table %lx(II)\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find table %lx(II)\n", fId));
     return false;
   }
-  HMWJGraphInternal::Table &table = reinterpret_cast<HMWJGraphInternal::Table &>(frame);
+  HanMacWrdJGraphInternal::Table &table = reinterpret_cast<HanMacWrdJGraphInternal::Table &>(frame);
   table.sendAsText(m_parserState->m_textListener);
   return true;
 }
@@ -2113,14 +2113,14 @@ bool HMWJGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
 
   if (!frame.valid()) {
     frame.m_parsed = true;
-    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: called with invalid frame\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: called with invalid frame\n"));
     return false;
   }
 
@@ -2128,15 +2128,15 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
   switch (frame.m_type) {
   case 4: {
     frame.m_parsed = true;
-    HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
+    HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
     if (format.m_style.hasPattern()) {
-      HMWJGraphInternal::TextboxFrame const &textbox=
-        reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      HanMacWrdJGraphInternal::TextboxFrame const &textbox=
+        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_zId,0) &&
           graphicListener && !graphicListener->isDocumentStarted()) {
         MWAWSubDocumentPtr subdoc
-        (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+        (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
         Box2f box(Vec2f(0,0),pos.size());
         graphicListener->startGraphic(box);
         librevenge::RVNGBinaryData data;
@@ -2148,11 +2148,11 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
         return true;
       }
     }
-    return sendTextbox(static_cast<HMWJGraphInternal::TextboxFrame const &>(frame), pos, extras);
+    return sendTextbox(static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame), pos, extras);
   }
   case 6: {
-    HMWJGraphInternal::PictureFrame const &pict =
-      static_cast<HMWJGraphInternal::PictureFrame const &>(frame);
+    HanMacWrdJGraphInternal::PictureFrame const &pict =
+      static_cast<HanMacWrdJGraphInternal::PictureFrame const &>(frame);
     if (!pict.m_entry.valid()) {
       pos.setSize(pict.getBdBox().size());
 
@@ -2162,8 +2162,8 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWJGraphInternal::SubDocument
-       (*this, input, framePos, HMWJGraphInternal::SubDocument::EmptyPicture, 0));
+      (new HanMacWrdJGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::EmptyPicture, 0));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -2171,21 +2171,21 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
   }
   case 8:
     frame.m_parsed = true;
-    return sendShapeGraph(static_cast<HMWJGraphInternal::ShapeGraph const &>(frame), pos);
+    return sendShapeGraph(static_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(frame), pos);
   case 9: {
     frame.m_parsed = true;
-    HMWJGraphInternal::TableFrame const &tableFrame = static_cast<HMWJGraphInternal::TableFrame const &>(frame);
+    HanMacWrdJGraphInternal::TableFrame const &tableFrame = static_cast<HanMacWrdJGraphInternal::TableFrame const &>(frame);
     if (!tableFrame.m_table) {
-      MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find the table\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: can not find the table\n"));
       return false;
     }
-    HMWJGraphInternal::Table &table = *tableFrame.m_table;
+    HanMacWrdJGraphInternal::Table &table = *tableFrame.m_table;
 
     if (!table.updateTable()) {
-      MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: can not find the table structure\n"));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: can not find the table structure\n"));
       MWAWSubDocumentPtr subdoc
-      (new HMWJGraphInternal::SubDocument
-       (*this, input, HMWJGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
+      (new HanMacWrdJGraphInternal::SubDocument
+       (*this, input, HanMacWrdJGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -2196,8 +2196,8 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       framePos.setOrigin(Vec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
-      (new HMWJGraphInternal::SubDocument
-       (*this, input, framePos, HMWJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
+      (new HanMacWrdJGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
       pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc, extras);
       return true;
@@ -2208,9 +2208,9 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
   }
   case 10:
     frame.m_parsed = true;
-    return sendComment(static_cast<HMWJGraphInternal::CommentFrame const &>(frame), pos, extras);
+    return sendComment(static_cast<HanMacWrdJGraphInternal::CommentFrame const &>(frame), pos, extras);
   case 11: {
-    HMWJGraphInternal::Group const &group=reinterpret_cast<HMWJGraphInternal::Group const &>(frame);
+    HanMacWrdJGraphInternal::Group const &group=reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame);
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
         (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
@@ -2219,8 +2219,8 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
       framePos.setOrigin(Vec2f(0,0));
       pos.setSize(group.getBdBox().size());
       MWAWSubDocumentPtr subdoc
-      (new HMWJGraphInternal::SubDocument
-       (*this, input, framePos, HMWJGraphInternal::SubDocument::Group, group.m_fileId));
+      (new HanMacWrdJGraphInternal::SubDocument
+       (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::Group, group.m_fileId));
       listener->insertTextBox(pos, subdoc, extras);
       return true;
     }
@@ -2228,7 +2228,7 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("HMWJGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: sending type %d is not implemented\n", frame.m_type));
     break;
   }
   frame.m_parsed = true;
@@ -2236,9 +2236,9 @@ bool HMWJGraph::sendFrame(HMWJGraphInternal::Frame const &frame, MWAWPosition po
 }
 
 // try to read a basic comment zone
-shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::CommentFrame> HanMacWrdJGraph::readCommentData(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::CommentFrame> comment;
+  shared_ptr<HanMacWrdJGraphInternal::CommentFrame> comment;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2246,10 +2246,10 @@ shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraph
 
   long pos = input->tell();
   if (endPos<pos+40) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readCommentData: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readCommentData: the zone seems too short\n"));
     return comment;
   }
-  comment.reset(new HMWJGraphInternal::CommentFrame(header));
+  comment.reset(new HanMacWrdJGraphInternal::CommentFrame(header));
   comment->m_width = double(input->readLong(4))/65536.;
   long val = input->readLong(2); // small number between 1 and 0x17
   if (val!=1)
@@ -2288,9 +2288,9 @@ shared_ptr<HMWJGraphInternal::CommentFrame> HMWJGraph::readCommentData(HMWJGraph
 }
 
 // try to read a basic picture zone
-shared_ptr<HMWJGraphInternal::PictureFrame> HMWJGraph::readPictureData(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::PictureFrame> HanMacWrdJGraph::readPictureData(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::PictureFrame> picture;
+  shared_ptr<HanMacWrdJGraphInternal::PictureFrame> picture;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2298,10 +2298,10 @@ shared_ptr<HMWJGraphInternal::PictureFrame> HMWJGraph::readPictureData(HMWJGraph
 
   long pos = input->tell();
   if (endPos<pos+40) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readPictureData: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readPictureData: the zone seems too short\n"));
     return picture;
   }
-  picture.reset(new HMWJGraphInternal::PictureFrame(header));
+  picture.reset(new HanMacWrdJGraphInternal::PictureFrame(header));
   long val;
   for (int i=0; i < 2; ++i) { // always 0
     val = input->readLong(2);
@@ -2339,9 +2339,9 @@ shared_ptr<HMWJGraphInternal::PictureFrame> HMWJGraph::readPictureData(HMWJGraph
 }
 
 // try to read a basic table zone
-shared_ptr<HMWJGraphInternal::TableFrame> HMWJGraph::readTableData(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::TableFrame> HanMacWrdJGraph::readTableData(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::TableFrame> table;
+  shared_ptr<HanMacWrdJGraphInternal::TableFrame> table;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2349,10 +2349,10 @@ shared_ptr<HMWJGraphInternal::TableFrame> HMWJGraph::readTableData(HMWJGraphInte
 
   long pos = input->tell();
   if (endPos<pos+28) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTableData: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTableData: the zone seems too short\n"));
     return table;
   }
-  table.reset(new HMWJGraphInternal::TableFrame(header));
+  table.reset(new HanMacWrdJGraphInternal::TableFrame(header));
   table->m_width = double(input->readLong(4))/65536.;
   long val = input->readLong(2); // small number between 1 and 3
   if (val!=1)
@@ -2382,9 +2382,9 @@ shared_ptr<HMWJGraphInternal::TableFrame> HMWJGraph::readTableData(HMWJGraphInte
 }
 
 // try to read a basic text box zone
-shared_ptr<HMWJGraphInternal::TextboxFrame> HMWJGraph::readTextboxData(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::TextboxFrame> HanMacWrdJGraph::readTextboxData(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::TextboxFrame> textbox;
+  shared_ptr<HanMacWrdJGraphInternal::TextboxFrame> textbox;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2392,10 +2392,10 @@ shared_ptr<HMWJGraphInternal::TextboxFrame> HMWJGraph::readTextboxData(HMWJGraph
 
   long pos = input->tell();
   if (endPos<pos+24) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTextboxData: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTextboxData: the zone seems too short\n"));
     return textbox;
   }
-  textbox.reset(new HMWJGraphInternal::TextboxFrame(header));
+  textbox.reset(new HanMacWrdJGraphInternal::TextboxFrame(header));
   textbox->m_width = double(input->readLong(4))/65536.;
   long val = input->readLong(2); // small number between 1 and 0x17
   if (val!=1)
@@ -2422,9 +2422,9 @@ shared_ptr<HMWJGraphInternal::TextboxFrame> HMWJGraph::readTextboxData(HMWJGraph
 }
 
 // try to read a basic text zone
-shared_ptr<HMWJGraphInternal::TextFrame> HMWJGraph::readTextData(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::TextFrame> HanMacWrdJGraph::readTextData(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::TextFrame> text;
+  shared_ptr<HanMacWrdJGraphInternal::TextFrame> text;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2432,10 +2432,10 @@ shared_ptr<HMWJGraphInternal::TextFrame> HMWJGraph::readTextData(HMWJGraphIntern
 
   long pos = input->tell();
   if (endPos<pos+20) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readTextData: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readTextData: the zone seems too short\n"));
     return text;
   }
-  text.reset(new HMWJGraphInternal::TextFrame(header));
+  text.reset(new HanMacWrdJGraphInternal::TextFrame(header));
   text->m_width = double(input->readLong(4))/65536.;
   long val = input->readLong(2); // small number between 1 and 0x17
   if (val!=1)
@@ -2460,9 +2460,9 @@ shared_ptr<HMWJGraphInternal::TextFrame> HMWJGraph::readTextData(HMWJGraphIntern
 }
 
 // try to read a small graphic
-shared_ptr<HMWJGraphInternal::ShapeGraph> HMWJGraph::readShapeGraph(HMWJGraphInternal::Frame const &header, long endPos)
+shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(HanMacWrdJGraphInternal::Frame const &header, long endPos)
 {
-  shared_ptr<HMWJGraphInternal::ShapeGraph> graph;
+  shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> graph;
 
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &asciiFile = m_parserState->m_asciiFile;
@@ -2470,11 +2470,11 @@ shared_ptr<HMWJGraphInternal::ShapeGraph> HMWJGraph::readShapeGraph(HMWJGraphInt
 
   long pos = input->tell();
   if (endPos<pos+36) {
-    MWAW_DEBUG_MSG(("HMWJGraph::readShapeGraph: the zone seems too short\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::readShapeGraph: the zone seems too short\n"));
     return graph;
   }
 
-  graph.reset(new HMWJGraphInternal::ShapeGraph(header));
+  graph.reset(new HanMacWrdJGraphInternal::ShapeGraph(header));
   long val = (int) input->readULong(1);
   int graphType = (int)(val>>4);
   int flag = int(val&0xf);
@@ -2605,7 +2605,7 @@ shared_ptr<HMWJGraphInternal::ShapeGraph> HMWJGraph::readShapeGraph(HMWJGraphInt
 ////////////////////////////////////////////////////////////
 // prepare data
 ////////////////////////////////////////////////////////////
-void HMWJGraph::prepareStructures()
+void HanMacWrdJGraph::prepareStructures()
 {
   std::map<long, int >::const_iterator fIt= m_state->m_framesMap.begin();
   std::multimap<long,size_t> textZoneFrameMap;
@@ -2614,24 +2614,24 @@ void HMWJGraph::prepareStructures()
     int id = fIt->second;
     if (id < 0 || id >= numFrames || !m_state->m_framesList[size_t(id)])
       continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
     if (!frame.valid() || frame.m_type!=4)
       continue;
-    HMWJGraphInternal::TextboxFrame const &text = reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+    HanMacWrdJGraphInternal::TextboxFrame const &text = reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
     if (!text.m_zId) continue;
     textZoneFrameMap.insert(std::multimap<long,size_t>::value_type(text.m_zId, size_t(id)));
   }
   std::multimap<long,size_t>::iterator tbIt=textZoneFrameMap.begin();
   while (tbIt!=textZoneFrameMap.end()) {
     long textId=tbIt->first;
-    std::map<long, HMWJGraphInternal::TextboxFrame *> nCharTextMap;
+    std::map<long, HanMacWrdJGraphInternal::TextboxFrame *> nCharTextMap;
     bool ok=true;
     while (tbIt!=textZoneFrameMap.end() && tbIt->first==textId) {
       size_t id=tbIt++->second;
-      HMWJGraphInternal::TextboxFrame &text =
-        reinterpret_cast<HMWJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
+      HanMacWrdJGraphInternal::TextboxFrame &text =
+        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
       if (nCharTextMap.find(text.m_cPos)!=nCharTextMap.end()) {
-        MWAW_DEBUG_MSG(("HMWJGraph::prepareStructures: pos %ld already exist for textZone %lx\n",
+        MWAW_DEBUG_MSG(("HanMacWrdJGraph::prepareStructures: pos %ld already exist for textZone %lx\n",
                         text.m_cPos, textId));
         ok=false;
       }
@@ -2640,10 +2640,10 @@ void HMWJGraph::prepareStructures()
     }
     size_t numIds=nCharTextMap.size();
     if (!ok || numIds<=1) continue;
-    std::map<long, HMWJGraphInternal::TextboxFrame *>::iterator ctIt=nCharTextMap.begin();
-    HMWJGraphInternal::TextboxFrame *prevText=0;
+    std::map<long, HanMacWrdJGraphInternal::TextboxFrame *>::iterator ctIt=nCharTextMap.begin();
+    HanMacWrdJGraphInternal::TextboxFrame *prevText=0;
     for (; ctIt != nCharTextMap.end() ; ++ctIt) {
-      HMWJGraphInternal::TextboxFrame *newText=ctIt->second;
+      HanMacWrdJGraphInternal::TextboxFrame *newText=ctIt->second;
       if (prevText) {
         prevText->m_linkToFId=newText->m_fileId;
         newText->m_isLinked=true;
@@ -2657,7 +2657,7 @@ void HMWJGraph::prepareStructures()
     int id = fIt->second;
     if (id < 0 || id >= numFrames || !m_state->m_framesList[size_t(id)])
       continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
     if (!frame.valid() || frame.m_inGroup || frame.m_type!=11)
       continue;
     std::set<long> seens;
@@ -2665,24 +2665,24 @@ void HMWJGraph::prepareStructures()
   }
 }
 
-bool HMWJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool inGroup)
+bool HanMacWrdJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool inGroup)
 {
   while (seens.find(zId)!=seens.end()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::checkGroupStructures: zone %ld already find\n", zId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::checkGroupStructures: zone %ld already find\n", zId));
     return false;
   }
   seens.insert(zId);
   std::map<long, int >::iterator fIt= m_state->m_framesMap.find(zId);
   if (fIt==m_state->m_framesMap.end() || fIt->second < 0 ||
       fIt->second >= (int) m_state->m_framesList.size() || !m_state->m_framesList[size_t(fIt->second)]) {
-    MWAW_DEBUG_MSG(("HMWJGraph::checkGroupStructures: can not find zone %ld\n", zId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::checkGroupStructures: can not find zone %ld\n", zId));
     return false;
   }
-  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(fIt->second)];
+  HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(fIt->second)];
   frame.m_inGroup=inGroup;
   if (!frame.valid() || frame.m_type!=11)
     return true;
-  HMWJGraphInternal::Group &group = reinterpret_cast<HMWJGraphInternal::Group &>(frame);
+  HanMacWrdJGraphInternal::Group &group = reinterpret_cast<HanMacWrdJGraphInternal::Group &>(frame);
   for (size_t c=0; c < group.m_childsList.size(); ++c) {
     if (checkGroupStructures(group.m_childsList[c], seens, true))
       continue;
@@ -2695,27 +2695,27 @@ bool HMWJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool inGro
 ////////////////////////////////////////////////////////////
 // send group
 ////////////////////////////////////////////////////////////
-bool HMWJGraph::sendGroup(long fId, MWAWPosition pos)
+bool HanMacWrdJGraph::sendGroup(long fId, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx\n", fId));
     return false;
   }
   int id = fIt->second;
   if (id < 0 || id >= (int) m_state->m_framesList.size())
     return false;
-  HMWJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
+  HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 11) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find table %lx(II)\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx(II)\n", fId));
     return false;
   }
-  return sendGroup(reinterpret_cast<HMWJGraphInternal::Group &>(frame), pos);
+  return sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group &>(frame), pos);
 }
 
-bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition pos)
+bool HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
@@ -2733,10 +2733,10 @@ bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition po
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
         !m_state->m_framesList[size_t(fIt->second)]) {
-      MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find child %lx\n", fId));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find child %lx\n", fId));
       continue;
     }
-    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
     MWAWPosition fPos(pos);
     fPos.setOrigin(frame.m_pos[0]-group.m_pos[0]+pos.origin());
     fPos.setSize(frame.m_pos.size());
@@ -2746,7 +2746,7 @@ bool HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWPosition po
   return true;
 }
 
-bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
+bool HanMacWrdJGraph::canCreateGraphic(HanMacWrdJGraphInternal::Group const &group)
 {
   std::map<long, int>::const_iterator fIt;
   int page = group.m_page;
@@ -2757,11 +2757,11 @@ bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
     if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
         !m_state->m_framesList[size_t(fIt->second)])
       continue;
-    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
     if (frame.m_page!=page) return false;
     switch (frame.m_type) {
     case 4: {
-      HMWJGraphInternal::TextboxFrame const &text=reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      HanMacWrdJGraphInternal::TextboxFrame const &text=reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_zId,0))
         return false;
       break;
@@ -2769,7 +2769,7 @@ bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
     case 8: // shape
       break;
     case 11:
-      if (!canCreateGraphic(reinterpret_cast<HMWJGraphInternal::Group const &>(frame)))
+      if (!canCreateGraphic(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame)))
         return false;
       break;
     default:
@@ -2779,7 +2779,7 @@ bool HMWJGraph::canCreateGraphic(HMWJGraphInternal::Group const &group)
   return true;
 }
 
-void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
+void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWAWGraphicListenerPtr &listener)
 {
   if (!listener) return;
   group.m_parsed=true;
@@ -2792,23 +2792,23 @@ void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicList
     if (fIt == m_state->m_framesMap.end()  || fIt->second < 0 || fIt->second >= numFrames ||
         !m_state->m_framesList[size_t(fIt->second)])
       continue;
-    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
     Box2f box=frame.getBdBox();
-    HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
+    HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
     switch (frame.m_type) {
     case 4: {
       frame.m_parsed=true;
-      HMWJGraphInternal::TextboxFrame const &textbox=
-        reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+      HanMacWrdJGraphInternal::TextboxFrame const &textbox=
+        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWSubDocumentPtr subdoc
-      (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+      (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
       listener->insertTextBox(box, subdoc, format.m_style);
       break;
     }
     case 8: {
       frame.m_parsed=true;
-      HMWJGraphInternal::ShapeGraph const &shape=
-        reinterpret_cast<HMWJGraphInternal::ShapeGraph const &>(frame);
+      HanMacWrdJGraphInternal::ShapeGraph const &shape=
+        reinterpret_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(frame);
       MWAWGraphicStyle style(format.m_style);;
       if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
         if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
@@ -2818,21 +2818,21 @@ void HMWJGraph::sendGroup(HMWJGraphInternal::Group const &group, MWAWGraphicList
       break;
     }
     case 11:
-      sendGroup(reinterpret_cast<HMWJGraphInternal::Group const &>(frame), listener);
+      sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame), listener);
       break;
     default:
-      MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: unexpected type %d\n", frame.m_type));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: unexpected type %d\n", frame.m_type));
       break;
     }
   }
 }
 
-void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPosition const &pos)
+void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: can not find the listeners\n"));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: can not find the listeners\n"));
     return;
   }
   size_t numChilds=group.m_childsList.size(), childNotSent=0;
@@ -2849,15 +2849,15 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end()  || fIt->second < 0 || fIt->second >= numFrames ||
         !m_state->m_framesList[size_t(fIt->second)]) {
-      MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: can not find child %lx\n", fId));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: can not find child %lx\n", fId));
       continue;
     }
-    HMWJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
+    HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
     bool canMerge=false;
     if (frame.m_page==group.m_page) {
       switch (frame.m_type) {
       case 4: {
-        HMWJGraphInternal::TextboxFrame const &text=reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(frame);
+        HanMacWrdJGraphInternal::TextboxFrame const &text=reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
         canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_zId,0);
         break;
       }
@@ -2865,7 +2865,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
         canMerge = true;
         break;
       case 11:
-        canMerge = canCreateGraphic(reinterpret_cast<HMWJGraphInternal::Group const &>(frame));
+        canMerge = canCreateGraphic(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame));
         break;
       default:
         break;
@@ -2894,23 +2894,23 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
         if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
             !m_state->m_framesList[size_t(fIt->second)])
           continue;
-        HMWJGraphInternal::Frame const &child=*m_state->m_framesList[size_t(fIt->second)];
+        HanMacWrdJGraphInternal::Frame const &child=*m_state->m_framesList[size_t(fIt->second)];
         Box2f box=child.getBdBox();
-        HMWJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(child.m_formatId);
+        HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(child.m_formatId);
         switch (child.m_type) {
         case 4: {
           child.m_parsed=true;
-          HMWJGraphInternal::TextboxFrame const &textbox=
-            reinterpret_cast<HMWJGraphInternal::TextboxFrame const &>(child);
+          HanMacWrdJGraphInternal::TextboxFrame const &textbox=
+            reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(child);
           MWAWSubDocumentPtr subdoc
-          (new HMWJGraphInternal::SubDocument(*this, input, HMWJGraphInternal::SubDocument::Text, textbox.m_zId));
+          (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
           graphicListener->insertTextBox(box, subdoc, format.m_style);
           break;
         }
         case 8: {
           child.m_parsed=true;
-          HMWJGraphInternal::ShapeGraph const &shape=
-            reinterpret_cast<HMWJGraphInternal::ShapeGraph const &>(child);
+          HanMacWrdJGraphInternal::ShapeGraph const &shape=
+            reinterpret_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(child);
           MWAWGraphicStyle style(format.m_style);
           if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
             if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
@@ -2920,10 +2920,10 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
           break;
         }
         case 11:
-          sendGroup(reinterpret_cast<HMWJGraphInternal::Group const &>(child), graphicListener);
+          sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(child), graphicListener);
           break;
         default:
-          MWAW_DEBUG_MSG(("HMWJGraph::sendGroupChild: unexpected type %d\n", child.m_type));
+          MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: unexpected type %d\n", child.m_type));
           break;
         }
       }
@@ -2945,10 +2945,10 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
       fIt=m_state->m_framesMap.find(localFId);
       if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
           !m_state->m_framesList[size_t(fIt->second)]) {
-        MWAW_DEBUG_MSG(("HMWJGraph::sendGroup: can not find child %lx\n", localFId));
+        MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find child %lx\n", localFId));
         continue;
       }
-      HMWJGraphInternal::Frame const &childFrame=*m_state->m_framesList[size_t(fIt->second)];
+      HanMacWrdJGraphInternal::Frame const &childFrame=*m_state->m_framesList[size_t(fIt->second)];
       MWAWPosition fPos(pos);
       fPos.setOrigin(childFrame.m_pos[0]-group.m_pos[0]+pos.origin());
       fPos.setSize(childFrame.m_pos.size());
@@ -2961,7 +2961,7 @@ void HMWJGraph::sendGroupChild(HMWJGraphInternal::Group const &group, MWAWPositi
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
+bool HanMacWrdJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
 {
   if (!m_parserState->m_textListener)
     return true;
@@ -2975,7 +2975,7 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
     if (notSend.find(fIt->first) != notSend.end() || id < 0 || id >= numFrames ||
         !m_state->m_framesList[size_t(id)])
       continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
     if (!frame.valid() || frame.m_parsed || frame.m_inGroup)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
@@ -2987,13 +2987,13 @@ bool HMWJGraph::sendPageGraphics(std::vector<long> const &doNotSendIds)
   return true;
 }
 
-void HMWJGraph::flushExtra()
+void HanMacWrdJGraph::flushExtra()
 {
   if (!m_parserState->m_textListener)
     return;
   for (size_t f=0; f < m_state->m_framesList.size(); f++) {
     if (!m_state->m_framesList[f]) continue;
-    HMWJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
+    HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[f];
     if (!frame.valid() || frame.m_parsed)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
