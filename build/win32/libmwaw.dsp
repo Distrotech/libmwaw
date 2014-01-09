@@ -179,15 +179,15 @@ SOURCE=..\..\src\lib\FullWrtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWGraph.cxx
+SOURCE=..\..\src\lib\GreatWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWParser.cxx
+SOURCE=..\..\src\lib\GreatWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWText.cxx
+SOURCE=..\..\src\lib\GreatWksText.cxx
 # End Source File
 # Begin Source File
 
@@ -455,7 +455,7 @@ SOURCE=..\..\src\lib\NSText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TTParser.cxx
+SOURCE=..\..\src\lib\TeachTxtParser.cxx
 # End Source File
 # Begin Source File
 
@@ -575,15 +575,15 @@ SOURCE=..\..\src\lib\FullWrtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWGraph.hxx
+SOURCE=..\..\src\lib\GreatWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWParser.hxx
+SOURCE=..\..\src\lib\GreatWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWText.hxx
+SOURCE=..\..\src\lib\GreatWksText.hxx
 # End Source File
 # Begin Source File
 
@@ -871,7 +871,7 @@ SOURCE=..\..\src\lib\NSText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TTParser.hxx
+SOURCE=..\..\src\lib\TeachTxtParser.hxx
 # End Source File
 # Begin Source File
 

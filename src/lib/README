@@ -9,7 +9,7 @@
 - DM*           : parser of DOCMaker documents
 - EDoc*         : parser of eDOC documents
 - FullWrt*      : parser of FullWrite documents
-- GW*           : parser of GreatWorks documents
+- GreatWks*     : parser of GreatWorks documents
 - HanMacWrdJ*   : parser of HanMac Word-J documents
 - HanMacWrdK*   : parser of HanMac Word-K documents
 - LightWayTxt*  : parser of LightWay Text documents
@@ -18,11 +18,11 @@
 - MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
 - MarinerWrt*   : parser of Mariner Write documents
 - MindWrt*      : parser of MindWrite documents
+- More*         : parser of More documents (retrieving the organization part)
 - MsWks*        : parser of Microsoft Works documents
-- More*         : parser of More documents (organization part)
 - MSW* : parser of Microsoft Word documents
 - NS* : parser of Nisus Writer documents,
-- TT* : parser of TeachText/SimpleText/Tex-Edit documents,
+- TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
 - WN* : parser of WriteNow documents
 - WriterPls*    : parser of WriterPlus documents
 - ZWrt*         : parser of Z-Write documents
@@ -105,11 +105,11 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWCell.hxx, MWAWTable.hxx
 	a helper to reconstruct a table structure from a list of cell
 
-------------------------------------------------------------
----  Acta/BeagleWks/CW/DM/EDoc/FullWrt                   ---
----  GW/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt   ---
----  MindWrt/More/MsWks/MSW/NS/TT/WN/WriterPls/ZWrt       ---
-------------------------------------------------------------
+-------------------------------------------------------------------
+---  Acta/BeagleWks/CW/DM/EDoc/FullWrt                          ---
+---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt    ---
+---  MindWrt/More/MsWks/MSW/NS/TeachTxt/WN/WriterPls/ZWrt       ---
+-------------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
 
@@ -143,9 +143,9 @@ FullWrtParser: parser of FullWrite : v1.0 v2.0
 -   FullWrtStruct : class which the shared structures
 -   FullWrtText : class which reads the text
 
-GWParser : parser of GreatWorks : v1-v2
--   GWGraph : class which reads the picture/graph/frame
--   GWText : class which reads the text
+GreatWksParser : parser of GreatWorks : v1-v2
+-   GreatWksGraph : class which reads the picture/graph/frame
+-   GreatWksText : class which reads the text
 
 HanMacWrdJParser : parser of HanMac Word-J
 -   HanMacWrdJGraph : class which reads the picture/graph/frame
@@ -196,7 +196,7 @@ NSParser : parser of a Nisus Writer document : v4.0
 -   NSStruct : class which defines the different structures used by the parsed
 -   NSText : class which reads the text
 
-TTParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
+TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
 
 WNParser : parser of WriteNow document : v1.0-4.0
 -   WNText : class which reads the text and its structures

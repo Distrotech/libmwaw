@@ -35,34 +35,34 @@
  * Parser to GreatWorks document
  *
  */
-#ifndef GW_TEXT
-#  define GW_TEXT
+#ifndef GREAT_WKS_TEXT
+#  define GREAT_WKS_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace GWTextInternal
+namespace GreatWksTextInternal
 {
 struct State;
 struct Token;
 struct Zone;
 }
 
-class GWParser;
+class GreatWksParser;
 
 /** \brief the main class to read the text part of GreatWorks Text file
  *
  *
  *
  */
-class GWText
+class GreatWksText
 {
-  friend class GWParser;
+  friend class GreatWksParser;
 public:
   //! constructor
-  GWText(GWParser &parser);
+  GreatWksText(GreatWksParser &parser);
   //! destructor
-  virtual ~GWText();
+  virtual ~GreatWksText();
 
   /** returns the file version */
   int version() const;
@@ -93,11 +93,11 @@ protected:
   //! try to read the font names zone
   bool readFontNames();
   //! try to read a zone ( textheader+fonts+rulers)
-  bool readZone(GWTextInternal::Zone &zone);
+  bool readZone(GreatWksTextInternal::Zone &zone);
   //! try to read the end of a zone ( line + frame position )
-  bool readZonePositions(GWTextInternal::Zone &zone);
+  bool readZonePositions(GreatWksTextInternal::Zone &zone);
   //! try to send a zone
-  bool sendZone(GWTextInternal::Zone const &zone, bool inGraphic=false);
+  bool sendZone(GreatWksTextInternal::Zone const &zone, bool inGraphic=false);
   //! try to send simplified textbox zone
   bool sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic=false);
   //! try to read a font
@@ -105,14 +105,14 @@ protected:
   //! try to read a ruler
   bool readRuler(MWAWParagraph &para);
   //! try to read a token
-  bool readToken(GWTextInternal::Token &token, long &nChar);
+  bool readToken(GreatWksTextInternal::Token &token, long &nChar);
 
   //! heuristic function used to find the next zone
   bool findNextZone();
 
 private:
-  GWText(GWText const &orig);
-  GWText &operator=(GWText const &orig);
+  GreatWksText(GreatWksText const &orig);
+  GreatWksText &operator=(GreatWksText const &orig);
 
 protected:
   //
@@ -122,10 +122,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<GWTextInternal::State> m_state;
+  shared_ptr<GreatWksTextInternal::State> m_state;
 
   //! the main parser;
-  GWParser *m_mainParser;
+  GreatWksParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

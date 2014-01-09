@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef GW_PARSER
-#  define GW_PARSER
+#ifndef GREAT_WKS_PARSER
+#  define GREAT_WKS_PARSER
 
 #include <string>
 #include <vector>
@@ -43,29 +43,29 @@
 
 #include "MWAWParser.hxx"
 
-namespace GWParserInternal
+namespace GreatWksParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class GWGraph;
-class GWText;
+class GreatWksGraph;
+class GreatWksText;
 
 /** \brief the main class to read a GreatWorks text file
  */
-class GWParser : public MWAWTextParser
+class GreatWksParser : public MWAWTextParser
 {
-  friend class GWParserInternal::SubDocument;
-  friend class GWGraph;
-  friend class GWText;
+  friend class GreatWksParserInternal::SubDocument;
+  friend class GreatWksGraph;
+  friend class GreatWksText;
 public:
   //! an enum used to defined the document type
   enum DocType { DRAW, TEXT, UNKNOWN };
   //! constructor
-  GWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  GreatWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~GWParser();
+  virtual ~GreatWksParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -145,12 +145,12 @@ protected:
   //
 
   //! the state
-  shared_ptr<GWParserInternal::State> m_state;
+  shared_ptr<GreatWksParserInternal::State> m_state;
 
   //! the graph parser
-  shared_ptr<GWGraph> m_graphParser;
+  shared_ptr<GreatWksGraph> m_graphParser;
   //! the text parser
-  shared_ptr<GWText> m_textParser;
+  shared_ptr<GreatWksText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

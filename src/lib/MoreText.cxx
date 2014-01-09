@@ -2073,7 +2073,7 @@ bool MoreText::parseUnknown(MWAWEntry const &entry, long fDecal)
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
-  MORStruct::Pattern pattern;
+  MoreStruct::Pattern pattern;
   long pos = entry.begin();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (m_mainParser->readPattern(entry.end(),pattern)) {

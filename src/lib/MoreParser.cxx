@@ -1008,7 +1008,7 @@ bool MoreParser::readUnknown9(MWAWEntry const &entry)
     f.str("");
     f << "Unknown9-" << n << ":type=" << type << ",";
     if (type==2) {
-      MORStruct::Pattern pattern;
+      MoreStruct::Pattern pattern;
       ok=readPattern(endFPos, pattern);
       if (ok)
         f << pattern << ",";
@@ -1144,9 +1144,9 @@ bool MoreParser::readBackside(long endPos, std::string &extra)
 }
 
 // a pattern ( the zones of block9 which follow color)
-bool MoreParser::readPattern(long endPos, MORStruct::Pattern &pattern)
+bool MoreParser::readPattern(long endPos, MoreStruct::Pattern &pattern)
 {
-  pattern = MORStruct::Pattern();
+  pattern = MoreStruct::Pattern();
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   if (pos+0x1c > endPos)
@@ -1274,10 +1274,10 @@ bool MoreParser::readUnkn9Sub(long endPos)
 }
 
 ////////////////////////////////////////////////////////////
-// MORStruct implementation
+// MoreStruct implementation
 ////////////////////////////////////////////////////////////
 
-namespace MORStruct
+namespace MoreStruct
 {
 std::ostream &operator<<(std::ostream &o, Pattern const &pat)
 {

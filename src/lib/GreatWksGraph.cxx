@@ -50,15 +50,15 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "GWParser.hxx"
+#include "GreatWksParser.hxx"
 
-#include "GWGraph.hxx"
+#include "GreatWksGraph.hxx"
 
-/** Internal: the structures of a GWGraph */
-namespace GWGraphInternal
+/** Internal: the structures of a GreatWksGraph */
+namespace GreatWksGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the graphic zone of a GWGraph
+//! Internal: the graphic zone of a GreatWksGraph
 struct Frame {
   //! the frame type
   enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_UNSET };
@@ -156,7 +156,7 @@ struct Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: a unknown zone of a GWGraph
+//! Internal: a unknown zone of a GreatWksGraph
 struct FrameBad : public Frame {
   //! constructor
   FrameBad() : Frame()
@@ -170,7 +170,7 @@ struct FrameBad : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the basic shape of a GWGraph
+//! Internal: the basic shape of a GreatWksGraph
 struct FrameShape : public Frame {
   //! constructor
   FrameShape(Frame const &frame) : Frame(frame), m_shape(), m_lineArrow(0), m_lineFormat(0)
@@ -239,7 +239,7 @@ private:
 };
 
 ////////////////////////////////////////
-//! Internal: the group zone of a GWGraph
+//! Internal: the group zone of a GreatWksGraph
 struct FrameGroup : public Frame {
   //! constructor
   FrameGroup(Frame const &frame) : Frame(frame), m_numChild(0), m_childList()
@@ -264,7 +264,7 @@ struct FrameGroup : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the picture zone of a GWGraph
+//! Internal: the picture zone of a GreatWksGraph
 struct FramePicture : public Frame {
   //! constructor
   FramePicture(Frame const &frame) : Frame(frame), m_entry()
@@ -287,7 +287,7 @@ struct FramePicture : public Frame {
 };
 
 ////////////////////////////////////////
-//! Internal: the text zone of a GWGraph
+//! Internal: the text zone of a GreatWksGraph
 struct FrameText : public Frame {
   //! constructor
   FrameText(Frame const &frame) : Frame(frame), m_entry(), m_rotate(0)
@@ -354,7 +354,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a GWGraph
+//! Internal: the state of a GreatWksGraph
 struct State {
   //! constructor
   State() : m_zoneList(), m_numPages(0) { }
@@ -365,12 +365,12 @@ struct State {
 
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a GWGraph
+//! Internal: the subdocument of a GreatWksGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(GWGraph &pars, MWAWInputStreamPtr input, MWAWEntry entry) :
+  SubDocument(GreatWksGraph &pars, MWAWInputStreamPtr input, MWAWEntry entry) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry(entry)), m_graphParser(&pars) {}
 
 
@@ -400,7 +400,7 @@ protected:
   //! the parser function
   void parse(MWAWBasicListenerPtr listener, bool inGraphic);
   /** the graph parser */
-  GWGraph *m_graphParser;
+  GreatWksGraph *m_graphParser;
 
 private:
   SubDocument(SubDocument const &orig);
@@ -410,7 +410,7 @@ private:
 void SubDocument::parse(MWAWBasicListenerPtr listener, bool inGraphic)
 {
   if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("GWGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -433,22 +433,22 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GWGraph::GWGraph(GWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new GWGraphInternal::State),
+GreatWksGraph::GreatWksGraph(GreatWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new GreatWksGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-GWGraph::~GWGraph()
+GreatWksGraph::~GreatWksGraph()
 { }
 
-int GWGraph::version() const
+int GreatWksGraph::version() const
 {
   return m_parserState->m_version;
 }
 
 
-int GWGraph::numPages() const
+int GreatWksGraph::numPages() const
 {
   if (m_state->m_numPages)
     return m_state->m_numPages;
@@ -462,7 +462,7 @@ int GWGraph::numPages() const
   return nPages;
 }
 
-bool GWGraph::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   return m_mainParser->sendTextbox(entry, inGraphic);
 }
@@ -476,10 +476,10 @@ bool GWGraph::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 ////////////////////////////////////////////////////////////
 // read the patterns list
 ////////////////////////////////////////////////////////////
-bool GWGraph::readPatterns(MWAWEntry const &entry)
+bool GreatWksGraph::readPatterns(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%8) != 2) {
-    MWAW_DEBUG_MSG(("GWGraph::readPatterns: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPatterns: the entry is bad\n"));
     return false;
   }
 
@@ -495,7 +495,7 @@ bool GWGraph::readPatterns(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (2+8*N!=int(entry.length())) {
     f << "###";
-    MWAW_DEBUG_MSG(("GWGraph::readPatterns: the number of entries seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPatterns: the number of entries seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
     return true;
@@ -519,10 +519,10 @@ bool GWGraph::readPatterns(MWAWEntry const &entry)
   return true;
 }
 
-bool GWGraph::readPalettes(MWAWEntry const &entry)
+bool GreatWksGraph::readPalettes(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 0x664) {
-    MWAW_DEBUG_MSG(("GWGraph::readPalettes: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPalettes: the entry is bad\n"));
     return false;
   }
 
@@ -575,10 +575,10 @@ bool GWGraph::readPalettes(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // graphic zone ( main header )
 ////////////////////////////////////////////////////////////
-bool GWGraph::isGraphicZone()
+bool GreatWksGraph::isGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
+  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
   if (vers == 1 && !isDraw)
     return false;
   int headerSize;
@@ -613,10 +613,10 @@ bool GWGraph::isGraphicZone()
   return ok;
 }
 
-bool GWGraph::readGraphicZone()
+bool GreatWksGraph::readGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
+  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
   if (vers == 1 && !isDraw)
     return false;
 
@@ -691,10 +691,10 @@ bool GWGraph::readGraphicZone()
   return true;
 }
 
-bool GWGraph::findGraphicZone()
+bool GreatWksGraph::findGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GWParser::DRAW;
+  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
   if (vers == 1 && !isDraw)
     return false;
   int headerSize;
@@ -761,10 +761,10 @@ bool GWGraph::findGraphicZone()
 ////////////////////////////////////////////////////////////
 // graphic zone ( page frames)
 ////////////////////////////////////////////////////////////
-bool GWGraph::isPageFrames()
+bool GreatWksGraph::isPageFrames()
 {
   int const vers=version();
-  bool hasPageUnknown=vers==2 && m_mainParser->getDocumentType()==GWParser::TEXT;
+  bool hasPageUnknown=vers==2 && m_mainParser->getDocumentType()==GreatWksParser::TEXT;
   int const headerSize=hasPageUnknown ? 22 : vers==2 ? 12 : 16;
   int const nZones= vers==2 ? 3 : 4;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -807,7 +807,7 @@ bool GWGraph::isPageFrames()
       return false;
     }
     if (i!=nZones-1 && nData *fSz+4!=zoneSz[i]) {
-      MWAW_DEBUG_MSG(("GWGraph::isPageFrames: find a diff of %ld for data %d\n", zoneSz[i]-nData*fSz-4, i));
+      MWAW_DEBUG_MSG(("GreatWksGraph::isPageFrames: find a diff of %ld for data %d\n", zoneSz[i]-nData*fSz-4, i));
       if ((2*nData+4)*fSz+4 < zoneSz[i]) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         return false;
@@ -819,7 +819,7 @@ bool GWGraph::isPageFrames()
   return true;
 }
 
-bool GWGraph::readStyle(MWAWGraphicStyle &style)
+bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
 {
   style=MWAWGraphicStyle();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -919,7 +919,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
 
   int nDash=val==1 ? 1 : (int)input->readULong(2);
   if (nDash<0||nDash>6) {
-    MWAW_DEBUG_MSG(("GWGraph::readStyle: can not read number of line dash\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readStyle: can not read number of line dash\n"));
     f << "#nDash=" << nDash << ",";
   }
   else {
@@ -928,7 +928,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
       if (w<=0) {
         if (i==0 && nDash==1)
           break;
-        MWAW_DEBUG_MSG(("GWGraph::readStyle: the line dash seems bad\n"));
+        MWAW_DEBUG_MSG(("GreatWksGraph::readStyle: the line dash seems bad\n"));
         f << "###dash" << i << ":w=" << w << ",";
         style.m_lineDashWidth.resize(0);
         break;
@@ -1033,7 +1033,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
       break;
     }
     if (style.m_gradientType==MWAWGraphicStyle::G_None) {
-      MWAW_DEBUG_MSG(("GWGraph::readStyle: find odd gradient\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readStyle: find odd gradient\n"));
       f << "grad[##type]=" << gradType << ",";
     }
   }
@@ -1080,7 +1080,7 @@ bool GWGraph::readStyle(MWAWGraphicStyle &style)
   return true;
 }
 
-bool GWGraph::readLineFormat(std::string &extra)
+bool GreatWksGraph::readLineFormat(std::string &extra)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugStream f;
@@ -1102,11 +1102,11 @@ bool GWGraph::readLineFormat(std::string &extra)
   return true;
 }
 
-bool GWGraph::readPageFrames()
+bool GreatWksGraph::readPageFrames()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   int const vers=version();
-  bool isDraw = m_mainParser->getDocumentType()==GWParser::DRAW;
+  bool isDraw = m_mainParser->getDocumentType()==GreatWksParser::DRAW;
   bool hasPageUnknown=vers==2 && !isDraw;
   int const nZones=hasPageUnknown ? 4 : vers==2 ? 3 : 4;
   long pos=input->tell();
@@ -1119,7 +1119,7 @@ bool GWGraph::readPageFrames()
   f << "Entries(GFrame):";
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   long endPos=-1;
-  GWGraphInternal::Zone pageZone;
+  GreatWksGraphInternal::Zone pageZone;
   if (hasPageUnknown) {
     pageZone.m_page = (int)input->readLong(2);
     f << "page=" << pageZone.m_page << ",";
@@ -1140,17 +1140,17 @@ bool GWGraph::readPageFrames()
   f << "nFrames=" << nFrames << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  std::vector<shared_ptr<GWGraphInternal::Frame> > &frames=pageZone.m_frameList;
+  std::vector<shared_ptr<GreatWksGraphInternal::Frame> > &frames=pageZone.m_frameList;
   for (int i=0; i < nFrames; ++i) {
     pos = input->tell();
     f.str("");
     f << "GFrame[head]-F" << i+1 << ":";
-    shared_ptr<GWGraphInternal::Frame> zone=readFrameHeader();
+    shared_ptr<GreatWksGraphInternal::Frame> zone=readFrameHeader();
     if (!zone) {
-      MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops graphic detection is probably bad\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: oops graphic detection is probably bad\n"));
       f << "###";
       input->seek(pos+0x36, librevenge::RVNG_SEEK_SET);
-      zone.reset(new GWGraphInternal::FrameBad());
+      zone.reset(new GreatWksGraphInternal::FrameBad());
     }
     else
       f << *zone;
@@ -1257,12 +1257,12 @@ bool GWGraph::readPageFrames()
     for (size_t i=0; i < pageZone.m_rootList.size(); ++i) {
       int id=pageZone.m_rootList[i];
       if (id<=0 || id>nFrames) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: can not find order for frame %d\n",id));
+        MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: can not find order for frame %d\n",id));
         continue;
       }
       int ord=frames[size_t(id-1)]->m_order;
       if (orderMap.find(ord)!=orderMap.end()) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: oops order %d already exist\n",ord));
+        MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: oops order %d already exist\n",ord));
         continue;
       }
       orderMap[ord]=id;
@@ -1289,10 +1289,10 @@ bool GWGraph::readPageFrames()
   bool ok=true;
   for (int id=nFrames-1; id >= 0; --id) {
     if (id<0|| id>=nFrames) {
-      MWAW_DEBUG_MSG(("GWGraph::readPageFrames: can not find frame with id=%d\n",id));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: can not find frame with id=%d\n",id));
       continue;
     }
-    shared_ptr<GWGraphInternal::Frame> zone=frames[size_t(id)];
+    shared_ptr<GreatWksGraphInternal::Frame> zone=frames[size_t(id)];
     if (!zone) continue;
     pos=input->tell();
     ok = readFrameExtraData(*zone, id, endPos);
@@ -1300,7 +1300,7 @@ bool GWGraph::readPageFrames()
     f << "GFrame-data:F" << id+1 << "[" << *zone << "]:";
     if (zone->m_dataSize>0 && input->tell()!=pos+zone->m_dataSize) {
       if (input->tell()>pos+zone->m_dataSize || !input->checkPosition(pos+zone->m_dataSize)) {
-        MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop, file position seems bad\n"));
+        MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: must stop, file position seems bad\n"));
         f << "###";
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
@@ -1317,7 +1317,7 @@ bool GWGraph::readPageFrames()
     }
     if (ok)
       continue;
-    MWAW_DEBUG_MSG(("GWGraph::readPageFrames: must stop parsing graphic data\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: must stop parsing graphic data\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1331,7 +1331,7 @@ bool GWGraph::readPageFrames()
   }
   pos=input->tell();
   if (endPos>0 && pos!=endPos) {
-    MWAW_DEBUG_MSG(("GWGraph::readPageFrames: find some end data\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: find some end data\n"));
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote("GFrame-end:###");
@@ -1341,22 +1341,22 @@ bool GWGraph::readPageFrames()
   return ok;
 }
 
-bool GWGraph::checkGraph(GWGraphInternal::Zone &zone, int id, std::set<int> &seens)
+bool GreatWksGraph::checkGraph(GreatWksGraphInternal::Zone &zone, int id, std::set<int> &seens)
 {
   if (seens.find(id)!=seens.end()) {
-    MWAW_DEBUG_MSG(("GWGraph::checkGraph: index %d is already read\n", id));
+    MWAW_DEBUG_MSG(("GreatWksGraph::checkGraph: index %d is already read\n", id));
     return false;
   }
   if (id < 0 || id >= int(zone.m_frameList.size())) {
-    MWAW_DEBUG_MSG(("GWGraph::readPageFrames: can not find zone %d\n", id));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: can not find zone %d\n", id));
     return false;
   }
   seens.insert(id);
-  shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(id)];
+  shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(id)];
   if (!frame) return true;
-  if (frame->getType()!=GWGraphInternal::Frame::T_GROUP)
+  if (frame->getType()!=GreatWksGraphInternal::Frame::T_GROUP)
     return true;
-  GWGraphInternal::FrameGroup &group=reinterpret_cast<GWGraphInternal::FrameGroup &>(*frame);
+  GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
   for (size_t c=0; c < group.m_childList.size(); ++c) {
     if (!checkGraph(zone, group.m_childList[c]-1, seens)) {
       group.m_childList.resize(c);
@@ -1366,25 +1366,25 @@ bool GWGraph::checkGraph(GWGraphInternal::Zone &zone, int id, std::set<int> &see
   return true;
 }
 
-bool GWGraph::readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::set<int> &seens, long endPos)
+bool GreatWksGraph::readFrameExtraDataRec(GreatWksGraphInternal::Zone &zone, int id, std::set<int> &seens, long endPos)
 {
   if (seens.find(id)!=seens.end()) {
-    MWAW_DEBUG_MSG(("GWGraph::readPageFrames: index %d is already read\n", id));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: index %d is already read\n", id));
     return false;
   }
   if (id < 0 || id >= int(zone.m_frameList.size())) {
-    MWAW_DEBUG_MSG(("GWGraph::readFrameExtraDataRec: can not find zone %d\n", id));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraDataRec: can not find zone %d\n", id));
     return false;
   }
   seens.insert(id);
-  shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(id)];
+  shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(id)];
   if (!frame) return true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   if (!readFrameExtraData(*frame, id, endPos)) return false;
   if (frame->m_dataSize>0 && input->tell()!=pos+frame->m_dataSize) {
     if (input->tell()>pos+frame->m_dataSize || !input->checkPosition(pos+frame->m_dataSize)) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraDataRec: must stop, file position seems bad\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraDataRec: must stop, file position seems bad\n"));
       libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
       ascFile.addPos(pos);
       ascFile.addNote("GFrame-Data###");
@@ -1394,9 +1394,9 @@ bool GWGraph::readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::se
     }
     input->seek(pos+frame->m_dataSize, librevenge::RVNG_SEEK_SET);
   }
-  if (frame->getType()!=GWGraphInternal::Frame::T_GROUP)
+  if (frame->getType()!=GreatWksGraphInternal::Frame::T_GROUP)
     return true;
-  GWGraphInternal::FrameGroup &group=reinterpret_cast<GWGraphInternal::FrameGroup &>(*frame);
+  GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
   for (size_t c=0; c < group.m_childList.size(); ++c) {
     if (!readFrameExtraDataRec(zone, group.m_childList[c]-1, seens, endPos)) {
       group.m_childList.resize(c);
@@ -1406,11 +1406,11 @@ bool GWGraph::readFrameExtraDataRec(GWGraphInternal::Zone &zone, int id, std::se
   return true;
 }
 
-shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
+shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
 {
   int const vers=version();
-  GWGraphInternal::Frame zone;
-  shared_ptr<GWGraphInternal::Frame> res;
+  GreatWksGraphInternal::Frame zone;
+  shared_ptr<GreatWksGraphInternal::Frame> res;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+54;
@@ -1439,7 +1439,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   zone.m_order=(int) input->readULong(2);
   switch (zone.m_type) {
   case 1: {
-    GWGraphInternal::FrameText *textBox = new GWGraphInternal::FrameText(zone);
+    GreatWksGraphInternal::FrameText *textBox = new GreatWksGraphInternal::FrameText(zone);
     res.reset(textBox);
     res->m_dataSize=(long) input->readULong(4);
     long val=(long) input->readULong(2);
@@ -1455,17 +1455,17 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 11:
-    res.reset(new GWGraphInternal::FramePicture(zone));
+    res.reset(new GreatWksGraphInternal::FramePicture(zone));
     res->m_dataSize=(long) input->readULong(4);
     break;
   case 15: {
-    GWGraphInternal::FrameGroup *grp=new GWGraphInternal::FrameGroup(zone);
+    GreatWksGraphInternal::FrameGroup *grp=new GreatWksGraphInternal::FrameGroup(zone);
     res.reset(grp);
     grp->m_numChild=(int) input->readULong(2);
     break;
   }
   case 2: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
+    GreatWksGraphInternal::FrameShape *graph=new GreatWksGraphInternal::FrameShape(zone);
     res.reset(graph);
     if (vers==1) {
       graph->m_lineArrow=(int) input->readLong(2);
@@ -1478,7 +1478,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 4: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
+    GreatWksGraphInternal::FrameShape *graph=new GreatWksGraphInternal::FrameShape(zone);
     res.reset(graph);
     int roundType = (int) input->readLong(2);
     float cornerDim = (float) input->readLong(2);
@@ -1500,7 +1500,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   case 6: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
+    GreatWksGraphInternal::FrameShape *graph=new GreatWksGraphInternal::FrameShape(zone);
     res.reset(graph);
     int fileAngle[2];
     for (int i=0; i < 2; ++i) // angles
@@ -1548,7 +1548,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   }
   case 3: // rect: no data
   case 5: { // oval no data
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
+    GreatWksGraphInternal::FrameShape *graph=new GreatWksGraphInternal::FrameShape(zone);
     MWAWGraphicShape &shape = graph->m_shape;
     res.reset(graph);
     shape.m_bdBox = shape.m_formBox = zone.m_box;
@@ -1558,7 +1558,7 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
   case 7:
   case 8:
   case 12: {
-    GWGraphInternal::FrameShape *graph=new GWGraphInternal::FrameShape(zone);
+    GreatWksGraphInternal::FrameShape *graph=new GreatWksGraphInternal::FrameShape(zone);
     res.reset(graph);
     graph->m_shape = zone.m_type==12 ? MWAWGraphicShape::path(zone.m_box) : MWAWGraphicShape::polygon(zone.m_box);
     graph->m_dataSize=(long) input->readULong(4);
@@ -1568,14 +1568,14 @@ shared_ptr<GWGraphInternal::Frame> GWGraph::readFrameHeader()
     break;
   }
   if (!res)
-    res.reset(new GWGraphInternal::Frame(zone));
+    res.reset(new GreatWksGraphInternal::Frame(zone));
   res->m_extra=f.str();
   ascFile.addDelimiter(input->tell(),'|');
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return res;
 }
 
-bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long endPos)
+bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int id, long endPos)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1584,16 +1584,16 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
   long pos=input->tell();
   switch (frame.m_type) {
   case 0:
-    MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find group with type=0\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: find group with type=0\n"));
     return false;
   case 1: {
-    if (frame.getType()!=GWGraphInternal::Frame::T_TEXT) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for text\n"));
+    if (frame.getType()!=GreatWksGraphInternal::Frame::T_TEXT) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for text\n"));
       return false;
     }
-    GWGraphInternal::FrameText &text=reinterpret_cast<GWGraphInternal::FrameText &>(frame);
+    GreatWksGraphInternal::FrameText &text=reinterpret_cast<GreatWksGraphInternal::FrameText &>(frame);
     if (!input->checkPosition(pos+text.m_dataSize)) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: text size seems bad\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: text size seems bad\n"));
       return false;
     }
     text.m_entry.setBegin(pos);
@@ -1612,8 +1612,8 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
   case 8: // poly normal
   case 7: // regular poly
   case 12: { // spline
-    if (frame.getType()!=GWGraphInternal::Frame::T_BASIC) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for basic graph\n"));
+    if (frame.getType()!=GreatWksGraphInternal::Frame::T_BASIC) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for basic graph\n"));
       return false;
     }
     int nPt=(int) input->readLong(2);
@@ -1629,7 +1629,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     f << "dim=" << dim[1] << "x" << dim[0] << "<->"
       << dim[3] << "x" << dim[2] << ",";
     f << "pt=[";
-    GWGraphInternal::FrameShape &graph=reinterpret_cast<GWGraphInternal::FrameShape &>(frame);
+    GreatWksGraphInternal::FrameShape &graph=reinterpret_cast<GreatWksGraphInternal::FrameShape &>(frame);
     float pt[2];
     std::vector<Vec2f> vertices;
     for (int p=0; p<nPt; ++p) {
@@ -1643,7 +1643,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
       graph.m_shape.m_vertices = vertices;
     else if (graph.m_shape.m_type == MWAWGraphicShape::Path) {
       if (nPt<4 || (nPt%3)!=1) {
-        MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: the spline number of points seems bad\n"));
+        MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: the spline number of points seems bad\n"));
         f << "###";
       }
       else {
@@ -1664,7 +1664,7 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
       }
     }
     else {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: find unexpected vertices\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: find unexpected vertices\n"));
       f << "###";
     }
     if (input->tell()!=endData) {
@@ -1676,13 +1676,13 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     return true;
   }
   case 11: {
-    if (frame.getType()!=GWGraphInternal::Frame::T_PICTURE) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for picture\n"));
+    if (frame.getType()!=GreatWksGraphInternal::Frame::T_PICTURE) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for picture\n"));
       return false;
     }
-    GWGraphInternal::FramePicture &pict=reinterpret_cast<GWGraphInternal::FramePicture &>(frame);
+    GreatWksGraphInternal::FramePicture &pict=reinterpret_cast<GreatWksGraphInternal::FramePicture &>(frame);
     if (!input->checkPosition(pos+pict.m_dataSize)) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: picture size seems bad\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: picture size seems bad\n"));
       return false;
     }
     pict.m_entry.setBegin(pos);
@@ -1694,20 +1694,20 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
     int nGrp=(int) input->readLong(2);
     if (nGrp<0 || (endPos>0 && pos+4+2*nGrp>endPos) ||
         (endPos<0 && !input->checkPosition(pos+4+2*nGrp))) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected number of group\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected number of group\n"));
       return false;
     }
 
-    if (frame.getType()!=GWGraphInternal::Frame::T_GROUP) {
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type for group\n"));
+    if (frame.getType()!=GreatWksGraphInternal::Frame::T_GROUP) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for group\n"));
       input->seek(pos+4+2*nGrp, librevenge::RVNG_SEEK_SET);
       f << "###[internal]";
       return false;
     }
-    GWGraphInternal::FrameGroup &group=reinterpret_cast<GWGraphInternal::FrameGroup &>(frame);
+    GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(frame);
     if (nGrp != group.m_numChild) {
       f << "###[N=" << group.m_numChild << "]";
-      MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected number of group child\n"));
+      MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected number of group child\n"));
     }
     int val=(int) input->readLong(2); // always 2
     if (val!=2) f << "f0=" << val << ",";
@@ -1725,18 +1725,18 @@ bool GWGraph::readFrameExtraData(GWGraphInternal::Frame &frame, int id, long end
   default:
     break;
   }
-  MWAW_DEBUG_MSG(("GWGraph::readFrameExtraData: unexpected type\n"));
+  MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type\n"));
   return false;
 }
 
 ////////////////////////////////////////////////////////////
 // textbox
 ////////////////////////////////////////////////////////////
-bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
+bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendTextbox: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendTextbox: can not find the listener\n"));
     return true;
   }
   MWAWGraphicStyle style;
@@ -1747,7 +1747,7 @@ bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInterna
   Vec2f newSz(fSz[0]+3,fSz[1]);
   MWAWPosition finalPos(pos);
   finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
-  shared_ptr<MWAWSubDocument> doc(new GWGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
+  shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
       m_mainParser->canSendTextBoxAsGraphic(text.m_entry) &&
@@ -1769,17 +1769,17 @@ bool GWGraph::sendTextbox(GWGraphInternal::FrameText const &text, GWGraphInterna
   return true;
 }
 
-bool GWGraph::sendTextboxAsGraphic(Box2f const &box, GWGraphInternal::FrameText const &text,
-                                   MWAWGraphicStyle const &style)
+bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text,
+    MWAWGraphicStyle const &style)
 {
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   libmwaw::SubDocumentType subdocType;
   if (!graphicListener || !graphicListener->isDocumentStarted() ||
       graphicListener->isSubDocumentOpened(subdocType)) {
-    MWAW_DEBUG_MSG(("GWGraph::sendTextboxAsGraphic: unexpected graphic state\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendTextboxAsGraphic: unexpected graphic state\n"));
     return false;
   }
-  shared_ptr<MWAWSubDocument> doc(new GWGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
+  shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
 
   Vec2f fSz=box.size();
   Box2f textBox=Box2f(box[0],box[0]+Vec2f(fSz[0],-fSz[1]));
@@ -1794,15 +1794,15 @@ bool GWGraph::sendTextboxAsGraphic(Box2f const &box, GWGraphInternal::FrameText 
 ////////////////////////////////////////////////////////////
 // picture
 ////////////////////////////////////////////////////////////
-bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
+bool GreatWksGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendPicture: can not find the listener\n"));
     return true;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("GWGraph::sendPicture: can not find the entry\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendPicture: can not find the entry\n"));
     return false;
   }
   entry.setParsed(true);
@@ -1838,11 +1838,11 @@ bool GWGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 // group
 ////////////////////////////////////////////////////////////
-bool GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
+bool GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendTextbox: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendTextbox: can not find the listener\n"));
     return true;
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
@@ -1856,14 +1856,14 @@ bool GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInterna
   for (size_t c=0; c<numChilds; c++) {
     int childId=group.m_childList[c];
     if (childId<=0 || childId>int(numFrames)) continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
+    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
     if (!frame) continue;
     sendFrame(frame, zone);
   }
   return true;
 }
 
-bool GWGraph::canCreateGraphic(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone)
+bool GreatWksGraph::canCreateGraphic(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone)
 {
   size_t numChilds=group.m_childList.size();
   int numFrames=(int) zone.m_frameList.size();
@@ -1872,26 +1872,26 @@ bool GWGraph::canCreateGraphic(GWGraphInternal::FrameGroup const &group, GWGraph
   for (size_t c=0; c<numChilds; ++c) {
     int childId=group.m_childList[c];
     if (childId<=0 || childId>int(numFrames)) continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
+    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
     if (!frame) continue;
     if (frame->m_page!=page) return false;
     switch (frame->getType()) {
-    case GWGraphInternal::Frame::T_BASIC:
+    case GreatWksGraphInternal::Frame::T_BASIC:
       break;
-    case GWGraphInternal::Frame::T_PICTURE:
+    case GreatWksGraphInternal::Frame::T_PICTURE:
       return false;
-    case GWGraphInternal::Frame::T_GROUP:
-      if (!canCreateGraphic(reinterpret_cast<GWGraphInternal::FrameGroup const &>(*frame), zone))
+    case GreatWksGraphInternal::Frame::T_GROUP:
+      if (!canCreateGraphic(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone))
         return false;
       break;
-    case GWGraphInternal::Frame::T_TEXT: {
-      GWGraphInternal::FrameText const &text=reinterpret_cast<GWGraphInternal::FrameText const &>(*frame);
+    case GreatWksGraphInternal::Frame::T_TEXT: {
+      GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
       if (!m_mainParser->canSendTextBoxAsGraphic(text.m_entry))
         return false;
       break;
     }
-    case GWGraphInternal::Frame::T_BAD:
-    case GWGraphInternal::Frame::T_UNSET:
+    case GreatWksGraphInternal::Frame::T_BAD:
+    case GreatWksGraphInternal::Frame::T_UNSET:
     default:
       break;
     }
@@ -1899,7 +1899,7 @@ bool GWGraph::canCreateGraphic(GWGraphInternal::FrameGroup const &group, GWGraph
   return true;
 }
 
-void GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWGraphicListenerPtr &listener)
+void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWGraphicListenerPtr &listener)
 {
   if (!listener) return;
   size_t numChilds=group.m_childList.size();
@@ -1908,7 +1908,7 @@ void GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInterna
   for (size_t c=0; c<numChilds; ++c) {
     int childId=group.m_childList[c];
     if (childId<=0 || childId>int(numFrames)) continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
+    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
     if (!frame) continue;
 
     Box2f const &box=frame->m_box;
@@ -1916,34 +1916,34 @@ void GWGraph::sendGroup(GWGraphInternal::FrameGroup const &group, GWGraphInterna
     if (frame->m_styleId>=1 && frame->m_styleId <= int(zone.m_styleList.size()))
       style = zone.m_styleList[size_t(frame->m_styleId-1)];
     switch (frame->getType()) {
-    case GWGraphInternal::Frame::T_BASIC: {
-      GWGraphInternal::FrameShape const &shape=reinterpret_cast<GWGraphInternal::FrameShape const &>(*frame);
+    case GreatWksGraphInternal::Frame::T_BASIC: {
+      GreatWksGraphInternal::FrameShape const &shape=reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*frame);
       shape.updateStyle(style);
       listener->insertPicture(box, shape.m_shape, style);
       break;
     }
-    case GWGraphInternal::Frame::T_GROUP:
-      sendGroup(reinterpret_cast<GWGraphInternal::FrameGroup const &>(*frame), zone,listener);
+    case GreatWksGraphInternal::Frame::T_GROUP:
+      sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone,listener);
       break;
-    case GWGraphInternal::Frame::T_TEXT:
+    case GreatWksGraphInternal::Frame::T_TEXT:
       sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                           reinterpret_cast<GWGraphInternal::FrameText const &>(*frame), style);
+                           reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame), style);
       break;
-    case GWGraphInternal::Frame::T_PICTURE:
-    case GWGraphInternal::Frame::T_BAD:
-    case GWGraphInternal::Frame::T_UNSET:
+    case GreatWksGraphInternal::Frame::T_PICTURE:
+    case GreatWksGraphInternal::Frame::T_BAD:
+    case GreatWksGraphInternal::Frame::T_UNSET:
     default:
       break;
     }
   }
 }
 
-void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
+void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("GWGraph::sendGroupChild: can not find the listeners\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendGroupChild: can not find the listeners\n"));
     return;
   }
   size_t numChilds=group.m_childList.size(), childNotSent=0;
@@ -1957,26 +1957,26 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
   for (size_t c=0; c<numChilds; ++c) {
     int childId=group.m_childList[c];
     if (childId<=0 || childId>int(numFrames)) continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
+    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
     if (!frame) continue;
 
     bool canMerge=false;
     if (frame->m_page==group.m_page) {
       switch (frame->getType()) {
-      case GWGraphInternal::Frame::T_BASIC:
+      case GreatWksGraphInternal::Frame::T_BASIC:
         canMerge=true;
         break;
-      case GWGraphInternal::Frame::T_GROUP:
-        canMerge=canCreateGraphic(reinterpret_cast<GWGraphInternal::FrameGroup const &>(*frame), zone);
+      case GreatWksGraphInternal::Frame::T_GROUP:
+        canMerge=canCreateGraphic(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone);
         break;
-      case GWGraphInternal::Frame::T_TEXT: {
-        GWGraphInternal::FrameText const &text=reinterpret_cast<GWGraphInternal::FrameText const &>(*frame);
+      case GreatWksGraphInternal::Frame::T_TEXT: {
+        GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
         canMerge=m_mainParser->canSendTextBoxAsGraphic(text.m_entry);
         break;
       }
-      case GWGraphInternal::Frame::T_PICTURE:
-      case GWGraphInternal::Frame::T_BAD:
-      case GWGraphInternal::Frame::T_UNSET:
+      case GreatWksGraphInternal::Frame::T_PICTURE:
+      case GreatWksGraphInternal::Frame::T_BAD:
+      case GreatWksGraphInternal::Frame::T_UNSET:
       default:
         break;
       }
@@ -2000,7 +2000,7 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
         int localCId = group.m_childList[ch];
         if (localCId<=0 || localCId>int(numFrames)) continue;
-        shared_ptr<GWGraphInternal::Frame> child=zone.m_frameList[size_t(localCId-1)];
+        shared_ptr<GreatWksGraphInternal::Frame> child=zone.m_frameList[size_t(localCId-1)];
         if (!child) continue;
 
         box=child->m_box;
@@ -2008,22 +2008,22 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
         if (child->m_styleId>=1 && child->m_styleId <= int(zone.m_styleList.size()))
           style = zone.m_styleList[size_t(child->m_styleId-1)];
         switch (child->getType()) {
-        case GWGraphInternal::Frame::T_BASIC: {
-          GWGraphInternal::FrameShape const &shape=reinterpret_cast<GWGraphInternal::FrameShape const &>(*child);
+        case GreatWksGraphInternal::Frame::T_BASIC: {
+          GreatWksGraphInternal::FrameShape const &shape=reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*child);
           shape.updateStyle(style);
           graphicListener->insertPicture(box, shape.m_shape, style);
           break;
         }
-        case GWGraphInternal::Frame::T_GROUP:
-          sendGroup(reinterpret_cast<GWGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
+        case GreatWksGraphInternal::Frame::T_GROUP:
+          sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
           break;
-        case GWGraphInternal::Frame::T_TEXT:
+        case GreatWksGraphInternal::Frame::T_TEXT:
           sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                               reinterpret_cast<GWGraphInternal::FrameText const &>(*child), style);
+                               reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*child), style);
           break;
-        case GWGraphInternal::Frame::T_PICTURE:
-        case GWGraphInternal::Frame::T_BAD:
-        case GWGraphInternal::Frame::T_UNSET:
+        case GreatWksGraphInternal::Frame::T_PICTURE:
+        case GreatWksGraphInternal::Frame::T_BAD:
+        case GreatWksGraphInternal::Frame::T_UNSET:
         default:
           break;
         }
@@ -2044,7 +2044,7 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
     for (; childNotSent <= c; ++childNotSent) {
       int localCId=group.m_childList[childNotSent];
       if (localCId<=0 || localCId>int(numFrames)) continue;
-      shared_ptr<GWGraphInternal::Frame> child=zone.m_frameList[size_t(localCId-1)];
+      shared_ptr<GreatWksGraphInternal::Frame> child=zone.m_frameList[size_t(localCId-1)];
       if (!child) continue;
       sendFrame(child, zone);
     }
@@ -2060,11 +2060,11 @@ void GWGraph::sendGroupChild(GWGraphInternal::FrameGroup const &group, GWGraphIn
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInternal::Zone const &zone, MWAWPosition const &pos)
+bool GreatWksGraph::sendShape(GreatWksGraphInternal::FrameShape const &graph, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendShape: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendShape: can not find a listener\n"));
     return false;
   }
   MWAWGraphicStyle style;
@@ -2078,18 +2078,18 @@ bool GWGraph::sendShape(GWGraphInternal::FrameShape const &graph, GWGraphInterna
   return true;
 }
 
-bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInternal::Zone const &zone)
+bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, GreatWksGraphInternal::Zone const &zone)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener || !frame) {
-    MWAW_DEBUG_MSG(("GWGraph::sendFrame: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendFrame: can not find a listener\n"));
     return false;
   }
   frame->m_parsed=true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   Vec2f LTPos(0,0);
-  if (m_mainParser->getDocumentType()==GWParser::DRAW)
+  if (m_mainParser->getDocumentType()==GreatWksParser::DRAW)
     LTPos=72.f*m_mainParser->getPageLeftTop();
   MWAWPosition fPos(frame->m_box[0]+LTPos,frame->m_box.size(),librevenge::RVNG_POINT);
   fPos.setRelativePosition(MWAWPosition::Page);
@@ -2097,20 +2097,20 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   fPos.m_wrapping = MWAWPosition::WBackground;
   bool ok=true;
   switch (frame->getType()) {
-  case GWGraphInternal::Frame::T_BASIC:
-    ok = sendShape(reinterpret_cast<GWGraphInternal::FrameShape const &>(*frame), zone, fPos);
+  case GreatWksGraphInternal::Frame::T_BASIC:
+    ok = sendShape(reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*frame), zone, fPos);
     break;
-  case GWGraphInternal::Frame::T_PICTURE:
-    ok = sendPicture(reinterpret_cast<GWGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
+  case GreatWksGraphInternal::Frame::T_PICTURE:
+    ok = sendPicture(reinterpret_cast<GreatWksGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
     break;
-  case GWGraphInternal::Frame::T_GROUP:
-    ok = sendGroup(reinterpret_cast<GWGraphInternal::FrameGroup const &>(*frame), zone, fPos);
+  case GreatWksGraphInternal::Frame::T_GROUP:
+    ok = sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone, fPos);
     break;
-  case GWGraphInternal::Frame::T_TEXT:
-    ok = sendTextbox(reinterpret_cast<GWGraphInternal::FrameText const &>(*frame), zone, fPos);
+  case GreatWksGraphInternal::Frame::T_TEXT:
+    ok = sendTextbox(reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame), zone, fPos);
     break;
-  case GWGraphInternal::Frame::T_BAD:
-  case GWGraphInternal::Frame::T_UNSET:
+  case GreatWksGraphInternal::Frame::T_BAD:
+  case GreatWksGraphInternal::Frame::T_UNSET:
   default:
     ok=false;
   }
@@ -2118,11 +2118,11 @@ bool GWGraph::sendFrame(shared_ptr<GWGraphInternal::Frame> frame, GWGraphInterna
   return ok;
 }
 
-bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
+bool GreatWksGraph::sendPageFrames(GreatWksGraphInternal::Zone const &zone)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendPageFrames: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendPageFrames: can not find a listener\n"));
     return false;
   }
   zone.m_parsed=true;
@@ -2130,7 +2130,7 @@ bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
     int id=zone.m_rootList[f]-1;
     if (id<0 || !zone.m_frameList[(size_t) id])
       continue;
-    shared_ptr<GWGraphInternal::Frame> frame=zone.m_frameList[(size_t) id];
+    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[(size_t) id];
     if (frame->m_parsed)
       continue;
     sendFrame(frame,zone);
@@ -2138,11 +2138,11 @@ bool GWGraph::sendPageFrames(GWGraphInternal::Zone const &zone)
   return true;
 }
 
-bool GWGraph::sendPageGraphics()
+bool GreatWksGraph::sendPageGraphics()
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::sendPageGraphics: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::sendPageGraphics: can not find a listener\n"));
     return false;
   }
   for (size_t z=0; z < m_state->m_zoneList.size(); ++z) {
@@ -2153,11 +2153,11 @@ bool GWGraph::sendPageGraphics()
   return true;
 }
 
-void GWGraph::flushExtra()
+void GreatWksGraph::flushExtra()
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWGraph::flushExtra: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksGraph::flushExtra: can not find a listener\n"));
     return;
   }
   for (size_t z=0; z < m_state->m_zoneList.size(); ++z) {

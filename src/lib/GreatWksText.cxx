@@ -50,17 +50,17 @@
 #include "MWAWSection.hxx"
 #include "MWAWRSRCParser.hxx"
 
-#include "GWParser.hxx"
+#include "GreatWksParser.hxx"
 
-#include "GWText.hxx"
+#include "GreatWksText.hxx"
 
-/** Internal: the structures of a GWText */
-namespace GWTextInternal
+/** Internal: the structures of a GreatWksText */
+namespace GreatWksTextInternal
 {
 /** the different plc type */
 enum PLCType { P_Font, P_Page,  P_Ruler, P_Token, P_Unknown};
 
-/** Internal : a PLC: used to store change of properties in GWTextInternal::Zone */
+/** Internal : a PLC: used to store change of properties in GreatWksTextInternal::Zone */
 struct PLC {
   /// the constructor
   PLC() : m_type(P_Unknown), m_id(-1), m_extra("")
@@ -102,7 +102,7 @@ std::ostream &operator<<(std::ostream &o, PLC const &plc)
 }
 
 ////////////////////////////////////////
-//! Internal and low level: structure which stores a token for GWText
+//! Internal and low level: structure which stores a token for GreatWksText
 struct Token {
   //! constructor
   Token() : m_type(-1), m_format(0), m_pictEntry(), m_dataSize(0), m_dim(0,0), m_date(0xFFFFFFFF), m_extra("")
@@ -255,7 +255,7 @@ std::ostream &operator<<(std::ostream &o, Token const &token)
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("GWTextInternal::Token: unknown type=%d\n", token.m_type));
+    MWAW_DEBUG_MSG(("GreatWksTextInternal::Token: unknown type=%d\n", token.m_type));
     o << "#type=" << token.m_type << ",";
     if (token.m_format)
       o << "#format=" << token.m_format << ",";
@@ -264,7 +264,7 @@ std::ostream &operator<<(std::ostream &o, Token const &token)
   return o;
 }
 ////////////////////////////////////////
-//! Internal and low level: structure which stores a text position for GWText
+//! Internal and low level: structure which stores a text position for GreatWksText
 struct Frame {
   //! constructor
   Frame() : m_pos(), m_page(0), m_extra("")
@@ -287,7 +287,7 @@ struct Frame {
   std::string m_extra;
 };
 ////////////////////////////////////////
-//! Internal and low level: structure which stores a text zone header for GWText
+//! Internal and low level: structure which stores a text zone header for GreatWksText
 struct Zone {
   //! constructor
   Zone(): m_type(-1), m_numFonts(0), m_numRulers(0), m_numLines(0),
@@ -395,7 +395,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a GWText
+//! Internal: the state of a GreatWksText
 struct State {
   //! constructor
   State() : m_fileIdFontIdMap(), m_zonesList(), m_version(-1), m_numPages(-1)
@@ -421,29 +421,29 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GWText::GWText(GWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new GWTextInternal::State), m_mainParser(&parser)
+GreatWksText::GreatWksText(GreatWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new GreatWksTextInternal::State), m_mainParser(&parser)
 {
 }
 
-GWText::~GWText()
+GreatWksText::~GreatWksText()
 { }
 
-int GWText::version() const
+int GreatWksText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int GWText::numPages() const
+int GreatWksText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
 
   int nPages=1;
   for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
-    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    GreatWksTextInternal::Zone const &zone=m_state->m_zonesList[i];
     if (!zone.isMain() || zone.m_frameList.empty())
       continue;
     if (zone.m_frameList.back().m_page>1)
@@ -454,11 +454,11 @@ int GWText::numPages() const
   return m_state->m_numPages = nPages;
 }
 
-int GWText::numHFZones() const
+int GreatWksText::numHFZones() const
 {
   int nHF=0;
   for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
-    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    GreatWksTextInternal::Zone const &zone=m_state->m_zonesList[i];
     if (zone.isMain())
       break;
     nHF++;
@@ -466,30 +466,30 @@ int GWText::numHFZones() const
   return nHF;
 }
 
-bool GWText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
+bool GreatWksText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
 {
   if (!entry.valid())
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  GWTextInternal::Zone zone;
+  GreatWksTextInternal::Zone zone;
   bool ok=!readZone(zone) ||!zone.hasGraphics();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   return ok;
 }
 
-bool GWText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("GWText::sendTextbox: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendTextbox: can not find a listener\n"));
     return false;
   }
   if (!entry.valid())
     return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  GWTextInternal::Zone zone;
+  GreatWksTextInternal::Zone zone;
   if (readZone(zone)) {
     sendZone(zone, inGraphic);
     return true;
@@ -502,7 +502,7 @@ bool GWText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool GWText::createZones(int expectedHF)
+bool GreatWksText::createZones(int expectedHF)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -525,7 +525,7 @@ bool GWText::createZones(int expectedHF)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   if (!readFontNames()) {
-    MWAW_DEBUG_MSG(("GWText::createZones: can not find the font names\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::createZones: can not find the font names\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
@@ -533,7 +533,7 @@ bool GWText::createZones(int expectedHF)
   int nAuxi=0;
   while (!input->isEnd()) {
     pos=input->tell();
-    GWTextInternal::Zone zone;
+    GreatWksTextInternal::Zone zone;
     if (!readZone(zone)) {
       input->seek(pos,librevenge::RVNG_SEEK_SET);
       if (findMainZone)
@@ -551,12 +551,12 @@ bool GWText::createZones(int expectedHF)
       nAuxi++;
   }
   if (nAuxi!=expectedHF) {
-    MWAW_DEBUG_MSG(("GWText::createZones: unexpected HF zones: %d/%d\n", nAuxi, expectedHF));
+    MWAW_DEBUG_MSG(("GreatWksText::createZones: unexpected HF zones: %d/%d\n", nAuxi, expectedHF));
   }
   return findMainZone;
 }
 
-bool GWText::findNextZone()
+bool GreatWksText::findNextZone()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
 
@@ -599,7 +599,7 @@ bool GWText::findNextZone()
 
   pos=input->tell();
   int nFonts=0;
-  GWTextInternal::Zone zone;
+  GreatWksTextInternal::Zone zone;
   while (true) {
     long hSize=headerSize+22*nFonts++;
     if (pos-hSize < searchPos)
@@ -620,14 +620,14 @@ bool GWText::findNextZone()
     }
   }
 
-  MWAW_DEBUG_MSG(("GWText::findNextZone: can not find begin of zone for pos=%lx\n", pos));
+  MWAW_DEBUG_MSG(("GreatWksText::findNextZone: can not find begin of zone for pos=%lx\n", pos));
   input->seek(searchPos, librevenge::RVNG_SEEK_SET);
   return false;
 }
 
-bool GWText::readZone(GWTextInternal::Zone &zone)
+bool GreatWksText::readZone(GreatWksTextInternal::Zone &zone)
 {
-  zone=GWTextInternal::Zone();
+  zone=GreatWksTextInternal::Zone();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+24;
@@ -712,36 +712,36 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   pos=input->tell();
   f.str("");
   f << "Entries(CharPLC):";
-  GWTextInternal::PLC plc;
-  plc.m_type = GWTextInternal::P_Font;
+  GreatWksTextInternal::PLC plc;
+  plc.m_type = GreatWksTextInternal::P_Font;
   long textPos = 0;
   for (int i=0; i < zone.m_numCharPLC; ++i) {
     plc.m_id=(int) input->readULong(2);
     zone.m_posPLCMap.insert
-    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    (std::multimap<long,GreatWksTextInternal::PLC>::value_type(textPos, plc));
     f << "F" << plc.m_id << ":" << std::hex << textPos << std::dec << ",";
     textPos+= (int) input->readULong(4);
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   // the token
-  plc.m_type = GWTextInternal::P_Token;
+  plc.m_type = GreatWksTextInternal::P_Token;
   textPos = 0;
   for (int i=0; i < zone.m_numTokens; ++i) {
     pos = input->tell();
     f.str("");
     plc.m_id=i;
     f << "Entries(Token)-Tn" << i << ":";
-    GWTextInternal::Token tkn;
+    GreatWksTextInternal::Token tkn;
     long numC;
     if (!readToken(tkn,numC)) {
       f << "###";
-      tkn = GWTextInternal::Token();
+      tkn = GreatWksTextInternal::Token();
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
       numC=input->readLong(2);
     }
     zone.m_posPLCMap.insert
-    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    (std::multimap<long,GreatWksTextInternal::PLC>::value_type(textPos, plc));
     zone.m_tokenList.push_back(tkn);
     f << tkn << ",pos=" << std::hex << textPos << std::dec;
     textPos+= numC;
@@ -762,11 +762,11 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   ascFile.addNote("_");
 
   for (size_t i=0; i < zone.m_tokenList.size(); ++i) {
-    GWTextInternal::Token &tkn=zone.m_tokenList[i];
+    GreatWksTextInternal::Token &tkn=zone.m_tokenList[i];
     if (tkn.m_type != 4)
       continue;
     if (tkn.m_dataSize <= 0 || !input->checkPosition(pos+tkn.m_dataSize)) {
-      MWAW_DEBUG_MSG(("GWText::readZone: can not determine the picture size\n"));
+      MWAW_DEBUG_MSG(("GreatWksText::readZone: can not determine the picture size\n"));
       break;
     }
     tkn.m_pictEntry.setBegin(pos);
@@ -777,7 +777,7 @@ bool GWText::readZone(GWTextInternal::Zone &zone)
   return true;
 }
 
-bool GWText::readZonePositions(GWTextInternal::Zone &zone)
+bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
@@ -785,8 +785,8 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
   libmwaw::DebugStream f;
 
   // the line
-  GWTextInternal::PLC plc;
-  plc.m_type = GWTextInternal::P_Ruler;
+  GreatWksTextInternal::PLC plc;
+  plc.m_type = GreatWksTextInternal::P_Ruler;
   long textPos = 0;
   std::vector<long> linesPos;
   linesPos.push_back(0);
@@ -799,7 +799,7 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
     f << "->" << double(input->readLong(4))/65536.;
     plc.m_extra=f.str();
     zone.m_posPLCMap.insert
-    (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+    (std::multimap<long,GreatWksTextInternal::PLC>::value_type(textPos, plc));
     f.str("");
     f << "Entries(Line)-L" << i << ":" << plc <<  ":"
       << std::hex << textPos << std::dec;
@@ -810,9 +810,9 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
     ascFile.addNote(f.str().c_str());
   }
   // the page dimension
-  plc.m_type = GWTextInternal::P_Page;
+  plc.m_type = GreatWksTextInternal::P_Page;
   for (int i=0; i < zone.m_numFrames; ++i) {
-    GWTextInternal::Frame frame;
+    GreatWksTextInternal::Frame frame;
     pos=input->tell();
     plc.m_id=i;
     f.str("");
@@ -828,12 +828,12 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
     if (line >= 0 && line < int(linesPos.size())) {
       textPos=linesPos[size_t(line)];
       zone.m_posPLCMap.insert
-      (std::multimap<long,GWTextInternal::PLC>::value_type(textPos, plc));
+      (std::multimap<long,GreatWksTextInternal::PLC>::value_type(textPos, plc));
       if (textPos)
         f << "pos=" << std::hex << textPos << std::dec;
     }
     else {
-      MWAW_DEBUG_MSG(("GWText::readZone: can not find begin pos for page %d\n",line));
+      MWAW_DEBUG_MSG(("GreatWksText::readZone: can not find begin pos for page %d\n",line));
       f << "##pos[line]=" << line << ",";
     }
     frame.m_extra=f.str();
@@ -850,7 +850,7 @@ bool GWText::readZonePositions(GWTextInternal::Zone &zone)
 //////////////////////////////////////////////
 // Fonts
 //////////////////////////////////////////////
-bool GWText::readFontNames()
+bool GreatWksText::readFontNames()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
@@ -860,7 +860,7 @@ bool GWText::readFontNames()
   long sz= (long) input->readULong(4);
   long endPos = input->tell()+sz;
   if (sz < 2 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("GWText::readFontNames: can not read field size\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::readFontNames: can not read field size\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -869,7 +869,7 @@ bool GWText::readFontNames()
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
   if (N*5+2 > sz) {
-    MWAW_DEBUG_MSG(("GWText::readFontNames: can not read N\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::readFontNames: can not read N\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -888,7 +888,7 @@ bool GWText::readFontNames()
       f << "unkn=" << val << ",";
     int fSz=(int) input->readULong(1);
     if (pos+5+fSz>endPos) {
-      MWAW_DEBUG_MSG(("GWText::readFontNames: can not read font %d\n", i));
+      MWAW_DEBUG_MSG(("GreatWksText::readFontNames: can not read font %d\n", i));
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -909,7 +909,7 @@ bool GWText::readFontNames()
   }
   pos = input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("GWText::readFontNames: find extra data\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::readFontNames: find extra data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("FontNames:###");
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -917,7 +917,7 @@ bool GWText::readFontNames()
   return true;
 }
 
-bool GWText::readFont(MWAWFont &font)
+bool GreatWksText::readFont(MWAWFont &font)
 {
   font=MWAWFont();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -974,7 +974,7 @@ bool GWText::readFont(MWAWFont &font)
 //////////////////////////////////////////////
 // Ruler
 //////////////////////////////////////////////
-bool GWText::readRuler(MWAWParagraph &para)
+bool GreatWksText::readRuler(MWAWParagraph &para)
 {
   para = MWAWParagraph();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1094,9 +1094,9 @@ bool GWText::readRuler(MWAWParagraph &para)
 //////////////////////////////////////////////
 // Token
 //////////////////////////////////////////////
-bool GWText::readToken(GWTextInternal::Token &token, long &nChar)
+bool GreatWksText::readToken(GreatWksTextInternal::Token &token, long &nChar)
 {
-  token = GWTextInternal::Token();
+  token = GreatWksTextInternal::Token();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+18;
@@ -1130,10 +1130,10 @@ bool GWText::readToken(GWTextInternal::Token &token, long &nChar)
 //////////////////////////////////////////////
 // send data
 //////////////////////////////////////////////
-bool GWText::sendMainText()
+bool GreatWksText::sendMainText()
 {
   for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
-    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    GreatWksTextInternal::Zone const &zone=m_state->m_zonesList[i];
     if (!zone.isMain())
       continue;
     return sendZone(zone);
@@ -1141,35 +1141,35 @@ bool GWText::sendMainText()
   return false;
 }
 
-bool GWText::sendHF(int id)
+bool GreatWksText::sendHF(int id)
 {
   for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
-    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    GreatWksTextInternal::Zone const &zone=m_state->m_zonesList[i];
     if (zone.isMain())
       continue;
     if (id--==0)
       return sendZone(zone);
   }
-  MWAW_DEBUG_MSG(("GWText::sendHF: can not find a header/footer\n"));
+  MWAW_DEBUG_MSG(("GreatWksText::sendHF: can not find a header/footer\n"));
   return false;
 }
 
-void GWText::flushExtra()
+void GreatWksText::flushExtra()
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("GWText::flushExtra: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::flushExtra: can not find a listener\n"));
     return;
   }
   for (size_t i=0; i < m_state->m_zonesList.size(); ++i) {
-    GWTextInternal::Zone const &zone=m_state->m_zonesList[i];
+    GreatWksTextInternal::Zone const &zone=m_state->m_zonesList[i];
     if (zone.m_parsed)
       continue;
     sendZone(zone);
   }
 }
 
-bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   MWAWBasicListenerPtr listener;
   if (inGraphic)
@@ -1177,11 +1177,11 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   else
     listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: can not find a listener\n"));
     return false;
   }
   if (entry.length()<51) {
-    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the entry seems to short\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: the entry seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1219,7 +1219,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   if (ok) ok=input->readLong(1)==1;
 
   if (!ok) {
-    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the header seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: the header seems bad\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1291,7 +1291,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << "," ;
   int fSz=(int) input->readULong(1);
   if (50+fSz > entry.length()) {
-    MWAW_DEBUG_MSG(("GWText::sendSimpleTextbox: the text size seems too big\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: the text size seems too big\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1326,7 +1326,7 @@ bool GWText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   return true;
 }
 
-bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
+bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraphic)
 {
   MWAWBasicListenerPtr listener;
   if (inGraphic)
@@ -1334,13 +1334,13 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
   else
     listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("GWText::sendZone: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find a listener\n"));
     return false;
   }
   bool isMain = zone.isMain();
   int actPage = 1, actCol = 0, numCol=1;
   if (isMain && !listener->canOpenSectionAddBreak()) {
-    MWAW_DEBUG_MSG(("GWText::sendZone: in a main zone, but can not open section\n"));
+    MWAW_DEBUG_MSG(("GreatWksText::sendZone: in a main zone, but can not open section\n"));
     isMain = false;
   }
   else if (isMain) {
@@ -1378,36 +1378,36 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
     }
     if (done) break;
 
-    std::multimap<long, GWTextInternal::PLC>::const_iterator pIt=
+    std::multimap<long, GreatWksTextInternal::PLC>::const_iterator pIt=
       zone.m_posPLCMap.find(cPos);
-    GWTextInternal::Token token;
+    GreatWksTextInternal::Token token;
     while (pIt!=zone.m_posPLCMap.end() && pIt->first==cPos) {
-      GWTextInternal::PLC const &plc=(pIt++)->second;
+      GreatWksTextInternal::PLC const &plc=(pIt++)->second;
       f << "[" << plc << "]";
       switch (plc.m_type) {
-      case GWTextInternal::P_Font:
+      case GreatWksTextInternal::P_Font:
         if (plc.m_id < 0 || plc.m_id >= (int) zone.m_fontList.size()) {
-          MWAW_DEBUG_MSG(("GWText::sendZone: can not find font %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find font %d\n", plc.m_id));
           break;
         }
         listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
         break;
-      case GWTextInternal::P_Ruler:
+      case GreatWksTextInternal::P_Ruler:
         if (plc.m_id < 0 || plc.m_id >= (int) zone.m_rulerList.size()) {
-          MWAW_DEBUG_MSG(("GWText::sendZone: can not find ruler %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find ruler %d\n", plc.m_id));
           break;
         }
         listener->setParagraph(zone.m_rulerList[size_t(plc.m_id)]);
         break;
-      case GWTextInternal::P_Token:
+      case GreatWksTextInternal::P_Token:
         if (plc.m_id < 0 || plc.m_id >= (int) zone.m_tokenList.size()) {
-          MWAW_DEBUG_MSG(("GWText::sendZone: can not find token %d\n", plc.m_id));
+          MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find token %d\n", plc.m_id));
           break;
         }
         token=zone.m_tokenList[size_t(plc.m_id)];
         break;
-      case GWTextInternal::P_Page:
-      case GWTextInternal::P_Unknown:
+      case GreatWksTextInternal::P_Page:
+      case GreatWksTextInternal::P_Unknown:
       default:
         break;
       }
@@ -1417,12 +1417,12 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
     case 0x4: {
       f << "[pict]";
       if (token.m_type!=4 || !token.m_pictEntry.valid()) {
-        MWAW_DEBUG_MSG(("GWText::sendZone: can not find a picture\n"));
+        MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find a picture\n"));
         f << "###";
         break;
       }
       if (inGraphic) {
-        MWAW_DEBUG_MSG(("GWText::sendZone: oops, can not send a picture in a graphic zone\n"));
+        MWAW_DEBUG_MSG(("GreatWksText::sendZone: oops, can not send a picture in a graphic zone\n"));
         break;
       }
       MWAWPosition pictPos(Vec2f(0,0), token.m_dim, librevenge::RVNG_POINT);
@@ -1436,7 +1436,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
     case 0xb:
       f << "[colbreak]";
       if (!isMain) {
-        MWAW_DEBUG_MSG(("GWText::sendZone: find column break in auxilliary block\n"));
+        MWAW_DEBUG_MSG(("GreatWksText::sendZone: find column break in auxilliary block\n"));
         break;
       }
       if (actCol < numCol-1 && numCol > 1) {
@@ -1452,7 +1452,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
       f << "[pagebreak]";
       if (!isMain) {
         f << "###";
-        MWAW_DEBUG_MSG(("GWText::sendZone: find page break in auxilliary zone\n"));
+        MWAW_DEBUG_MSG(("GreatWksText::sendZone: find page break in auxilliary zone\n"));
         break;
       }
       m_mainParser->newPage(++actPage);
@@ -1467,7 +1467,7 @@ bool GWText::sendZone(GWTextInternal::Zone const &zone, bool inGraphic)
       if (token.sendTo(*listener))
         break;
       f << "###";
-      MWAW_DEBUG_MSG(("GWText::sendZone: can not send token\n"));
+      MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not send token\n"));
       break;
     default:
       listener->insertCharacter((unsigned char) c);

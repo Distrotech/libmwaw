@@ -51,7 +51,7 @@
 #include "DMParser.hxx"
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
-#include "GWParser.hxx"
+#include "GreatWksParser.hxx"
 #include "HanMacWrdJParser.hxx"
 #include "HanMacWrdKParser.hxx"
 #include "LightWayTxtParser.hxx"
@@ -59,14 +59,14 @@
 #include "MacWrtParser.hxx"
 #include "MacWrtProParser.hxx"
 #include "MarinerWrtParser.hxx"
-#include "MsWks3Parser.hxx"
-#include "MsWks4Parser.hxx"
 #include "MindWrtParser.hxx"
 #include "MoreParser.hxx"
+#include "MsWks3Parser.hxx"
+#include "MsWks4Parser.hxx"
 #include "MSW1Parser.hxx"
 #include "MSWParser.hxx"
 #include "NSParser.hxx"
-#include "TTParser.hxx"
+#include "TeachTxtParser.hxx"
 #include "WNParser.hxx"
 #include "WriterPlsParser.hxx"
 #include "ZWrtParser.hxx"
@@ -411,7 +411,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new FullWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_GREATWORKS:
-      parser.reset(new GWParser(input, rsrcParser, header));
+      parser.reset(new GreatWksParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_HANMACWORDJ:
       parser.reset(new HanMacWrdJParser(input, rsrcParser, header));
@@ -457,7 +457,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
-      parser.reset(new TTParser(input, rsrcParser, header));
+      parser.reset(new TeachTxtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_WRITENOW:
       parser.reset(new WNParser(input, rsrcParser, header));

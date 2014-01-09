@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef TT_PARSER
-#  define TT_PARSER
+#ifndef TEACH_TXT_PARSER
+#  define TEACH_TXT_PARSER
 
 #include <string>
 #include <vector>
@@ -44,21 +44,21 @@
 
 #include "MWAWParser.hxx"
 
-namespace TTParserInternal
+namespace TeachTxtParserInternal
 {
 struct State;
 }
 
 /** \brief the main class to read a SimpleText/TeachText/Tex-Edit file
  */
-class TTParser : public MWAWTextParser
+class TeachTxtParser : public MWAWTextParser
 {
   friend class TTText;
 public:
   //! constructor
-  TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  TeachTxtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~TTParser();
+  virtual ~TeachTxtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -106,7 +106,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<TTParserInternal::State> m_state;
+  shared_ptr<TeachTxtParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

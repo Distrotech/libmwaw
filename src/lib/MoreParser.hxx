@@ -54,7 +54,7 @@ class MoreText;
 
 /** \brief a namespace used to define basic structures in a More file
  */
-namespace MORStruct
+namespace MoreStruct
 {
 struct Pattern {
   //!constructor
@@ -136,7 +136,7 @@ protected:
   bool readColors(long endPos);
 
   //! read a pattern ( some sub zone of block 9)
-  bool readPattern(long endPos, MORStruct::Pattern &pattern);
+  bool readPattern(long endPos, MoreStruct::Pattern &pattern);
 
   //! read a backside ( some sub zone of block 9)
   bool readBackside(long endPos, std::string &extra);

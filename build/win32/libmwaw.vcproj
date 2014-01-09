@@ -264,15 +264,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWGraph.cxx"
+				RelativePath="..\..\src\lib\GreatWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWParser.cxx"
+				RelativePath="..\..\src\lib\GreatWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWText.cxx"
+				RelativePath="..\..\src\lib\GreatWksText.cxx"
 				>
 			</File>
 			<File
@@ -540,7 +540,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\TTParser.cxx"
+				RelativePath="..\..\src\lib\TeachTxtParser.cxx"
 				>
 			</File>
 			<File
@@ -661,15 +661,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWGraph.hxx"
+				RelativePath="..\..\src\lib\GreatWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWParser.hxx"
+				RelativePath="..\..\src\lib\GreatWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWText.hxx"
+				RelativePath="..\..\src\lib\GreatWksText.hxx"
 				>
 			</File>
 			<File
@@ -957,7 +957,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\TTParser.hxx"
+				RelativePath="..\..\src\lib\TeachTxtParser.hxx"
 				>
 			</File>
 			<File

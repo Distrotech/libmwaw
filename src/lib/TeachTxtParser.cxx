@@ -50,13 +50,13 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "TTParser.hxx"
+#include "TeachTxtParser.hxx"
 
-/** Internal: the structures of a TTParser */
-namespace TTParserInternal
+/** Internal: the structures of a TeachTxtParser */
+namespace TeachTxtParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a TTParser
+//! Internal: the state of a TeachTxtParser
 struct State {
   //! constructor
   State() : m_type(MWAWDocument::MWAW_T_UNKNOWN), m_posFontMap(), m_idPictEntryMap(), m_numberSpacesForTab(0),
@@ -82,32 +82,32 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-TTParser::TTParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+TeachTxtParser::TeachTxtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-TTParser::~TTParser()
+TeachTxtParser::~TeachTxtParser()
 {
 }
 
-void TTParser::init()
+void TeachTxtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new TTParserInternal::State);
+  m_state.reset(new TeachTxtParserInternal::State);
 
   getPageSpan().setMargins(0.1);
 }
 
-MWAWInputStreamPtr TTParser::rsrcInput()
+MWAWInputStreamPtr TeachTxtParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &TTParser::rsrcAscii()
+libmwaw::DebugFile &TeachTxtParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -115,7 +115,7 @@ libmwaw::DebugFile &TTParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void TTParser::newPage(int number)
+void TeachTxtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -131,7 +131,7 @@ void TTParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
+void TeachTxtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -153,7 +153,7 @@ void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("TTParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -164,11 +164,11 @@ void TTParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void TTParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void TeachTxtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("TTParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -192,7 +192,7 @@ void TTParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool TTParser::createZones()
+bool TeachTxtParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
@@ -229,7 +229,7 @@ bool TTParser::createZones()
   return true;
 }
 
-void TTParser::flushExtra()
+void TeachTxtParser::flushExtra()
 {
 #ifdef DEBUG
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
@@ -242,9 +242,9 @@ void TTParser::flushExtra()
 #endif
 }
 
-int TTParser::computeNumPages() const
+int TeachTxtParser::computeNumPages() const
 {
-  MWAWInputStreamPtr input = const_cast<TTParser *>(this)->getInput();
+  MWAWInputStreamPtr input = const_cast<TeachTxtParser *>(this)->getInput();
   input->seek(0, librevenge::RVNG_SEEK_SET);
   int nPages=1;
   int pageBreakChar=(m_state->m_type==MWAWDocument::MWAW_T_TEXEDIT) ? 0xc : 0;
@@ -256,7 +256,7 @@ int TTParser::computeNumPages() const
   return nPages;
 }
 
-bool TTParser::sendText()
+bool TeachTxtParser::sendText()
 {
   if (!getTextListener()) {
     MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
@@ -345,10 +345,10 @@ bool TTParser::sendText()
 ////////////////////////////////////////////////////////////
 
 // the styles
-bool TTParser::readStyles(MWAWEntry const &entry)
+bool TeachTxtParser::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<2) {
-    MWAW_DEBUG_MSG(("TTParser::readStyles: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::readStyles: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -361,7 +361,7 @@ bool TTParser::readStyles(MWAWEntry const &entry)
   int N=(int) input->readULong(2);
   f << "Entries(Style)[" << entry.type() << "-" << entry.id() << "]:N="<<N;
   if (20*N+2 != entry.length()) {
-    MWAW_DEBUG_MSG(("TTParser::readStyles: the number of values seems bad\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::readStyles: the number of values seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
@@ -398,7 +398,7 @@ bool TTParser::readStyles(MWAWEntry const &entry)
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (m_state->m_posFontMap.find(cPos) != m_state->m_posFontMap.end()) {
-      MWAW_DEBUG_MSG(("TTParser::readStyles: a style for pos=%lx already exist\n", cPos));
+      MWAW_DEBUG_MSG(("TeachTxtParser::readStyles: a style for pos=%lx already exist\n", cPos));
     }
     else
       m_state->m_posFontMap[cPos] = font;
@@ -414,10 +414,10 @@ bool TTParser::readStyles(MWAWEntry const &entry)
 }
 
 // unknown structure 4 int, related to some counter ?
-bool TTParser::readWRCT(MWAWEntry const &entry)
+bool TeachTxtParser::readWRCT(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<8) {
-    MWAW_DEBUG_MSG(("TTParser::readWRCT: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::readWRCT: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -438,14 +438,14 @@ bool TTParser::readWRCT(MWAWEntry const &entry)
 }
 
 // the pictures
-bool TTParser::sendPicture(int id)
+bool TeachTxtParser::sendPicture(int id)
 {
   if (m_state->m_idPictEntryMap.find(id)==m_state->m_idPictEntryMap.end()) {
-    MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find picture for id=%d\n",id));
+    MWAW_DEBUG_MSG(("TeachTxtParser::sendPicture: can not find picture for id=%d\n",id));
     return false;
   }
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::sendPicture: can not find the listener\n"));
     return false;
   }
 
@@ -467,7 +467,7 @@ bool TTParser::sendPicture(int id)
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("TTParser::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("TeachTxtParser::sendPicture: can not find the picture\n"));
     return false;
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
@@ -488,9 +488,9 @@ bool TTParser::sendPicture(int id)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool TTParser::checkHeader(MWAWHeader *header, bool strict)
+bool TeachTxtParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = TTParserInternal::State();
+  *m_state = TeachTxtParserInternal::State();
   /** no data fork, may be ok, but this means
       that the file contains no text, so... */
   MWAWInputStreamPtr input = getInput();
@@ -515,7 +515,7 @@ bool TTParser::checkHeader(MWAWHeader *header, bool strict)
     MWAWEntry entry = getRSRCParser()->getEntry("styl", 128);
     if (!entry.valid()) {
       entry = getRSRCParser()->getEntry("PICT", 1000);
-      MWAW_DEBUG_MSG(("TTParser::checkHeader: can not find any basic ressource, stop\n"));
+      MWAW_DEBUG_MSG(("TeachTxtParser::checkHeader: can not find any basic ressource, stop\n"));
       if (!entry.valid())
         return false;
     }

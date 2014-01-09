@@ -64,12 +64,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FullWrtStruct.hxx		\
 	FullWrtText.cxx			\
 	FullWrtText.hxx			\
-	GWGraph.cxx			\
-	GWGraph.hxx			\
-	GWParser.cxx			\
-	GWParser.hxx			\
-	GWText.cxx			\
-	GWText.hxx			\
+	GreatWksGraph.cxx		\
+	GreatWksGraph.hxx		\
+	GreatWksParser.cxx		\
+	GreatWksParser.hxx		\
+	GreatWksText.cxx		\
+	GreatWksText.hxx		\
 	HanMacWrdJGraph.cxx		\
 	HanMacWrdJGraph.hxx		\
 	HanMacWrdJParser.cxx		\
@@ -203,8 +203,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	NSStruct.hxx			\
 	NSText.cxx			\
 	NSText.hxx			\
-	TTParser.cxx			\
-	TTParser.hxx			\
+	TeachTxtParser.cxx		\
+	TeachTxtParser.hxx		\
 	WNEntry.hxx			\
 	WNParser.cxx			\
 	WNParser.hxx			\
