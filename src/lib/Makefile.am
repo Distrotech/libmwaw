@@ -96,6 +96,14 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MacWrtProParser.hxx		\
 	MacWrtProStructures.cxx		\
 	MacWrtProStructures.hxx		\
+	MarinerWrtGraph.cxx		\
+	MarinerWrtGraph.hxx		\
+	MarinerWrtParser.cxx		\
+	MarinerWrtParser.hxx		\
+	MarinerWrtText.cxx		\
+	MarinerWrtText.hxx		\
+	MindWrtParser.cxx		\
+	MindWrtParser.hxx		\
 	MsWksGraph.cxx			\
 	MsWksGraph.hxx			\
 	MsWksParser.cxx			\
@@ -112,18 +120,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MsWks4Text.hxx			\
 	MsWks4Zone.cxx			\
 	MsWks4Zone.hxx			\
-	MDWParser.cxx			\
-	MDWParser.hxx			\
 	MORParser.cxx			\
 	MORParser.hxx			\
 	MORText.cxx			\
 	MORText.hxx			\
-	MRWGraph.cxx			\
-	MRWGraph.hxx			\
-	MRWParser.cxx			\
-	MRWParser.hxx			\
-	MRWText.cxx			\
-	MRWText.hxx			\
 	MSW1Parser.cxx			\
 	MSW1Parser.hxx			\
 	MSWParser.cxx			\

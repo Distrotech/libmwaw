@@ -51,15 +51,15 @@
 #include "MWAWSubDocument.hxx"
 #include "MWAWTable.hxx"
 
-#include "MRWParser.hxx"
+#include "MarinerWrtParser.hxx"
 
-#include "MRWText.hxx"
+#include "MarinerWrtText.hxx"
 
-/** Internal: the structures of a MRWText */
-namespace MRWTextInternal
+/** Internal: the structures of a MarinerWrtText */
+namespace MarinerWrtTextInternal
 {
 ////////////////////////////////////////
-//! Internal: struct used to store the font of a MRWText
+//! Internal: struct used to store the font of a MarinerWrtText
 struct Font {
   //! constructor
   Font() : m_font(), m_localId(-1), m_tokenId(0), m_extra("")
@@ -89,7 +89,7 @@ std::ostream &operator<<(std::ostream &o, Font const &font)
 }
 
 ////////////////////////////////////////
-//! Internal: struct used to store the paragraph of a MRWText
+//! Internal: struct used to store the paragraph of a MarinerWrtText
 struct Paragraph : public MWAWParagraph {
   //! constructor
   Paragraph() : MWAWParagraph(), m_paraFill(),
@@ -128,7 +128,7 @@ struct Paragraph : public MWAWParagraph {
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &para);
-  //! small structure to store border/fills properties in MRWText
+  //! small structure to store border/fills properties in MarinerWrtText
   struct BorderFill {
     //! constructor
     BorderFill() : m_foreColor(MWAWColor::black()), m_backColor(MWAWColor::white()), m_patternId(0),
@@ -332,7 +332,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph::BorderFill const &fill)
 }
 
 ////////////////////////////////////////
-//! Internal: struct used to store zone data of a MRWText
+//! Internal: struct used to store zone data of a MarinerWrtText
 struct Zone {
   struct Information;
 
@@ -368,12 +368,12 @@ struct Zone {
   bool getFont(int id, Font &ft) const
   {
     if (id < 0 || id >= int(m_fontList.size())) {
-      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font %d\n", id));
+      MWAW_DEBUG_MSG(("MarinerWrtTextInternal::Zone::getFont: can not find font %d\n", id));
       return false;
     }
     ft = m_fontList[size_t(id)];
     if (m_idFontMap.find(ft.m_localId) == m_idFontMap.end()) {
-      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getFont: can not find font id %d\n", id));
+      MWAW_DEBUG_MSG(("MarinerWrtTextInternal::Zone::getFont: can not find font id %d\n", id));
     }
     else
       ft.m_font.setId(m_idFontMap.find(ft.m_localId)->second);
@@ -383,7 +383,7 @@ struct Zone {
   bool getRuler(int id, Paragraph &ruler) const
   {
     if (id < 0 || id >= int(m_rulerList.size())) {
-      MWAW_DEBUG_MSG(("MRWTextInternal::Zone::getParagraph: can not find paragraph %d\n", id));
+      MWAW_DEBUG_MSG(("MarinerWrtTextInternal::Zone::getParagraph: can not find paragraph %d\n", id));
       return false;
     }
     ruler = m_rulerList[size_t(id)];
@@ -403,12 +403,12 @@ struct Zone {
   std::map<long,int> m_posFontMap;
   //! a map pos -> rulerId
   std::map<long,int> m_posRulerMap;
-  //! a index used to know the next zone in MRWText::readZone
+  //! a index used to know the next zone in MarinerWrtText::readZone
   int m_actZone;
   //! a flag to know if the zone is parsed
   mutable bool m_parsed;
 
-  //! struct used to keep the information of a small zone of MRWTextInternal::Zone
+  //! struct used to keep the information of a small zone of MarinerWrtTextInternal::Zone
   struct Information {
     //! constructor
     Information() : m_pos(), m_cPos(0,0), m_extra("") { }
@@ -431,7 +431,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: struct used to store the table of a MRWText
+//! Internal: struct used to store the table of a MarinerWrtText
 struct Table {
   struct Cell;
   struct Row;
@@ -443,7 +443,7 @@ struct Table {
   long nextCharPos() const
   {
     if (!m_rowsList.size()) {
-      MWAW_DEBUG_MSG(("MRWTextInternal::Table: can not compute the last position\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtTextInternal::Table: can not compute the last position\n"));
       return -1;
     }
     return m_rowsList.back().m_lastChar;
@@ -453,7 +453,7 @@ struct Table {
   //! the list of row
   std::vector<Row> m_rowsList;
 
-  //! a table row of a MRWText
+  //! a table row of a MarinerWrtText
   struct Row {
     //! constructor
     Row() :  m_lastChar(-1), m_height(0), m_cellsList()
@@ -466,7 +466,7 @@ struct Table {
     //! a list of cell entry list
     std::vector<Cell> m_cellsList;
   };
-  //! a table cell of a MRWText
+  //! a table cell of a MarinerWrtText
   struct Cell {
     // constructor
     Cell() : m_entry(), m_rulerId(-1), m_width(-1)
@@ -487,7 +487,7 @@ struct Table {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MRWText
+//! Internal: the state of a MarinerWrtText
 struct State {
   //! constructor
   State() : m_version(-1), m_textZoneMap(), m_numPages(-1), m_actualPage(0)
@@ -516,27 +516,27 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MRWText::MRWText(MRWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new MRWTextInternal::State), m_mainParser(&parser)
+MarinerWrtText::MarinerWrtText(MarinerWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MarinerWrtTextInternal::State), m_mainParser(&parser)
 {
 }
 
-MRWText::~MRWText()
+MarinerWrtText::~MarinerWrtText()
 {
 }
 
-int MRWText::version() const
+int MarinerWrtText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int MRWText::numPages() const
+int MarinerWrtText::numPages() const
 {
   if (m_state->m_numPages <= 0) {
     int nPages = 0;
-    std::map<int,MRWTextInternal::Zone>::const_iterator it = m_state->m_textZoneMap.begin();
+    std::map<int,MarinerWrtTextInternal::Zone>::const_iterator it = m_state->m_textZoneMap.begin();
     for (; it != m_state->m_textZoneMap.end(); ++it) {
       nPages = computeNumPages(it->second);
       if (nPages)
@@ -554,41 +554,41 @@ int MRWText::numPages() const
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool MRWText::readZone(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readZone(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < 0x3) {
-    MWAW_DEBUG_MSG(("MRWText::readZone: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readZone: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList);
   input->popLimit();
 
   if (dataList.size() != 1) {
-    MWAW_DEBUG_MSG(("MRWText::readZone: can find my data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readZone: can find my data\n"));
     return false;
   }
 
   libmwaw::DebugStream f;
   f << entry.name() << "[data]:";
-  MRWStruct const &data = dataList[0];
+  MarinerWrtStruct const &data = dataList[0];
   if (data.m_type) {
-    MWAW_DEBUG_MSG(("MRWText::readZone: find unexpected type zone\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readZone: find unexpected type zone\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   if (zone.m_actZone < 0 || zone.m_actZone >= int(zone.m_infoList.size())) {
-    MWAW_DEBUG_MSG(("MRWText::readZone: actZone seems bad\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readZone: actZone seems bad\n"));
     if (zone.m_actZone < 0)
       zone.m_actZone = int(zone.m_infoList.size());
     zone.m_infoList.resize(size_t(zone.m_actZone)+1);
   }
-  MRWTextInternal::Zone::Information &info
+  MarinerWrtTextInternal::Zone::Information &info
     = zone.m_infoList[size_t(zone.m_actZone++)];
   info.m_pos = data.m_pos;
 
@@ -599,13 +599,13 @@ bool MRWText::readZone(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
+int MarinerWrtText::computeNumPages(MarinerWrtTextInternal::Zone const &zone) const
 {
   int nPages = 0;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   for (size_t z=0; z < zone.m_infoList.size(); z++) {
-    MRWTextInternal::Zone::Information const &info=zone.m_infoList[z];
+    MarinerWrtTextInternal::Zone::Information const &info=zone.m_infoList[z];
     if (!info.m_pos.valid()) continue;
     if (nPages==0) nPages=1;
     input->seek(info.m_pos.begin(), librevenge::RVNG_SEEK_SET);
@@ -620,37 +620,37 @@ int MRWText::computeNumPages(MRWTextInternal::Zone const &zone) const
   return nPages;
 }
 
-bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readTextStruct(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readTextStruct: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readTextStruct: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+22*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 22*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readTextStruct: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readTextStruct: find unexpected number of data\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
-    MRWTextInternal::Zone::Information info;
+    MarinerWrtTextInternal::Zone::Information info;
     ascFile.addPos(dataList[d].m_filePos);
 
     int posi[4]= {0,0,0,0};
     int dim[4]= {0,0,0,0}, dim2[4]= {0,0,0,0};
     f.str("");
     for (int j = 0; j < 22; j++) {
-      MRWStruct const &data = dataList[d++];
+      MarinerWrtStruct const &data = dataList[d++];
       if (!data.isBasic()) {
         f << "###f" << j << "=" << data << ",";
         continue;
@@ -726,17 +726,17 @@ bool MRWText::readTextStruct(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-bool MRWText::send(int zoneId)
+bool MarinerWrtText::send(int zoneId)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find the listener\n"));
     return false;
   }
   if (m_state->m_textZoneMap.find(zoneId) == m_state->m_textZoneMap.end()) {
-    MWAW_DEBUG_MSG(("MRWText::send: can not find the text zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find the text zone %d\n", zoneId));
     return false;
   }
-  MRWTextInternal::Zone const &zone=m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone const &zone=m_state->getZone(zoneId);
   MWAWEntry entry;
   entry.setBegin(0);
   entry.setEnd(zone.length());
@@ -744,11 +744,11 @@ bool MRWText::send(int zoneId)
   return send(zone,entry);
 }
 
-bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
+bool MarinerWrtText::send(MarinerWrtTextInternal::Zone const &zone, MWAWEntry const &entry)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MRWText::send: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find the listener\n"));
     return false;
   }
   zone.m_parsed = true;
@@ -772,7 +772,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
   long firstPos=0;
   size_t firstZ=0;
   if (!zone.getPosition(entry.begin(), firstPos, firstZ)) {
-    MWAW_DEBUG_MSG(("MRWText::send: can not find the beginning of the zone\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find the beginning of the zone\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -807,18 +807,18 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
       if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end()) {
         int id = zone.m_posRulerMap.find(actChar)->second;
         f << "[P" << id << "]";
-        MRWTextInternal::Paragraph para;
+        MarinerWrtTextInternal::Paragraph para;
         if (zone.getRuler(id, para)) {
           if (entry.id()>=0 && para.m_cellWidth>0) {
-            MRWTextInternal::Table table(zone);
+            MarinerWrtTextInternal::Table table(zone);
             MWAWEntry tableEntry;
             tableEntry.setBegin(actChar);
             tableEntry.setEnd(entry.end());
             if (!findTableStructure(table, tableEntry)) {
-              MWAW_DEBUG_MSG(("MRWText::send: can not find table data\n"));
+              MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find table data\n"));
             }
             else if (!sendTable(table) || actChar >= table.nextCharPos()) {
-              MWAW_DEBUG_MSG(("MRWText::send: can not send a table data\n"));
+              MWAW_DEBUG_MSG(("MarinerWrtText::send: can not send a table data\n"));
             }
             else {
               ascFile.addPos(pos);
@@ -830,7 +830,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
               if (actChar >= entry.end())
                 break;
               if (!zone.getPosition(actChar, firstPos, firstZ)) {
-                MWAW_DEBUG_MSG(("MRWText::send: can not find the data after a table\n"));
+                MWAW_DEBUG_MSG(("MarinerWrtText::send: can not find the data after a table\n"));
                 actChar = entry.end();
                 break;
               }
@@ -854,7 +854,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
       if (zone.m_posFontMap.find(actChar)!=zone.m_posFontMap.end()) {
         int id = zone.m_posFontMap.find(actChar)->second;
         f << "[F" << id << "]";
-        MRWTextInternal::Font font;
+        MarinerWrtTextInternal::Font font;
         if (zone.getFont(id, font)) {
           listener->setFont(font.m_font);
           if (font.m_tokenId > 0) {
@@ -873,13 +873,13 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
           continue;
         }
         tokenEndPos++;
-        MWAW_DEBUG_MSG(("MRWText::send: find unexpected char for a token\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtText::send: find unexpected char for a token\n"));
       }
       switch (c) {
       case 0x6: { // end of line
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("MRWText::send: oops find some table end of row\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::send: oops find some table end of row\n"));
           first = false;
         }
         f << "#";
@@ -908,7 +908,7 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
           listener->insertBreak(MWAWTextListener::ColumnBreak);
           break;
         }
-        MWAW_DEBUG_MSG(("MRWText::sendText: Find unexpected column break\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtText::sendText: Find unexpected column break\n"));
         f << "###";
         if (isMain)
           m_mainParser->newPage(++actPage);
@@ -948,24 +948,24 @@ bool MRWText::send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry)
 
 ////////////////////////////////////////////////////////////
 // table function
-bool MRWText::sendTable(MRWTextInternal::Table &table)
+bool MarinerWrtText::sendTable(MarinerWrtTextInternal::Table &table)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MRWText::sendTable: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::sendTable: can not find the listener\n"));
     return false;
   }
   size_t nRows=table.m_rowsList.size();
   if (nRows == 0) {
-    MWAW_DEBUG_MSG(("MRWText::sendTable: can not find the number of row\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::sendTable: can not find the number of row\n"));
     return false;
   }
   // fixme: create a single table
   for (size_t r = 0; r < nRows; r++) {
-    MRWTextInternal::Table::Row &row=table.m_rowsList[r];
+    MarinerWrtTextInternal::Table::Row &row=table.m_rowsList[r];
     size_t nCells=row.m_cellsList.size();
     if (nCells == 0) {
-      MWAW_DEBUG_MSG(("MRWText::sendTable: can not find the number of cells\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtText::sendTable: can not find the number of cells\n"));
       continue;
     }
     std::vector<float> colWidths(nCells);
@@ -978,9 +978,9 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
     listener->openTableRow(-float(row.m_height), librevenge::RVNG_POINT);
 
     for (size_t c=0; c < nCells; c++) {
-      MRWTextInternal::Table::Cell const &cell=row.m_cellsList[c];
+      MarinerWrtTextInternal::Table::Cell const &cell=row.m_cellsList[c];
       MWAWCell fCell;
-      MRWTextInternal::Paragraph para;
+      MarinerWrtTextInternal::Paragraph para;
       if (table.m_zone.getRuler(cell.m_rulerId, para))
         para.update(m_mainParser->getPatternPercent(para.m_cellFill.m_patternId), fCell);
       fCell.setPosition(Vec2i((int)c,0));
@@ -1003,9 +1003,9 @@ bool MRWText::sendTable(MRWTextInternal::Table &table)
   return true;
 }
 
-bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const &entry)
+bool MarinerWrtText::findTableStructure(MarinerWrtTextInternal::Table &table, MWAWEntry const &entry)
 {
-  MRWTextInternal::Zone const &zone = table.m_zone;
+  MarinerWrtTextInternal::Zone const &zone = table.m_zone;
   long firstPos=0;
   size_t firstZ=0;
   if (!zone.getPosition(entry.begin(), firstPos, firstZ))
@@ -1015,9 +1015,9 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
 
   int actHeight=0, lastHeight = 0;
   long actChar = entry.begin();
-  MRWTextInternal::Table::Row row;
+  MarinerWrtTextInternal::Table::Row row;
 
-  MRWTextInternal::Table::Cell cell;
+  MarinerWrtTextInternal::Table::Cell cell;
   cell.m_entry.setBegin(actChar);
   bool firstCellInRow=true;
   for (size_t z=firstZ ; z < zone.m_infoList.size(); z++) {
@@ -1034,7 +1034,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
         break;
       if (zone.m_posRulerMap.find(actChar)!=zone.m_posRulerMap.end()) {
         int id = zone.m_posRulerMap.find(actChar)->second;
-        MRWTextInternal::Paragraph para;
+        MarinerWrtTextInternal::Paragraph para;
         if (zone.getRuler(id, para)) {
           if (para.m_cellWidth > 0) {
             cell.m_rulerId = id;
@@ -1059,7 +1059,7 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
         table.m_rowsList.push_back(row);
 
         // reset to look for the next row
-        row=MRWTextInternal::Table::Row();
+        row=MarinerWrtTextInternal::Table::Row();
         actHeight=lastHeight;
         cell.m_entry.setBegin(actChar);
         firstCellInRow = true;
@@ -1078,26 +1078,26 @@ bool MRWText::findTableStructure(MRWTextInternal::Table &table, MWAWEntry const 
 
 ////////////////////////////////////////////////////////////
 // read the data
-bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readPLCZone(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < 2*entry.m_N-1) {
-    MWAW_DEBUG_MSG(("MRWText::readPLCZone: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readPLCZone: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 2*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readPLCZone: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readPLCZone: find unexpected number of data\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   bool isCharZone = entry.m_fileType==4;
   std::map<long,int> &map = isCharZone ? zone.m_posFontMap : zone.m_posRulerMap;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1131,26 +1131,26 @@ bool MRWText::readPLCZone(MRWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readFontNames(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readFontNames: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readFontNames: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList,1+19*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 19*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readFontNames: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readFontNames: find unexpected number of data\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
@@ -1161,9 +1161,9 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     ascFile.addPos(dataList[d].m_filePos);
     std::string fontName("");
     for (int j = 0; j < 2; j++, d++) {
-      MRWStruct const &data = dataList[d];
+      MarinerWrtStruct const &data = dataList[d];
       if (data.m_type!=0 || !data.m_pos.valid()) {
-        MWAW_DEBUG_MSG(("MRWText::readFontNames: name %d seems bad\n", j));
+        MWAW_DEBUG_MSG(("MarinerWrtText::readFontNames: name %d seems bad\n", j));
         f << "###" << data << ",";
         continue;
       }
@@ -1171,7 +1171,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
-        MWAW_DEBUG_MSG(("MRWText::readFontNames: field name %d seems bad\n", j));
+        MWAW_DEBUG_MSG(("MarinerWrtText::readFontNames: field name %d seems bad\n", j));
         f << data << "[###fSz=" << fSz << ",";
         continue;
       }
@@ -1197,7 +1197,7 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
     if (fIdAux)
       f << "f2=" << std::hex << fIdAux << std::dec << ",";
     for (int j = 6; j < 19; j++) { // f14=1,f15=0|3
-      MRWStruct const &data = dataList[d++];
+      MarinerWrtStruct const &data = dataList[d++];
       if (data.m_type==0 || data.numValues() > 1)
         f << "f" << j-3 << "=" << data << ",";
       else if (data.value(0))
@@ -1215,26 +1215,26 @@ bool MRWText::readFontNames(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readFonts(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N+1) {
-    MWAW_DEBUG_MSG(("MRWText::readFonts: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readFonts: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList,1+1+77*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 1+77*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readFonts: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readFonts: find unexpected number of data\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << entry.name() << ":unkn=" << dataList[0].value(0);
@@ -1243,7 +1243,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
 
   size_t d = 1;
   for (int i = 0; i < entry.m_N; i++) {
-    MRWTextInternal::Font font;
+    MarinerWrtTextInternal::Font font;
     f.str("");
     ascFile.addPos(dataList[d].m_filePos);
 
@@ -1251,7 +1251,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
     long val;
     uint32_t fFlags=0;
     for (int j = 0; j < 77; j++) {
-      MRWStruct const &dt = dataList[d++];
+      MarinerWrtStruct const &dt = dataList[d++];
       if (!dt.isBasic()) continue;
       unsigned char color[3];
       switch (j) {
@@ -1427,7 +1427,7 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
             fFlags |= MWAWFont::boxedBit;
             break;
           default:
-            MWAW_DEBUG_MSG(("MRWText::readFonts: find unknown font flag: %d\n", j));
+            MWAW_DEBUG_MSG(("MarinerWrtText::readFonts: find unknown font flag: %d\n", j));
             f << "#f" << j << ",";
             break;
           }
@@ -1479,22 +1479,22 @@ bool MRWText::readFonts(MRWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 //     Style
 ////////////////////////////////////////////////////////////
-bool MRWText::readStyleNames(MRWEntry const &entry, int)
+bool MarinerWrtText::readStyleNames(MarinerWrtEntry const &entry, int)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readStyleNames: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readStyleNames: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList,1+2*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 2*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readStyleNames: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readStyleNames: find unexpected number of data\n"));
     return false;
   }
 
@@ -1506,7 +1506,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     f << entry.name() << "-" << i << ":";
     ascFile.addPos(dataList[d].m_filePos);
     if (!dataList[d].isBasic()) {
-      MWAW_DEBUG_MSG(("MRWText::readStyleNames: bad id field for style %d\n", i));
+      MWAW_DEBUG_MSG(("MarinerWrtText::readStyleNames: bad id field for style %d\n", i));
       f << "###" << dataList[d] << ",";
     }
     else
@@ -1514,9 +1514,9 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
     d++;
 
     std::string name("");
-    MRWStruct const &data = dataList[d++];
+    MarinerWrtStruct const &data = dataList[d++];
     if (data.m_type!=0 || !data.m_pos.valid()) {
-      MWAW_DEBUG_MSG(("MRWText::readStyleNames: name %d seems bad\n", i));
+      MWAW_DEBUG_MSG(("MarinerWrtText::readStyleNames: name %d seems bad\n", i));
       f << "###" << data << ",";
     }
     else {
@@ -1524,7 +1524,7 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       int fSz = int(input->readULong(1));
       if (fSz+1 > data.m_pos.length()) {
-        MWAW_DEBUG_MSG(("MRWText::readStyleNames: field name %d seems bad\n", i));
+        MWAW_DEBUG_MSG(("MarinerWrtText::readStyleNames: field name %d seems bad\n", i));
         f << data << "[###fSz=" << fSz << ",";
       }
       else {
@@ -1542,42 +1542,42 @@ bool MRWText::readStyleNames(MRWEntry const &entry, int)
 ////////////////////////////////////////////////////////////
 //     Paragraph
 ////////////////////////////////////////////////////////////
-void MRWText::setProperty(MRWTextInternal::Paragraph const &ruler)
+void MarinerWrtText::setProperty(MarinerWrtTextInternal::Paragraph const &ruler)
 {
   if (!m_parserState->m_textListener) return;
   m_parserState->m_textListener->setParagraph(ruler);
 }
 
-bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
+bool MarinerWrtText::readRulers(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N+1) {
-    MWAW_DEBUG_MSG(("MRWText::readRulers: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: data seems to short\n"));
     return false;
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList,1+3*68*entry.m_N);
   input->popLimit();
 
   int numDatas = int(dataList.size());
   if (numDatas < 68*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWText::readRulers: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: find unexpected number of data\n"));
     return false;
   }
 
-  MRWTextInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtTextInternal::Zone &zone = m_state->getZone(zoneId);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
   for (int i = 0; i < entry.m_N; i++) {
-    MRWTextInternal::Paragraph para;
+    MarinerWrtTextInternal::Paragraph para;
     ascFile.addPos(dataList[d].m_filePos);
 
     if (int(d+68) > numDatas) {
-      MWAW_DEBUG_MSG(("MRWText::readRulers: ruler %d is too short\n", i));
+      MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: ruler %d is too short\n", i));
       f << "###";
       ascFile.addNote(f.str().c_str());
       return true;
@@ -1589,7 +1589,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
     MWAWFont fontItem(3);
     MWAWListLevel level;
     for (int j = 0; j < 58; j++, d++) {
-      MRWStruct const &dt = dataList[d];
+      MarinerWrtStruct const &dt = dataList[d];
       if (!dt.isBasic()) continue;
       switch (j) {
       case 0:
@@ -1630,7 +1630,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       case 9:
         if (!dt.value(0)) break;
         if (dt.value(0)<0) {
-          MWAW_DEBUG_MSG(("MRWText::readRulers: find negative interline\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: find negative interline\n"));
           f << "#inteline=" << dt.value(0) << "[at least],";
         }
         else
@@ -1680,7 +1680,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         unsigned char const *strPtr=str;
         int sz=int(*strPtr++);
         if (sz<=0 || sz>3 || !str[1]) {
-          MWAW_DEBUG_MSG(("MRWText::readRulers: can not read bullet\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: can not read bullet\n"));
           f << "#bullet=" << std::hex << strNum << std::dec << ",";
           break;
         }
@@ -1768,7 +1768,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         else if (j>=51&&j<=53)   // table foreground color
           debInd=51;
         else {
-          MWAW_DEBUG_MSG(("MRWText::readRulers: find unknown color idx\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: find unknown color idx\n"));
           f << "#col[debIndex=" << j << ",";
           break;
         }
@@ -1798,7 +1798,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
           para.m_cellFill.m_foreColor=col;
           break;
         default:
-          MWAW_DEBUG_MSG(("MRWText::readRulers: find unknown color idx\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: find unknown color idx\n"));
           f << "#col[debIndex]=" << col << ",";
           break;
         }
@@ -1806,7 +1806,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       }
       case 14: // para border
       case 56: { // cell border
-        MRWTextInternal::Paragraph::BorderFill &fill=
+        MarinerWrtTextInternal::Paragraph::BorderFill &fill=
           (j==14) ? para.m_paraFill : para.m_cellFill;
         long val = dt.value(0);
         for (int b = 0, depl=0; b < 4; b++,depl+=8)
@@ -1828,7 +1828,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
         f << "#f" << j << "=" << dataList[d].isBasic() << ",";
     }
     if (nTabs < 0 || int(d)+4*nTabs+10 > numDatas) {
-      MWAW_DEBUG_MSG(("MRWText::readRulers: can not read numtabs\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: can not read numtabs\n"));
       para.m_extra = f.str();
       f.str("");
       f << entry.name() << "-P" << i << ":" << para << "," << "###";
@@ -1840,7 +1840,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       for (int j = 0; j < nTabs; j++) {
         MWAWTabStop tab;
         for (int k = 0; k < 4; k++, d++) {
-          MRWStruct const &dt = dataList[d];
+          MarinerWrtStruct const &dt = dataList[d];
           if (!dt.isBasic()) {
             f << "#tabs" << j << "[" << k << "]=" << dt << ",";
             continue;
@@ -1886,12 +1886,12 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
       }
     }
     for (int j = 0; j < 10; j++, d++) {
-      MRWStruct const &dt = dataList[d];
+      MarinerWrtStruct const &dt = dataList[d];
       if (j==1 && dt.m_type==0) { // a block with sz=40
         input->seek(dt.m_pos.begin(), librevenge::RVNG_SEEK_SET);
         int fSz = (int) input->readULong(1);
         if (fSz+1>dt.m_pos.length()) {
-          MWAW_DEBUG_MSG(("MRWText::readRulers: can not read paragraph name\n"));
+          MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: can not read paragraph name\n"));
           f << "#name,";
           continue;
         }
@@ -1922,7 +1922,7 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
           shared_ptr<MWAWList> list;
           list = m_parserState->m_listManager->getNewList(list, 1, level);
           if (!list) {
-            MWAW_DEBUG_MSG(("MRWText::readRulers: can create a listn for bullet\n"));
+            MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: can create a listn for bullet\n"));
             f << "###";
             break;
           }
@@ -1988,11 +1988,11 @@ bool MRWText::readRulers(MRWEntry const &entry, int zoneId)
 
 //! send data to the listener
 
-void MRWText::flushExtra()
+void MarinerWrtText::flushExtra()
 {
   if (!m_parserState->m_textListener) return;
 #ifdef DEBUG
-  std::map<int,MRWTextInternal::Zone>::iterator it =
+  std::map<int,MarinerWrtTextInternal::Zone>::iterator it =
     m_state->m_textZoneMap.begin();
   for (; it != m_state->m_textZoneMap.end(); ++it) {
     if (it->second.m_parsed)

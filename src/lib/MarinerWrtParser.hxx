@@ -34,8 +34,8 @@
 /*
  * Parser to convert Mariner Write document
  */
-#ifndef MRW_PARSER
-#  define MRW_PARSER
+#ifndef MARINER_WRT_PARSER
+#  define MARINER_WRT_PARSER
 
 #include <iostream>
 #include <string>
@@ -49,25 +49,25 @@
 
 #include "MWAWParser.hxx"
 
-namespace MRWParserInternal
+namespace MarinerWrtParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class MRWGraph;
-class MRWText;
+class MarinerWrtGraph;
+class MarinerWrtText;
 
 //! a entry to store a zone structure
-struct MRWEntry : public MWAWEntry {
+struct MarinerWrtEntry : public MWAWEntry {
   //! constructor
-  MRWEntry() : MWAWEntry(), m_fileType(0), m_N(0), m_value(0)
+  MarinerWrtEntry() : MWAWEntry(), m_fileType(0), m_N(0), m_value(0)
   {
   }
   //! returns the entry name;
   std::string name() const;
   //! operator<<
-  friend std::ostream &operator<< (std::ostream &o, MRWEntry const &ent)
+  friend std::ostream &operator<< (std::ostream &o, MarinerWrtEntry const &ent)
   {
     if (ent.m_N || ent.m_value || ent.m_extra.length()) {
       o << "[";
@@ -87,13 +87,13 @@ struct MRWEntry : public MWAWEntry {
 };
 
 //! Internal: a struct used to read some field
-struct MRWStruct {
+struct MarinerWrtStruct {
   //! constructor
-  MRWStruct() : m_filePos(-1), m_pos(), m_type(-1), m_data()
+  MarinerWrtStruct() : m_filePos(-1), m_pos(), m_type(-1), m_data()
   {
   }
   //! operator<<
-  friend std::ostream &operator<<(std::ostream &o, MRWStruct const &dt);
+  friend std::ostream &operator<<(std::ostream &o, MarinerWrtStruct const &dt);
   //! returns the number of values
   int numValues() const
   {
@@ -121,17 +121,17 @@ struct MRWStruct {
  *
  *
  */
-class MRWParser : public MWAWTextParser
+class MarinerWrtParser : public MWAWTextParser
 {
-  friend class MRWGraph;
-  friend class MRWText;
-  friend class MRWParserInternal::SubDocument;
+  friend class MarinerWrtGraph;
+  friend class MarinerWrtText;
+  friend class MarinerWrtParserInternal::SubDocument;
 
 public:
   //! constructor
-  MRWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MarinerWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MRWParser();
+  virtual ~MarinerWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -177,28 +177,28 @@ protected:
   //
 
   /** try to read an entry header */
-  bool readEntryHeader(MRWEntry &entry);
+  bool readEntryHeader(MarinerWrtEntry &entry);
   /** try to decode a zone */
-  bool decodeZone(std::vector<MRWStruct> &dataList, long numData=999999);
+  bool decodeZone(std::vector<MarinerWrtStruct> &dataList, long numData=999999);
 
   /** try to read the separator of differents part */
-  bool readSeparator(MRWEntry const &entry);
+  bool readSeparator(MarinerWrtEntry const &entry);
   /** try to read the zone dimension ( normal and with margin ) */
-  bool readZoneDim(MRWEntry const &entry, int zoneId);
+  bool readZoneDim(MarinerWrtEntry const &entry, int zoneId);
   /** try to read the zone header */
-  bool readZoneHeader(MRWEntry const &entry, int zoneId, bool onlyTest);
+  bool readZoneHeader(MarinerWrtEntry const &entry, int zoneId, bool onlyTest);
   /** try to read a unknown zone : one by separator?, borderdim? */
-  bool readZoneb(MRWEntry const &entry, int zoneId);
+  bool readZoneb(MarinerWrtEntry const &entry, int zoneId);
   /** try to read a unknown zone of 9 int*/
-  bool readZonec(MRWEntry const &entry, int zoneId);
+  bool readZonec(MarinerWrtEntry const &entry, int zoneId);
   /** try to read a unknown zone of 23 int*/
-  bool readZone13(MRWEntry const &entry, int zoneId);
+  bool readZone13(MarinerWrtEntry const &entry, int zoneId);
   /** try to read the doc info zone */
-  bool readDocInfo(MRWEntry const &entry, int zoneId);
+  bool readDocInfo(MarinerWrtEntry const &entry, int zoneId);
   /** try to read a printinfo zone */
-  bool readPrintInfo(MRWEntry const &entry);
+  bool readPrintInfo(MarinerWrtEntry const &entry);
   /** try to read a xml printinfo zone */
-  bool readCPRT(MRWEntry const &entry);
+  bool readCPRT(MarinerWrtEntry const &entry);
 
   /** try to read a number or a list of number entries */
   bool readNumbersString(int num, std::vector<long> &res);
@@ -208,16 +208,16 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MRWParserInternal::State> m_state;
+  shared_ptr<MarinerWrtParserInternal::State> m_state;
 
   //! a flag to know if page margins span are set
   bool  m_pageMarginsSpanSet;
 
   //! the graph parser
-  shared_ptr<MRWGraph> m_graphParser;
+  shared_ptr<MarinerWrtGraph> m_graphParser;
 
   //! the text parser
-  shared_ptr<MRWText> m_textParser;
+  shared_ptr<MarinerWrtText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

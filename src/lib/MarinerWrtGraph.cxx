@@ -51,15 +51,15 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MRWParser.hxx"
+#include "MarinerWrtParser.hxx"
 
-#include "MRWGraph.hxx"
+#include "MarinerWrtGraph.hxx"
 
-/** Internal: the structures of a MRWGraph */
-namespace MRWGraphInternal
+/** Internal: the structures of a MarinerWrtGraph */
+namespace MarinerWrtGraphInternal
 {
 ////////////////////////////////////////
-//! Internal: the struct use to store a pattern in MRWGraph
+//! Internal: the struct use to store a pattern in MarinerWrtGraph
 struct Pattern {
   //! constructor with default pattern
   Pattern() : m_uniform(true), m_pattern(), m_percent(1)
@@ -336,7 +336,7 @@ std::ostream &operator<<(std::ostream &o, Token const &tkn)
 }
 
 ////////////////////////////////////////
-//! Internal: the struct use to store a ps zone of a MRWGraph
+//! Internal: the struct use to store a ps zone of a MarinerWrtGraph
 struct PSZone {
   //! constructor
   PSZone() : m_pos(), m_type(0), m_id(0), m_parsed(false), m_extra("")
@@ -363,7 +363,7 @@ struct PSZone {
 };
 
 ////////////////////////////////////////
-//! Internal: the struct use to store a zone of a MRWGraph
+//! Internal: the struct use to store a zone of a MarinerWrtGraph
 struct Zone {
   //! constructor
   Zone() : m_tokenMap(), m_psZoneMap()
@@ -376,7 +376,7 @@ struct Zone {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MRWGraph
+//! Internal: the state of a MarinerWrtGraph
 struct State {
   //! constructor
   State() : m_zoneMap(), m_patternList(), m_numPages(0) { }
@@ -427,12 +427,12 @@ void State::setDefaultPatternList(int /*version*/)
 }
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MRWGraph
+//! Internal: the subdocument of a MarinerWrtGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor
-  SubDocument(MRWGraph &pars, MWAWInputStreamPtr input, int id) :
+  SubDocument(MarinerWrtGraph &pars, MWAWInputStreamPtr input, int id) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id) {}
 
   //! destructor
@@ -451,7 +451,7 @@ public:
 
 protected:
   /** the graph parser */
-  MRWGraph *m_graphParser;
+  MarinerWrtGraph *m_graphParser;
   //! the zone id
   int m_id;
 
@@ -463,7 +463,7 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MRWGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -487,21 +487,21 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MRWGraph::MRWGraph(MRWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new MRWGraphInternal::State),
+MarinerWrtGraph::MarinerWrtGraph(MarinerWrtParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new MarinerWrtGraphInternal::State),
   m_mainParser(&parser)
 {
 }
 
-MRWGraph::~MRWGraph()
+MarinerWrtGraph::~MarinerWrtGraph()
 { }
 
-int MRWGraph::version() const
+int MarinerWrtGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-int MRWGraph::numPages() const
+int MarinerWrtGraph::numPages() const
 {
   if (m_state->m_numPages)
     return m_state->m_numPages;
@@ -510,7 +510,7 @@ int MRWGraph::numPages() const
   return nPages;
 }
 
-float MRWGraph::getPatternPercent(int id) const
+float MarinerWrtGraph::getPatternPercent(int id) const
 {
   int numPattern = (int) m_state->m_patternList.size();
   if (!numPattern) {
@@ -522,29 +522,29 @@ float MRWGraph::getPatternPercent(int id) const
   return m_state->m_patternList[size_t(id)].m_percent;
 }
 
-void MRWGraph::sendText(int zoneId)
+void MarinerWrtGraph::sendText(int zoneId)
 {
   if (zoneId)
     m_mainParser->sendText(zoneId);
 }
 
-void MRWGraph::sendToken(int zoneId, long tokenId)
+void MarinerWrtGraph::sendToken(int zoneId, long tokenId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not the listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: can not the listener\n"));
     return;
   }
   if (m_state->m_zoneMap.find(zoneId)==m_state->m_zoneMap.end()) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not find zone %d\n", zoneId));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: can not find zone %d\n", zoneId));
     return;
   }
-  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtGraphInternal::Zone &zone = m_state->getZone(zoneId);
   if (zone.m_tokenMap.find(tokenId)== zone.m_tokenMap.end()) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendToken: can not find token id %ld\n", tokenId));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: can not find token id %ld\n", tokenId));
     return;
   }
-  MRWGraphInternal::Token const &token = zone.m_tokenMap.find(tokenId)->second;
+  MarinerWrtGraphInternal::Token const &token = zone.m_tokenMap.find(tokenId)->second;
   token.m_parsed = true;
   switch (token.m_type) {
   case 0x14:
@@ -589,7 +589,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
       listener->insertField(MWAWField(MWAWField::PageCount));
       break;
     default:
-      MWAW_DEBUG_MSG(("MRWGraph::sendToken: find unknown pagenumber style\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: find unknown pagenumber style\n"));
       listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     }
@@ -597,7 +597,7 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
   case 0x1e: {
     bool endNote=true;
     int fZoneId = m_mainParser->getZoneId(token.m_refId, endNote);
-    MWAWSubDocumentPtr subdoc(new MRWGraphInternal::SubDocument(*this, m_parserState->m_input, fZoneId));
+    MWAWSubDocumentPtr subdoc(new MarinerWrtGraphInternal::SubDocument(*this, m_parserState->m_input, fZoneId));
     listener->insertNote(MWAWNote(endNote ? MWAWNote::EndNote : MWAWNote::FootNote), subdoc);
     return;
   }
@@ -620,18 +620,18 @@ void MRWGraph::sendToken(int zoneId, long tokenId)
     break;
   }
 
-  MWAW_DEBUG_MSG(("MRWGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
+  MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
 }
 
-void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
+void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: can not find the listener\n"));
     return;
   }
   Vec2i const &sz=tkn.m_dim;
   if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendRule: the rule size seems bad\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: the rule size seems bad\n"));
     return;
   }
   std::vector<float> listW;
@@ -662,11 +662,11 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
     break;
   }
 
-  MRWGraphInternal::Pattern pat;
+  MarinerWrtGraphInternal::Pattern pat;
   if (tkn.m_rulePattern >= 0 && tkn.m_rulePattern < (int) m_state->m_patternList.size())
     pat = m_state->m_patternList[size_t(tkn.m_rulePattern)];
   else {
-    MWAW_DEBUG_MSG(("MRWGraph::sendRule: can not find pattern\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: can not find pattern\n"));
   }
   // retrieve the actual font to get the ruler color + a basic estimation of the line height
   MWAWFont actFont=m_parserState->m_textListener->getFont();
@@ -714,10 +714,10 @@ void MRWGraph::sendRule(MRWGraphInternal::Token const &tkn)
   }
 }
 
-void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
+void MarinerWrtGraph::sendPicture(MarinerWrtGraphInternal::Token const &tkn)
 {
   if (!tkn.m_pictData.valid()) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the graph\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendPicture: can not find the graph\n"));
     return;
   }
 
@@ -737,7 +737,7 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
 #endif
   Vec2i dim(tkn.m_dim);
   if (dim[0] <= 0 || dim[1] <= 0) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the picture dim\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendPicture: can not find the picture dim\n"));
     dim = Vec2i(100,100);
   }
   MWAWPosition posi(Vec2i(0,0),dim,librevenge::RVNG_POINT);
@@ -749,12 +749,12 @@ void MRWGraph::sendPicture(MRWGraphInternal::Token const &tkn)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
-void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos)
+void MarinerWrtGraph::sendPSZone(MarinerWrtGraphInternal::PSZone const &ps, MWAWPosition const &pos)
 {
   ps.m_parsed = true;
 
   if (!ps.m_pos.valid()) {
-    MWAW_DEBUG_MSG(("MRWGraph::sendPicture: can not find the graph\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::sendPicture: can not find the graph\n"));
     return;
   }
 
@@ -786,22 +786,22 @@ void MRWGraph::sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const
 //
 ////////////////////////////////////////////////////////////
 
-bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
+bool MarinerWrtGraph::readToken(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < 3) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList, 100);
   input->popLimit();
 
   size_t numData = dataList.size();
   if (numData < 16) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken: find unexpected number of data\n"));
     return false;
   }
 
@@ -810,15 +810,15 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   size_t d = 0;
   long val;
 
-  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
-  MRWGraphInternal::Token tkn;
+  MarinerWrtGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtGraphInternal::Token tkn;
   for (int j = 0; j < 14; j++) {
-    MRWStruct const &dt = dataList[d++];
+    MarinerWrtStruct const &dt = dataList[d++];
     if (!dt.isBasic()) {
       f << "#f" << j << "=" << dt << ",";
       static bool first=true;
       if (first) {
-        MWAW_DEBUG_MSG(("MRWGraph::readToken: find some struct block\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken: find some struct block\n"));
         first = false;
       }
       continue;
@@ -882,7 +882,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   f.str("");
   f << entry.name() << "(II):type=" << std::hex << tkn.m_type << std::dec << ",";
   for (int i = 0; i < 2; i++) {
-    MRWStruct const &data = dataList[d++];
+    MarinerWrtStruct const &data = dataList[d++];
     std::string str;
     if (i==0 && readTokenBlock0(data, tkn, str)) {
       if (str.length())
@@ -890,7 +890,7 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
       continue;
     }
     if (data.m_type != 0) {
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(II): can not read block%d\n", i));
+      MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken(II): can not read block%d\n", i));
       f << "###bl" << i << "=" << data << ",";
     }
     else {
@@ -924,12 +924,12 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   }
   if (tkn.m_type != 0x14 || numData < 32) {
     for (; d < numData; d++) {
-      MRWStruct const &data = dataList[d];
+      MarinerWrtStruct const &data = dataList[d];
       f << "#" << data << ",";
       static bool first = true;
       if (first) {
         first = false;
-        MWAW_DEBUG_MSG(("MRWGraph::readToken(II): find some extra data \n"));
+        MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken(II): find some extra data \n"));
       }
     }
     zone.m_tokenMap[tkn.m_id[0]] = tkn;
@@ -944,10 +944,10 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   ascFile.addPos(dataList[d].m_filePos);
   f.str("");
   for (int j = 0; j < 15; j++) {
-    MRWStruct const &dt = dataList[d++];
+    MarinerWrtStruct const &dt = dataList[d++];
     if (!dt.isBasic()) {
       f << "#f" << j << "=" << dt << ",";
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some struct block\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken(III): find some struct block\n"));
       continue;
     }
     switch (j) {
@@ -963,21 +963,21 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
     }
   }
 
-  MRWStruct dt = dataList[d++];
+  MarinerWrtStruct dt = dataList[d++];
   if (dt.m_type != 0 || !dt.m_pos.length()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readToken: can not find the picture data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken: can not find the picture data\n"));
     f << "###pictData=" << dt << ",";
   }
   else
     tkn.m_pictData = dt.m_pos;
 
   for (; d < numData; d++) {
-    MRWStruct const &data = dataList[d];
+    MarinerWrtStruct const &data = dataList[d];
     f << "#" << data << ",";
     static bool first = true;
     if (first) {
       first = false;
-      MWAW_DEBUG_MSG(("MRWGraph::readToken(III): find some extra data \n"));
+      MWAW_DEBUG_MSG(("MarinerWrtGraph::readToken(III): find some extra data \n"));
     }
   }
   tkn.m_extra += f.str();
@@ -991,15 +991,15 @@ bool MRWGraph::readToken(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &tkn, std::string &res)
+bool MarinerWrtGraph::readTokenBlock0(MarinerWrtStruct const &data, MarinerWrtGraphInternal::Token &tkn, std::string &res)
 {
   res = "";
   if (data.m_type != 0 || !data.m_pos.valid()) {
-    MWAW_DEBUG_MSG(("MRWGraph::readTokenBlock0: called without data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readTokenBlock0: called without data\n"));
     return false;
   }
   if (data.m_pos.length()<0x2c) {
-    MWAW_DEBUG_MSG(("MRWGraph::readTokenBlock0: the data seems very short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readTokenBlock0: the data seems very short\n"));
     return false;
   }
 
@@ -1096,33 +1096,33 @@ bool MRWGraph::readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &t
   return true;
 }
 
-bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
+bool MarinerWrtGraph::readPostscript(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < 3) {
-    MWAW_DEBUG_MSG(("MRWGraph::readPostscript: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readPostscript: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   m_mainParser->decodeZone(dataList, 1+3);
   input->popLimit();
 
   if (int(dataList.size()) != 3) {
-    MWAW_DEBUG_MSG(("MRWGraph::readPostscript: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readPostscript: find unexpected number of data\n"));
     return false;
   }
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   size_t d = 0;
-  MRWGraphInternal::Zone &zone = m_state->getZone(zoneId);
-  MRWGraphInternal::PSZone psFile;
+  MarinerWrtGraphInternal::Zone &zone = m_state->getZone(zoneId);
+  MarinerWrtGraphInternal::PSZone psFile;
   for (int i = 0; i < 2; i++) {
-    MRWStruct const &data = dataList[d++];
+    MarinerWrtStruct const &data = dataList[d++];
     if (!data.isBasic()) {
-      MWAW_DEBUG_MSG(("MRWGraph::readPostscript: find unexpected type for f0\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtGraph::readPostscript: find unexpected type for f0\n"));
       f << "###f" << i << "=" << data << ",";
     }
     else if (i==0)
@@ -1130,9 +1130,9 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
     else
       psFile.m_id = data.value(0);
   }
-  MRWStruct const &data = dataList[d++];
+  MarinerWrtStruct const &data = dataList[d++];
   if (data.m_type != 0) {
-    MWAW_DEBUG_MSG(("MRWGraph::readPostscript: can not find my file\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtGraph::readPostscript: can not find my file\n"));
     f << "###";
     psFile.m_extra=f.str();
   }
@@ -1172,34 +1172,34 @@ bool MRWGraph::readPostscript(MRWEntry const &entry, int zoneId)
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool MRWGraph::sendPageGraphics()
+bool MarinerWrtGraph::sendPageGraphics()
 {
   return true;
 }
 
-void MRWGraph::flushExtra()
+void MarinerWrtGraph::flushExtra()
 {
 #ifdef DEBUG
-  std::map<int,MRWGraphInternal::Zone>::const_iterator it = m_state->m_zoneMap.begin();
-  std::map<long,MRWGraphInternal::Token>::const_iterator tIt;
-  std::map<long,MRWGraphInternal::PSZone>::const_iterator psIt;
+  std::map<int,MarinerWrtGraphInternal::Zone>::const_iterator it = m_state->m_zoneMap.begin();
+  std::map<long,MarinerWrtGraphInternal::Token>::const_iterator tIt;
+  std::map<long,MarinerWrtGraphInternal::PSZone>::const_iterator psIt;
   MWAWPosition pictPos(Vec2i(0,0),Vec2i(0,0),librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   while (it != m_state->m_zoneMap.end()) {
     int zId = it->first;
-    MRWGraphInternal::Zone const &zone = it++->second;
+    MarinerWrtGraphInternal::Zone const &zone = it++->second;
 
     tIt = zone.m_tokenMap.begin();
     while (tIt != zone.m_tokenMap.end()) {
       long tId = it->first;
-      MRWGraphInternal::Token const &tkn = tIt++->second;
+      MarinerWrtGraphInternal::Token const &tkn = tIt++->second;
       if (tkn.m_parsed) continue;
       sendToken(zId, tId);
     }
     psIt = zone.m_psZoneMap.begin();
     while (psIt != zone.m_psZoneMap.end()) {
-      MRWGraphInternal::PSZone const &psZone = psIt++->second;
+      MarinerWrtGraphInternal::PSZone const &psZone = psIt++->second;
       if (psZone.m_parsed) continue;
       sendPSZone(psZone, pictPos);
     }

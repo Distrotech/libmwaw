@@ -35,13 +35,13 @@
  * Parser to Mariner Write text document
  *
  */
-#ifndef MRW_TEXT
-#  define MRW_TEXT
+#ifndef MARINER_WRT_TEXT
+#  define MARINER_WRT_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace MRWTextInternal
+namespace MarinerWrtTextInternal
 {
 struct Paragraph;
 struct State;
@@ -49,22 +49,22 @@ struct Table;
 struct Zone;
 }
 
-struct MRWEntry;
-class MRWParser;
+struct MarinerWrtEntry;
+class MarinerWrtParser;
 
 /** \brief the main class to read the text part of Mariner Write file
  *
  *
  *
  */
-class MRWText
+class MarinerWrtText
 {
-  friend class MRWParser;
+  friend class MarinerWrtParser;
 public:
   //! constructor
-  MRWText(MRWParser &parser);
+  MarinerWrtText(MarinerWrtParser &parser);
   //! destructor
-  virtual ~MRWText();
+  virtual ~MarinerWrtText();
 
   /** returns the file version */
   int version() const;
@@ -74,7 +74,7 @@ public:
 
 protected:
   /** sends a paragraph property to the listener */
-  void setProperty(MRWTextInternal::Paragraph const &ruler);
+  void setProperty(MarinerWrtTextInternal::Paragraph const &ruler);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -85,36 +85,36 @@ protected:
   /** try to send a zone (knowing zoneId) */
   bool send(int zoneId);
   /** try to send a zone */
-  bool send(MRWTextInternal::Zone const &zone, MWAWEntry const &entry);
+  bool send(MarinerWrtTextInternal::Zone const &zone, MWAWEntry const &entry);
 
   /** try to find the table structure beginning in actual position */
-  bool findTableStructure(MRWTextInternal::Table &table, MWAWEntry const &entry);
+  bool findTableStructure(MarinerWrtTextInternal::Table &table, MWAWEntry const &entry);
   /** try to send a table */
-  bool sendTable(MRWTextInternal::Table &table);
+  bool sendTable(MarinerWrtTextInternal::Table &table);
   /** try to read the text struct */
-  bool readTextStruct(MRWEntry const &entry, int zoneId);
+  bool readTextStruct(MarinerWrtEntry const &entry, int zoneId);
   /** try to read a text zone */
-  bool readZone(MRWEntry const &entry, int zoneId);
+  bool readZone(MarinerWrtEntry const &entry, int zoneId);
   /** try to compute the number of pages of a zone, returns 0 if not data */
-  int computeNumPages(MRWTextInternal::Zone const &zone) const;
+  int computeNumPages(MarinerWrtTextInternal::Zone const &zone) const;
   /** try to read a font zone */
-  bool readFonts(MRWEntry const &entry, int zoneId);
+  bool readFonts(MarinerWrtEntry const &entry, int zoneId);
 
   /** try to read a font name zone */
-  bool readFontNames(MRWEntry const &entry, int zoneId);
+  bool readFontNames(MarinerWrtEntry const &entry, int zoneId);
 
   /** try to read a ruler zone */
-  bool readRulers(MRWEntry const &entry, int zoneId);
+  bool readRulers(MarinerWrtEntry const &entry, int zoneId);
 
   /** try to read a PLC zone: position in text to char(zone 4) or ruler(zone 5) id */
-  bool readPLCZone(MRWEntry const &entry, int zoneId);
+  bool readPLCZone(MarinerWrtEntry const &entry, int zoneId);
 
   /** try to read a style name zone */
-  bool readStyleNames(MRWEntry const &entry, int zoneId);
+  bool readStyleNames(MarinerWrtEntry const &entry, int zoneId);
 
 private:
-  MRWText(MRWText const &orig);
-  MRWText &operator=(MRWText const &orig);
+  MarinerWrtText(MarinerWrtText const &orig);
+  MarinerWrtText &operator=(MarinerWrtText const &orig);
 
 protected:
   //
@@ -124,10 +124,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MRWTextInternal::State> m_state;
+  shared_ptr<MarinerWrtTextInternal::State> m_state;
 
   //! the main parser;
-  MRWParser *m_mainParser;
+  MarinerWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

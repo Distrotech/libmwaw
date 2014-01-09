@@ -35,8 +35,8 @@
  * Parser to Mariner Write text document ( graphic part )
  *
  */
-#ifndef MRW_GRAPH
-#  define MRW_GRAPH
+#ifndef MARINER_WRT_GRAPH
+#  define MARINER_WRT_GRAPH
 
 #include <string>
 #include <vector>
@@ -48,7 +48,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
 
-namespace MRWGraphInternal
+namespace MarinerWrtGraphInternal
 {
 struct State;
 struct PSZone;
@@ -56,25 +56,25 @@ struct Token;
 class SubDocument;
 }
 
-struct MRWEntry;
-struct MRWStruct;
-class MRWParser;
+struct MarinerWrtEntry;
+struct MarinerWrtStruct;
+class MarinerWrtParser;
 
 /** \brief the main class to read the graphic part of a Mariner Write file
  *
  *
  *
  */
-class MRWGraph
+class MarinerWrtGraph
 {
-  friend class MRWParser;
-  friend class MRWGraphInternal::SubDocument;
+  friend class MarinerWrtParser;
+  friend class MarinerWrtGraphInternal::SubDocument;
 
 public:
   //! constructor
-  MRWGraph(MRWParser &parser);
+  MarinerWrtGraph(MarinerWrtParser &parser);
   //! destructor
-  virtual ~MRWGraph();
+  virtual ~MarinerWrtGraph();
 
   /** returns the file version */
   int version() const;
@@ -95,18 +95,18 @@ protected:
   //
 
   /** try to read a postscript zone */
-  bool readPostscript(MRWEntry const &entry, int zoneId);
+  bool readPostscript(MarinerWrtEntry const &entry, int zoneId);
 
   /** try to read a token zone (can be a picture or a field) */
-  bool readToken(MRWEntry const &entry, int zoneId);
+  bool readToken(MarinerWrtEntry const &entry, int zoneId);
   /** try to read the first token zone ( which can contains some field text )*/
-  bool readTokenBlock0(MRWStruct const &data, MRWGraphInternal::Token &tkn, std::string &res);
+  bool readTokenBlock0(MarinerWrtStruct const &data, MarinerWrtGraphInternal::Token &tkn, std::string &res);
   /** try to send a picture token as char */
-  void sendPicture(MRWGraphInternal::Token const &tkn);
+  void sendPicture(MarinerWrtGraphInternal::Token const &tkn);
   /** try to send a rule */
-  void sendRule(MRWGraphInternal::Token const &tkn);
+  void sendRule(MarinerWrtGraphInternal::Token const &tkn);
   /** try to send a ps picture as pos */
-  void sendPSZone(MRWGraphInternal::PSZone const &ps, MWAWPosition const &pos);
+  void sendPSZone(MarinerWrtGraphInternal::PSZone const &ps, MWAWPosition const &pos);
 
   // interface with mainParser
 
@@ -116,8 +116,8 @@ protected:
   void sendText(int zoneId);
 
 private:
-  MRWGraph(MRWGraph const &orig);
-  MRWGraph &operator=(MRWGraph const &orig);
+  MarinerWrtGraph(MarinerWrtGraph const &orig);
+  MarinerWrtGraph &operator=(MarinerWrtGraph const &orig);
 
 protected:
   //
@@ -127,10 +127,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<MRWGraphInternal::State> m_state;
+  shared_ptr<MarinerWrtGraphInternal::State> m_state;
 
   //! the main parser;
-  MRWParser *m_mainParser;
+  MarinerWrtParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

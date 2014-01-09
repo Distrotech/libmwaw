@@ -235,7 +235,7 @@ SOURCE=..\..\src\lib\MacDocParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MDWParser.cxx
+SOURCE=..\..\src\lib\MindWrtParser.cxx
 # End Source File
 # Begin Source File
 
@@ -247,15 +247,15 @@ SOURCE=..\..\src\lib\MORText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWGraph.cxx
+SOURCE=..\..\src\lib\MarinerWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWParser.cxx
+SOURCE=..\..\src\lib\MarinerWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWText.cxx
+SOURCE=..\..\src\lib\MarinerWrtText.cxx
 # End Source File
 # Begin Source File
 
@@ -635,7 +635,7 @@ SOURCE=..\..\src\lib\MacDocParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MDWParser.hxx
+SOURCE=..\..\src\lib\MindWrtParser.hxx
 # End Source File
 # Begin Source File
 
@@ -647,15 +647,15 @@ SOURCE=..\..\src\lib\MORText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWGraph.hxx
+SOURCE=..\..\src\lib\MarinerWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWParser.hxx
+SOURCE=..\..\src\lib\MarinerWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWText.hxx
+SOURCE=..\..\src\lib\MarinerWrtText.hxx
 # End Source File
 # Begin Source File
 

@@ -34,8 +34,8 @@
 /*
  * Parser to convert MindWrite document
  */
-#ifndef MDW_PARSER
-#  define MDW_PARSER
+#ifndef MIND_WRT_PARSER
+#  define MIND_WRT_PARSER
 
 #include <string>
 #include <vector>
@@ -45,7 +45,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace MDWParserInternal
+namespace MindWrtParserInternal
 {
 struct LineInfo;
 struct State;
@@ -57,15 +57,15 @@ class SubDocument;
  *
  *
  */
-class MDWParser : public MWAWTextParser
+class MindWrtParser : public MWAWTextParser
 {
-  friend class MDWParserInternal::SubDocument;
+  friend class MindWrtParserInternal::SubDocument;
 
 public:
   //! constructor
-  MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MindWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MDWParser();
+  virtual ~MindWrtParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -87,16 +87,16 @@ protected:
   bool sendZone(int i);
 
   //! try to read a graphic
-  bool readGraphic(MDWParserInternal::LineInfo const &line);
+  bool readGraphic(MindWrtParserInternal::LineInfo const &line);
 
   //! try to read a ruler
-  bool readRuler(MDWParserInternal::LineInfo &line);
+  bool readRuler(MindWrtParserInternal::LineInfo &line);
 
   //! try to read a compressed text zone
-  bool readCompressedText(MDWParserInternal::LineInfo const &line);
+  bool readCompressedText(MindWrtParserInternal::LineInfo const &line);
 
   //! try to read a non compressed text zone
-  bool readText(MDWParserInternal::LineInfo const &line);
+  bool readText(MindWrtParserInternal::LineInfo const &line);
 
   //! try to send the text
   void sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos);
@@ -145,7 +145,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MDWParserInternal::State> m_state;
+  shared_ptr<MindWrtParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -53,13 +53,13 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MDWParser.hxx"
+#include "MindWrtParser.hxx"
 
-/** Internal: the structures of a MDWParser */
-namespace MDWParserInternal
+/** Internal: the structures of a MindWrtParser */
+namespace MindWrtParserInternal
 {
 ////////////////////////////////////////
-//! Internal: a field of a MDWParser
+//! Internal: a field of a MindWrtParser
 struct Field {
   //! constructor
   Field(MWAWField::Type type=MWAWField::None) : m_type(type), m_pos(0,-1), m_extra("")
@@ -103,7 +103,7 @@ struct Field {
     case MWAWField::PageCount:
     case MWAWField::Database:
     default:
-      MWAW_DEBUG_MSG(("MDWParserInternal::Field: unexpected field type %d\n", int(field.m_type)));
+      MWAW_DEBUG_MSG(("MindWrtParserInternal::Field: unexpected field type %d\n", int(field.m_type)));
       break;
     }
     o << "line=" << field.m_pos[1] << ", x=" << field.m_pos[0] << ",";
@@ -119,7 +119,7 @@ struct Field {
 };
 
 ////////////////////////////////////////
-//! Internal: the list properties of a MDWParser
+//! Internal: the list properties of a MindWrtParser
 struct ListProperties {
   //! constructor
   ListProperties() : m_startListIndex(1), m_headingStyle(1), m_headingFullSubLevels(true),
@@ -239,7 +239,7 @@ void  ListProperties::updateHeadingList()
   }
 }
 ////////////////////////////////////////
-//! Internal: a line information of a MDWParser
+//! Internal: a line information of a MindWrtParser
 struct LineInfo {
   LineInfo() : m_entry(), m_type(-1000), m_height(0), m_y(-1), m_page(-1),
     m_paragraph(),  m_specialHeadingInterface(false), m_paragraphSet(false), m_listLevel(0), m_listType(0), m_extra("")
@@ -356,7 +356,7 @@ struct LineInfo {
 };
 
 ////////////////////////////////////////
-//! Internal: a zone information of a MDWParser
+//! Internal: a zone information of a MindWrtParser
 struct ZoneInfo {
   ZoneInfo() : m_linesList()
   {
@@ -460,7 +460,7 @@ void ZoneInfo::updateListId(ListProperties &prop, MWAWListManager &listManager)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a MDWParser
+//! Internal: the state of a MindWrtParser
 struct State {
   //! constructor
   State() : m_compressCorr(" etnroaisdlhcfp"), m_entryMap(), m_listProperties(),
@@ -495,11 +495,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MDWParser
+//! Internal: the subdocument of a MindWrtParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MDWParser &pars, MWAWInputStreamPtr input, int zoneId, int step) :
+  SubDocument(MindWrtParser &pars, MWAWInputStreamPtr input, int zoneId, int step) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_step(step) {}
 
   //! destructor
@@ -549,7 +549,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 
   assert(m_parser);
   long pos = m_input->tell();
-  MDWParser *parser=static_cast<MDWParser *>(m_parser);
+  MindWrtParser *parser=static_cast<MindWrtParser *>(m_parser);
   if (m_step==0)
     parser->sendHeaderFooter(m_id==1);
   else
@@ -561,22 +561,22 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MDWParser::MDWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MindWrtParser::MindWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-MDWParser::~MDWParser()
+MindWrtParser::~MindWrtParser()
 {
 }
 
-void MDWParser::init()
+void MindWrtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MDWParserInternal::State);
+  m_state.reset(new MindWrtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
@@ -585,7 +585,7 @@ void MDWParser::init()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MDWParser::newPage(int number)
+void MindWrtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -598,14 +598,14 @@ void MDWParser::newPage(int number)
   }
 }
 
-MWAWEntry MDWParser::readEntry()
+MWAWEntry MindWrtParser::readEntry()
 {
   MWAWEntry res;
   MWAWInputStreamPtr input = getInput();
   res.setBegin((long) input->readULong(4));
   res.setLength((long) input->readULong(4));
   if (res.length() && !input->checkPosition(res.end())) {
-    MWAW_DEBUG_MSG(("MDWParser::readEntry: find an invalid entry\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readEntry: find an invalid entry\n"));
     res.setLength(0);
   }
   return res;
@@ -613,7 +613,7 @@ MWAWEntry MDWParser::readEntry()
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MindWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -630,7 +630,7 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
       std::string corrString("");
       if (corrEntry.valid() && getRSRCParser()->parseSTR(corrEntry, corrString)) {
         if (corrString.length() != 15) {
-          MWAW_DEBUG_MSG(("MDWParser::parse: resource correspondance string seems bad\n"));
+          MWAW_DEBUG_MSG(("MindWrtParser::parse: resource correspondance string seems bad\n"));
         }
         else
           m_state->m_compressCorr = corrString;
@@ -659,7 +659,7 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MDWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -670,11 +670,11 @@ void MDWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MindWrtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MDWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -683,7 +683,7 @@ void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 
   int numPage = 0, numBreakPage = 0;
   for (size_t i = 0; i < m_state->m_zones[0].m_linesList.size(); i++) {
-    MDWParserInternal::LineInfo const &line = m_state->m_zones[0].m_linesList[i];
+    MindWrtParserInternal::LineInfo const &line = m_state->m_zones[0].m_linesList[i];
     if (line.m_type == -2)
       numBreakPage++;
     if (line.m_page > numPage)
@@ -698,7 +698,7 @@ void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     if (!m_state->m_zones[i].m_linesList.size())
       continue;
     MWAWHeaderFooter hF((i==1) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new MDWParserInternal::SubDocument(*this, getInput(), i, 0));
+    hF.m_subDocument.reset(new MindWrtParserInternal::SubDocument(*this, getInput(), i, 0));
     ps.setHeaderFooter(hF);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -715,13 +715,13 @@ void MDWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MDWParser::createZones()
+bool MindWrtParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   long pos = input->tell();
   if (!input->checkPosition(pos+128+56)) {
-    MWAW_DEBUG_MSG(("MDWParser::createZones: zones Zone is too short\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::createZones: zones Zone is too short\n"));
     return false;
   }
 
@@ -831,15 +831,15 @@ bool MDWParser::createZones()
 ////////////////////////////////////////////////////////////
 // try to send a text zone
 ////////////////////////////////////////////////////////////
-bool MDWParser::sendZone(int id)
+bool MindWrtParser::sendZone(int id)
 {
   if (id < 0 || id >= 3) {
-    MWAW_DEBUG_MSG(("MDWParser::sendZone: find unexpected id %d\n", id));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendZone: find unexpected id %d\n", id));
     return false;
   }
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MDWParser::sendZone: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendZone: can not find a listener\n"));
     return false;
   }
 
@@ -856,9 +856,9 @@ bool MDWParser::sendZone(int id)
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   if (id==0) m_state->m_actPage = 1;
-  MDWParserInternal::ZoneInfo &zone = m_state->m_zones[id];
+  MindWrtParserInternal::ZoneInfo &zone = m_state->m_zones[id];
   for (size_t i = 0; i < zone.m_linesList.size(); i++) {
-    MDWParserInternal::LineInfo &line = zone.m_linesList[i];
+    MindWrtParserInternal::LineInfo &line = zone.m_linesList[i];
     if (i==0) {
       ascii().addPos(line.m_entry.begin());
       ascii().addNote("Entries(Text)");
@@ -893,7 +893,7 @@ bool MDWParser::sendZone(int id)
       break;
     case -2:
       if (id!=0) {
-        MWAW_DEBUG_MSG(("MDWParser::sendZone: find page break on not main zone\n"));
+        MWAW_DEBUG_MSG(("MindWrtParser::sendZone: find page break on not main zone\n"));
         break;
       }
       newPage(m_state->m_actPage+1);
@@ -918,7 +918,7 @@ bool MDWParser::sendZone(int id)
 ////////////////////////////////////////////////////////////
 // read a graphic zone
 ////////////////////////////////////////////////////////////
-bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
+bool MindWrtParser::readGraphic(MindWrtParserInternal::LineInfo const &line)
 {
   if (!line.m_entry.valid())
     return false;
@@ -927,7 +927,7 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
   libmwaw::DebugStream f;
   int sz = (int) line.m_entry.length();
   if (sz < 10) {
-    MWAW_DEBUG_MSG(("MDWParser::readGraphic: zone size is two short or odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readGraphic: zone size is two short or odd\n"));
     return false;
   }
 
@@ -942,7 +942,7 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, sz-8));
   if (!pict) {
-    MWAW_DEBUG_MSG(("MDWParser::readGraphic: can not read the picture\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readGraphic: can not read the picture\n"));
     return false;
   }
   librevenge::RVNGBinaryData data;
@@ -961,14 +961,14 @@ bool MDWParser::readGraphic(MDWParserInternal::LineInfo const &line)
 ////////////////////////////////////////////////////////////
 // read a ruler zone
 ////////////////////////////////////////////////////////////
-bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
+bool MindWrtParser::readRuler(MindWrtParserInternal::LineInfo &line)
 {
   line.m_paragraph = MWAWParagraph();
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
 
   if (line.m_entry.length() < 10 || (line.m_entry.length()%2)) {
-    MWAW_DEBUG_MSG(("MDWParser::readRuler: zone size is two short or odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readRuler: zone size is two short or odd\n"));
     return false;
   }
   line.m_specialHeadingInterface = (line.m_flags[1] & 0x4)==0;
@@ -1004,7 +1004,7 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
   }
   int N = (int) input->readULong(1);
   if (line.m_entry.length() != 2*N+10) {
-    MWAW_DEBUG_MSG(("MDWParser::readRuler: num tabs is incorrect\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readRuler: num tabs is incorrect\n"));
     line.m_paragraph = para;
     line.m_paragraphSet = true;
     return false;
@@ -1056,15 +1056,15 @@ bool MDWParser::readRuler(MDWParserInternal::LineInfo &line)
 ////////////////////////////////////////////////////////////
 // send the header data
 ////////////////////////////////////////////////////////////
-void MDWParser::sendHeaderFooter(bool header)
+void MindWrtParser::sendHeaderFooter(bool header)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooter: can note find the listener\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendHeaderFooter: can note find the listener\n"));
     return;
   }
   int zId=header ? 1 : 2;
-  std::vector<MDWParserInternal::Field> const &fieldList=
+  std::vector<MindWrtParserInternal::Field> const &fieldList=
     header ? m_state->m_headerFieldList : m_state->m_footerFieldList;
   if (fieldList.size()) {
     /** field are separated from the main text
@@ -1072,25 +1072,25 @@ void MDWParser::sendHeaderFooter(bool header)
     MWAWPosition fPos(Vec2f(0,0), Vec2f(float(getPageWidth()),0), librevenge::RVNG_INCH);
     fPos.m_anchorTo = MWAWPosition::Paragraph;
     fPos.m_wrapping =  MWAWPosition::WBackground;
-    shared_ptr<MDWParserInternal::SubDocument> subDoc
-    (new MDWParserInternal::SubDocument(*this, getInput(), zId, 1));
+    shared_ptr<MindWrtParserInternal::SubDocument> subDoc
+    (new MindWrtParserInternal::SubDocument(*this, getInput(), zId, 1));
     listener->insertTextBox(fPos, subDoc);
   }
   sendZone(zId);
 }
 
-void MDWParser::sendHeaderFooterFields(bool header)
+void MindWrtParser::sendHeaderFooterFields(bool header)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: can note find the listener\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendHeaderFooterFields: can note find the listener\n"));
     return;
   }
-  std::vector<MDWParserInternal::Field> fieldList=
+  std::vector<MindWrtParserInternal::Field> fieldList=
     header ? m_state->m_headerFieldList : m_state->m_footerFieldList;
   size_t numFields=fieldList.size();
   if (!numFields) {
-    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: called with empty field list\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendHeaderFooterFields: called with empty field list\n"));
     return;
   }
   // sort the field list by position ; at most 4 elements, so...
@@ -1100,13 +1100,13 @@ void MDWParser::sendHeaderFooterFields(bool header)
       if (diffLine > 0 ||
           (diffLine==0 && fieldList[j].m_pos[0]>fieldList[i].m_pos[0]))
         continue;
-      MDWParserInternal::Field tmp=fieldList[j];
+      MindWrtParserInternal::Field tmp=fieldList[j];
       fieldList[j]=fieldList[i];
       fieldList[i]=tmp;
     }
   }
   if (fieldList[numFields-1].m_pos[1]>10) {
-    MWAW_DEBUG_MSG(("MDWParser::sendHeaderFooterFields: the line position seems too big\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendHeaderFooterFields: the line position seems too big\n"));
     return;
   }
   int actLine = 0;
@@ -1150,7 +1150,7 @@ void MDWParser::sendHeaderFooterFields(bool header)
 ////////////////////////////////////////////////////////////
 // read the text zone
 ////////////////////////////////////////////////////////////
-bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
+bool MindWrtParser::readText(MindWrtParserInternal::LineInfo const &line)
 {
   if (!line.m_entry.valid())
     return false;
@@ -1163,7 +1163,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int num = (int) input->readULong(2);
   if (pos+num >= endPos) {
-    MWAW_DEBUG_MSG(("MDWParser::readText: numChar is too long\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readText: numChar is too long\n"));
     return false;
   }
 
@@ -1192,7 +1192,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
   for (int n = 0; n < num; n++) {
     char c = (char) input->readULong(1);
     if (!c) {
-      MWAW_DEBUG_MSG(("MDWParser::readText: find 0 char\n"));
+      MWAW_DEBUG_MSG(("MindWrtParser::readText: find 0 char\n"));
       continue;
     }
     text+=(char) c;
@@ -1218,7 +1218,7 @@ bool MDWParser::readText(MDWParserInternal::LineInfo const &line)
   return true;
 }
 
-bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
+bool MindWrtParser::readCompressedText(MindWrtParserInternal::LineInfo const &line)
 {
   if (!line.m_entry.valid())
     return false;
@@ -1230,7 +1230,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int num = (int) input->readULong(2);
   if (pos+num/2 > endPos) {
-    MWAW_DEBUG_MSG(("MDWParser::readCompressedText: numChar is too long\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readCompressedText: numChar is too long\n"));
     return false;
   }
 
@@ -1260,7 +1260,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
   std::string text("");
   for (int n = 0; n < num; n++) {
     if (input->tell() >= endPos) {
-      MWAW_DEBUG_MSG(("MDWParser::readCompressedText: entry is too short\n"));
+      MWAW_DEBUG_MSG(("MindWrtParser::readCompressedText: entry is too short\n"));
       return false;
     }
     int highByte = 0;
@@ -1268,7 +1268,7 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
       int actVal;
       if (!actualCharSet) {
         if (input->isEnd()) {
-          MWAW_DEBUG_MSG(("MDWParser::readCompressedText: text is too long\n"));
+          MWAW_DEBUG_MSG(("MindWrtParser::readCompressedText: text is too long\n"));
           return false;
         }
         actualChar = (int) input->readULong(1);
@@ -1317,8 +1317,8 @@ bool MDWParser::readCompressedText(MDWParserInternal::LineInfo const &line)
 ////////////////////////////////////////////////////////////
 // read the fonts
 ////////////////////////////////////////////////////////////
-bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
-                          std::vector<int> &textPos)
+bool MindWrtParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
+                              std::vector<int> &textPos)
 {
   textPos.resize(0);
   fonts.resize(0);
@@ -1329,12 +1329,12 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
   long pos = input->tell();
   long endPos= entry.end();
   if (pos+2 > endPos) {
-    MWAW_DEBUG_MSG(("MDWParser::readFonts: zone is too short\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readFonts: zone is too short\n"));
     return false;
   }
   int sz = (int) input->readULong(2);
   if (pos+2+sz > endPos || (sz%6)) {
-    MWAW_DEBUG_MSG(("MDWParser::readFonts: sz is odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readFonts: sz is odd\n"));
     return false;
   }
   int N = sz/6;
@@ -1379,9 +1379,9 @@ bool MDWParser::readFonts(MWAWEntry const &entry, std::vector<MWAWFont> &fonts,
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
+bool MindWrtParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MDWParserInternal::State();
+  *m_state = MindWrtParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -1390,7 +1390,7 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
 
   int const headerSize=0x50;
   if (!input->checkPosition(headerSize)) {
-    MWAW_DEBUG_MSG(("MDWParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -1487,20 +1487,20 @@ bool MDWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // read the line info zones
 ////////////////////////////////////////////////////////////
-bool MDWParser::readLinesInfo(MWAWEntry &entry)
+bool MindWrtParser::readLinesInfo(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.id() < 0 || entry.id() >= 3) {
-    MWAW_DEBUG_MSG(("MDWParser::readLinesInfo: bad entry id %d\n", entry.id()));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLinesInfo: bad entry id %d\n", entry.id()));
     return false;
   }
   if (entry.length()%32) {
-    MWAW_DEBUG_MSG(("MDWParser::readLinesInfo: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLinesInfo: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readLinesInfo: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLinesInfo: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1510,10 +1510,10 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
   int N = int(entry.length())/32;
 
   libmwaw::DebugStream f;
-  MDWParserInternal::ZoneInfo &textZone = m_state->m_zones[entry.id()];
+  MindWrtParserInternal::ZoneInfo &textZone = m_state->m_zones[entry.id()];
   textZone.m_linesList.clear();
   for (int n = 0; n < N; n++) {
-    MDWParserInternal::LineInfo line;
+    MindWrtParserInternal::LineInfo line;
 
     pos = input->tell();
     f.str("");
@@ -1549,7 +1549,7 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
   MWAWParagraph para;
   bool hasSpecialHeadInterface = false;
   for (size_t n = 0; n < size_t(N); n++) {
-    MDWParserInternal::LineInfo &line=textZone.m_linesList[n];
+    MindWrtParserInternal::LineInfo &line=textZone.m_linesList[n];
     if (line.m_height || line.m_type) {
       line.m_paragraph=para;
       line.m_specialHeadingInterface = hasSpecialHeadInterface;
@@ -1567,16 +1567,16 @@ bool MDWParser::readLinesInfo(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the last zone ( use ?)
 ////////////////////////////////////////////////////////////
-bool MDWParser::readLastZone(MWAWEntry &entry)
+bool MindWrtParser::readLastZone(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()<0x8 || (entry.length())%4!=0) {
-    MWAW_DEBUG_MSG(("MDWParser::readLastZone: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLastZone: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readLastZone: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLastZone: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1594,7 +1594,7 @@ bool MDWParser::readLastZone(MWAWEntry &entry)
   }
   val = (long) input->readULong(4);
   if (val != pos) {
-    MWAW_DEBUG_MSG(("MDWParser::readLastZone: the ptr seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readLastZone: the ptr seems odd\n"));
     f << "#ptr=" << std::hex << val << std::dec << ",";
   }
   val = (long) input->readULong(2); // always 0x7fff
@@ -1609,12 +1609,12 @@ bool MDWParser::readLastZone(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the heading state/properties/custom
 ////////////////////////////////////////////////////////////
-bool MDWParser::readHeadingStates(MWAWEntry &entry)
+bool MindWrtParser::readHeadingStates(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (!entry.length() || (entry.length()%2)) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingStates: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingStates: the size seems odd\n"));
     return false;
   }
   entry.setParsed(true);
@@ -1657,13 +1657,13 @@ bool MDWParser::readHeadingStates(MWAWEntry &entry)
   return true;
 }
 
-bool MDWParser::readHeadingCustom(MWAWEntry &entry)
+bool MindWrtParser::readHeadingCustom(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   int len=int(entry.length());
   if (len<16) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingCustom: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingCustom: the size seems odd\n"));
     return false;
   }
   entry.setParsed(true);
@@ -1673,7 +1673,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   libmwaw::DebugStream f;
   f << "HeadCust:";
   if ((int) input->readULong(2)!= len) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingCustom: the size field seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingCustom: the size field seems odd\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1682,7 +1682,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   if (len < 16+2*N) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingCustom: N seems bads\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingCustom: N seems bads\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1697,7 +1697,7 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   if (debDeplPos+2*N >= len || debStringPos > len) {
     f << "##deplPos=" << debDeplPos << ","
       << "##stringPos=" << debStringPos << ",";
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingCustom: can not read first pos\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingCustom: can not read first pos\n"));
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
@@ -1784,16 +1784,16 @@ bool MDWParser::readHeadingCustom(MWAWEntry &entry)
   return true;
 }
 
-bool MDWParser::readHeadingProperties(MWAWEntry &entry)
+bool MindWrtParser::readHeadingProperties(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()!=32) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingProperties: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingProperties: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingProperties: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingProperties: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1861,16 +1861,16 @@ bool MDWParser::readHeadingProperties(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read zone8
 ////////////////////////////////////////////////////////////
-bool MDWParser::readZone8(MWAWEntry &entry)
+bool MindWrtParser::readZone8(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()!=48) {
-    MWAW_DEBUG_MSG(("MDWParser::readZone8: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readZone8: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readZone8: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readZone8: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1916,16 +1916,16 @@ bool MDWParser::readZone8(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // header/footer fields position
 ////////////////////////////////////////////////////////////
-bool MDWParser::readHeadingFields(MWAWEntry &entry)
+bool MindWrtParser::readHeadingFields(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()%12) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingFields: the size seems odd\n"));
     return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingFields: entry is already parsed\n"));
     return true;
   }
   entry.setParsed(true);
@@ -1935,7 +1935,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
 
   int num = int(entry.length()/12);
   if (num != 8) {
-    MWAW_DEBUG_MSG(("MDWParser::readHeadingFields: the number of fields seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readHeadingFields: the number of fields seems odd\n"));
   }
   libmwaw::DebugStream f;
   long val;
@@ -1944,7 +1944,7 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
   };
   for (int i = 0; i < num; i++) {
     pos = input->tell();
-    MDWParserInternal::Field field(listType[i%4]);
+    MindWrtParserInternal::Field field(listType[i%4]);
     f.str("");
     int dim[2];
     for (int j=0; j < 2; j++)
@@ -1975,17 +1975,17 @@ bool MDWParser::readHeadingFields(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool MDWParser::readPrintInfo(MWAWEntry &entry)
+bool MindWrtParser::readPrintInfo(MWAWEntry &entry)
 {
   if (!entry.valid())
     return false;
   if (entry.length()!=0x78) {
-    MWAW_DEBUG_MSG(("MDWParser::readPrintInfo: the size seems odd\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readPrintInfo: the size seems odd\n"));
     if (entry.length() < 0x78)
       return false;
   }
   if (entry.isParsed()) {
-    MWAW_DEBUG_MSG(("MDWParser::readPrintInfo: entry is already parsed\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readPrintInfo: entry is already parsed\n"));
     return true;
   }
   MWAWInputStreamPtr input = getInput();
@@ -2031,7 +2031,7 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
 
   input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != pos+0x78) {
-    MWAW_DEBUG_MSG(("MDWParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::readPrintInfo: file is too short\n"));
     return false;
   }
 
@@ -2041,13 +2041,13 @@ bool MDWParser::readPrintInfo(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // send the text, ...
 ////////////////////////////////////////////////////////////
-void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos)
+void MindWrtParser::sendText(std::string const &text, std::vector<MWAWFont> const &fonts, std::vector<int> const &textPos)
 {
   if (!getTextListener() || !text.length())
     return;
   size_t numFonts = fonts.size();
   if (numFonts != textPos.size()) {
-    MWAW_DEBUG_MSG(("MDWParser::sendText: find fonts/textPos incompatibility\n"));
+    MWAW_DEBUG_MSG(("MindWrtParser::sendText: find fonts/textPos incompatibility\n"));
     if (numFonts > textPos.size())
       numFonts = textPos.size();
   }
@@ -2071,7 +2071,7 @@ void MDWParser::sendText(std::string const &text, std::vector<MWAWFont> const &f
   }
 }
 
-void MDWParser::setProperty(MWAWParagraph const &para)
+void MindWrtParser::setProperty(MWAWParagraph const &para)
 {
   if (!getTextListener()) return;
   getTextListener()->setParagraph(para);

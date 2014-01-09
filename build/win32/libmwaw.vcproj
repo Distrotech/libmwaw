@@ -320,7 +320,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MDWParser.cxx"
+				RelativePath="..\..\src\lib\MindWrtParser.cxx"
 				>
 			</File>
 			<File
@@ -332,15 +332,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWGraph.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWParser.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWText.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtText.cxx"
 				>
 			</File>
 			<File
@@ -721,7 +721,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MDWParser.hxx"
+				RelativePath="..\..\src\lib\MindWrtParser.hxx"
 				>
 			</File>
 			<File
@@ -733,15 +733,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWGraph.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWParser.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWText.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtText.hxx"
 				>
 			</File>
 			<File

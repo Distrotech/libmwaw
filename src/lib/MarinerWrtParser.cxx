@@ -56,16 +56,16 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MRWGraph.hxx"
-#include "MRWText.hxx"
+#include "MarinerWrtGraph.hxx"
+#include "MarinerWrtText.hxx"
 
-#include "MRWParser.hxx"
+#include "MarinerWrtParser.hxx"
 
-/** Internal: the structures of a MRWParser */
-namespace MRWParserInternal
+/** Internal: the structures of a MarinerWrtParser */
+namespace MarinerWrtParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the struct used to store the zone of a MRWParser
+//! Internal: the struct used to store the zone of a MarinerWrtParser
 struct Zone {
   //! a enum to define the diffent zone type
   enum Type { Z_Main, Z_Footnote, Z_Header, Z_Footer, Z_Unknown };
@@ -156,7 +156,7 @@ std::ostream &operator<<(std::ostream &o, Zone const &zone)
   return o;
 }
 ////////////////////////////////////////
-//! Internal: the state of a MRWParser
+//! Internal: the state of a MarinerWrtParser
 struct State {
   //! constructor
   State() : m_zonesList(), m_fileToZoneMap(),
@@ -178,11 +178,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a MRWParser
+//! Internal: the subdocument of a MarinerWrtParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(MRWParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(MarinerWrtParser &pars, MWAWInputStreamPtr input, int zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -220,7 +220,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   }
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<MRWParser *>(m_parser)->sendText(m_id);
+  reinterpret_cast<MarinerWrtParser *>(m_parser)->sendText(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -228,40 +228,40 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // constructor/destructor + basic interface ...
 ////////////////////////////////////////////////////////////
-MRWParser::MRWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MarinerWrtParser::MarinerWrtParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_pageMarginsSpanSet(false), m_graphParser(), m_textParser()
 {
   init();
 }
 
-MRWParser::~MRWParser()
+MarinerWrtParser::~MarinerWrtParser()
 {
 }
 
-void MRWParser::init()
+void MarinerWrtParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MRWParserInternal::State);
+  m_state.reset(new MarinerWrtParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_graphParser.reset(new MRWGraph(*this));
-  m_textParser.reset(new MRWText(*this));
+  m_graphParser.reset(new MarinerWrtGraph(*this));
+  m_textParser.reset(new MarinerWrtText(*this));
 }
 
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f MRWParser::getPageLeftTop() const
+Vec2f MarinerWrtParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-MWAWSection MRWParser::getSection(int zId) const
+MWAWSection MarinerWrtParser::getSection(int zId) const
 {
   if (zId >= 0 && zId < int(m_state->m_zonesList.size()))
     return m_state->m_zonesList[size_t(zId)].m_section;
@@ -271,7 +271,7 @@ MWAWSection MRWParser::getSection(int zId) const
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MRWParser::newPage(int number)
+void MarinerWrtParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -287,10 +287,10 @@ void MRWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // interface
 ////////////////////////////////////////////////////////////
-int MRWParser::getZoneId(uint32_t fileId, bool &endNote)
+int MarinerWrtParser::getZoneId(uint32_t fileId, bool &endNote)
 {
   if (m_state->m_fileToZoneMap.find(fileId)==m_state->m_fileToZoneMap.end()) {
-    MWAW_DEBUG_MSG(("MRWParser::getZoneId: can not find zone for %x\n", fileId));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::getZoneId: can not find zone for %x\n", fileId));
     return -1;
   }
   int id=m_state->m_fileToZoneMap.find(fileId)->second;
@@ -300,7 +300,7 @@ int MRWParser::getZoneId(uint32_t fileId, bool &endNote)
   return id;
 }
 
-void MRWParser::sendText(int zoneId)
+void MarinerWrtParser::sendText(int zoneId)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
@@ -308,12 +308,12 @@ void MRWParser::sendText(int zoneId)
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
 }
 
-float MRWParser::getPatternPercent(int id) const
+float MarinerWrtParser::getPatternPercent(int id) const
 {
   return m_graphParser->getPatternPercent(id);
 }
 
-void MRWParser::sendToken(int zoneId, long tokenId)
+void MarinerWrtParser::sendToken(int zoneId, long tokenId)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
@@ -324,7 +324,7 @@ void MRWParser::sendToken(int zoneId, long tokenId)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MRWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MarinerWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -350,7 +350,7 @@ void MRWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MRWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -361,11 +361,11 @@ void MRWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MarinerWrtParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MRWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -385,12 +385,12 @@ void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   // look for an header/footer
   int headerId[4] = { -1, -1, -1, -1}, footerId[4] = { -1, -1, -1, -1};
   for (size_t z = 0; z < m_state->m_zonesList.size(); z++) {
-    MRWParserInternal::Zone const &zone=m_state->m_zonesList[z];
-    if (zone.m_type==MRWParserInternal::Zone::Z_Header) {
+    MarinerWrtParserInternal::Zone const &zone=m_state->m_zonesList[z];
+    if (zone.m_type==MarinerWrtParserInternal::Zone::Z_Header) {
       if (zone.m_fileId < 4)
         headerId[zone.m_fileId]=int(z);
     }
-    else if (zone.m_type==MRWParserInternal::Zone::Z_Footer) {
+    else if (zone.m_type==MarinerWrtParserInternal::Zone::Z_Footer) {
       if (zone.m_fileId < 4)
         footerId[zone.m_fileId]=int(z);
     }
@@ -399,12 +399,12 @@ void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
   if (m_state->m_firstPageFooter) {
     if (headerId[3]>0) {
       MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-      header.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[3])));
+      header.m_subDocument.reset(new MarinerWrtParserInternal::SubDocument(*this, getInput(), int(headerId[3])));
       firstPs.setHeaderFooter(header);
     }
     if (footerId[3]>0) {
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-      footer.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[3])));
+      footer.m_subDocument.reset(new MarinerWrtParserInternal::SubDocument(*this, getInput(), int(footerId[3])));
       firstPs.setHeaderFooter(footer);
     }
   }
@@ -414,12 +414,12 @@ void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     int which= !m_state->m_hasOddEvenHeaderFooter ? 0 : 1+st;
     if (headerId[which]>0) {
       MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, what);
-      header.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(headerId[which])));
+      header.m_subDocument.reset(new MarinerWrtParserInternal::SubDocument(*this, getInput(), int(headerId[which])));
       ps.setHeaderFooter(header);
     }
     if (footerId[which]>0) {
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, what);
-      footer.m_subDocument.reset(new MRWParserInternal::SubDocument(*this, getInput(), int(footerId[which])));
+      footer.m_subDocument.reset(new MarinerWrtParserInternal::SubDocument(*this, getInput(), int(footerId[which])));
       ps.setHeaderFooter(footer);
     }
     if (!m_state->m_hasOddEvenHeaderFooter)
@@ -449,7 +449,7 @@ void MRWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 ////////////////////////////////////////////////////////////
 
 // ------ read the different zones ---------
-bool MRWParser::createZones()
+bool MarinerWrtParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -461,13 +461,13 @@ bool MRWParser::createZones()
   return m_state->m_zonesList.size();
 }
 
-bool MRWParser::readZone(int &actZone, bool onlyTest)
+bool MarinerWrtParser::readZone(int &actZone, bool onlyTest)
 {
   MWAWInputStreamPtr input = getInput();
   if (input->isEnd())
     return false;
   long pos = input->tell();
-  MRWEntry zone;
+  MarinerWrtEntry zone;
   if (!readEntryHeader(zone)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
@@ -554,7 +554,7 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
     return false;
   input->seek(zone.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(zone.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList);
   input->popLimit();
 
@@ -565,7 +565,7 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
 
   int numDataByField = zone.m_fileType==1 ? 22 : 10;
   for (size_t d = 0; d < numData; d++) {
-    MRWStruct const &dt = dataList[d];
+    MarinerWrtStruct const &dt = dataList[d];
     if ((int(d)%numDataByField)==0) {
       if (d)
         ascii().addNote(f.str().c_str());
@@ -594,25 +594,25 @@ bool MRWParser::readZone(int &actZone, bool onlyTest)
 // --------- zone separator ----------
 
 // read the zone separator
-bool MRWParser::readSeparator(MRWEntry const &entry)
+bool MarinerWrtParser::readSeparator(MarinerWrtEntry const &entry)
 {
   if (entry.length() < 0x3) {
-    MWAW_DEBUG_MSG(("MRWParser::readSeparator: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readSeparator: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList);
   input->popLimit();
 
   if (dataList.size() != 1) {
-    MWAW_DEBUG_MSG(("MRWParser::readSeparator: can find my data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readSeparator: can find my data\n"));
     return false;
   }
 
-  MRWStruct const &data = dataList[0]; // always 0x77aa
+  MarinerWrtStruct const &data = dataList[0]; // always 0x77aa
   libmwaw::DebugStream f;
   f << entry.name() << "[data]:";
   if (data.m_data.size() != 1 || data.m_data[0] != 0x77aa)
@@ -623,22 +623,22 @@ bool MRWParser::readSeparator(MRWEntry const &entry)
   return true;
 }
 
-bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
+bool MarinerWrtParser::readZoneHeader(MarinerWrtEntry const &entry, int actId, bool onlyTest)
 {
   if (entry.length() < 3) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneHeader: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList);
   input->popLimit();
 
   size_t numData = dataList.size();
   if (numData < 47) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneHeader: find unexpected number of data\n"));
     return false;
   }
   if (onlyTest)
@@ -646,9 +646,9 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
   size_t d = 0;
   long val;
   libmwaw::DebugStream f;
-  MRWParserInternal::Zone zone;
+  MarinerWrtParserInternal::Zone zone;
   for (int j = 0; j < 47; j++) {
-    MRWStruct const &data = dataList[d++];
+    MarinerWrtStruct const &data = dataList[d++];
     if (!data.isBasic()) {
       f << "###f" << j << "=" << data << ",";
       continue;
@@ -693,16 +693,16 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
       uint32_t v = uint32_t(data.value(0));
       switch (v>>28) {
       case 0: // main
-        zone.m_type = MRWParserInternal::Zone::Z_Main;
+        zone.m_type = MarinerWrtParserInternal::Zone::Z_Main;
         break;
       case 0xc:
-        zone.m_type = MRWParserInternal::Zone::Z_Header;
+        zone.m_type = MarinerWrtParserInternal::Zone::Z_Header;
         break;
       case 0xd:
-        zone.m_type = MRWParserInternal::Zone::Z_Footer;
+        zone.m_type = MarinerWrtParserInternal::Zone::Z_Footer;
         break;
       case 0xe:
-        zone.m_type = MRWParserInternal::Zone::Z_Footnote;
+        zone.m_type = MarinerWrtParserInternal::Zone::Z_Footnote;
         break;
       default:
         f << "#type=" << (v>>28) << ",";
@@ -815,7 +815,7 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
   }
   zone.m_extra = f.str();
   if (actId < 0) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneHeader: called with negative id\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneHeader: called with negative id\n"));
   }
   else {
     if (actId >= int(m_state->m_zonesList.size()))
@@ -830,21 +830,21 @@ bool MRWParser::readZoneHeader(MRWEntry const &entry, int actId, bool onlyTest)
   return true;
 }
 
-bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
+bool MarinerWrtParser::readZoneDim(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneDim: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneDim: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList, 1+4*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 4*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneDim: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneDim: find unexpected number of data\n"));
     return false;
   }
 
@@ -858,9 +858,9 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
 
     int dim[4] = { 0, 0, 0, 0 };
     for (int j = 0; j < 4; j++) {
-      MRWStruct const &data = dataList[d++];
+      MarinerWrtStruct const &data = dataList[d++];
       if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: find unexpected dim data type\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneDim: find unexpected dim data type\n"));
         f << "###dim" << j << "=" << data << ",";
       }
       else
@@ -872,14 +872,14 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
     bool dimOk=dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3];
     if (i==0 && dimOk) {
       if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
-        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: can not find the zone storage\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneDim: can not find the zone storage\n"));
       }
       else if (entry.m_fileType == 9)
         m_state->m_zonesList[size_t(zoneId)].m_pageDim = dimension;
       else if (entry.m_fileType == 0xa)
         m_state->m_zonesList[size_t(zoneId)].m_pageTextDim = dimension;
       else {
-        MWAW_DEBUG_MSG(("MRWParser::readZoneDim: unknown zone type\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneDim: unknown zone type\n"));
       }
     }
     else if (i && dimOk) {
@@ -914,22 +914,22 @@ bool MRWParser::readZoneDim(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
+bool MarinerWrtParser::readDocInfo(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < 3) {
-    MWAW_DEBUG_MSG(("MRWParser::readDocInfo: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readDocInfo: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList);
   input->popLimit();
 
   int numDatas = int(dataList.size());
   if (numDatas < 60) {
-    MWAW_DEBUG_MSG(("MRWParser::readDocInfo: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readDocInfo: find unexpected number of data\n"));
     return false;
   }
 
@@ -940,12 +940,12 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
   unsigned char color[3];
   size_t d=0;
   for (int j=0; j < numDatas; j++, d++) {
-    MRWStruct const &dt = dataList[d];
+    MarinerWrtStruct const &dt = dataList[d];
     if (!dt.isBasic()) {
       f << "#f" << d << "=" << dt << ",";
       static bool first=true;
       if (first) {
-        MWAW_DEBUG_MSG(("MRWParser::readDocInfo: find some struct block\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readDocInfo: find some struct block\n"));
         first = false;
       }
       continue;
@@ -1064,21 +1064,21 @@ bool MRWParser::readDocInfo(MRWEntry const &entry, int zoneId)
   ascii().addNote(f.str().c_str());
   return true;
 }
-bool MRWParser::readZoneb(MRWEntry const &entry, int)
+bool MarinerWrtParser::readZoneb(MarinerWrtEntry const &entry, int)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneb: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneb: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList, 1+4*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 4*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZoneb: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneb: find unexpected number of data\n"));
     return false;
   }
 
@@ -1090,9 +1090,9 @@ bool MRWParser::readZoneb(MRWEntry const &entry, int)
     ascii().addPos(dataList[d].m_filePos);
 
     for (int j = 0; j < 4; j++) { // always 0, 0, 0, 0?
-      MRWStruct const &data = dataList[d++];
+      MarinerWrtStruct const &data = dataList[d++];
       if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZoneb: find unexpected dim data type\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readZoneb: find unexpected dim data type\n"));
         f << "###dim" << j << "=" << data << ",";
       }
       else if (data.value(0))
@@ -1105,21 +1105,21 @@ bool MRWParser::readZoneb(MRWEntry const &entry, int)
   return true;
 }
 
-bool MRWParser::readZonec(MRWEntry const &entry, int zoneId)
+bool MarinerWrtParser::readZonec(MarinerWrtEntry const &entry, int zoneId)
 {
   if (entry.length() < entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZonec: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZonec: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList, 1+9*entry.m_N);
   input->popLimit();
 
   if (int(dataList.size()) != 9*entry.m_N) {
-    MWAW_DEBUG_MSG(("MRWParser::readZonec: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZonec: find unexpected number of data\n"));
     return false;
   }
 
@@ -1131,9 +1131,9 @@ bool MRWParser::readZonec(MRWEntry const &entry, int zoneId)
     ascii().addPos(dataList[d].m_filePos);
 
     for (int j = 0; j < 9; j++) {
-      MRWStruct const &data = dataList[d++];
+      MarinerWrtStruct const &data = dataList[d++];
       if (!data.isBasic()) {
-        MWAW_DEBUG_MSG(("MRWParser::readZonec: find unexpected dim data type\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readZonec: find unexpected dim data type\n"));
         f << "###dim" << j << "=" << data << ",";
       }
       else if (j==8) {
@@ -1155,21 +1155,21 @@ bool MRWParser::readZonec(MRWEntry const &entry, int zoneId)
   return true;
 }
 
-bool MRWParser::readZone13(MRWEntry const &entry, int)
+bool MarinerWrtParser::readZone13(MarinerWrtEntry const &entry, int)
 {
   if (entry.length() < 3) {
-    MWAW_DEBUG_MSG(("MRWParser::readZone13: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZone13: data seems to short\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   input->pushLimit(entry.end());
-  std::vector<MRWStruct> dataList;
+  std::vector<MarinerWrtStruct> dataList;
   decodeZone(dataList, 1+23);
   input->popLimit();
 
   if (int(dataList.size()) != 23) {
-    MWAW_DEBUG_MSG(("MRWParser::readZone13: find unexpected number of data\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readZone13: find unexpected number of data\n"));
     return false;
   }
 
@@ -1180,9 +1180,9 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
 
   int val;
   for (int j = 0; j < 23; j++) {
-    MRWStruct const &data = dataList[d++];
+    MarinerWrtStruct const &data = dataList[d++];
     if ((j!=14 && !data.isBasic()) || (j==14 && data.m_type)) {
-      MWAW_DEBUG_MSG(("MRWParser::readZone13: find unexpected struct data type\n"));
+      MWAW_DEBUG_MSG(("MarinerWrtParser::readZone13: find unexpected struct data type\n"));
       f << "#f" << j << "=" << data << ",";
       continue;
     }
@@ -1250,10 +1250,10 @@ bool MRWParser::readZone13(MRWEntry const &entry, int)
 // --------- print info ----------
 
 // read the print info xml data
-bool MRWParser::readCPRT(MRWEntry const &entry)
+bool MarinerWrtParser::readCPRT(MarinerWrtEntry const &entry)
 {
   if (entry.length() < 0x10) {
-    MWAW_DEBUG_MSG(("MRWParser::readCPRT: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readCPRT: data seems to short\n"));
     return false;
   }
 
@@ -1276,10 +1276,10 @@ bool MRWParser::readCPRT(MRWEntry const &entry)
 }
 
 // read the print info data
-bool MRWParser::readPrintInfo(MRWEntry const &entry)
+bool MarinerWrtParser::readPrintInfo(MarinerWrtEntry const &entry)
 {
   if (entry.length() < 0x77) {
-    MWAW_DEBUG_MSG(("MRWParser::readPrintInfo: data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readPrintInfo: data seems to short\n"));
     return false;
   }
 
@@ -1335,19 +1335,19 @@ bool MRWParser::readPrintInfo(MRWEntry const &entry)
 ////////////////////////////////////////////////////////////
 
 // ---- field decoder ---------
-bool MRWParser::readEntryHeader(MRWEntry &entry)
+bool MarinerWrtParser::readEntryHeader(MarinerWrtEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   std::vector<long> dataList;
   if (!readNumbersString(4,dataList)||dataList.size()<5) {
-    MWAW_DEBUG_MSG(("MRWParser::readEntryHeader: oops can not find header entry\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readEntryHeader: oops can not find header entry\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
   long length = (dataList[1]<<16)+dataList[2];
   if (length < 0 || !input->checkPosition(input->tell()+length)) {
-    MWAW_DEBUG_MSG(("MRWParser::readEntryHeader: the header data seems to short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::readEntryHeader: the header data seems to short\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1360,7 +1360,7 @@ bool MRWParser::readEntryHeader(MRWEntry &entry)
   return true;
 }
 
-bool MRWParser::readNumbersString(int num, std::vector<long> &res)
+bool MarinerWrtParser::readNumbersString(int num, std::vector<long> &res)
 {
   res.resize(0);
   // first read the string
@@ -1390,7 +1390,7 @@ bool MRWParser::readNumbersString(int num, std::vector<long> &res)
     char c = str[--i];
     if (c=='-') {
       if (!nBytes) {
-        MWAW_DEBUG_MSG(("MRWParser::readNumbersString find '-' with no val\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::readNumbersString find '-' with no val\n"));
         break;
       }
       res.insert(res.begin(),-val);
@@ -1410,7 +1410,7 @@ bool MRWParser::readNumbersString(int num, std::vector<long> &res)
     else if (c >= 'A' && c <= 'F')
       val += (long(c+10-'A')<<(4*nBytes));
     else {
-      MWAW_DEBUG_MSG(("MRWParser::readNumbersString find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MarinerWrtParser::readNumbersString find odd char %x\n", int(c)));
       break;
     }
     nBytes++;
@@ -1418,7 +1418,7 @@ bool MRWParser::readNumbersString(int num, std::vector<long> &res)
   return true;
 }
 
-bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
+bool MarinerWrtParser::decodeZone(std::vector<MarinerWrtStruct> &dataList, long numData)
 {
   dataList.clear();
 
@@ -1428,7 +1428,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
     size_t numVal = dataList.size();
     if (numVal >= size_t(numData))
       break;
-    MRWStruct data;
+    MarinerWrtStruct data;
     data.m_filePos = pos;
     int type = int(input->readULong(1));
     data.m_type = (type&3);
@@ -1441,7 +1441,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
       int num = int(input->readULong(1));
       if (!num) break;
       if (numVal==0) {
-        MWAW_DEBUG_MSG(("MRWParser::decodeZone: no previous data to copy\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::decodeZone: no previous data to copy\n"));
       }
       else   // checkme
         data = dataList[numVal-1];
@@ -1453,7 +1453,7 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
     }
     if ((type>>4)==0x8) {
       if (numVal==0) {
-        MWAW_DEBUG_MSG(("MRWParser::decodeZone: no previous data to copy(II)\n"));
+        MWAW_DEBUG_MSG(("MarinerWrtParser::decodeZone: no previous data to copy(II)\n"));
         dataList.push_back(data);
       }
       else
@@ -1485,16 +1485,16 @@ bool MRWParser::decodeZone(std::vector<MRWStruct> &dataList, long numData)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
+bool MarinerWrtParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MRWParserInternal::State();
+  *m_state = MarinerWrtParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
     return false;
 
   long const headerSize=0x2e;
   if (!input->checkPosition(headerSize)) {
-    MWAW_DEBUG_MSG(("MRWParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -1513,9 +1513,9 @@ bool MRWParser::checkHeader(MWAWHeader *header, bool strict)
 }
 
 ////////////////////////////////////////////////////////////
-// MRWEntry/MRWStruct function
+// MarinerWrtEntry/MarinerWrtStruct function
 ////////////////////////////////////////////////////////////
-std::string MRWEntry::name() const
+std::string MarinerWrtEntry::name() const
 {
   switch (m_fileType) {
   case -1:
@@ -1568,17 +1568,17 @@ std::string MRWEntry::name() const
   return s.str();
 }
 
-long MRWStruct::value(int i) const
+long MarinerWrtStruct::value(int i) const
 {
   if (i < 0 || i >= int(m_data.size())) {
     if (i) {
-      MWAW_DEBUG_MSG(("MRWStruct::value: can not find value %d\n", i));
+      MWAW_DEBUG_MSG(("MarinerWrtStruct::value: can not find value %d\n", i));
     }
     return 0;
   }
   return m_data[size_t(i)];
 }
-std::ostream &operator<<(std::ostream &o, MRWStruct const &dt)
+std::ostream &operator<<(std::ostream &o, MarinerWrtStruct const &dt)
 {
   switch (dt.m_type) {
   case 0: // data

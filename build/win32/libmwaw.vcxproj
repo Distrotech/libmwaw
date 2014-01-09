@@ -246,7 +246,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MDWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MindWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -258,15 +258,15 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWText.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -534,12 +534,12 @@
     <ClInclude Include="..\..\src\lib\LWParser.hxx" />
     <ClInclude Include="..\..\src\lib\LWText.hxx" />
     <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MDWParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MindWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORText.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWText.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks3Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks3Text.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks4Parser.hxx" />
