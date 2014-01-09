@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef ED_PARSER
-#  define ED_PARSER
+#ifndef E_DOC_PARSER
+#  define E_DOC_PARSER
 
 #include <string>
 #include <vector>
@@ -44,21 +44,21 @@
 
 #include "MWAWParser.hxx"
 
-namespace EDParserInternal
+namespace EDocParserInternal
 {
 struct State;
 }
 
 /** \brief the main class to read a eDOC file
  */
-class EDParser : public MWAWTextParser
+class EDocParser : public MWAWTextParser
 {
   friend class EDText;
 public:
   //! constructor
-  EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  EDocParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~EDParser();
+  virtual ~EDocParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -118,7 +118,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<EDParserInternal::State> m_state;
+  shared_ptr<EDocParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

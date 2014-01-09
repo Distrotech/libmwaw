@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MCD_PARSER
-#  define MCD_PARSER
+#ifndef MAC_DOC_PARSER
+#  define MAC_DOC_PARSER
 
 #include <string>
 #include <vector>
@@ -44,21 +44,21 @@
 
 #include "MWAWParser.hxx"
 
-namespace MCDParserInternal
+namespace MacDocParserInternal
 {
 struct State;
 }
 
 /** \brief the main class to read a MacDoc file
  */
-class MCDParser : public MWAWTextParser
+class MacDocParser : public MWAWTextParser
 {
   friend class MCDText;
 public:
   //! constructor
-  MCDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MacDocParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MCDParser();
+  virtual ~MacDocParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -113,7 +113,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MCDParserInternal::State> m_state;
+  shared_ptr<MacDocParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

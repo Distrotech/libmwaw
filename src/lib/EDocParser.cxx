@@ -53,13 +53,13 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "EDParser.hxx"
+#include "EDocParser.hxx"
 
-/** Internal: the structures of a EDParser */
-namespace EDParserInternal
+/** Internal: the structures of a EDocParser */
+namespace EDocParserInternal
 {
 ////////////////////////////////////////
-//! Internal: an index of a EDParser
+//! Internal: an index of a EDocParser
 struct Index {
   //! constructor
   Index() : m_levelId(0), m_text(""), m_page(-1), m_extra("")
@@ -85,7 +85,7 @@ struct Index {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a EDParser
+//! Internal: the state of a EDocParser
 struct State {
   //! constructor
   State() : m_compressed(false), m_maxPictId(0), m_idCPICMap(), m_idPICTMap(),
@@ -113,32 +113,32 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-EDParser::EDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+EDocParser::EDocParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-EDParser::~EDParser()
+EDocParser::~EDocParser()
 {
 }
 
-void EDParser::init()
+void EDocParser::init()
 {
   resetTextListener();
 
-  m_state.reset(new EDParserInternal::State);
+  m_state.reset(new EDocParserInternal::State);
 
   // no margins ( ie. the document is a set of picture corresponding to each page )
   getPageSpan().setMargins(0.01);
 }
 
-MWAWInputStreamPtr EDParser::rsrcInput()
+MWAWInputStreamPtr EDocParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &EDParser::rsrcAscii()
+libmwaw::DebugFile &EDocParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -146,7 +146,7 @@ libmwaw::DebugFile &EDParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void EDParser::newPage(int number)
+void EDocParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -162,7 +162,7 @@ void EDParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
+void EDocParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -181,7 +181,7 @@ void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("EDParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("EDocParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -192,11 +192,11 @@ void EDParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void EDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void EDocParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("EDParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("EDocParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -225,7 +225,7 @@ void EDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool EDParser::createZones()
+bool EDocParser::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -280,7 +280,7 @@ bool EDParser::createZones()
   return res;
 }
 
-bool EDParser::findContents()
+bool EDocParser::findContents()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -317,7 +317,7 @@ bool EDParser::findContents()
   return true;
 }
 
-bool EDParser::sendContents()
+bool EDocParser::sendContents()
 {
   bool compressed=m_state->m_compressed;
   int actPage=0;
@@ -332,10 +332,10 @@ bool EDParser::sendContents()
   return true;
 }
 
-bool EDParser::sendPicture(int pictId, bool compressed)
+bool EDocParser::sendPicture(int pictId, bool compressed)
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("EDocParser::sendPicture: can not find the listener\n"));
     return false;
   }
   std::map<int, MWAWEntry>::const_iterator it;
@@ -357,13 +357,13 @@ bool EDParser::sendPicture(int pictId, bool compressed)
     return false;
   MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
   if (!pictInput) {
-    MWAW_DEBUG_MSG(("EDParser::sendPicture: oops can not find an input\n"));
+    MWAW_DEBUG_MSG(("EDocParser::sendPicture: oops can not find an input\n"));
     return false;
   }
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("EDParser::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("EDocParser::sendPicture: can not find the picture\n"));
     return false;
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
@@ -379,7 +379,7 @@ bool EDParser::sendPicture(int pictId, bool compressed)
   return true;
 }
 
-void EDParser::flushExtra()
+void EDocParser::flushExtra()
 {
 #ifdef DEBUG
   std::map<int, MWAWEntry>::const_iterator rIt = m_state->m_idCPICMap.begin();
@@ -405,11 +405,11 @@ void EDParser::flushExtra()
 
 
 // the font name
-bool EDParser::readFontsName(MWAWEntry const &entry)
+bool EDocParser::readFontsName(MWAWEntry const &entry)
 {
   long length = entry.length();
   if (!entry.valid() || (length%0x100)!=2) {
-    MWAW_DEBUG_MSG(("EDParser::readFontsName: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readFontsName: the entry seems very short\n"));
     return false;
   }
 
@@ -427,7 +427,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   if (N*0x100+2!=length) {
-    MWAW_DEBUG_MSG(("EDParser::readFontsName: the number of elements seems bad\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readFontsName: the number of elements seems bad\n"));
     return false;
   }
   for (int i = 0; i < N; i++) {
@@ -438,7 +438,7 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
     int fSz=(int) input->readULong(1);
     if (!fSz || fSz >= 255) {
       f << "##" << fSz << ",";
-      MWAW_DEBUG_MSG(("EDParser::readFontsName: the font name %d seems bad\n", i));
+      MWAW_DEBUG_MSG(("EDocParser::readFontsName: the font name %d seems bad\n", i));
     }
     else {
       std::string name("");
@@ -459,10 +459,10 @@ bool EDParser::readFontsName(MWAWEntry const &entry)
 }
 
 // the index
-bool EDParser::sendIndex()
+bool EDocParser::sendIndex()
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("EDParser::sendIndex: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("EDocParser::sendIndex: can not find the listener\n"));
     return false;
   }
   if (!m_state->m_indexList.size())
@@ -485,7 +485,7 @@ bool EDParser::sendIndex()
   getTextListener()->insertEOL();
   std::stringstream ss;
   for (size_t i=0; i <  m_state->m_indexList.size(); i++) {
-    EDParserInternal::Index const &index = m_state->m_indexList[i];
+    EDocParserInternal::Index const &index = m_state->m_indexList[i];
     para.m_margins[0] = 0.3f*float(index.m_levelId+1);
     getTextListener()->setParagraph(para);
     getTextListener()->setFont(actFont);
@@ -504,11 +504,11 @@ bool EDParser::sendIndex()
   return true;
 }
 
-bool EDParser::readIndex(MWAWEntry const &entry)
+bool EDocParser::readIndex(MWAWEntry const &entry)
 {
   long length = entry.length();
   if (!entry.valid() || length < 20) {
-    MWAW_DEBUG_MSG(("EDParser::readIndex: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readIndex: the entry seems very short\n"));
     return false;
   }
 
@@ -535,7 +535,7 @@ bool EDParser::readIndex(MWAWEntry const &entry)
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   if (N*14+20>length) {
-    MWAW_DEBUG_MSG(("EDParser::readIndex: the number of elements seems bad\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readIndex: the number of elements seems bad\n"));
     return false;
   }
 
@@ -547,10 +547,10 @@ bool EDParser::readIndex(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("EDParser::readIndex: can not read index %d\n", i));
+      MWAW_DEBUG_MSG(("EDocParser::readIndex: can not read index %d\n", i));
       return false;
     }
-    EDParserInternal::Index index;
+    EDocParserInternal::Index index;
     val = (int) input->readULong(1); // 0|80
     if (val) f << "fl=" << std::hex << val << std::dec << ",";
     index.m_levelId = (int) input->readULong(1);
@@ -569,7 +569,7 @@ bool EDParser::readIndex(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("EDParser::readIndex: can not read index %d text\n", i));
+      MWAW_DEBUG_MSG(("EDocParser::readIndex: can not read index %d text\n", i));
       return false;
     }
     std::string text("");
@@ -589,11 +589,11 @@ bool EDParser::readIndex(MWAWEntry const &entry)
 }
 
 // the document information
-bool EDParser::readInfo(MWAWEntry const &entry)
+bool EDocParser::readInfo(MWAWEntry const &entry)
 {
   long length = entry.length();
   if (!entry.valid() || length < 0x68) {
-    MWAW_DEBUG_MSG(("EDParser::readInfo: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readInfo: the entry seems very short\n"));
     return false;
   }
 
@@ -617,7 +617,7 @@ bool EDParser::readInfo(MWAWEntry const &entry)
   for (int i = 0; i < 2; i++) {
     int sz=(int) input->readULong(1);
     if (sz > 31) {
-      MWAW_DEBUG_MSG(("EDParser::readInfo: can not read string %d\n", i));
+      MWAW_DEBUG_MSG(("EDocParser::readInfo: can not read string %d\n", i));
       f << "###,";
     }
     else {
@@ -641,7 +641,7 @@ bool EDParser::readInfo(MWAWEntry const &entry)
     getPageSpan().setFormWidth(double(dim[1])/72.);
   }
   else {
-    MWAW_DEBUG_MSG(("EDParser::readInfo: the page dimension seems bad\n"));
+    MWAW_DEBUG_MSG(("EDocParser::readInfo: the page dimension seems bad\n"));
     f << "###,";
   }
   int N=(int) input->readLong(2);
@@ -670,7 +670,7 @@ bool EDParser::readInfo(MWAWEntry const &entry)
 }
 
 // code to uncompress data ( very low level)
-namespace EDParserInternal
+namespace EDocParserInternal
 {
 //! very low structure to help uncompress data
 struct DeflateStruct {
@@ -783,12 +783,12 @@ bool DeflateStruct::treatDelayed(unsigned char c)
 }
 }
 
-bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &data)
+bool EDocParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &data)
 {
   data.clear();
   long length = entry.length();
   if (!entry.valid() || length<0x21+12) {
-    MWAW_DEBUG_MSG(("EDParser::decodeZone: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("EDocParser::decodeZone: the entry seems very short\n"));
     return false;
   }
   entry.setParsed(true);
@@ -801,14 +801,14 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
   libmwaw::DebugStream f;
   f << "Entries(CompressZone):";
   if ((long) input->readULong(4)!=length) {
-    MWAW_DEBUG_MSG(("EDParser::decodeZone: unexpected zone size\n"));
+    MWAW_DEBUG_MSG(("EDocParser::decodeZone: unexpected zone size\n"));
     return false;
   }
   long zoneSize=(long) input->readULong(4);
   f << "sz[final]=" << std::hex << zoneSize << std::dec << ",";
 
   if (!zoneSize) {
-    MWAW_DEBUG_MSG(("EDParser::decodeZone: unexpected final zone size\n"));
+    MWAW_DEBUG_MSG(("EDocParser::decodeZone: unexpected final zone size\n"));
     return false;
   }
   f << "checkSum=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -816,7 +816,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
-  EDParserInternal::DeflateStruct deflate(zoneSize);
+  EDocParserInternal::DeflateStruct deflate(zoneSize);
   int const maxData[]= {0x80, 0x20, 0x40};
   int val;
 
@@ -831,7 +831,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
       int num=(int)input->readULong(1);
       f << "num=" << num << ",";
       if (num > maxData[st] || pos+1+num > endPos) {
-        MWAW_DEBUG_MSG(("EDParser::decodeZone: find unexpected num of data : %x for zone %d\n", num, st));
+        MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected num of data : %x for zone %d\n", num, st));
         f << "###";
 
         ascFile.addPos(pos);
@@ -856,7 +856,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
       for (it=mapData.begin(); it != mapData.end(); ++it) {
         int n=0x8000>>(it->first);
         if (writePos+n>0x8000) {
-          MWAW_DEBUG_MSG(("EDParser::decodeZone: find unexpected value writePos=%x for zone %d\n",writePos+n, st));
+          MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected value writePos=%x for zone %d\n",writePos+n, st));
 
           f << "###";
 
@@ -932,7 +932,7 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
   }
 
   if (input->tell()!=endPos) {
-    MWAW_DEBUG_MSG(("EDParser::decodeZone: unexpected end of data\n"));
+    MWAW_DEBUG_MSG(("EDocParser::decodeZone: unexpected end of data\n"));
     ascFile.addPos(input->tell());
     ascFile.addNote("CompressZone[after]");
   }
@@ -952,16 +952,16 @@ bool EDParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &da
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool EDParser::checkHeader(MWAWHeader *header, bool strict)
+bool EDocParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = EDParserInternal::State();
+  *m_state = EDocParserInternal::State();
   /** no data fork, may be ok, but this means
       that the file contains no text, so... */
   MWAWInputStreamPtr input = getInput();
   if (!input || !getRSRCParser())
     return false;
   if (input->hasDataFork()) {
-    MWAW_DEBUG_MSG(("EDParser::checkHeader: find a datafork, odd!!!\n"));
+    MWAW_DEBUG_MSG(("EDocParser::checkHeader: find a datafork, odd!!!\n"));
   }
   if (strict) {
     // check that the fontname zone exists

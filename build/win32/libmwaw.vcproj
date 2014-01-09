@@ -244,7 +244,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\EDParser.cxx"
+				RelativePath="..\..\src\lib\EDocParser.cxx"
 				>
 			</File>
 			<File
@@ -316,7 +316,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MCDParser.cxx"
+				RelativePath="..\..\src\lib\MacDocParser.cxx"
 				>
 			</File>
 			<File
@@ -641,7 +641,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\EDParser.hxx"
+				RelativePath="..\..\src\lib\EDocParser.hxx"
 				>
 			</File>
 			<File
@@ -717,7 +717,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MCDParser.hxx"
+				RelativePath="..\..\src\lib\MacDocParser.hxx"
 				>
 			</File>
 			<File

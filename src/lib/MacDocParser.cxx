@@ -53,13 +53,13 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MCDParser.hxx"
+#include "MacDocParser.hxx"
 
-/** Internal: the structures of a MCDParser */
-namespace MCDParserInternal
+/** Internal: the structures of a MacDocParser */
+namespace MacDocParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the index data of a MCDParser
+//! Internal: the index data of a MacDocParser
 struct Index {
   //! constructor
   Index() : m_entry(), m_level(0), m_numChild(0), m_page(0), m_box(), m_extra("")
@@ -90,7 +90,7 @@ struct Index {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a MCDParser
+//! Internal: the state of a MacDocParser
 struct State {
   //! constructor
   State() : m_idPictureMap(), m_indexList(), m_idFontMap(), m_actPage(0), m_numPages(0)
@@ -110,32 +110,32 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MCDParser::MCDParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MacDocParser::MacDocParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-MCDParser::~MCDParser()
+MacDocParser::~MacDocParser()
 {
 }
 
-void MCDParser::init()
+void MacDocParser::init()
 {
   resetTextListener();
 
-  m_state.reset(new MCDParserInternal::State);
+  m_state.reset(new MacDocParserInternal::State);
 
   // no margins ( ie. the document is a set of picture corresponding to each page )
   getPageSpan().setMargins(0.01);
 }
 
-MWAWInputStreamPtr MCDParser::rsrcInput()
+MWAWInputStreamPtr MacDocParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &MCDParser::rsrcAscii()
+libmwaw::DebugFile &MacDocParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -143,7 +143,7 @@ libmwaw::DebugFile &MCDParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MCDParser::newPage(int number)
+void MacDocParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -159,7 +159,7 @@ void MCDParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
+void MacDocParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -175,7 +175,7 @@ void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MCDParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -186,11 +186,11 @@ void MCDParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MCDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MacDocParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MCDParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -216,7 +216,7 @@ void MCDParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MCDParser::createZones()
+bool MacDocParser::createZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
@@ -318,11 +318,11 @@ bool MCDParser::createZones()
 }
 
 
-bool MCDParser::sendContents()
+bool MacDocParser::sendContents()
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MCDParser::sendContents: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::sendContents: can not find the listener\n"));
     return false;
   }
   int actPage=0;
@@ -344,10 +344,10 @@ bool MCDParser::sendContents()
 ////////////////////////////////////////////////////////////
 
 // font
-bool MCDParser::readFont(MWAWEntry const &entry)
+bool MacDocParser::readFont(MWAWEntry const &entry)
 {
   if (entry.length()<12) {
-    MWAW_DEBUG_MSG(("MCDParser::readFont: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readFont: the entry seems bad\n"));
     return false;
   }
 
@@ -399,14 +399,14 @@ bool MCDParser::readFont(MWAWEntry const &entry)
 //
 // index functions
 //
-bool MCDParser::readIndex(MWAWEntry const &entry)
+bool MacDocParser::readIndex(MWAWEntry const &entry)
 {
   if (entry.length()<4) {
-    MWAW_DEBUG_MSG(("MCDParser::readIndex: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readIndex: the entry seems bad\n"));
     return false;
   }
   if (entry.id()!=1) {
-    MWAW_DEBUG_MSG(("MCDParser::readIndex: the entry id seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readIndex: the entry id seems bad\n"));
   }
   entry.setParsed(true);
   MWAWInputStreamPtr input = rsrcInput();
@@ -423,7 +423,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
       break;
 
     f.str("");
-    MCDParserInternal::Index index;
+    MacDocParserInternal::Index index;
     int val=(int) input->readLong(2);
     if (val) f << "#f0=" << val << ",";
     index.m_page=(int) input->readLong(2);
@@ -472,7 +472,7 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
   f << "Index[end]:";
   pos=input->tell();
   if (pos!=entry.end()-4) {
-    MWAW_DEBUG_MSG(("MCDParser::readIndex: problem reading end\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readIndex: problem reading end\n"));
     f << "###";
   }
   ascFile.addPos(pos);
@@ -480,14 +480,14 @@ bool MCDParser::readIndex(MWAWEntry const &entry)
   return true;
 }
 
-int MCDParser::updateIndex(int actIndex, int actLevel)
+int MacDocParser::updateIndex(int actIndex, int actLevel)
 {
   int numIndex=(int) m_state->m_indexList.size();
   if (actIndex < 0 || actIndex >= numIndex) {
-    MWAW_DEBUG_MSG(("MCDParser::updateIndex: the actual index seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::updateIndex: the actual index seems bad\n"));
     return -1;
   }
-  MCDParserInternal::Index &index =  m_state->m_indexList[size_t(actIndex++)];
+  MacDocParserInternal::Index &index =  m_state->m_indexList[size_t(actIndex++)];
   index.m_level=actLevel;
   for (int c=0; c < index.m_numChild; ++c) {
     actIndex=updateIndex(actIndex, actLevel+1);
@@ -497,11 +497,11 @@ int MCDParser::updateIndex(int actIndex, int actLevel)
   return actIndex;
 }
 
-bool MCDParser::sendIndex()
+bool MacDocParser::sendIndex()
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MCDParser::sendIndex: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::sendIndex: can not find the listener\n"));
     return false;
   }
   if (m_state->m_indexList.empty())
@@ -528,7 +528,7 @@ bool MCDParser::sendIndex()
   tab.m_position = w-0.3;
   para.m_tabs->push_back(tab);
   for (size_t i=0; i < numIndex; ++i) {
-    MCDParserInternal::Index const &index =  m_state->m_indexList[i];
+    MacDocParserInternal::Index const &index =  m_state->m_indexList[i];
     if (!index.m_entry.valid() || index.m_level<=0)
       continue;
     para.m_margins[1]=0.5*double(index.m_level);
@@ -536,7 +536,7 @@ bool MCDParser::sendIndex()
     if (m_state->m_idFontMap.find(index.m_level)!=m_state->m_idFontMap.end())
       listener->setFont(m_state->m_idFontMap.find(index.m_level)->second);
     else {
-      MWAW_DEBUG_MSG(("MCDParser::sendIndex: can not find font for index %d\n", int(i)));
+      MWAW_DEBUG_MSG(("MacDocParser::sendIndex: can not find font for index %d\n", int(i)));
       listener->setFont(MWAWFont());
     }
     input->seek(index.m_entry.begin(), librevenge::RVNG_SEEK_SET);
@@ -560,10 +560,10 @@ bool MCDParser::sendIndex()
 }
 
 // picture
-bool MCDParser::sendPicture(MWAWEntry const &entry)
+bool MacDocParser::sendPicture(MWAWEntry const &entry)
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::sendPicture: can not find the listener\n"));
     return false;
   }
   librevenge::RVNGBinaryData data;
@@ -576,13 +576,13 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
     return false;
   MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
   if (!pictInput) {
-    MWAW_DEBUG_MSG(("MCDParser::sendPicture: oops can not find an input\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::sendPicture: oops can not find an input\n"));
     return false;
   }
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("MCDParser::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::sendPicture: can not find the picture\n"));
     return false;
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
@@ -599,7 +599,7 @@ bool MCDParser::sendPicture(MWAWEntry const &entry)
 }
 
 // file: unknown format: 0002 0000 0000 00 + FileInfo + DataFrk + RSRCFork ?
-bool MCDParser::readFile(MWAWEntry const &entry)
+bool MacDocParser::readFile(MWAWEntry const &entry)
 {
   entry.setParsed(true);
 #ifdef DEBUG_WITH_FILES
@@ -624,10 +624,10 @@ bool MCDParser::readFile(MWAWEntry const &entry)
 }
 
 // bookmark. note the name is stored as resource name
-bool MCDParser::readBookmark(MWAWEntry const &entry)
+bool MacDocParser::readBookmark(MWAWEntry const &entry)
 {
   if (entry.length()!=8) {
-    MWAW_DEBUG_MSG(("MCDParser::readWP: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readWP: the entry seems bad\n"));
     return false;
   }
 
@@ -647,10 +647,10 @@ bool MCDParser::readBookmark(MWAWEntry const &entry)
 }
 
 // unknown related to window position?
-bool MCDParser::readWP(MWAWEntry const &entry)
+bool MacDocParser::readWP(MWAWEntry const &entry)
 {
   if (entry.length()!=4) {
-    MWAW_DEBUG_MSG(("MCDParser::readWP: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::readWP: the entry seems bad\n"));
     return false;
   }
 
@@ -673,16 +673,16 @@ bool MCDParser::readWP(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MCDParser::checkHeader(MWAWHeader *header, bool strict)
+bool MacDocParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MCDParserInternal::State();
+  *m_state = MacDocParserInternal::State();
   /** no data fork, may be ok, but this means
       that the file contains no text, so... */
   MWAWInputStreamPtr input = getInput();
   if (!input || !getRSRCParser())
     return false;
   if (input->hasDataFork()) {
-    MWAW_DEBUG_MSG(("MCDParser::checkHeader: find a datafork, odd!!!\n"));
+    MWAW_DEBUG_MSG(("MacDocParser::checkHeader: find a datafork, odd!!!\n"));
   }
   if (strict) {
     // check if at least one picture zone exists

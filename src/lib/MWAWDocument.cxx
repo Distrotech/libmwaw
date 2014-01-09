@@ -49,13 +49,13 @@
 #include "BeagleWksSSParser.hxx"
 #include "CWParser.hxx"
 #include "DMParser.hxx"
-#include "EDParser.hxx"
+#include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
 #include "GWParser.hxx"
 #include "HMWJParser.hxx"
 #include "HMWKParser.hxx"
 #include "LWParser.hxx"
-#include "MCDParser.hxx"
+#include "MacDocParser.hxx"
 #include "MDWParser.hxx"
 #include "MORParser.hxx"
 #include "MRWParser.hxx"
@@ -405,7 +405,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new DMParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_EDOC:
-      parser.reset(new EDParser(input, rsrcParser, header));
+      parser.reset(new EDocParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_FULLWRITE:
       parser.reset(new FullWrtParser(input, rsrcParser, header));
@@ -423,7 +423,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new LWParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACDOC:
-      parser.reset(new MCDParser(input, rsrcParser, header));
+      parser.reset(new MacDocParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACWRITE:
       parser.reset(new MacWrtParser(input, rsrcParser, header));

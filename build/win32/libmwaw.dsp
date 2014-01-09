@@ -159,7 +159,7 @@ SOURCE=..\..\src\lib\DMText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\EDParser.cxx
+SOURCE=..\..\src\lib\EDocParser.cxx
 # End Source File
 # Begin Source File
 
@@ -231,7 +231,7 @@ SOURCE=..\..\src\lib\LWText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MCDParser.cxx
+SOURCE=..\..\src\lib\MacDocParser.cxx
 # End Source File
 # Begin Source File
 
@@ -555,7 +555,7 @@ SOURCE=..\..\src\lib\DMText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\EDParser.hxx
+SOURCE=..\..\src\lib\EDocParser.hxx
 # End Source File
 # Begin Source File
 
@@ -631,7 +631,7 @@ SOURCE=..\..\src\lib\LWText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MCDParser.hxx
+SOURCE=..\..\src\lib\MacDocParser.hxx
 # End Source File
 # Begin Source File
 

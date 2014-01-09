@@ -54,8 +54,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	DMParser.hxx			\
 	DMText.cxx			\
 	DMText.hxx			\
-	EDParser.cxx			\
-	EDParser.hxx			\
+	EDocParser.cxx			\
+	EDocParser.hxx			\
 	FullWrtGraph.cxx		\
 	FullWrtGraph.hxx		\
 	FullWrtParser.cxx		\
@@ -88,6 +88,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LWParser.hxx			\
 	LWText.cxx			\
 	LWText.hxx			\
+	MacDocParser.cxx		\
+	MacDocParser.hxx		\
 	MacWrtParser.cxx		\
 	MacWrtParser.hxx		\
 	MacWrtProParser.cxx		\
@@ -110,8 +112,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MsWks4Text.hxx			\
 	MsWks4Zone.cxx			\
 	MsWks4Zone.hxx			\
-	MCDParser.cxx			\
-	MCDParser.hxx			\
 	MDWParser.cxx			\
 	MDWParser.hxx			\
 	MORParser.cxx			\

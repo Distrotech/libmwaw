@@ -174,7 +174,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\EDParser.cxx">
+    <ClCompile Include="..\..\src\lib\EDocParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -242,7 +242,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MCDParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacDocParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -516,7 +516,7 @@
     <ClInclude Include="..\..\src\lib\CWText.hxx" />
     <ClInclude Include="..\..\src\lib\DMParser.hxx" />
     <ClInclude Include="..\..\src\lib\DMText.hxx" />
-    <ClInclude Include="..\..\src\lib\EDParser.hxx" />
+    <ClInclude Include="..\..\src\lib\EDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\FullWrtGraph.hxx" />
     <ClInclude Include="..\..\src\lib\FullWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\FullWrtStruct.hxx" />
@@ -533,7 +533,7 @@
     <ClInclude Include="..\..\src\lib\LWGraph.hxx" />
     <ClInclude Include="..\..\src\lib\LWParser.hxx" />
     <ClInclude Include="..\..\src\lib\LWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MCDParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\MDWParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORParser.hxx" />
     <ClInclude Include="..\..\src\lib\MORText.hxx" />
