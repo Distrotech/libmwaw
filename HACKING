@@ -3,10 +3,12 @@ libmwaw coding style
 
 Indentation/spacing: We indent with tabs. Not spaces. This decision is, of
 course, rather contentious, but it does have the force of inertia going for
-it. Try to keep lines less than 120 columns wide.
+it. Try to keep lines less than 120 columns wide. Please run
+
+    astyle -HU -A3 -k3 -y -n -s2 -r \*.cpp \*.h \*.?xx
 
 Naming: Version-specific classes, enumerations, and defines should be prefixed 
-with 'ClarisWks', 'MacWrt', ...
+with a clear abreviation of the format 'ClarisWks', 'MacWrt', ...
 Generic classes (this includes utility abstractions like streams and strings) 
 should be prefixed with MWAW.
 
@@ -16,10 +18,6 @@ but don't overdo it (m_var->len() instead of m_variable->length() is ok,
 m_nam instead of m_name is stupid).
 
 Memory allocation: Use the C++ standard operations for this (new, delete) and shared_ptr (boost, c++11, ...). 
-The rare use of realloc (and consequent use of malloc and free) in special 
-cases is allowed (although using a data structure from the C++ standard library
-is almost always preferable): take care not to mix and match C and C++ memory 
-allocation functions in this case.
 
 Data structures: Use the C++ standard library wherever appropriate and 
 convenient. It should almost never be necessary to roll your own data 

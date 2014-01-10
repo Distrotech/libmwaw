@@ -1,11 +1,15 @@
 CHANGES:
+1/10/2014:
+- rename all the parser files to recognize more easily the parser...
 
 1/6/2014:
 - BeagleWorks/WordPerfect Work: add code to retrieve chart, very basic,
   ie. retrieve only the data ranges:-~
 - add a class MWAWChart to store and create some basic charts
+
 12/26/2013:
 - BeagleWorks/WordPerfect Work: add a spreadsheet parser
+
 12/22/2013:
 - add a listener MWAWSpreadsheetListener to create spreadsheet document
 

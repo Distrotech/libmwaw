@@ -5,7 +5,7 @@
 
 - Acta*         : parser of Acta documents
 - BeagleWks*    : parser of BeagleWorks and WordPerfect Works documents
-- CW*           : parser of ClarisWorks and AppleWorks documents
+- ClarisWks*    : parser of ClarisWorks and AppleWorks documents
 - DocMkr*       : parser of DOCMaker documents
 - EDoc*         : parser of eDOC documents
 - FullWrt*      : parser of FullWrite documents
