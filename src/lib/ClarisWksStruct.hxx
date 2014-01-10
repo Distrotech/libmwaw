@@ -35,8 +35,8 @@
  * Structures used by Claris Works parser
  *
  */
-#ifndef CW_MWAW_STRUCT
-#  define CW_MWAW_STRUCT
+#ifndef CLARIS_WKS_STRUCT
+#  define CLARIS_WKS_STRUCT
 
 #include <iostream>
 #include <map>
@@ -46,10 +46,10 @@
 
 #include "libmwaw_internal.hxx"
 
-class CWParser;
+class ClarisWksParser;
 
 /** namespace to store the main structure which appears in a Claris Works file */
-namespace CWStruct
+namespace ClarisWksStruct
 {
 //! main structure which correspond to a document part
 struct DSET {

@@ -6,9 +6,9 @@ course, rather contentious, but it does have the force of inertia going for
 it. Try to keep lines less than 120 columns wide.
 
 Naming: Version-specific classes, enumerations, and defines should be prefixed 
-with 'CW', 'MW', ...
+with 'ClarisWks', 'MacWrt', ...
 Generic classes (this includes utility abstractions like streams and strings) 
-should be prefixed with DMWAW, IMWAW, MWAW.
+should be prefixed with MWAW.
 
 For better worse, we have decided on using the 'm_' prefix for naming class and struct
 variables (i.e.: my_class->m_var). Short-hand for variable names is allowed,

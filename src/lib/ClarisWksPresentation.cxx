@@ -44,27 +44,27 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWPresentation.hxx"
+#include "ClarisWksPresentation.hxx"
 
-/** Internal: the structures of a CWPresentation */
-namespace CWPresentationInternal
+/** Internal: the structures of a ClarisWksPresentation */
+namespace ClarisWksPresentationInternal
 {
 //! Internal the presentation
-struct Presentation : public CWStruct::DSET {
+struct Presentation : public ClarisWksStruct::DSET {
   // constructor
-  Presentation(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_zoneIdList()
+  Presentation(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
+    ClarisWksStruct::DSET(dset), m_zoneIdList()
   {
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Presentation const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
 
@@ -72,7 +72,7 @@ struct Presentation : public CWStruct::DSET {
   std::vector<int> m_zoneIdList;
 };
 
-//! Internal: the state of a CWPresentation
+//! Internal: the state of a ClarisWksPresentation
 struct State {
   //! constructor
   State() : m_presentationMap()
@@ -87,22 +87,22 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWPresentation::CWPresentation
-(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWPresentationInternal::State),
+ClarisWksPresentation::ClarisWksPresentation
+(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksPresentationInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWPresentation::~CWPresentation()
+ClarisWksPresentation::~ClarisWksPresentation()
 { }
 
-int CWPresentation::version() const
+int ClarisWksPresentation::version() const
 {
   return m_parserState->m_version;
 }
 
-int CWPresentation::numPages() const
+int ClarisWksPresentation::numPages() const
 {
   if (!m_mainParser->getHeader() ||
       m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_PRESENTATION ||
@@ -114,13 +114,13 @@ int CWPresentation::numPages() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-std::vector<int> CWPresentation::getSlidesList() const
+std::vector<int> ClarisWksPresentation::getSlidesList() const
 {
   std::vector<int> res;
-  std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::const_iterator it =
+  std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::const_iterator it =
     m_state->m_presentationMap.begin();
   while (it != m_state->m_presentationMap.end()) {
-    shared_ptr<CWPresentationInternal::Presentation> pres = it++->second;
+    shared_ptr<ClarisWksPresentationInternal::Presentation> pres = it++->second;
     if (!pres) continue;
     for (size_t c = 0; c < pres->m_otherChilds.size(); c++)
       res.push_back(pres->m_otherChilds[c]);
@@ -131,19 +131,19 @@ std::vector<int> CWPresentation::getSlidesList() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksPresentation::readPresentationZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = true;
   if (!entry.valid() || zone.m_fileType != 5 || entry.length() < 0x40)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWPresentationInternal::Presentation>
-  presentationZone(new CWPresentationInternal::Presentation(zone));
+  shared_ptr<ClarisWksPresentationInternal::Presentation>
+  presentationZone(new ClarisWksPresentationInternal::Presentation(zone));
 
   f << "Entries(PresentationDef):" << *presentationZone << ",";
   ascFile.addDelimiter(input->tell(), '|');
@@ -155,16 +155,16 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksPresentation::readPresentationZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::readPresentationZone: unexpected size for zone definition, try to continue\n"));
   }
 
   if (m_state->m_presentationMap.find(presentationZone->m_id) != m_state->m_presentationMap.end()) {
-    MWAW_DEBUG_MSG(("CWPresentation::readPresentationZone: zone %d already exists!!!\n", presentationZone->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::readPresentationZone: zone %d already exists!!!\n", presentationZone->m_id));
   }
   else
     m_state->m_presentationMap[presentationZone->m_id] = presentationZone;
@@ -199,7 +199,7 @@ shared_ptr<CWStruct::DSET> CWPresentation::readPresentationZone
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
+bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentation &pres)
 {
   long val;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -213,7 +213,7 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (N < 0 || long(input->tell()) != endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWPresentation::readZone1: zone seems too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone1: zone seems too short\n"));
       return false;
     }
     f.str("");
@@ -240,7 +240,7 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
       input->seek(pos+16+sSz, librevenge::RVNG_SEEK_SET);
       if (sSz < 0 || input->tell() != pos+16+sSz) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
-        MWAW_DEBUG_MSG(("CWPresentation::readZone1: can not read string %d\n", i));
+        MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone1: can not read string %d\n", i));
         return false;
       }
       input->seek(pos+12, librevenge::RVNG_SEEK_SET);
@@ -259,7 +259,7 @@ bool CWPresentation::readZone1(CWPresentationInternal::Presentation &pres)
   return true;
 }
 
-bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
+bool ClarisWksPresentation::readZone2(ClarisWksPresentationInternal::Presentation &/*pres*/)
 {
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -270,7 +270,7 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWPresentation::readZone2: zone seems too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone2: zone seems too short\n"));
     return false;
   }
 
@@ -286,7 +286,7 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
   input->seek(pos+16+sSz, librevenge::RVNG_SEEK_SET);
   if (sSz < 0 || input->tell() != pos+16+sSz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWPresentation::readZone2: can not read title\n"));
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone2: can not read title\n"));
     return false;
   }
   input->seek(pos+16, librevenge::RVNG_SEEK_SET);
@@ -306,13 +306,13 @@ bool CWPresentation::readZone2(CWPresentationInternal::Presentation &/*pres*/)
 //
 ////////////////////////////////////////////////////////////
 
-bool CWPresentation::sendZone(int number)
+bool ClarisWksPresentation::sendZone(int number)
 {
-  std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.find(number);
   if (iter == m_state->m_presentationMap.end())
     return false;
-  shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
+  shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
   if (!presentation || !m_parserState->m_textListener)
     return true;
   presentation->m_parsed = true;
@@ -329,12 +329,12 @@ bool CWPresentation::sendZone(int number)
   return true;
 }
 
-void CWPresentation::flushExtra()
+void ClarisWksPresentation::flushExtra()
 {
-  std::map<int, shared_ptr<CWPresentationInternal::Presentation> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.begin();
   for (; iter !=  m_state->m_presentationMap.end(); ++iter) {
-    shared_ptr<CWPresentationInternal::Presentation> presentation = iter->second;
+    shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;
     if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();

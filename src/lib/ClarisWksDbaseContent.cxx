@@ -50,34 +50,34 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 
-#include "CWStyleManager.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWDbaseContent.hxx"
+#include "ClarisWksDbaseContent.hxx"
 
-CWDbaseContent::CWDbaseContent(MWAWParserStatePtr parserState, shared_ptr<CWStyleManager> styleManager, bool spreadsheet) :
+ClarisWksDbaseContent::ClarisWksDbaseContent(MWAWParserStatePtr parserState, shared_ptr<ClarisWksStyleManager> styleManager, bool spreadsheet) :
   m_version(0), m_isSpreadsheet(spreadsheet), m_parserState(parserState), m_styleManager(styleManager), m_idColumnMap(), m_dbFormatList()
 {
   if (!m_parserState || !m_parserState->m_header) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::CWDbaseContent: can not find the file header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::ClarisWksDbaseContent: can not find the file header\n"));
     return;
   }
   m_version = m_parserState->m_header->getMajorVersion();
 }
 
-CWDbaseContent::~CWDbaseContent()
+ClarisWksDbaseContent::~ClarisWksDbaseContent()
 {
 }
 
-void CWDbaseContent::setDatabaseFormats(std::vector<CWStyleManager::CellFormat> const &format)
+void ClarisWksDbaseContent::setDatabaseFormats(std::vector<ClarisWksStyleManager::CellFormat> const &format)
 {
   if (m_isSpreadsheet) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::setDatabaseFormats: called with spreadsheet\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::setDatabaseFormats: called with spreadsheet\n"));
     return;
   }
   m_dbFormatList=format;
 }
 
-bool CWDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
+bool ClarisWksDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
 {
   if (m_idColumnMap.empty())
     return false;
@@ -106,7 +106,7 @@ bool CWDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
   return !first;
 }
 
-bool CWDbaseContent::getRecordList(std::vector<int> &list) const
+bool ClarisWksDbaseContent::getRecordList(std::vector<int> &list) const
 {
   list.resize(0);
   if (m_isSpreadsheet || m_idColumnMap.empty())
@@ -129,7 +129,7 @@ bool CWDbaseContent::getRecordList(std::vector<int> &list) const
   return true;
 }
 
-bool CWDbaseContent::readContent()
+bool ClarisWksDbaseContent::readContent()
 {
   if (!m_parserState) return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -141,7 +141,7 @@ bool CWDbaseContent::readContent()
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || sz < 6) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDbaseContent::readContent: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readContent: file is too short\n"));
     return false;
   }
 
@@ -163,7 +163,7 @@ bool CWDbaseContent::readContent()
   }
   /* can we have more than one sheet ? If so, going into the while
      loop may be ok, we will not read the data...*/
-  MWAW_DEBUG_MSG(("CWDbaseContent::readContent: find extra data\n"));
+  MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readContent: find extra data\n"));
   bool ok=true;
   while (input->tell() < endPos) {
     pos = input->tell();
@@ -171,7 +171,7 @@ bool CWDbaseContent::readContent()
     long zoneEnd=pos+4+sz;
     if (zoneEnd > endPos || (sz && sz < 12)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWDbaseContent::readContent: find a odd content field\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readContent: find a odd content field\n"));
       ok=false;
       break;
     }
@@ -183,7 +183,7 @@ bool CWDbaseContent::readContent()
     std::string name("");
     for (int i = 0; i < 4; i++)
       name+=char(input->readULong(1));
-    MWAW_DEBUG_MSG(("CWDbaseContent::readContent: find unexpected content field\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readContent: find unexpected content field\n"));
     f << "DBHeader[" << zoneName << "]:###" << name;
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
@@ -194,7 +194,7 @@ bool CWDbaseContent::readContent()
   return ok;
 }
 
-bool CWDbaseContent::readColumnList()
+bool ClarisWksDbaseContent::readColumnList()
 {
   if (!m_parserState) return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -203,7 +203,7 @@ bool CWDbaseContent::readColumnList()
   std::string hName("");
   for (int i=0; i < 4; ++i) hName+=(char) input->readULong(1);
   if (sz!=0x408 || hName!="CTAB" || !input->checkPosition(pos+4+sz)) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readCOLM: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readCOLM: the entry seems bad\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -219,7 +219,7 @@ bool CWDbaseContent::readColumnList()
   int val=(int) input->readLong(2);
   if (val) f << "Nrows=" << val << ",";
   if (N<0 || N>255) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readColumnList: the entries number of elements seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readColumnList: the entries number of elements seems bad\n"));
     f << "####";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -242,7 +242,7 @@ bool CWDbaseContent::readColumnList()
     if (!ptr) continue;
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readColumnList: find some extra values\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readColumnList: find some extra values\n"));
       first=false;
     }
     f << "#g" << i << "=" << ptr << ",";
@@ -260,7 +260,7 @@ bool CWDbaseContent::readColumnList()
   return true;
 }
 
-bool CWDbaseContent::readColumn(int c)
+bool ClarisWksDbaseContent::readColumn(int c)
 {
   if (!m_parserState) return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -272,7 +272,7 @@ bool CWDbaseContent::readColumn(int c)
   for (int i=0; i < 2; ++i)
     cPos[i]=(int) input->readLong(2);
   if (sz!=8+4*(cPos[1]-cPos[0]+1) || hName!="COLM" || !input->checkPosition(pos+4+sz)) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readCOLM: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readCOLM: the entry seems bad\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -298,7 +298,7 @@ bool CWDbaseContent::readColumn(int c)
   ascFile.addNote(f.str().c_str());
 
   // now read the chnk
-  CWDbaseContent::Column col;
+  ClarisWksDbaseContent::Column col;
   bool ok=true;
   for (size_t i=0; i < listIds.size(); ++i) {
     pos=input->tell();
@@ -313,7 +313,7 @@ bool CWDbaseContent::readColumn(int c)
   return ok;
 }
 
-bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
+bool ClarisWksDbaseContent::readRecordList(Vec2i const &where, Column &col)
 {
   if (!m_parserState) return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -324,7 +324,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
   for (int i=0; i < 4; ++i) hName+=(char) input->readULong(1);
   int N=(int) input->readULong(2);
   if (sz<6+134 || hName!="CHNK" || !input->checkPosition(pos+4+sz) || N>0x40) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readRecordList: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordList: the entry seems bad\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -351,7 +351,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
     find++;
     long fPos=pos+4+depl;
     if (fPos > endPos) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordList: the %d ptr seems bad\n", (int) i));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordList: the %d ptr seems bad\n", (int) i));
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -362,7 +362,7 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
   }
   f << "],";
   if (find!=N) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readRecordList: the number of find data seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordList: the number of find data seems bad\n"));
     f << "###find=" << find << "!=" << N << ",";
   }
   ascFile.addPos(pos);
@@ -392,9 +392,9 @@ bool CWDbaseContent::readRecordList(Vec2i const &where, Column &col)
   return true;
 }
 
-bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
-  record=CWDbaseContent::Record();
+  record=ClarisWksDbaseContent::Record();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "DBCHNK[spread" << id << "]:";
@@ -421,7 +421,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
   }
   if (ord&1) {
     if (!input->checkPosition(pos+8)) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read format\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read format\n"));
       f << "###";
       ok = false;
     }
@@ -449,7 +449,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
         if (m_styleManager->getColor(colId, col))
           font.setColor(col);
         else {
-          MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: unknown color %d\n", colId));
+          MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unknown color %d\n", colId));
         }
       }
       f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
@@ -487,7 +487,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
     }
   }
   if (ok && ord!=0x20) {
-    MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: find unexpected order\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: find unexpected order\n"));
     f << "###ord=" << std::hex << ord << std::dec;
     ok = false;
   }
@@ -501,7 +501,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       else
         f << "long,";
       if (!input->checkPosition(actPos+2+2*type)) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: unexpected size for a int\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a int\n"));
         f << "###";
         ok = false;
         break;
@@ -513,7 +513,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
     case 2:
       f << "float,";
       if (!input->checkPosition(actPos+10)) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: unexpected size for a float\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a float\n"));
         f << "###";
         ok=false;
         break;
@@ -522,7 +522,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
         f << record.m_resDouble << ",";
       else {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not read a float\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a float\n"));
         f << "###,";
       }
       break;
@@ -530,7 +530,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       f << "string,";
       int fSz = (int) input->readULong(1);
       if (!input->checkPosition(actPos+1+fSz)) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: the string(II) seems bad\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the string(II) seems bad\n"));
         f << "###";
         ok=false;
         break;
@@ -547,7 +547,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       f << "formula,";
       int formSz=(int) input->readULong(1);
       if (!input->checkPosition(actPos+2+formSz)) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: the formula seems bad\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the formula seems bad\n"));
         f << "###";
         break;
       }
@@ -569,7 +569,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
           f << "=" << record.m_resLong << ",";
           break;
         }
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not formula res\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
         f << "###int" << rType << "[res],";
         break;
       case 2:
@@ -578,13 +578,13 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
           f << "=" << record.m_resDouble << ",";
           break;
         }
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: can not formula res\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
         f << "###float[res],";
         break;
       case 3: {
         int fSz = (int) input->readULong(1);
         if (!input->checkPosition(resPos+fSz+1)) {
-          MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: the res string(II) seems bad\n"));
+          MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the res string(II) seems bad\n"));
           f << "###string[res]";
           break;
         }
@@ -605,7 +605,7 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
       break;
     }
     default:
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSSV1: unexpected type\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected type\n"));
       f << "###type=" << type << ",";
       ok=false;
       break;
@@ -621,11 +621,11 @@ bool CWDbaseContent::readRecordSSV1(Vec2i const &id, long pos, CWDbaseContent::R
   return ok;
 }
 
-bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
   if (m_version <= 3)
     return readRecordSSV1(id, pos, record);
-  record=CWDbaseContent::Record();
+  record=ClarisWksDbaseContent::Record();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "DBCHNK[spread" << id << "]:";
@@ -635,7 +635,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   long endPos=pos+sz+2;
   if (!input->checkPosition(endPos) || sz < 4) {
     f << "###sz=" << sz;
-    MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the sz seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the sz seems bad\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return true;
@@ -646,8 +646,8 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   if (val) f << "format=" << std::hex << val << std::dec << ",";
   record.m_style=(int) input->readLong(2);
   if (record.m_style) f << "style" << record.m_style << ",";
-  CWStyleManager::Style style;
-  CWStyleManager::CellFormat format;
+  ClarisWksStyleManager::Style style;
+  ClarisWksStyleManager::CellFormat format;
   if (m_styleManager->get(record.m_style, style) &&
       m_styleManager->get(style.m_cellFormatId, format))
     f << format << ",";
@@ -659,7 +659,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     else
       f << "long,";
     if (sz!=6+2*type) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: unexpected size for a int\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a int\n"));
       f << "###";
       break;
     }
@@ -670,7 +670,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   case 2: {
     f << "float,";
     if (sz!=0xe) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: unexpected size for a float\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a float\n"));
       f << "###";
       break;
     }
@@ -678,7 +678,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
     if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
       f << record.m_resDouble << ",";
     else {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: can not read a float\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a float\n"));
       f << "###,";
     }
     break;
@@ -686,13 +686,13 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   case 3: {
     f << "string,";
     if (sz<5) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the string seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string seems bad\n"));
       f << "###";
       break;
     }
     int fSz = (int) input->readULong(1);
     if (fSz+5!=sz && fSz+6!=sz) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the string(II) seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string(II) seems bad\n"));
       f << "###";
       break;
     }
@@ -707,14 +707,14 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   case 4: {
     f << "formula,";
     if (sz<7) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the formula seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
       f << "###";
       break;
     }
     int rType=(int) input->readULong(1);
     int formSz=(int) input->readULong(2);
     if (8+formSz > sz) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the formula seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
       f << "###";
       break;
     }
@@ -733,7 +733,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
         f << "=" << record.m_resLong << ",";
         break;
       }
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: can not formula res\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
       f << "###int" << rType << "[res],";
       break;
     case 2:
@@ -742,18 +742,18 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
         f << "=" << record.m_resDouble << ",";
         break;
       }
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: can not formula res\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
       f << "###float[res],";
       break;
     case 3: {
       if (remainSz<1) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the res string seems bad\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the res string seems bad\n"));
         f << "###string[res]";
         break;
       }
       int fSz = (int) input->readULong(1);
       if (fSz+1>remainSz) {
-        MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the res string(II) seems bad\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the res string(II) seems bad\n"));
         f << "###string[res]";
         break;
       }
@@ -773,7 +773,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   }
   case 7: // link/anchor/goto
     if (sz!=4) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the mark size seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the mark size seems bad\n"));
       f << "###mark";
       break;
     }
@@ -783,7 +783,7 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   case 9:
     f << "type" << type << ",";
     if (sz!=4) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordSS: the type%d seems bad\n", type));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the type%d seems bad\n", type));
       f << "###";
       break;
     }
@@ -798,9 +798,9 @@ bool CWDbaseContent::readRecordSS(Vec2i const &id, long pos, CWDbaseContent::Rec
   return true;
 }
 
-bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
-  record=CWDbaseContent::Record();
+  record=ClarisWksDbaseContent::Record();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "DBCHNK[dbase" << id << "]:";
@@ -813,7 +813,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     endPos=pos+sz+2;
     if (!input->checkPosition(endPos) || sz < 2) {
       f << "###sz=" << sz;
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: the sz seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: the sz seems bad\n"));
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
       return true;
@@ -827,7 +827,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     f << "string,";
     if ((m_version<=3&&!input->checkPosition(pos+2+val)) ||
         (m_version>3 && val+2!=sz && val+3!=sz)) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: the string(II) seems bad\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: the string(II) seems bad\n"));
       f << "###";
       break;
     }
@@ -843,7 +843,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     if (val) f << "unkn=" << std::hex << val << std::dec << ",";
     f << "int,";
     if ((m_version<=3&&!input->checkPosition(pos+2)) || (m_version>3 && sz!=2)) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: unexpected size for a int\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: unexpected size for a int\n"));
       f << "###";
       break;
     }
@@ -855,7 +855,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
     if (val) f << "unkn=" << std::hex << val << std::dec << ",";
     f << "float" << type << ",";
     if ((m_version<=3&&!input->checkPosition(pos+12)) || (m_version>3 && sz!=12)) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: unexpected size for a float\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: unexpected size for a float\n"));
       f << "###";
       break;
     }
@@ -864,7 +864,7 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
       f << record.m_resDouble << ",";
     }
     else {
-      MWAW_DEBUG_MSG(("CWDbaseContent::readRecordDB: can not read a float\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: can not read a float\n"));
       f << "###,";
     }
     break;
@@ -881,11 +881,11 @@ bool CWDbaseContent::readRecordDB(Vec2i const &id, long pos, CWDbaseContent::Rec
   return true;
 }
 
-bool CWDbaseContent::send(Vec2i const &pos)
+bool ClarisWksDbaseContent::send(Vec2i const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWDBaseContent::send: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find the listener\n"));
     return false;
   }
   std::map<int, Column>::const_iterator it=m_idColumnMap.find(pos[0]);
@@ -896,13 +896,13 @@ bool CWDbaseContent::send(Vec2i const &pos)
 
   Record const &record=rIt->second;
   int justify=0;
-  CWStyleManager::CellFormat format;
+  ClarisWksStyleManager::CellFormat format;
   if (!m_isSpreadsheet) {
     static bool first=true;
     if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size()))
       format=m_dbFormatList[size_t(pos[0])];
     else if (first) {
-      MWAW_DEBUG_MSG(("CWDBaseContent::send: can not find format for field %d\n", pos[0]));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find format for field %d\n", pos[0]));
       first=false;
     }
   }
@@ -913,7 +913,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
   }
   else {
     MWAWFont font;
-    CWStyleManager::Style style;
+    ClarisWksStyleManager::Style style;
     if (record.m_style>=0)
       m_styleManager->get(record.m_style, style);
     if (style.m_fontId>=0 && m_styleManager->get(style.m_fontId, font))
@@ -963,7 +963,7 @@ bool CWDbaseContent::send(Vec2i const &pos)
   return true;
 }
 
-void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFormat const &format)
+void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleManager::CellFormat const &format)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener)
@@ -1001,7 +1001,7 @@ void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFor
     time_t date= time_t((val-24107+0.4)*24.*3600);
     struct tm timeinfo;
     if (!gmtime_r(&date,&timeinfo)) {
-      MWAW_DEBUG_MSG(("CWDbaseContent::send: can not convert a date\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not convert a date\n"));
       s << "###" << val;
       break;
     }
@@ -1032,7 +1032,7 @@ void CWDbaseContent::send(double val, bool isNotANumber, CWStyleManager::CellFor
     break;
   }
   default:
-    MWAW_DEBUG_MSG(("CWDbaseContent::send: unknown format %d\n", type));
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: unknown format %d\n", type));
     s << val;
     break;
   }

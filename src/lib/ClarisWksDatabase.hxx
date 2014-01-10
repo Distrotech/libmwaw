@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to Claris Works text document ( table part )
+ * Parser to Claris Works text document ( database part )
  *
  */
-#ifndef CW_TABLE
-#  define CW_TABLE
+#ifndef CLARIS_WKS_DATABASE
+#  define CLARIS_WKS_DATABASE
 
 #include <list>
 #include <string>
@@ -50,32 +50,32 @@
 
 #include "MWAWParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWTableInternal
+namespace ClarisWksDatabaseInternal
 {
-struct Table;
+struct Database;
+struct Field;
 struct State;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWTable
+class ClarisWksDatabase
 {
-  friend class CWParser;
-  friend struct CWTableInternal::Table;
+  friend class ClarisWksParser;
 
 public:
   //! constructor
-  CWTable(CWParser &parser);
+  ClarisWksDatabase(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWTable();
+  virtual ~ClarisWksDatabase();
 
   /** returns the file version */
   int version() const;
@@ -84,38 +84,34 @@ public:
   int numPages() const;
 
   //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readTableZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  shared_ptr<ClarisWksStruct::DSET> readDatabaseZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  //! check if we can send a database as graphic
+  bool canSendDatabaseAsGraphic(int) const
+  {
+    return false;
+  }
+  //! sends the zone data to the listener (if it exists )
+  bool sendDatabase(int number);
 
 protected:
-  //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number);
-
-  //! ask the main parser to send a zone
-  bool askMainToSendZone(int number);
-
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
 
   //
   // Intermediate level
   //
+  //! try to read the database structure
+  bool readFields(ClarisWksDatabaseInternal::Database &dBase);
 
-  //! try to read the table border
-  bool readTableBorders(CWTableInternal::Table &table);
+  //! try to read the default structure
+  bool readDefaults(ClarisWksDatabaseInternal::Database &dBase);
 
-  //! try to read the table cells
-  bool readTableCells(CWTableInternal::Table &table);
-
-  //! try to read the table border
-  bool readTableBordersId(CWTableInternal::Table &table);
-
-  //! try to read a list of pointer ( unknown meaning )
-  bool readTablePointers(CWTableInternal::Table &table);
+  //
+  // low level
+  //
 
 private:
-  CWTable(CWTable const &orig);
-  CWTable &operator=(CWTable const &orig);
+  ClarisWksDatabase(ClarisWksDatabase const &orig);
+  ClarisWksDatabase &operator=(ClarisWksDatabase const &orig);
 
 protected:
   //
@@ -125,13 +121,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWTableInternal::State> m_state;
+  shared_ptr<ClarisWksDatabaseInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -30,30 +30,30 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	BeagleWksStructManager.hxx	\
 	BeagleWksText.cxx		\
 	BeagleWksText.hxx		\
-	CWDatabase.cxx			\
-	CWDatabase.hxx			\
-	CWDbaseContent.cxx		\
-	CWDbaseContent.hxx		\
-	CWGraph.cxx			\
-	CWGraph.hxx			\
-	CWParser.cxx			\
-	CWParser.hxx			\
-	CWPresentation.cxx		\
-	CWPresentation.hxx		\
-	CWSpreadsheet.cxx		\
-	CWSpreadsheet.hxx		\
-	CWStruct.cxx			\
-	CWStruct.hxx			\
-	CWStyleManager.cxx		\
-	CWStyleManager.hxx		\
-	CWTable.cxx			\
-	CWTable.hxx			\
-	CWText.cxx			\
-	CWText.hxx			\
-	DMParser.cxx			\
-	DMParser.hxx			\
-	DMText.cxx			\
-	DMText.hxx			\
+	ClarisWksDatabase.cxx		\
+	ClarisWksDatabase.hxx		\
+	ClarisWksDbaseContent.cxx	\
+	ClarisWksDbaseContent.hxx	\
+	ClarisWksGraph.cxx		\
+	ClarisWksGraph.hxx		\
+	ClarisWksParser.cxx		\
+	ClarisWksParser.hxx		\
+	ClarisWksPresentation.cxx	\
+	ClarisWksPresentation.hxx	\
+	ClarisWksSpreadsheet.cxx	\
+	ClarisWksSpreadsheet.hxx	\
+	ClarisWksStruct.cxx		\
+	ClarisWksStruct.hxx		\
+	ClarisWksStyleManager.cxx	\
+	ClarisWksStyleManager.hxx	\
+	ClarisWksTable.cxx		\
+	ClarisWksTable.hxx		\
+	ClarisWksText.cxx		\
+	ClarisWksText.hxx		\
+	DocMkrParser.cxx		\
+	DocMkrParser.hxx		\
+	DocMkrText.cxx			\
+	DocMkrText.hxx			\
 	EDocParser.cxx			\
 	EDocParser.hxx			\
 	FullWrtGraph.cxx		\

@@ -35,13 +35,13 @@
  * Parser to Nisus text document
  *
  */
-#ifndef DM_TEXT
-#  define DM_TEXT
+#ifndef DOC_MKR_TEXT
+#  define DOC_MKR_TEXT
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 
-namespace DMTextInternal
+namespace DocMkrTextInternal
 {
 struct Zone;
 
@@ -49,22 +49,22 @@ class SubDocument;
 struct State;
 }
 
-class DMParser;
+class DocMkrParser;
 
 /** \brief the main class to read the text part of DocMaker file
  *
  *
  *
  */
-class DMText
+class DocMkrText
 {
-  friend class DMTextInternal::SubDocument;
-  friend class DMParser;
+  friend class DocMkrTextInternal::SubDocument;
+  friend class DocMkrParser;
 public:
   //! constructor
-  DMText(DMParser &parser);
+  DocMkrText(DocMkrParser &parser);
   //! destructor
-  virtual ~DMText();
+  virtual ~DocMkrText();
 
   /** returns the file version */
   int version() const;
@@ -94,13 +94,13 @@ protected:
   //
 
   /** compute the number of page of a zone*/
-  void computeNumPages(DMTextInternal::Zone const &zone) const;
+  void computeNumPages(DocMkrTextInternal::Zone const &zone) const;
 
   /** update the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
 
   /** try to send the text corresponding to a zone */
-  bool sendText(DMTextInternal::Zone const &zone);
+  bool sendText(DocMkrTextInternal::Zone const &zone);
 
   //! try to read the font name ( resource rQDF )
   bool readFontNames(MWAWEntry const &entry);
@@ -130,8 +130,8 @@ protected:
   //! send a string to the listener
   void sendString(std::string const &str) const;
 private:
-  DMText(DMText const &orig);
-  DMText &operator=(DMText const &orig);
+  DocMkrText(DocMkrText const &orig);
+  DocMkrText &operator=(DocMkrText const &orig);
 
 protected:
   //
@@ -141,10 +141,10 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<DMTextInternal::State> m_state;
+  shared_ptr<DocMkrTextInternal::State> m_state;
 
   //! the main parser;
-  DMParser *m_mainParser;
+  DocMkrParser *m_mainParser;
 
 };
 #endif

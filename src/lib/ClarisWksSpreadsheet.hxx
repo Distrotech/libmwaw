@@ -32,12 +32,14 @@
 */
 
 /*
- * Parser to Claris Works text document ( presentation part )
+ * Parser to Claris Works text document ( spreadsheet part )
  *
  */
-#ifndef CW_MWAW_PRESENTATION
-#  define CW_MWAW_PRESENTATION
+#ifndef CLARIS_WKS_SPREADSHEET
+#  define CLARIS_WKS_SPREADSHEET
 
+#include <list>
+#include <string>
 #include <vector>
 
 #include "MWAWEntry.hxx"
@@ -48,31 +50,32 @@
 
 #include "MWAWParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWPresentationInternal
+namespace ClarisWksSpreadsheetInternal
 {
-struct Presentation;
+struct Spreadsheet;
+struct Field;
 struct State;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWPresentation
+class ClarisWksSpreadsheet
 {
-  friend class CWParser;
+  friend class ClarisWksParser;
 
 public:
   //! constructor
-  CWPresentation(CWParser &parser);
+  ClarisWksSpreadsheet(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWPresentation();
+  virtual ~ClarisWksSpreadsheet();
 
   /** returns the file version */
   int version() const;
@@ -80,38 +83,34 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
-  //! reads the zone presentation DSET
-  shared_ptr<CWStruct::DSET> readPresentationZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
-
-  //! returns the list of slide id
-  std::vector<int> getSlidesList() const;
+  //! reads the zone Text DSET
+  shared_ptr<ClarisWksStruct::DSET> readSpreadsheetZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  //! check if we can send a spreadsheet as graphic
+  bool canSendSpreadsheetAsGraphic(int) const
+  {
+    return false;
+  }
+  //! sends the zone data to the listener (if it exists )
+  bool sendSpreadsheet(int number);
 
 protected:
-  //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number);
-
-  //! sends the data which have not yet been sent to the listener
-  void flushExtra();
-
   //
   // Intermediate level
   //
 
-  /** try to read the first presentation zone ( the slide name ? ) */
-  bool readZone1(CWPresentationInternal::Presentation &pres);
-
-  /** try to read the second presentation zone ( title ) */
-  bool readZone2(CWPresentationInternal::Presentation &pres);
-
+  /** try to read the first spreadsheet zone */
+  bool readZone1(ClarisWksSpreadsheetInternal::Spreadsheet &sheet);
+  /** try to read the row height zone */
+  bool readRowHeightZone(ClarisWksSpreadsheetInternal::Spreadsheet &sheet);
 
   //
   // low level
   //
 
 private:
-  CWPresentation(CWPresentation const &orig);
-  CWPresentation &operator=(CWPresentation const &orig);
+  ClarisWksSpreadsheet(ClarisWksSpreadsheet const &orig);
+  ClarisWksSpreadsheet &operator=(ClarisWksSpreadsheet const &orig);
 
 protected:
   //
@@ -121,13 +120,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWPresentationInternal::State> m_state;
+  shared_ptr<ClarisWksSpreadsheetInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

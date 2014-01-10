@@ -52,18 +52,18 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWGraph.hxx"
+#include "ClarisWksGraph.hxx"
 
 #include "libmwaw_internal.hxx"
 
-/** Internal: the structures of a CWGraph */
-namespace CWGraphInternal
+/** Internal: the structures of a ClarisWksGraph */
+namespace ClarisWksGraphInternal
 {
-//! Internal: the structure used to a point of a CWGraph
+//! Internal: the structure used to a point of a ClarisWksGraph
 struct CurvePoint {
   CurvePoint(Vec2f point=Vec2f()) : m_pos(point), m_type(1)
   {
@@ -102,7 +102,7 @@ struct CurvePoint {
   int m_type;
 };
 
-//! Internal: the structure used to store a style of a CWGraph
+//! Internal: the structure used to store a style of a ClarisWksGraph
 struct Style : public MWAWGraphicStyle {
   //! constructor
   Style(): MWAWGraphicStyle(), m_id(-1), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0)
@@ -152,7 +152,7 @@ struct Style : public MWAWGraphicStyle {
   int m_surfacePatternType;
 };
 
-//! Internal: the generic structure used to store a zone of a CWGraph
+//! Internal: the generic structure used to store a zone of a ClarisWksGraph
 struct Zone {
   //! the list of types
   enum Type { T_Zone, T_Shape, T_Picture, T_Chart, T_DataBox, T_Unknown,
@@ -204,9 +204,9 @@ struct Zone {
   //! print the data contains
   virtual void print(std::ostream &) const { }
   //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const
+  virtual ClarisWksStruct::DSET::Child getChild() const
   {
-    CWStruct::DSET::Child child;
+    ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
     return child;
   }
@@ -218,7 +218,7 @@ struct Zone {
   Style m_style;
 };
 
-//! Internal: small class to store a basic graphic zone of a CWGraph
+//! Internal: small class to store a basic graphic zone of a ClarisWksGraph
 struct ZoneShape : public Zone {
   //! constructor
   ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape(), m_rotate(0)
@@ -247,11 +247,11 @@ struct ZoneShape : public Zone {
     return 0;
   }
   //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const
+  virtual ClarisWksStruct::DSET::Child getChild() const
   {
-    CWStruct::DSET::Child child;
+    ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = CWStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
     return child;
   }
 
@@ -315,11 +315,11 @@ struct ZonePict : public Zone {
     return 2;
   }
   //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const
+  virtual ClarisWksStruct::DSET::Child getChild() const
   {
-    CWStruct::DSET::Child child;
+    ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = CWStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
     return child;
   }
 
@@ -329,10 +329,10 @@ struct ZonePict : public Zone {
   MWAWEntry m_entries[2];
 };
 
-//! Internal: structure to store a bitmap of a CWGraph
-struct Bitmap : public CWStruct::DSET {
+//! Internal: structure to store a bitmap of a ClarisWksGraph
+struct Bitmap : public ClarisWksStruct::DSET {
   //! constructor
-  Bitmap(CWStruct::DSET const &dset = CWStruct::DSET()) :
+  Bitmap(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
     DSET(dset), m_numBytesPerPixel(0), m_bitmapSize(0,0), m_bitmapRowSize(0), m_entry(), m_colorMap()
   {
   }
@@ -340,7 +340,7 @@ struct Bitmap : public CWStruct::DSET {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Bitmap const &bt)
   {
-    o << static_cast<CWStruct::DSET const &>(bt);
+    o << static_cast<ClarisWksStruct::DSET const &>(bt);
     if (bt.m_numBytesPerPixel > 0) o << "type=" << bt.m_numBytesPerPixel << ",";
     else if (bt.m_numBytesPerPixel < 0) o << "type=1/" << (-bt.m_numBytesPerPixel) << ",";
     return o;
@@ -358,7 +358,7 @@ struct Bitmap : public CWStruct::DSET {
   std::vector<MWAWColor> m_colorMap;
 };
 
-//! Internal: structure to store a link to a zone of a CWGraph
+//! Internal: structure to store a link to a zone of a ClarisWksGraph
 struct ZoneZone : public Zone {
   //! constructor
   ZoneZone(Zone const &z) : Zone(z), m_id(-1), m_subId(-1), m_styleId(-1), m_wrappingSep(5)
@@ -389,12 +389,12 @@ struct ZoneZone : public Zone {
   }
 
   //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const
+  virtual ClarisWksStruct::DSET::Child getChild() const
   {
-    CWStruct::DSET::Child child;
+    ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
     child.m_id = m_id;
-    child.m_type = CWStruct::DSET::Child::ZONE;
+    child.m_type = ClarisWksStruct::DSET::Child::ZONE;
     return child;
   }
 
@@ -410,7 +410,7 @@ struct ZoneZone : public Zone {
   int m_flags[9];
 };
 
-//! Internal: structure used to store an unknown zone of a CWGraph
+//! Internal: structure used to store an unknown zone of a ClarisWksGraph
 struct ZoneUnknown : public Zone {
   //! construtor
   ZoneUnknown(Zone const &z) : Zone(z), m_type(T_Unknown), m_typeId(-1)
@@ -460,11 +460,11 @@ struct ZoneUnknown : public Zone {
     return m_type == T_Chart ? 2 : 0;
   }
   //! return a child corresponding to this zone
-  virtual CWStruct::DSET::Child getChild() const
+  virtual ClarisWksStruct::DSET::Child getChild() const
   {
-    CWStruct::DSET::Child child;
+    ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = CWStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
     return child;
   }
 
@@ -476,11 +476,11 @@ struct ZoneUnknown : public Zone {
 
 ////////////////////////////////////////
 //! Internal: class which stores a group of graphics, ...
-struct Group : public CWStruct::DSET {
+struct Group : public ClarisWksStruct::DSET {
   struct LinkedZones;
   //! constructor
-  Group(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_box(), m_page(0), m_totalNumber(0),
+  Group(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
+    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_box(), m_page(0), m_totalNumber(0),
     m_blockToSendList(), m_idLinkedZonesMap()
   {
   }
@@ -488,7 +488,7 @@ struct Group : public CWStruct::DSET {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Group const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
 
@@ -506,7 +506,7 @@ struct Group : public CWStruct::DSET {
     LinkedZones const &lZones = m_idLinkedZonesMap.find(id)->second;
     std::map<int, size_t>::const_iterator it = lZones.m_mapIdChild.find(subId);
     if (it == lZones.m_mapIdChild.end()) {
-      MWAW_DEBUG_MSG(("CWGraphInternal::Group::addFrameName: can not find frame %d[%d]\n", id, subId));
+      MWAW_DEBUG_MSG(("ClarisWksGraphInternal::Group::addFrameName: can not find frame %d[%d]\n", id, subId));
       return false;
     }
     if (it != lZones.m_mapIdChild.begin()) {
@@ -559,7 +559,7 @@ struct Group : public CWStruct::DSET {
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a CWGraph
+//! Internal: the state of a ClarisWksGraph
 struct State {
   //! constructor
   State() : m_numAccrossPages(-1), m_groupMap(), m_bitmapMap(), m_frameId(0) { }
@@ -575,11 +575,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a CWGraph
+//! Internal: the subdocument of a ClarisWksGraph
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(CWGraph &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition pos=MWAWPosition()) :
+  SubDocument(ClarisWksGraph &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition pos=MWAWPosition()) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_position(pos) {}
 
   //! destructor
@@ -614,7 +614,7 @@ public:
   //! the main parser function
   void parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
   /** the graph parser */
-  CWGraph *m_graphParser;
+  ClarisWksGraph *m_graphParser;
 
 protected:
   //! the subdocument id
@@ -629,7 +629,7 @@ private:
 void SubDocument::parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
 {
   if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
-    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -638,7 +638,7 @@ void SubDocument::parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType 
       || (!asGraphic && type==libmwaw::DOC_TEXT_BOX))
     m_graphParser->askToSend(m_id,asGraphic,m_position);
   else {
-    MWAW_DEBUG_MSG(("CWGraphInternal::SubDocument::parse: find unexpected type\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: find unexpected type\n"));
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
@@ -648,24 +648,24 @@ void SubDocument::parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWGraph::CWGraph(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWGraphInternal::State),
+ClarisWksGraph::ClarisWksGraph(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksGraphInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWGraph::~CWGraph()
+ClarisWksGraph::~ClarisWksGraph()
 { }
 
-int CWGraph::version() const
+int ClarisWksGraph::version() const
 {
   return m_parserState->m_version;
 }
 
-int CWGraph::numPages() const
+int ClarisWksGraph::numPages() const
 {
   int nPages = 1;
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter;
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
 
   if (m_state->m_numAccrossPages<=0) {
     m_state->m_numAccrossPages=1;
@@ -675,8 +675,8 @@ int CWGraph::numPages() const
       if (m_state->m_numAccrossPages<=1) {
         // info not always fill so we must check it
         for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
-          shared_ptr<CWGraphInternal::Group> group = iter->second;
-          if (!group || group->m_type != CWStruct::DSET::T_Main)
+          shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
+          if (!group || group->m_type != ClarisWksStruct::DSET::T_Main)
             continue;
           checkNumberAccrossPages(*group);
         }
@@ -684,20 +684,20 @@ int CWGraph::numPages() const
     }
   }
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
-    shared_ptr<CWGraphInternal::Group> group = iter->second;
+    shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
     if (!group) continue;
-    if (group->m_type == CWStruct::DSET::T_Slide) {
+    if (group->m_type == ClarisWksStruct::DSET::T_Slide) {
       if (group->m_page > nPages)
         nPages = group->m_page;
       continue;
     }
-    if (group->m_type != CWStruct::DSET::T_Main)
+    if (group->m_type != ClarisWksStruct::DSET::T_Main)
       continue;
     updateInformation(*group);
     size_t numBlock = group->m_blockToSendList.size();
     for (size_t b=0; b < numBlock; b++) {
       size_t bId=group->m_blockToSendList[b];
-      CWGraphInternal::Zone *child = group->m_zones[bId].get();
+      ClarisWksGraphInternal::Zone *child = group->m_zones[bId].get();
       if (!child) continue;
       if (child->m_page > nPages)
         nPages = child->m_page;
@@ -706,7 +706,7 @@ int CWGraph::numPages() const
   return nPages;
 }
 
-void CWGraph::askToSend(int number, bool asGraphic, MWAWPosition const &pos)
+void ClarisWksGraph::askToSend(int number, bool asGraphic, MWAWPosition const &pos)
 {
   m_mainParser->sendZone(number, asGraphic, pos);
 }
@@ -714,7 +714,7 @@ void CWGraph::askToSend(int number, bool asGraphic, MWAWPosition const &pos)
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-bool CWGraph::getSurfaceColor(CWGraphInternal::Style const &style, MWAWColor &col) const
+bool ClarisWksGraph::getSurfaceColor(ClarisWksGraphInternal::Style const &style, MWAWColor &col) const
 {
   if (!style.hasSurfaceColor())
     return false;
@@ -725,18 +725,18 @@ bool CWGraph::getSurfaceColor(CWGraphInternal::Style const &style, MWAWColor &co
 ////////////////////////////////////////////////////////////
 // a group of data mainly graphic
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readGroupZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 0)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWGraphInternal::Group> group(new CWGraphInternal::Group(zone));
+  shared_ptr<ClarisWksGraphInternal::Group> group(new ClarisWksGraphInternal::Group(zone));
 
   f << "Entries(GroupDef):" << *group << ",";
   int val = (int) input->readLong(2); // a small int between 0 and 3
@@ -762,12 +762,12 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      MWAW_DEBUG_MSG(("CWGraph::readGroupZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWGraph::readGroupZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupZone: unexpected size for zone definition, try to continue\n"));
   }
 
   long beginDefGroup = entry.end()-N*data0Length;
@@ -788,7 +788,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
     MWAWEntry gEntry;
     gEntry.setBegin(pos);
     gEntry.setLength(data0Length);
-    shared_ptr<CWGraphInternal::Zone> def = readGroupDef(gEntry);
+    shared_ptr<ClarisWksGraphInternal::Zone> def = readGroupDef(gEntry);
     group->m_zones.push_back(def);
 
     if (def)
@@ -809,7 +809,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
   }
 
   if (m_state->m_groupMap.find(group->m_id) != m_state->m_groupMap.end()) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", group->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupZone: zone %d already exists!!!\n", group->m_id));
   }
   else
     m_state->m_groupMap[group->m_id] = group;
@@ -820,18 +820,18 @@ shared_ptr<CWStruct::DSET> CWGraph::readGroupZone
 ////////////////////////////////////////////////////////////
 // a group of data mainly graphic
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 4)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWGraphInternal::Bitmap> bitmap(new CWGraphInternal::Bitmap(zone));
+  shared_ptr<ClarisWksGraphInternal::Bitmap> bitmap(new ClarisWksGraphInternal::Bitmap(zone));
 
   f << "Entries(BitmapDef):" << *bitmap << ",";
 
@@ -845,12 +845,12 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapZone: unexpected size for zone definition, try to continue\n"));
   }
 
   bool sizeSet=false;
@@ -930,7 +930,7 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   bitmap->m_otherChilds.push_back(bitmap->m_id+1);
 
   if (m_state->m_bitmapMap.find(bitmap->m_id) != m_state->m_bitmapMap.end()) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupZone: zone %d already exists!!!\n", bitmap->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupZone: zone %d already exists!!!\n", bitmap->m_id));
   }
   else
     m_state->m_bitmapMap[bitmap->m_id] = bitmap;
@@ -938,12 +938,12 @@ shared_ptr<CWStruct::DSET> CWGraph::readBitmapZone
   return bitmap;
 }
 
-shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
+shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry const &entry)
 {
-  shared_ptr<CWGraphInternal::Zone> res;
+  shared_ptr<ClarisWksGraphInternal::Zone> res;
   if (entry.length() < 32) {
     if (version() > 1 || entry.length() < 30) {
-      MWAW_DEBUG_MSG(("CWGraph::readGroupDef: sz is too short!!!\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: sz is too short!!!\n"));
       return res;
     }
   }
@@ -954,41 +954,41 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   libmwaw::DebugStream f;
   f << "GroupDef:";
 
-  CWGraphInternal::Zone zone;
-  CWGraphInternal::Style &style = zone.m_style;
+  ClarisWksGraphInternal::Zone zone;
+  ClarisWksGraphInternal::Style &style = zone.m_style;
 
   int typeId = (int) input->readULong(1);
-  CWGraphInternal::Zone::Type type = CWGraphInternal::Zone::T_Unknown;
+  ClarisWksGraphInternal::Zone::Type type = ClarisWksGraphInternal::Zone::T_Unknown;
   int const vers=version();
   switch (vers) {
   case 1:
     switch (typeId) {
     case 1:
-      type = CWGraphInternal::Zone::T_Zone;
+      type = ClarisWksGraphInternal::Zone::T_Zone;
       break;
     case 4:
-      type = CWGraphInternal::Zone::T_Line;
+      type = ClarisWksGraphInternal::Zone::T_Line;
       break;
     case 5:
-      type = CWGraphInternal::Zone::T_Rect;
+      type = ClarisWksGraphInternal::Zone::T_Rect;
       break;
     case 6:
-      type = CWGraphInternal::Zone::T_RectOval;
+      type = ClarisWksGraphInternal::Zone::T_RectOval;
       break;
     case 7:
-      type = CWGraphInternal::Zone::T_Oval;
+      type = ClarisWksGraphInternal::Zone::T_Oval;
       break;
     case 8:
-      type = CWGraphInternal::Zone::T_Arc;
+      type = ClarisWksGraphInternal::Zone::T_Arc;
       break;
     case 9:
-      type = CWGraphInternal::Zone::T_Poly;
+      type = ClarisWksGraphInternal::Zone::T_Poly;
       break;
     case 11:
-      type = CWGraphInternal::Zone::T_Pict;
+      type = ClarisWksGraphInternal::Zone::T_Pict;
       break;
     case 13:
-      type = CWGraphInternal::Zone::T_DataBox;
+      type = ClarisWksGraphInternal::Zone::T_DataBox;
       break;
     default:
       break;
@@ -997,40 +997,40 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   default:
     switch (typeId) {
     case 1:
-      type = CWGraphInternal::Zone::T_Zone;
+      type = ClarisWksGraphInternal::Zone::T_Zone;
       break;
     case 2:
-      type = CWGraphInternal::Zone::T_Line;
+      type = ClarisWksGraphInternal::Zone::T_Line;
       break;
     case 3:
-      type = CWGraphInternal::Zone::T_Rect;
+      type = ClarisWksGraphInternal::Zone::T_Rect;
       break;
     case 4:
-      type = CWGraphInternal::Zone::T_RectOval;
+      type = ClarisWksGraphInternal::Zone::T_RectOval;
       break;
     case 5:
-      type = CWGraphInternal::Zone::T_Oval;
+      type = ClarisWksGraphInternal::Zone::T_Oval;
       break;
     case 6:
-      type = CWGraphInternal::Zone::T_Arc;
+      type = ClarisWksGraphInternal::Zone::T_Arc;
       break;
     case 7:
-      type = CWGraphInternal::Zone::T_Poly;
+      type = ClarisWksGraphInternal::Zone::T_Poly;
       break;
     case 8:
-      type = CWGraphInternal::Zone::T_Pict;
+      type = ClarisWksGraphInternal::Zone::T_Pict;
       break;
     case 9:
-      type = CWGraphInternal::Zone::T_Chart;
+      type = ClarisWksGraphInternal::Zone::T_Chart;
       break;
     case 10:
-      type = CWGraphInternal::Zone::T_DataBox;
+      type = ClarisWksGraphInternal::Zone::T_DataBox;
       break;
     case 14:
-      type = CWGraphInternal::Zone::T_Movie;
+      type = ClarisWksGraphInternal::Zone::T_Movie;
       break;
     case 18:
-      type = CWGraphInternal::Zone::T_QTim;
+      type = ClarisWksGraphInternal::Zone::T_QTim;
       break;
     default:
       break;
@@ -1062,7 +1062,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     int col = (int) input->readULong(1);
     MWAWColor color;
     if (!m_styleManager->getColor(col, color)) {
-      MWAW_DEBUG_MSG(("CWGraph::readGroupDef: unknown color!!!\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: unknown color!!!\n"));
       f << "###col" << j << "=" << col << ",";
     }
     else if (j==0)
@@ -1084,7 +1084,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
       }
       else {
         f << "###surfaceType=" << style.m_surfacePatternType << ",";
-        MWAW_DEBUG_MSG(("CWGraph::readGroupDef: unknown surface type!!!\n"));
+        MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: unknown surface type!!!\n"));
       }
       continue;
     }
@@ -1100,7 +1100,7 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     MWAWGraphicStyle::Pattern pattern;
     float percent;
     if (!m_styleManager->getPattern(pat,pattern,percent)) {
-      MWAW_DEBUG_MSG(("CWGraph::readGroupDef: unknown pattern!!!\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: unknown pattern!!!\n"));
       f << "###pat" << j << "=" << pat << ",";
     }
     pattern.m_colors[1]=j==0 ? style.m_lineColor : style.m_surfaceColor;
@@ -1117,9 +1117,9 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
   style.m_id = (int) input->readLong(2);
 
   switch (type) {
-  case CWGraphInternal::Zone::T_Zone: {
+  case ClarisWksGraphInternal::Zone::T_Zone: {
     int nFlags = 0;
-    CWGraphInternal::ZoneZone *z = new CWGraphInternal::ZoneZone(zone);
+    ClarisWksGraphInternal::ZoneZone *z = new ClarisWksGraphInternal::ZoneZone(zone);
     res.reset(z);
     z->m_flags[nFlags++] = (int) input->readLong(2);
     z->m_id = (int) input->readULong(2);
@@ -1147,29 +1147,29 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
     }
     break;
   }
-  case CWGraphInternal::Zone::T_Pict:
-  case CWGraphInternal::Zone::T_QTim:
-  case CWGraphInternal::Zone::T_Movie:
-    res.reset(new CWGraphInternal::ZonePict(zone, type));
+  case ClarisWksGraphInternal::Zone::T_Pict:
+  case ClarisWksGraphInternal::Zone::T_QTim:
+  case ClarisWksGraphInternal::Zone::T_Movie:
+    res.reset(new ClarisWksGraphInternal::ZonePict(zone, type));
     break;
-  case CWGraphInternal::Zone::T_Line:
-  case CWGraphInternal::Zone::T_Rect:
-  case CWGraphInternal::Zone::T_RectOval:
-  case CWGraphInternal::Zone::T_Oval:
-  case CWGraphInternal::Zone::T_Arc:
-  case CWGraphInternal::Zone::T_Poly: {
-    CWGraphInternal::ZoneShape *z = new CWGraphInternal::ZoneShape(zone, type);
+  case ClarisWksGraphInternal::Zone::T_Line:
+  case ClarisWksGraphInternal::Zone::T_Rect:
+  case ClarisWksGraphInternal::Zone::T_RectOval:
+  case ClarisWksGraphInternal::Zone::T_Oval:
+  case ClarisWksGraphInternal::Zone::T_Arc:
+  case ClarisWksGraphInternal::Zone::T_Poly: {
+    ClarisWksGraphInternal::ZoneShape *z = new ClarisWksGraphInternal::ZoneShape(zone, type);
     res.reset(z);
     readShape(entry, *z);
     break;
   }
-  case CWGraphInternal::Zone::T_DataBox:
-  case CWGraphInternal::Zone::T_Chart:
-  case CWGraphInternal::Zone::T_Shape:
-  case CWGraphInternal::Zone::T_Picture:
-  case CWGraphInternal::Zone::T_Unknown:
+  case ClarisWksGraphInternal::Zone::T_DataBox:
+  case ClarisWksGraphInternal::Zone::T_Chart:
+  case ClarisWksGraphInternal::Zone::T_Shape:
+  case ClarisWksGraphInternal::Zone::T_Picture:
+  case ClarisWksGraphInternal::Zone::T_Unknown:
   default: {
-    CWGraphInternal::ZoneUnknown *z = new CWGraphInternal::ZoneUnknown(zone);
+    ClarisWksGraphInternal::ZoneUnknown *z = new ClarisWksGraphInternal::ZoneUnknown(zone);
     res.reset(z);
     z->m_type = type;
     z->m_typeId = typeId;
@@ -1194,11 +1194,11 @@ shared_ptr<CWGraphInternal::Zone> CWGraph::readGroupDef(MWAWEntry const &entry)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
+bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long beginGroupPos)
 {
   //  bool complete = false;
   if (!readGroupHeader(group)) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupData: unexpected graphic1\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: unexpected graphic1\n"));
     return false;
   }
 
@@ -1211,7 +1211,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
   size_t numChilds = group.m_zones.size();
   int numError = 0;
   for (size_t i = 0; i < numChilds; i++) {
-    shared_ptr<CWGraphInternal::Zone> z = group.m_zones[i];
+    shared_ptr<ClarisWksGraphInternal::Zone> z = group.m_zones[i];
     int numZoneExpected = z ? z->getNumData() : 0;
 
     if (numZoneExpected) {
@@ -1219,7 +1219,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       sz = (long) input->readULong(4);
       f.str("");
       if (sz == 0) {
-        MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a nop zone for type: %d\n",
+        MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find a nop zone for type: %d\n",
                         z->getSubType()));
         ascFile.addPos(pos);
         ascFile.addNote("#Nop");
@@ -1228,7 +1228,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
           ascFile.addNote("###");
         }
         else {
-          MWAW_DEBUG_MSG(("CWGraph::readGroupData: too many errors, zone parsing STOPS\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: too many errors, zone parsing STOPS\n"));
           return false;
         }
         pos = input->tell();
@@ -1237,31 +1237,31 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       bool parsed = true;
       switch (z->getSubType()) {
-      case CWGraphInternal::Zone::T_QTim:
+      case ClarisWksGraphInternal::Zone::T_QTim:
         if (!readQTimeData(z))
           return false;
         break;
-      case CWGraphInternal::Zone::T_Movie:
+      case ClarisWksGraphInternal::Zone::T_Movie:
       // FIXME: pict ( containing movie ) + ??? +
-      case CWGraphInternal::Zone::T_Pict:
+      case ClarisWksGraphInternal::Zone::T_Pict:
         if (!readPictData(z))
           return false;
         break;
-      case CWGraphInternal::Zone::T_Poly:
+      case ClarisWksGraphInternal::Zone::T_Poly:
         if (z->getNumData() && !readPolygonData(z))
           return false;
         break;
-      case CWGraphInternal::Zone::T_Line:
-      case CWGraphInternal::Zone::T_Rect:
-      case CWGraphInternal::Zone::T_RectOval:
-      case CWGraphInternal::Zone::T_Oval:
-      case CWGraphInternal::Zone::T_Arc:
-      case CWGraphInternal::Zone::T_Zone:
-      case CWGraphInternal::Zone::T_Shape:
-      case CWGraphInternal::Zone::T_Picture:
-      case CWGraphInternal::Zone::T_Chart:
-      case CWGraphInternal::Zone::T_DataBox:
-      case CWGraphInternal::Zone::T_Unknown:
+      case ClarisWksGraphInternal::Zone::T_Line:
+      case ClarisWksGraphInternal::Zone::T_Rect:
+      case ClarisWksGraphInternal::Zone::T_RectOval:
+      case ClarisWksGraphInternal::Zone::T_Oval:
+      case ClarisWksGraphInternal::Zone::T_Arc:
+      case ClarisWksGraphInternal::Zone::T_Zone:
+      case ClarisWksGraphInternal::Zone::T_Shape:
+      case ClarisWksGraphInternal::Zone::T_Picture:
+      case ClarisWksGraphInternal::Zone::T_Chart:
+      case ClarisWksGraphInternal::Zone::T_DataBox:
+      case ClarisWksGraphInternal::Zone::T_Unknown:
       default:
         parsed = false;
         break;
@@ -1271,12 +1271,12 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
         input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
         if (long(input->tell()) != pos+4+sz) {
           input->seek(pos, librevenge::RVNG_SEEK_SET);
-          MWAW_DEBUG_MSG(("CWGraph::readGroupData: find a odd zone for type: %d\n",
+          MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find a odd zone for type: %d\n",
                           z->getSubType()));
           return false;
         }
         f.str("");
-        if (z->getSubType() == CWGraphInternal::Zone::T_Chart)
+        if (z->getSubType() == ClarisWksGraphInternal::Zone::T_Chart)
           f << "Entries(ChartData)";
         else
           f << "Entries(UnknownDATA)-" << z->getSubType();
@@ -1288,7 +1288,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
           sz = (long) input->readULong(4);
           if (sz) {
             input->seek(pos, librevenge::RVNG_SEEK_SET);
-            MWAW_DEBUG_MSG(("CWGraph::readGroupData: two zones is not implemented for zone: %d\n",
+            MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: two zones is not implemented for zone: %d\n",
                             z->getSubType()));
             return false;
           }
@@ -1305,7 +1305,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
         ascFile.addNote("Nop");
         continue;
       }
-      MWAW_DEBUG_MSG(("CWGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   }
@@ -1316,7 +1316,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
   pos = input->tell();
   sz = (long) input->readULong(4);
   if (sz == 0 && !input->isEnd()) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupData: find unexpected nop data at end of zone\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find unexpected nop data at end of zone\n"));
     ascFile.addPos(beginGroupPos);
     ascFile.addNote("###");
   }
@@ -1329,7 +1329,7 @@ bool CWGraph::readGroupData(CWGraphInternal::Group &group, long beginGroupPos)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone)
+bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::ZoneShape &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long actPos = input->tell();
@@ -1343,24 +1343,24 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
   shape.m_bdBox=shape.m_formBox=box;
   libmwaw::DebugStream f;
   switch (zone.getSubType()) {
-  case CWGraphInternal::Zone::T_Line: {
+  case ClarisWksGraphInternal::Zone::T_Line: {
     int yDeb=(zone.m_style.m_lineFlags&1)?1:0;
     shape = MWAWGraphicShape::line(Vec2f(zone.m_box[0][0],zone.m_box[yDeb][1]),
                                    Vec2f(zone.m_box[1][0],zone.m_box[1-yDeb][1]));
     break;
   }
-  case CWGraphInternal::Zone::T_Rect:
+  case ClarisWksGraphInternal::Zone::T_Rect:
     shape.m_type = MWAWGraphicShape::Rectangle;
     break;
-  case CWGraphInternal::Zone::T_Oval:
+  case ClarisWksGraphInternal::Zone::T_Oval:
     shape.m_type = MWAWGraphicShape::Circle;
     break;
-  case CWGraphInternal::Zone::T_Poly:
+  case ClarisWksGraphInternal::Zone::T_Poly:
     shape.m_type = MWAWGraphicShape::Polygon;
     break; // value are defined in next zone
-  case CWGraphInternal::Zone::T_Arc: {
+  case ClarisWksGraphInternal::Zone::T_Arc: {
     if (remainBytes < 4) {
-      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: arc zone is too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
     int fileAngle[2];
@@ -1401,10 +1401,10 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;
   }
-  case CWGraphInternal::Zone::T_RectOval: {
+  case ClarisWksGraphInternal::Zone::T_RectOval: {
     shape.m_type = MWAWGraphicShape::Rectangle;
     if (remainBytes < 8) {
-      MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: arc zone is too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
     for (int i = 0; i < 2; i++) {
@@ -1415,17 +1415,17 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
     }
     break;
   }
-  case CWGraphInternal::Zone::T_Zone:
-  case CWGraphInternal::Zone::T_Shape:
-  case CWGraphInternal::Zone::T_Picture:
-  case CWGraphInternal::Zone::T_Chart:
-  case CWGraphInternal::Zone::T_DataBox:
-  case CWGraphInternal::Zone::T_Unknown:
-  case CWGraphInternal::Zone::T_Pict:
-  case CWGraphInternal::Zone::T_QTim:
-  case CWGraphInternal::Zone::T_Movie:
+  case ClarisWksGraphInternal::Zone::T_Zone:
+  case ClarisWksGraphInternal::Zone::T_Shape:
+  case ClarisWksGraphInternal::Zone::T_Picture:
+  case ClarisWksGraphInternal::Zone::T_Chart:
+  case ClarisWksGraphInternal::Zone::T_DataBox:
+  case ClarisWksGraphInternal::Zone::T_Unknown:
+  case ClarisWksGraphInternal::Zone::T_Pict:
+  case ClarisWksGraphInternal::Zone::T_QTim:
+  case ClarisWksGraphInternal::Zone::T_Movie:
   default:
-    MWAW_DEBUG_MSG(("CWGraph::readSimpleGraphicZone: unknown type\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readSimpleGraphicZone: unknown type\n"));
     return false;
   }
 
@@ -1457,7 +1457,7 @@ bool CWGraph::readShape(MWAWEntry const &entry, CWGraphInternal::ZoneShape &zone
   return true;
 }
 
-bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
+bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1469,7 +1469,7 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
   long endPos = pos+4+sz;
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()!=endPos) || (sz && sz < 16)) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: zone is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupHeader: zone is too short\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1534,21 +1534,21 @@ bool CWGraph::readGroupHeader(CWGraphInternal::Group &group)
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-    MWAW_DEBUG_MSG(("CWGraph::readGroupHeader: can not find data for %d\n", i));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupHeader: can not find data for %d\n", i));
     return true;
   }
 
   return true;
 }
 
-bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id)
+bool ClarisWksGraph::readGroupUnknown(ClarisWksGraphInternal::Group &group, int zoneSz, int id)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   input->seek(pos+zoneSz, librevenge::RVNG_SEEK_SET);
   if (input->tell() != pos+zoneSz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWGraph::readGroupUnknown: zone is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupUnknown: zone is too short\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1557,7 +1557,7 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
   if (id >= 0) f << id << "):";
   else f << "_" << "):";
   if (zoneSz < 42) {
-    MWAW_DEBUG_MSG(("CWGraph::readGroupUnknown: zone is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupUnknown: zone is too short\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1604,12 +1604,12 @@ bool CWGraph::readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id
 ////////////////////////////////////////////////////////////
 // read the polygon vertices
 ////////////////////////////////////////////////////////////
-bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
+bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zone)
 {
-  if (!zone || zone->getType() != CWGraphInternal::Zone::T_Shape)
+  if (!zone || zone->getType() != ClarisWksGraphInternal::Zone::T_Shape)
     return false;
-  CWGraphInternal::ZoneShape *bZone =
-    reinterpret_cast<CWGraphInternal::ZoneShape *>(zone.get());
+  ClarisWksGraphInternal::ZoneShape *bZone =
+    reinterpret_cast<ClarisWksGraphInternal::ZoneShape *>(zone.get());
   MWAWGraphicShape &shape = bZone->m_shape;
   if (shape.m_type!=MWAWGraphicShape::Polygon)
     return false;
@@ -1620,7 +1620,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || sz < 12) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWGraph::readPolygonData: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPolygonData: file is too short\n"));
     return false;
   }
 
@@ -1637,7 +1637,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWGraph::readPolygonData: find odd data size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPolygonData: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
@@ -1649,7 +1649,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   ascFile.addNote(f.str().c_str());
 
   bool isSpline=false;
-  std::vector<CWGraphInternal::CurvePoint> vertices;
+  std::vector<ClarisWksGraphInternal::CurvePoint> vertices;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     f.str("");
@@ -1657,7 +1657,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
     float position[2];
     for (int j = 0; j < 2; j++)
       position[j] = float(input->readLong(4))/256.f;
-    CWGraphInternal::CurvePoint point(Vec2f(position[1], position[0]));
+    ClarisWksGraphInternal::CurvePoint point(Vec2f(position[1], position[0]));
     if (fSz >= 26) {
       for (int cPt = 0; cPt < 2; cPt++) {
         float ctrlPos[2];
@@ -1692,7 +1692,7 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
   Vec2f prevPoint, pt1;
   bool hasPrevPoint = false;
   for (size_t i = 0; i < size_t(N); ++i) {
-    CWGraphInternal::CurvePoint const &pt = vertices[i];
+    ClarisWksGraphInternal::CurvePoint const &pt = vertices[i];
     if (pt.m_type >= 2) pt1 = pt.m_controlPoints[0];
     else pt1 = pt.m_pos;
     char type = hasPrevPoint ? 'C' : i==0 ? 'M' : pt.m_type<2 ? 'L' : 'S';
@@ -1707,17 +1707,17 @@ bool CWGraph::readPolygonData(shared_ptr<CWGraphInternal::Zone> zone)
 ////////////////////////////////////////////////////////////
 // read some picture
 ////////////////////////////////////////////////////////////
-bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
+bool ClarisWksGraph::readPictData(shared_ptr<ClarisWksGraphInternal::Zone> zone)
 {
-  if (!zone || (zone->getSubType() != CWGraphInternal::Zone::T_Pict &&
-                zone->getSubType() != CWGraphInternal::Zone::T_Movie))
+  if (!zone || (zone->getSubType() != ClarisWksGraphInternal::Zone::T_Pict &&
+                zone->getSubType() != ClarisWksGraphInternal::Zone::T_Movie))
     return false;
-  CWGraphInternal::ZonePict *pZone =
-    reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
+  ClarisWksGraphInternal::ZonePict *pZone =
+    reinterpret_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   if (!readPICT(*pZone)) {
-    MWAW_DEBUG_MSG(("CWGraph::readPictData: find a odd pict\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPictData: find a odd pict\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1729,7 +1729,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote("###");
-    MWAW_DEBUG_MSG(("CWGraph::readPictData: find a end zone for graphic\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPictData: find a end zone for graphic\n"));
     return false;
   }
   if (sz == 0) {
@@ -1747,7 +1747,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   if (readOLE(*pZone))
     return true;
 
-  MWAW_DEBUG_MSG(("CWGraph::readPictData: unknown data file\n"));
+  MWAW_DEBUG_MSG(("ClarisWksGraph::readPictData: unknown data file\n"));
 #ifdef DEBUG_WITH_FILES
   if (1) {
     librevenge::RVNGBinaryData file;
@@ -1760,7 +1760,7 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   }
 #endif
   ascFile.addPos(pos);
-  if (zone->getSubType() == CWGraphInternal::Zone::T_Movie)
+  if (zone->getSubType() == ClarisWksGraphInternal::Zone::T_Movie)
     ascFile.addNote("Entries(MovieData2):#"); // find filesignature: ALMC...
   else
     ascFile.addNote("Entries(PictData2):#");
@@ -1770,20 +1770,20 @@ bool CWGraph::readPictData(shared_ptr<CWGraphInternal::Zone> zone)
   return true;
 }
 
-bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
+bool ClarisWksGraph::readPICT(ClarisWksGraphInternal::ZonePict &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
   if (sz < 12) {
-    MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPict: file is too short\n"));
     return false;
   }
 
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWGraph::readPict: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPict: file is too short\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1795,7 +1795,7 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
 
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("CWGraph::readPict: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readPict: can not find the picture\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     f << "###";
     ascFile.addPos(pos);
@@ -1813,7 +1813,7 @@ bool CWGraph::readPICT(CWGraphInternal::ZonePict &zone)
   return true;
 }
 
-bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
+bool ClarisWksGraph::readPS(ClarisWksGraphInternal::ZonePict &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1853,7 +1853,7 @@ bool CWGraph::readPS(CWGraphInternal::ZonePict &zone)
   return true;
 }
 
-bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
+bool ClarisWksGraph::readOLE(ClarisWksGraphInternal::ZonePict &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1901,12 +1901,12 @@ bool CWGraph::readOLE(CWGraphInternal::ZonePict &zone)
 ////////////////////////////////////////////////////////////
 // read Qtime picture
 ////////////////////////////////////////////////////////////
-bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
+bool ClarisWksGraph::readQTimeData(shared_ptr<ClarisWksGraphInternal::Zone> zone)
 {
-  if (!zone || zone->getSubType() != CWGraphInternal::Zone::T_QTim)
+  if (!zone || zone->getSubType() != ClarisWksGraphInternal::Zone::T_QTim)
     return false;
-  CWGraphInternal::ZonePict *pZone =
-    reinterpret_cast<CWGraphInternal::ZonePict *>(zone.get());
+  ClarisWksGraphInternal::ZonePict *pZone =
+    reinterpret_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   bool ok = true;
@@ -1917,7 +1917,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
     name += c;
   }
   if (!ok) {
-    MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd qtim zone\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readQTimeData: find a odd qtim zone\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1930,7 +1930,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
 
   pos = input->tell();
   if (!readNamedPict(*pZone)) {
-    MWAW_DEBUG_MSG(("CWGraph::readQTimeData: find a odd named pict\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readQTimeData: find a odd named pict\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1938,7 +1938,7 @@ bool CWGraph::readQTimeData(shared_ptr<CWGraphInternal::Zone> zone)
 }
 
 
-bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
+bool ClarisWksGraph::readNamedPict(ClarisWksGraphInternal::ZonePict &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1946,7 +1946,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   for (int i = 0; i < 4; i++) {
     char c = (char) input->readULong(1);
     if (c < ' ' || c > 'z') {
-      MWAW_DEBUG_MSG(("CWGraph::readNamedPict: can not find the name\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readNamedPict: can not find the name\n"));
       return false;
     }
     name+=c;
@@ -1955,7 +1955,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
   long endPos = pos+8+sz;
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || !sz) {
-    MWAW_DEBUG_MSG(("CWGraph::readNamedPict: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readNamedPict: file is too short\n"));
     return false;
   }
 
@@ -1988,7 +1988,7 @@ bool CWGraph::readNamedPict(CWGraphInternal::ZonePict &zone)
 ////////////////////////////////////////////////////////////
 // read bitmap picture
 ////////////////////////////////////////////////////////////
-bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
+bool ClarisWksGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
 {
   cMap.resize(0);
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2003,7 +2003,7 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
   }
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapColorMap: file is too short\n"));
     return false;
   }
 
@@ -2013,14 +2013,14 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
   f << "unkn=" << input->readLong(4) << ",";
   int maxColor = (int) input->readLong(4);
   if (sz != 8+8*(maxColor+1)) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: sz is odd\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapColorMap: sz is odd\n"));
     return false;
   }
   cMap.resize(size_t(maxColor+1));
   for (int i = 0; i <= maxColor; i++) {
     int id = (int) input->readULong(2);
     if (id != i) {
-      MWAW_DEBUG_MSG(("CWGraph::readBitmapColorMap: find odd index : %d\n", i));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapColorMap: find odd index : %d\n", i));
       return false;
     }
     unsigned char col[3];
@@ -2035,7 +2035,7 @@ bool CWGraph::readBitmapColorMap(std::vector<MWAWColor> &cMap)
   return true;
 }
 
-bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
+bool ClarisWksGraph::readBitmapData(ClarisWksGraphInternal::Bitmap &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -2043,13 +2043,13 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
   long endPos = pos+4+sz;
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || !sz) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapData: file is too short\n"));
     return false;
   }
 
   long numPixels = zone.m_bitmapSize[0]*zone.m_bitmapSize[1];
   if (numPixels<=0) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected empty size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapData: unexpected empty size\n"));
     return false;
   }
 
@@ -2082,7 +2082,7 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
   }
 
   if (sz != bitmapRowSize*zone.m_bitmapSize[1]) {
-    MWAW_DEBUG_MSG(("CWGraph::readBitmapData: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readBitmapData: unexpected size\n"));
     return false;
   }
   zone.m_numBytesPerPixel = numBytesPerPixel;
@@ -2102,30 +2102,30 @@ bool CWGraph::readBitmapData(CWGraphInternal::Bitmap &zone)
 ////////////////////////////////////////////////////////////
 // update the group information
 ////////////////////////////////////////////////////////////
-void CWGraph::checkNumberAccrossPages(CWGraphInternal::Group &group) const
+void ClarisWksGraph::checkNumberAccrossPages(ClarisWksGraphInternal::Group &group) const
 {
   m_state->m_numAccrossPages=1;
   float textWidth=72.0f*(float)m_mainParser->getPageWidth();
   for (size_t b=0; b < group.m_zones.size(); b++) {
-    CWGraphInternal::Zone *child = group.m_zones[b].get();
+    ClarisWksGraphInternal::Zone *child = group.m_zones[b].get();
     if (!child) continue;
     if (child->m_box[1].y() >= 2000) // a little to suspicious
       continue;
     int page=int(child->m_box[1].x()/textWidth-0.2)+1;
     if (page > m_state->m_numAccrossPages && page < 100) {
-      MWAW_DEBUG_MSG(("CWGraph::checkNumberAccrossPages: increase num page accross to %d\n", page));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::checkNumberAccrossPages: increase num page accross to %d\n", page));
       m_state->m_numAccrossPages = page;
     }
   }
 }
 
-void CWGraph::updateInformation(CWGraphInternal::Group &group) const
+void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) const
 {
   if (!group.m_blockToSendList.empty() || !group.m_idLinkedZonesMap.empty())
     return;
   std::set<int> forbiddenZone;
 
-  if (group.m_type == CWStruct::DSET::T_Main || group.m_type == CWStruct::DSET::T_Slide) {
+  if (group.m_type == ClarisWksStruct::DSET::T_Main || group.m_type == ClarisWksStruct::DSET::T_Slide) {
     int headerId=0, footerId=0;
     m_mainParser->getHeaderFooterId(headerId, footerId);
     if (headerId) forbiddenZone.insert(headerId);
@@ -2133,16 +2133,16 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
   }
 
   for (size_t g = 0; g < group.m_zones.size(); g++) {
-    CWGraphInternal::Zone *child = group.m_zones[g].get();
+    ClarisWksGraphInternal::Zone *child = group.m_zones[g].get();
     if (!child) continue;
-    if (child->getType() != CWGraphInternal::Zone::T_Zone) {
+    if (child->getType() != ClarisWksGraphInternal::Zone::T_Zone) {
       group.m_blockToSendList.push_back(g);
       group.m_totalNumber++;
       continue;
     }
 
-    CWGraphInternal::ZoneZone const &childZone =
-      reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
+    ClarisWksGraphInternal::ZoneZone const &childZone =
+      reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
     int zId = childZone.m_id;
     if (!group.okChildId(zId) || forbiddenZone.find(zId) != forbiddenZone.end())
       continue;
@@ -2157,11 +2157,11 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 
     if (group.m_idLinkedZonesMap.find(zId) == group.m_idLinkedZonesMap.end())
       group.m_idLinkedZonesMap.insert
-      (std::map<int,CWGraphInternal::Group::LinkedZones>::value_type
-       (zId,CWGraphInternal::Group::LinkedZones(m_state->m_frameId++)));
-    CWGraphInternal::Group::LinkedZones &lZone = group.m_idLinkedZonesMap.find(zId)->second;
+      (std::map<int,ClarisWksGraphInternal::Group::LinkedZones>::value_type
+       (zId,ClarisWksGraphInternal::Group::LinkedZones(m_state->m_frameId++)));
+    ClarisWksGraphInternal::Group::LinkedZones &lZone = group.m_idLinkedZonesMap.find(zId)->second;
     if (lZone.m_mapIdChild.find(childZone.m_subId) != lZone.m_mapIdChild.end()) {
-      MWAW_DEBUG_MSG(("CWGraph::updateInformation: zone %d already find with subId %d\n",
+      MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: zone %d already find with subId %d\n",
                       zId, childZone.m_subId));
       continue;
     }
@@ -2171,7 +2171,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
   // try to fix the page position corresponding to the main zone
   int numPagesAccross=m_state->m_numAccrossPages;
   if (numPagesAccross <= 0) {
-    MWAW_DEBUG_MSG(("CWGraph::updateInformation: the number of accross pages is not set\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: the number of accross pages is not set\n"));
     numPagesAccross=1;
   }
   float textWidth=72.0f*(float)m_mainParser->getPageWidth();
@@ -2182,7 +2182,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
   else
     textHeight=72.0f*(float)m_mainParser->getTextHeight();
   if (textHeight <= 0) {
-    MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not retrieve the form length\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not retrieve the form length\n"));
     return;
   }
   size_t numBlock = group.m_blockToSendList.size();
@@ -2191,7 +2191,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
   bool firstGroupFound=false;
   for (size_t b=0; b < numBlock; b++) {
     size_t bId=group.m_blockToSendList[b];
-    CWGraphInternal::Zone *child = group.m_zones[bId].get();
+    ClarisWksGraphInternal::Zone *child = group.m_zones[bId].get();
     if (!child) continue;
     int pageY=int(float(child->m_box[1].y())/textHeight);
     if (pageY < 0)
@@ -2209,7 +2209,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
           pageY--;
         }
         else {
-          MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not find the page\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not find the page\n"));
           continue;
         }
       }
@@ -2230,7 +2230,7 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
           pageX--;
         }
         else {
-          MWAW_DEBUG_MSG(("CWGraph::updateInformation: can not find the horizontal page\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not find the horizontal page\n"));
           continue;
         }
       }
@@ -2258,32 +2258,32 @@ void CWGraph::updateInformation(CWGraphInternal::Group &group) const
 ////////////////////////////////////////////////////////////
 // send data to the listener
 ////////////////////////////////////////////////////////////
-bool CWGraph::canSendGroupAsGraphic(int number) const
+bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 {
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.find(number);
   if (iter == m_state->m_groupMap.end() || !iter->second)
     return false;
   return canSendAsGraphic(*iter->second);
 }
 
-bool CWGraph::sendGroup(int number, bool asGraphic, MWAWPosition const &position)
+bool ClarisWksGraph::sendGroup(int number, bool asGraphic, MWAWPosition const &position)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));
     return false;
   }
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.find(number);
   if (iter == m_state->m_groupMap.end() || !iter->second)
     return false;
-  shared_ptr<CWGraphInternal::Group> group = iter->second;
+  shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
   group->m_parsed=true;
   if (asGraphic) {
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if (!graphicListener) {
-      MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the graphiclistener\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the graphiclistener\n"));
       return false;
     }
     return sendGroup(*group, group->m_blockToSendList, *graphicListener);
@@ -2291,81 +2291,81 @@ bool CWGraph::sendGroup(int number, bool asGraphic, MWAWPosition const &position
   return sendGroup(*group, position);
 }
 
-bool CWGraph::canSendAsGraphic(CWGraphInternal::Group &group) const
+bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
   updateInformation(group);
-  if ((group.m_type != CWStruct::DSET::T_Frame && group.m_type != CWStruct::DSET::T_Unknown)
+  if ((group.m_type != ClarisWksStruct::DSET::T_Frame && group.m_type != ClarisWksStruct::DSET::T_Unknown)
       || group.m_page <= 0)
     return false;
   size_t numZones = group.m_blockToSendList.size();
   for (size_t g = 0; g < numZones; g++) {
-    CWGraphInternal::Zone const *child = group.m_zones[group.m_blockToSendList[g]].get();
+    ClarisWksGraphInternal::Zone const *child = group.m_zones[group.m_blockToSendList[g]].get();
     if (!child) continue;
-    CWGraphInternal::Zone::Type type=child->getType();
-    if (type==CWGraphInternal::Zone::T_Zone) {
-      CWGraphInternal::ZoneZone const &childZone =
-        reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
+    ClarisWksGraphInternal::Zone::Type type=child->getType();
+    if (type==ClarisWksGraphInternal::Zone::T_Zone) {
+      ClarisWksGraphInternal::ZoneZone const &childZone =
+        reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
       if (group.isLinked(childZone.m_id) || !m_mainParser->canSendZoneAsGraphic(childZone.m_id))
         return false;
       continue;
     }
-    if (type==CWGraphInternal::Zone::T_Shape || type==CWGraphInternal::Zone::T_DataBox ||
-        type==CWGraphInternal::Zone::T_Chart || type==CWGraphInternal::Zone::T_Unknown)
+    if (type==ClarisWksGraphInternal::Zone::T_Shape || type==ClarisWksGraphInternal::Zone::T_DataBox ||
+        type==ClarisWksGraphInternal::Zone::T_Chart || type==ClarisWksGraphInternal::Zone::T_Unknown)
       continue;
     return false;
   }
   return true;
 }
 
-bool CWGraph::sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener)
+bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener)
 {
   group.m_parsed=true;
   size_t numZones = lChild.size();
   for (size_t g = 0; g < numZones; g++) {
-    CWGraphInternal::Zone const *child = group.m_zones[lChild[g]].get();
+    ClarisWksGraphInternal::Zone const *child = group.m_zones[lChild[g]].get();
     if (!child) continue;
     Box2f box=child->getBdBox();
-    CWGraphInternal::Zone::Type type=child->getType();
-    if (type==CWGraphInternal::Zone::T_Zone) {
-      CWGraphInternal::ZoneZone const &zone=
-        reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
-      shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zone.m_id);
+    ClarisWksGraphInternal::Zone::Type type=child->getType();
+    if (type==ClarisWksGraphInternal::Zone::T_Zone) {
+      ClarisWksGraphInternal::ZoneZone const &zone=
+        reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
+      shared_ptr<ClarisWksStruct::DSET> dset=m_mainParser->getZone(zone.m_id);
       if (dset && dset->m_fileType==4) {
         MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
         sendBitmap(zone.m_id, true, pos);
         continue;
       }
-      shared_ptr<MWAWSubDocument> doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zone.m_id));
+      shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zone.m_id));
       if (dset && dset->m_fileType==1)
         listener.insertTextBox(box, doc, zone.m_style);
       else
         listener.insertGroup(box, doc);
     }
-    else if (type==CWGraphInternal::Zone::T_Shape) {
-      CWGraphInternal::ZoneShape const &shape=
-        reinterpret_cast<CWGraphInternal::ZoneShape const &>(*child);
+    else if (type==ClarisWksGraphInternal::Zone::T_Shape) {
+      ClarisWksGraphInternal::ZoneShape const &shape=
+        reinterpret_cast<ClarisWksGraphInternal::ZoneShape const &>(*child);
       MWAWGraphicStyle style(shape.m_style);
       if (shape.m_shape.m_type!=MWAWGraphicShape::Line)
         style.m_arrows[0]=style.m_arrows[1]=false;
       listener.insertPicture(box, shape.m_shape, style);
     }
-    else if (type!=CWGraphInternal::Zone::T_DataBox) {
-      MWAW_DEBUG_MSG(("CWGraph::sendGroup: find unexpected type!!!\n"));
+    else if (type!=ClarisWksGraphInternal::Zone::T_DataBox) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: find unexpected type!!!\n"));
     }
   }
   return true;
 }
 
-bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position)
+bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWGraph::sendGroup: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));
     return false;
   }
   updateInformation(group);
-  bool mainGroup = group.m_type == CWStruct::DSET::T_Main;
-  bool isSlide = group.m_type == CWStruct::DSET::T_Slide;
+  bool mainGroup = group.m_type == ClarisWksStruct::DSET::T_Main;
+  bool isSlide = group.m_type == ClarisWksStruct::DSET::T_Slide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup)
@@ -2400,7 +2400,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     break;
   }
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
-    MWAW_DEBUG_MSG(("CWGraph::sendGroup: position is not set\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: position is not set\n"));
   }
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   bool canUseGraphic=graphicListener && !graphicListener->isDocumentStarted();
@@ -2437,7 +2437,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
     // we need to a frame, ...
     MWAWPosition lPos;
     lPos.m_anchorTo=MWAWPosition::Frame;
-    MWAWSubDocumentPtr doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
+    MWAWSubDocumentPtr doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
     librevenge::RVNGPropertyList extras;
     extras.insert("style:background-transparency", "100%");
     listener->insertTextBox(position, doc, extras);
@@ -2447,7 +2447,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   /* first sort the different zone: ie. we must first send the page block, then the main zone */
   std::vector<size_t> listJobs[2];
   for (size_t g = 0; g < group.m_blockToSendList.size(); g++) {
-    CWGraphInternal::Zone *child = group.m_zones[g].get();
+    ClarisWksGraphInternal::Zone *child = group.m_zones[g].get();
     if (!child) continue;
     if (position.m_anchorTo==MWAWPosition::Unknown && suggestedAnchor == MWAWPosition::Page) {
       Vec2f RB = Vec2f(child->m_box[1])+leftTop;
@@ -2456,12 +2456,12 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
         continue;
       }
     }
-    if (child->getType() == CWGraphInternal::Zone::T_Zone) {
-      CWGraphInternal::ZoneZone const &childZone =
-        reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
+    if (child->getType() == ClarisWksGraphInternal::Zone::T_Zone) {
+      ClarisWksGraphInternal::ZoneZone const &childZone =
+        reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
       int zId = childZone.m_id;
-      shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zId);
-      if (dset && dset->m_type==CWStruct::DSET::T_Main) {
+      shared_ptr<ClarisWksStruct::DSET> dset=m_mainParser->getZone(zId);
+      if (dset && dset->m_type==ClarisWksStruct::DSET::T_Main) {
         listJobs[1].push_back(g);
         continue;
       }
@@ -2485,23 +2485,23 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
       if (st==0 && !mainGroup && canUseGraphic) {
         for (size_t h = g; h < numJobs; ++h) {
           cId=listJobs[st][h];
-          CWGraphInternal::Zone *child = group.m_zones[cId].get();
+          ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
           if (!child) continue;
-          CWGraphInternal::Zone::Type type=child->getType();
+          ClarisWksGraphInternal::Zone::Type type=child->getType();
           if (groupList.empty()) page=child->m_page;
           else if (page != child->m_page) break;
-          if (type==CWGraphInternal::Zone::T_Zone) {
-            CWGraphInternal::ZoneZone const &childZone =
-              reinterpret_cast<CWGraphInternal::ZoneZone const &>(*child);
+          if (type==ClarisWksGraphInternal::Zone::T_Zone) {
+            ClarisWksGraphInternal::ZoneZone const &childZone =
+              reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
             if (group.isLinked(childZone.m_id) ||
                 !m_mainParser->canSendZoneAsGraphic(childZone.m_id))
               break;
           }
-          else if (type==CWGraphInternal::Zone::T_DataBox ||
-                   type==CWGraphInternal::Zone::T_Chart ||
-                   type==CWGraphInternal::Zone::T_Unknown)
+          else if (type==ClarisWksGraphInternal::Zone::T_DataBox ||
+                   type==ClarisWksGraphInternal::Zone::T_Chart ||
+                   type==ClarisWksGraphInternal::Zone::T_Unknown)
             continue;
-          else if (type!=CWGraphInternal::Zone::T_Shape)
+          else if (type!=ClarisWksGraphInternal::Zone::T_Shape)
             break;
           if (groupList.empty())
             box=child->m_box;
@@ -2514,7 +2514,7 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
 
       if (groupList.size() <= 1) {
         cId=listJobs[st][g];
-        CWGraphInternal::Zone *child = group.m_zones[cId].get();
+        ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
         if (!child) continue;
         box = child->m_box;
         page = child->m_page;
@@ -2555,32 +2555,32 @@ bool CWGraph::sendGroup(CWGraphInternal::Group &group, MWAWPosition const &posit
   return true;
 }
 
-bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosition pos)
+bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t cId, MWAWPosition pos)
 {
-  CWGraphInternal::Zone *child = group.m_zones[cId].get();
+  ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
   if (!child) return false;
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWGraph::sendGroupChild: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: can not find the listener\n"));
     return false;
   }
-  CWGraphInternal::Zone::Type type = child->getType();
-  if (type==CWGraphInternal::Zone::T_Picture)
-    return sendPicture(reinterpret_cast<CWGraphInternal::ZonePict &>(*child), pos);
-  if (type==CWGraphInternal::Zone::T_Shape)
-    return sendShape(reinterpret_cast<CWGraphInternal::ZoneShape &>(*child), pos);
-  if (type==CWGraphInternal::Zone::T_DataBox || type==CWGraphInternal::Zone::T_Chart ||
-      type==CWGraphInternal::Zone::T_Unknown)
+  ClarisWksGraphInternal::Zone::Type type = child->getType();
+  if (type==ClarisWksGraphInternal::Zone::T_Picture)
+    return sendPicture(reinterpret_cast<ClarisWksGraphInternal::ZonePict &>(*child), pos);
+  if (type==ClarisWksGraphInternal::Zone::T_Shape)
+    return sendShape(reinterpret_cast<ClarisWksGraphInternal::ZoneShape &>(*child), pos);
+  if (type==ClarisWksGraphInternal::Zone::T_DataBox || type==ClarisWksGraphInternal::Zone::T_Chart ||
+      type==ClarisWksGraphInternal::Zone::T_Unknown)
     return true;
-  if (type!=CWGraphInternal::Zone::T_Zone) {
-    MWAW_DEBUG_MSG(("CWGraph::sendGroupChild: find unknown zone\n"));
+  if (type!=ClarisWksGraphInternal::Zone::T_Zone) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: find unknown zone\n"));
     return false;
   }
 
-  CWGraphInternal::ZoneZone const &childZone = reinterpret_cast<CWGraphInternal::ZoneZone &>(*child);
+  ClarisWksGraphInternal::ZoneZone const &childZone = reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
   int zId = childZone.m_id;
-  shared_ptr<CWStruct::DSET> dset=m_mainParser->getZone(zId);
-  CWGraphInternal::Style const cStyle = childZone.m_style;
+  shared_ptr<ClarisWksStruct::DSET> dset=m_mainParser->getZone(zId);
+  ClarisWksGraphInternal::Style const cStyle = childZone.m_style;
   switch (cStyle.m_wrapping&3) {
   case 0:
     pos.m_wrapping = MWAWPosition::WRunThrough;
@@ -2605,7 +2605,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
       (dset && dset->m_fileType==1) && m_mainParser->canSendZoneAsGraphic(zId)) {
     Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
     graphicListener->startGraphic(box);
-    shared_ptr<MWAWSubDocument> doc(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
+    shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
     graphicListener->insertTextBox(box, doc, cStyle);
     librevenge::RVNGBinaryData data;
     std::string mime;
@@ -2614,10 +2614,10 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     return true;
   }
   // now check if we need to create a frame
-  CWStruct::DSET::Type cType=dset ? dset->m_type : CWStruct::DSET::T_Unknown;
+  ClarisWksStruct::DSET::Type cType=dset ? dset->m_type : ClarisWksStruct::DSET::T_Unknown;
   bool createFrame=
-    cType == CWStruct::DSET::T_Frame || cType == CWStruct::DSET::T_Table ||
-    (cType == CWStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
+    cType == ClarisWksStruct::DSET::T_Frame || cType == ClarisWksStruct::DSET::T_Table ||
+    (cType == ClarisWksStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
   if (!isLinked && childZone.m_subId) {
     MWAW_DEBUG_MSG(("find old subs zone\n"));
     return false;
@@ -2648,9 +2648,9 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {
       MWAWPosition lPos;
-      if (0 && (cType == CWStruct::DSET::T_Frame || cType == CWStruct::DSET::T_Table))
+      if (0 && (cType == ClarisWksStruct::DSET::T_Frame || cType == ClarisWksStruct::DSET::T_Table))
         lPos.m_anchorTo=MWAWPosition::Frame;
-      doc.reset(new CWGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
+      doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
     }
     if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
       pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
@@ -2660,7 +2660,7 @@ bool CWGraph::sendGroupChild(CWGraphInternal::Group &group, size_t cId, MWAWPosi
   return m_mainParser->sendZone(zId, false);
 }
 
-bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
+bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosition pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
@@ -2676,41 +2676,41 @@ bool CWGraph::sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos)
   return true;
 }
 
-bool CWGraph::canSendBitmapAsGraphic(int number) const
+bool ClarisWksGraph::canSendBitmapAsGraphic(int number) const
 {
-  std::map<int, shared_ptr<CWGraphInternal::Bitmap> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Bitmap> >::iterator iter
     = m_state->m_bitmapMap.find(number);
   if (iter == m_state->m_bitmapMap.end() || !iter->second) {
-    MWAW_DEBUG_MSG(("CWGraph::canSendBitmapAsGraphic: can not find bitmap %d\n", number));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::canSendBitmapAsGraphic: can not find bitmap %d\n", number));
     return false;
   }
   return true;
 }
 
-bool CWGraph::sendBitmap(int number, bool asGraphic, MWAWPosition const &pos)
+bool ClarisWksGraph::sendBitmap(int number, bool asGraphic, MWAWPosition const &pos)
 {
-  std::map<int, shared_ptr<CWGraphInternal::Bitmap> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Bitmap> >::iterator iter
     = m_state->m_bitmapMap.find(number);
   if (iter == m_state->m_bitmapMap.end() || !iter->second) {
-    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap %d\n", number));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not find bitmap %d\n", number));
     return false;
   }
   return sendBitmap(*iter->second, asGraphic, pos);
 }
 
-bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPosition pos)
+bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPosition pos)
 {
   if (!bitmap.m_entry.valid() || !bitmap.m_numBytesPerPixel)
     return false;
   int bytesPerPixel = bitmap.m_numBytesPerPixel;
   if (bytesPerPixel<0 && (bytesPerPixel!=-2 && bytesPerPixel!=-4)) {
-    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unknown group of color\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: unknown group of color\n"));
     return false;
   }
   if (asGraphic) {
     if (!m_parserState->m_graphicListener ||
         !m_parserState->m_graphicListener->isDocumentStarted()) {
-      MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not access to the graphic listener\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not access to the graphic listener\n"));
       return true;
     }
   }
@@ -2730,7 +2730,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   }
   else {
     if (bytesPerPixel<0) {
-      MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unexpected mode for compressed bitmap. Bitmap ignored.\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: unexpected mode for compressed bitmap. Bitmap ignored.\n"));
       return false;
     }
     bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_bitmapSize)));
@@ -2771,7 +2771,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
       default: {
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("CWGraph::sendBitmap: unknown data size\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: unknown data size\n"));
           first = false;
         }
         break;
@@ -2785,7 +2785,7 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
-    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not find bitmap size\n"));
     pos.setSize(Vec2f(0,0));
   }
   if (asGraphic) {
@@ -2799,8 +2799,8 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   return true;
 }
 
-bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
-                          MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict,
+                                 MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   bool send = false;
   bool posOk = pos.size()[0] > 0 && pos.size()[1] > 0;
@@ -2820,8 +2820,8 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
     input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
     switch (pict.getSubType()) {
-    case CWGraphInternal::Zone::T_Movie:
-    case CWGraphInternal::Zone::T_Pict: {
+    case ClarisWksGraphInternal::Zone::T_Movie:
+    case ClarisWksGraphInternal::Zone::T_Pict: {
       shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
       if (thePict) {
         if (!send && listener) {
@@ -2834,19 +2834,19 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
       }
       break;
     }
-    case CWGraphInternal::Zone::T_Line:
-    case CWGraphInternal::Zone::T_Rect:
-    case CWGraphInternal::Zone::T_RectOval:
-    case CWGraphInternal::Zone::T_Oval:
-    case CWGraphInternal::Zone::T_Arc:
-    case CWGraphInternal::Zone::T_Poly:
-    case CWGraphInternal::Zone::T_Zone:
-    case CWGraphInternal::Zone::T_Shape:
-    case CWGraphInternal::Zone::T_Picture:
-    case CWGraphInternal::Zone::T_Chart:
-    case CWGraphInternal::Zone::T_DataBox:
-    case CWGraphInternal::Zone::T_Unknown:
-    case CWGraphInternal::Zone::T_QTim:
+    case ClarisWksGraphInternal::Zone::T_Line:
+    case ClarisWksGraphInternal::Zone::T_Rect:
+    case ClarisWksGraphInternal::Zone::T_RectOval:
+    case ClarisWksGraphInternal::Zone::T_Oval:
+    case ClarisWksGraphInternal::Zone::T_Arc:
+    case ClarisWksGraphInternal::Zone::T_Poly:
+    case ClarisWksGraphInternal::Zone::T_Zone:
+    case ClarisWksGraphInternal::Zone::T_Shape:
+    case ClarisWksGraphInternal::Zone::T_Picture:
+    case ClarisWksGraphInternal::Zone::T_Chart:
+    case ClarisWksGraphInternal::Zone::T_DataBox:
+    case ClarisWksGraphInternal::Zone::T_Unknown:
+    case ClarisWksGraphInternal::Zone::T_QTim:
     default:
       if (!send && listener) {
         librevenge::RVNGBinaryData data;
@@ -2872,12 +2872,12 @@ bool CWGraph::sendPicture(CWGraphInternal::ZonePict &pict,
   return send;
 }
 
-void CWGraph::flushExtra()
+void ClarisWksGraph::flushExtra()
 {
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.begin();
   for (; iter !=  m_state->m_groupMap.end(); ++iter) {
-    shared_ptr<CWGraphInternal::Group> zone = iter->second;
+    shared_ptr<ClarisWksGraphInternal::Group> zone = iter->second;
     if (zone->m_parsed)
       continue;
     if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
@@ -2887,13 +2887,13 @@ void CWGraph::flushExtra()
   }
 }
 
-void CWGraph::setSlideList(std::vector<int> const &slideList)
+void ClarisWksGraph::setSlideList(std::vector<int> const &slideList)
 {
-  std::map<int, shared_ptr<CWGraphInternal::Group> >::iterator iter;
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
   for (size_t s=0; s < slideList.size(); s++) {
     iter = m_state->m_groupMap.find(slideList[s]);
     if (iter==m_state->m_groupMap.end() || !iter->second) {
-      MWAW_DEBUG_MSG(("CWGraph::setSlideList: can find group %d\n", slideList[s]));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::setSlideList: can find group %d\n", slideList[s]));
       continue;
     }
     iter->second->m_page=int(s+1);

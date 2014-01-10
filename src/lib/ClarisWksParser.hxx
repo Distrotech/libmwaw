@@ -35,8 +35,8 @@
  * Parser to Claris Works text document
  *
  */
-#ifndef CW_MWAW_PARSER
-#  define CW_MWAW_PARSER
+#ifndef CLARIS_WKS_PARSER
+#  define CLARIS_WKS_PARSER
 
 #include <set>
 #include <string>
@@ -49,43 +49,43 @@
 
 #include "MWAWParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWParserInternal
+namespace ClarisWksParserInternal
 {
 struct State;
 class SubDocument;
 }
 
-class CWDatabase;
-class CWGraph;
-class CWPresentation;
-class CWSpreadsheet;
-class CWStyleManager;
-class CWTable;
-class CWText;
+class ClarisWksDatabase;
+class ClarisWksGraph;
+class ClarisWksPresentation;
+class ClarisWksSpreadsheet;
+class ClarisWksStyleManager;
+class ClarisWksTable;
+class ClarisWksText;
 
 /** \brief the main class to read a Claris Works file
  *
  *
  *
  */
-class CWParser : public MWAWTextParser
+class ClarisWksParser : public MWAWTextParser
 {
-  friend class CWParserInternal::SubDocument;
-  friend class CWDatabase;
-  friend class CWGraph;
-  friend class CWPresentation;
-  friend class CWSpreadsheet;
-  friend class CWStyleManager;
-  friend class CWTable;
-  friend class CWText;
+  friend class ClarisWksParserInternal::SubDocument;
+  friend class ClarisWksDatabase;
+  friend class ClarisWksGraph;
+  friend class ClarisWksPresentation;
+  friend class ClarisWksSpreadsheet;
+  friend class ClarisWksStyleManager;
+  friend class ClarisWksTable;
+  friend class ClarisWksText;
 
 public:
   //! constructor
-  CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  ClarisWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~CWParser();
+  virtual ~ClarisWksParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -104,7 +104,7 @@ protected:
   bool createZones();
 
   //! return the zone corresponding to an id ( low level)
-  shared_ptr<CWStruct::DSET> getZone(int zId) const;
+  shared_ptr<ClarisWksStruct::DSET> getZone(int zId) const;
 
   /** try to find the zone dags structure... */
   bool exploreZonesGraph();
@@ -115,7 +115,7 @@ protected:
   void typeMainZones();
 
   /** try to type the main zones recursif, returns the father id*/
-  int typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight);
+  int typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight);
 
   //! read a zone
   bool readZone();
@@ -179,7 +179,7 @@ protected:
   /** reads the zone DSET
 
   set complete to true if we read all the zone */
-  shared_ptr<CWStruct::DSET> readDSET(bool &complete);
+  shared_ptr<ClarisWksStruct::DSET> readDSET(bool &complete);
 
   // THE NAMED ENTRY
 
@@ -221,31 +221,31 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<CWParserInternal::State> m_state;
+  shared_ptr<ClarisWksParserInternal::State> m_state;
 
   //! a flag to know if pageSpan is filled
   bool m_pageSpanSet;
 
   //! the database parser
-  shared_ptr<CWDatabase> m_databaseParser;
+  shared_ptr<ClarisWksDatabase> m_databaseParser;
 
   //! the graph parser
-  shared_ptr<CWGraph> m_graphParser;
+  shared_ptr<ClarisWksGraph> m_graphParser;
 
   //! the spreadsheet parser
-  shared_ptr<CWPresentation> m_presentationParser;
+  shared_ptr<ClarisWksPresentation> m_presentationParser;
 
   //! the spreadsheet parser
-  shared_ptr<CWSpreadsheet> m_spreadsheetParser;
+  shared_ptr<ClarisWksSpreadsheet> m_spreadsheetParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 
   //! the table parser
-  shared_ptr<CWTable> m_tableParser;
+  shared_ptr<ClarisWksTable> m_tableParser;
 
   //! the text parser
-  shared_ptr<CWText> m_textParser;
+  shared_ptr<ClarisWksText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

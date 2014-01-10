@@ -46,14 +46,14 @@
 #include "MWAWParagraph.hxx"
 #include "MWAWSection.hxx"
 
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWText.hxx"
+#include "ClarisWksText.hxx"
 
-/** Internal: the structures of a CWText */
-namespace CWTextInternal
+/** Internal: the structures of a ClarisWksText */
+namespace ClarisWksTextInternal
 {
 /** the different plc type */
 enum PLCType { P_Font,  P_Ruler, P_Child, P_Section, P_TextZone, P_Token, P_Unknown};
@@ -276,12 +276,12 @@ struct Section {
       return sec;
     size_t numCols = m_columnsWidth.size();
     if (m_numColumns != int(numCols)) {
-      MWAW_DEBUG_MSG(("CWTextInternal::Section::getSection: unexpected number of columns\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTextInternal::Section::getSection: unexpected number of columns\n"));
       return sec;
     }
     bool hasSep = numCols==m_columnsSep.size();
     if (!hasSep && m_columnsSep.size()) {
-      MWAW_DEBUG_MSG(("CWTextInternal::Section::getSection: can not used column separator\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTextInternal::Section::getSection: can not used column separator\n"));
       return sec;
     }
     sec.m_columns.resize(size_t(numCols));
@@ -423,9 +423,9 @@ std::ostream &operator<<(std::ostream &o, Token const &tok)
   return o;
 }
 
-struct Zone : public CWStruct::DSET {
-  Zone(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_zones(), m_numChar(0), m_numTextZone(0), m_numParagInfo(0),
+struct Zone : public ClarisWksStruct::DSET {
+  Zone(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
+    ClarisWksStruct::DSET(dset), m_zones(), m_numChar(0), m_numTextZone(0), m_numParagInfo(0),
     m_numFont(0), m_fatherId(0), m_unknown(0), m_fontList(), m_paragraphList(),
     m_sectionList(), m_tokenList(), m_textZoneList(), m_plcMap()
   {
@@ -434,7 +434,7 @@ struct Zone : public CWStruct::DSET {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     if (doc.m_numChar) o << "numChar=" << doc.m_numChar << ",";
     if (doc.m_numTextZone) o << "numTextZone=" << doc.m_numTextZone << ",";
     if (doc.m_numParagInfo) o << "numParag=" << doc.m_numParagInfo << ",";
@@ -460,7 +460,7 @@ struct Zone : public CWStruct::DSET {
   std::multimap<long, PLC> m_plcMap /** the plc map */;
 };
 ////////////////////////////////////////
-//! Internal: the state of a CWText
+//! Internal: the state of a ClarisWksText
 struct State {
   //! constructor
   State() : m_version(-1), m_paragraphsList(), m_zoneMap()
@@ -480,25 +480,25 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWText::CWText(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWTextInternal::State),
+ClarisWksText::ClarisWksText(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksTextInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWText::~CWText()
+ClarisWksText::~ClarisWksText()
 { }
 
-int CWText::version() const
+int ClarisWksText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int CWText::numPages() const
+int ClarisWksText::numPages() const
 {
-  std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.find(1);
   if (iter == m_state->m_zoneMap.end())
     return 1;
@@ -526,18 +526,18 @@ int CWText::numPages() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 1)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   int const vers = version();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWTextInternal::Zone> textZone(new CWTextInternal::Zone(zone));
+  shared_ptr<ClarisWksTextInternal::Zone> textZone(new ClarisWksTextInternal::Zone(zone));
 
   textZone->m_unknown = (int) input->readULong(2); // alway 0 ?
   textZone->m_fatherId = (int) input->readULong(2);
@@ -547,24 +547,24 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   textZone->m_numFont = (int) input->readULong(2);
   switch (textZone->m_textType >> 4) {
   case 2:
-    textZone->m_type = CWStruct::DSET::T_Header;
+    textZone->m_type = ClarisWksStruct::DSET::T_Header;
     break;
   case 4:
-    textZone->m_type = CWStruct::DSET::T_Footer;
+    textZone->m_type = ClarisWksStruct::DSET::T_Footer;
     break;
   case 6:
-    textZone->m_type = CWStruct::DSET::T_Footnote;
+    textZone->m_type = ClarisWksStruct::DSET::T_Footnote;
     break;
   case 8:
-    textZone->m_type = CWStruct::DSET::T_Frame;
+    textZone->m_type = ClarisWksStruct::DSET::T_Frame;
     break;
   case 0xe:
-    textZone->m_type = CWStruct::DSET::T_Table;
+    textZone->m_type = ClarisWksStruct::DSET::T_Table;
     break;
   default:
     break;
   }
-  if (textZone->m_textType != CWStruct::DSET::T_Unknown)
+  if (textZone->m_textType != ClarisWksStruct::DSET::T_Unknown)
     textZone->m_textType &= 0xF;
 
   f << "Entries(DSETT):" << *textZone << ",";
@@ -596,29 +596,29 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 
   int N = int(zone.m_numData);
   if (long(input->tell())+N*data0Length > entry.end()) {
-    MWAW_DEBUG_MSG(("CWText::readDSETZone: file is too short\n"));
-    return shared_ptr<CWStruct::DSET>();
+    MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: file is too short\n"));
+    return shared_ptr<ClarisWksStruct::DSET>();
   }
 
   input->seek(entry.end()-N*data0Length, librevenge::RVNG_SEEK_SET);
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_Child;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_Child;
   if (data0Length) {
     for (int i = 0; i < N; i++) {
       /* definition of a list of text zone ( one by column and one by page )*/
       pos = input->tell();
       f.str("");
       f << "DSETT-" << i << ":";
-      CWStruct::DSET::Child child;
+      ClarisWksStruct::DSET::Child child;
       child.m_posC = (long) input->readULong(4);
-      child.m_type = CWStruct::DSET::Child::TEXT;
+      child.m_type = ClarisWksStruct::DSET::Child::TEXT;
       int dim[2];
       for (int j = 0; j < 2; j++)
         dim[j] = (int) input->readLong(2);
       child.m_box = Box2i(Vec2i(0,0), Vec2i(dim[0], dim[1]));
       textZone->m_childs.push_back(child);
       plc.m_id = i;
-      textZone->m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(child.m_posC, plc));
+      textZone->m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(child.m_posC, plc));
 
       f << child;
       f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
@@ -665,7 +665,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 
     input->seek(zEntry.end(), librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) !=  zEntry.end()) {
-      MWAW_DEBUG_MSG(("CWText::readDSETZone: entry for %d zone is too short\n", z));
+      MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: entry for %d zone is too short\n", z));
       ascFile.addPos(pos);
       ascFile.addNote("###");
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -696,7 +696,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
     if (!ok) {
       if (z >= 4) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
-        MWAW_DEBUG_MSG(("CWText::readDSETZone: can not find text %d zone\n", z-4));
+        MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: can not find text %d zone\n", z-4));
         if (z > 4) break;
         return textZone;
       }
@@ -716,13 +716,13 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
   }
 
   for (size_t tok = 0; tok < textZone->m_tokenList.size(); tok++) {
-    CWTextInternal::Token const &token = textZone->m_tokenList[tok];
+    ClarisWksTextInternal::Token const &token = textZone->m_tokenList[tok];
     if (token.m_zoneId > 0)
       textZone->m_otherChilds.push_back(token.m_zoneId);
   }
 
   if (m_state->m_zoneMap.find(textZone->m_id) != m_state->m_zoneMap.end()) {
-    MWAW_DEBUG_MSG(("CWText::readDSETZone: zone %d already exists!!!\n", textZone->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: zone %d already exists!!!\n", textZone->m_id));
   }
   else
     m_state->m_zoneMap[textZone->m_id] = textZone;
@@ -737,7 +737,7 @@ shared_ptr<CWStruct::DSET> CWText::readDSETZone(CWStruct::DSET const &zone, MWAW
 //
 ////////////////////////////////////////////////////////////
 
-bool CWText::readFont(int id, int &posC, MWAWFont &font)
+bool ClarisWksText::readFont(int id, int &posC, MWAWFont &font)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -765,7 +765,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
 
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!input->checkPosition(pos+fontSize)) {
-    MWAW_DEBUG_MSG(("CWText::readFont: file is too short"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readFont: file is too short"));
     return false;
   }
   posC = int(input->readULong(4));
@@ -806,7 +806,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
     if (m_styleManager->getColor(colId, col))
       color = col;
     else if (vers != 1) {
-      MWAW_DEBUG_MSG(("CWText::readFont: unknown color %d\n", colId));
+      MWAW_DEBUG_MSG(("ClarisWksText::readFont: unknown color %d\n", colId));
     }
     /*V1:
       color  = 1 black, 26 : yellow, 2c: magenta 24 red 29 cyan
@@ -843,7 +843,7 @@ bool CWText::readFont(int id, int &posC, MWAWFont &font)
 ////////////////////////////////////////////////////////////
 // the fonts properties
 ////////////////////////////////////////////////////////////
-bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool ClarisWksText::readFonts(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -889,15 +889,15 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   ascFile.addNote("Entries(Font)");
 
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_Font;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_Font;
   for (int i = 0; i < numElt; i++) {
     MWAWFont font;
     int posChar;
     if (!readFont(i, posChar, font)) return false;
     zone.m_fontList.push_back(font);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(posChar, plc));
+    zone.m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(posChar, plc));
   }
 
   return true;
@@ -906,7 +906,7 @@ bool CWText::readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // the paragraphs properties
 ////////////////////////////////////////////////////////////
-bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool ClarisWksText::readParagraphs(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -946,11 +946,11 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
   libmwaw::DebugStream f;
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_Ruler;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_Ruler;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
-    CWTextInternal::ParagraphPLC info;
+    ClarisWksTextInternal::ParagraphPLC info;
 
     long posC = (long) input->readULong(4);
     f.str("");
@@ -961,7 +961,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 
     if (vers > 2) {
       info.m_styleId = info.m_rulerId;
-      CWStyleManager::Style style;
+      ClarisWksStyleManager::Style style;
       if (m_styleManager->get(info.m_rulerId, style)) {
         info.m_rulerId = style.m_rulerId;
 #if 0
@@ -975,7 +975,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
       ascFile.addDelimiter(input->tell(), '|');
     zone.m_paragraphList.push_back(info);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(posC, plc));
+    zone.m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(posC, plc));
     input->seek(pos+styleSize, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -987,7 +987,7 @@ bool CWText::readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // zone which corresponds to the token
 ////////////////////////////////////////////////////////////
-bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool ClarisWksText::readTokens(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -1023,31 +1023,31 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
   libmwaw::DebugStream f;
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_Token;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_Token;
   int val;
   std::vector<int> fieldList;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
 
     int posC = (int) input->readULong(4);
-    CWTextInternal::Token token;
+    ClarisWksTextInternal::Token token;
 
     int type = (int) input->readLong(2);
     f.str("");
     switch (type) {
     case 0:
-      token.m_type = CWTextInternal::TKN_FOOTNOTE;
+      token.m_type = ClarisWksTextInternal::TKN_FOOTNOTE;
       break;
     case 1:
-      token.m_type = CWTextInternal::TKN_GRAPHIC;
+      token.m_type = ClarisWksTextInternal::TKN_GRAPHIC;
       break;
     case 2:
       /* find in v4-v6, does not seem to exist in v1-v2 */
-      token.m_type = CWTextInternal::TKN_PAGENUMBER;
+      token.m_type = ClarisWksTextInternal::TKN_PAGENUMBER;
       break;
     case 3:
-      token.m_type = CWTextInternal::TKN_FIELD;
+      token.m_type = ClarisWksTextInternal::TKN_FIELD;
       fieldList.push_back(i);
       break;
     default:
@@ -1076,7 +1076,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     f << "Token-" << i << ": pos=" << posC << "," << token;
     zone.m_tokenList.push_back(token);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(posC, plc));
+    zone.m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(posC, plc));
 
     if (long(input->tell()) != pos && long(input->tell()) != pos+dataSize)
       ascFile.addDelimiter(input->tell(), '|');
@@ -1092,7 +1092,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
     f.str("");
     f << "Token[field-" << i << "]:";
     if (!input->checkPosition(pos+sz+4) || long(input->readULong(1))+1!=sz) {
-      MWAW_DEBUG_MSG(("CWText::readTokens: can find token field name %d\n", int(i)));
+      MWAW_DEBUG_MSG(("ClarisWksText::readTokens: can find token field name %d\n", int(i)));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       f << "###";
       ascFile.addPos(pos);
@@ -1111,7 +1111,7 @@ bool CWText::readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone)
 }
 
 // read the different section definition
-bool CWText::readTextSection(CWTextInternal::Zone &zone)
+bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
 {
   int const vers = version();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1121,7 +1121,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos || (sz && sz < 12)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readTextSection: unexpected size\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1145,7 +1145,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   int hSz = (int) input->readULong(2);
   if (!fSz || N *fSz+hSz+12 != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readTextSection: unexpected size\n"));
     return false;
   }
   if ((vers > 3 && fSz != 0x4e) || (vers <= 3 && fSz < 60)) {
@@ -1153,7 +1153,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWText::readTextSection: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readTextSection: unexpected size\n"));
     return true;
   }
   if (long(input->tell()) != pos+4+hSz)
@@ -1162,10 +1162,10 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
   ascFile.addNote(f.str().c_str());
 
   input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_Section;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_Section;
   for (int i= 0; i < N; i++) {
-    CWTextInternal::Section sec;
+    ClarisWksTextInternal::Section sec;
 
     pos = input->tell();
     f.str("");
@@ -1178,7 +1178,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     }
     sec.m_numColumns  = (int) input->readULong(2);
     if (!sec.m_numColumns || sec.m_numColumns > 10) {
-      MWAW_DEBUG_MSG(("CWText::readTextSection: num columns seems odd\n"));
+      MWAW_DEBUG_MSG(("ClarisWksText::readTextSection: num columns seems odd\n"));
       f << "#numColumns=" << sec.m_numColumns << ",";
       sec.m_numColumns = 1;
     }
@@ -1196,7 +1196,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
     sec.m_extra = f.str();
     zone.m_sectionList.push_back(sec);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(sec.m_pos, plc));
+    zone.m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(sec.m_pos, plc));
     f.str("");
     f << "TextSection-S" << i << ":" << sec;
     if (input->tell() != pos+fSz)
@@ -1212,7 +1212,7 @@ bool CWText::readTextSection(CWTextInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // read the different size for the text
 ////////////////////////////////////////////////////////////
-bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone)
+bool ClarisWksText::readTextZoneSize(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone)
 {
   long pos = entry.begin();
 
@@ -1231,19 +1231,19 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
 
-  CWTextInternal::PLC plc;
-  plc.m_type = CWTextInternal::P_TextZone;
+  ClarisWksTextInternal::PLC plc;
+  plc.m_type = ClarisWksTextInternal::P_TextZone;
   for (int i = 0; i < numElt; i++) {
     pos = input->tell();
     f.str("");
     f << "TextZoneSz-" << i << ":";
-    CWTextInternal::TextZoneInfo info;
+    ClarisWksTextInternal::TextZoneInfo info;
     info.m_pos = (long) input->readULong(4);
     info.m_N = (int) input->readULong(2);
     f << info;
     zone.m_textZoneList.push_back(info);
     plc.m_id = i;
-    zone.m_plcMap.insert(std::map<long, CWTextInternal::PLC>::value_type(info.m_pos, plc));
+    zone.m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(info.m_pos, plc));
 
     if (long(input->tell()) != pos+dataSize)
       ascFile.addDelimiter(input->tell(), '|');
@@ -1256,23 +1256,23 @@ bool CWText::readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone
   return true;
 }
 
-bool CWText::canSendTextAsGraphic(CWTextInternal::Zone const &zone) const
+bool ClarisWksText::canSendTextAsGraphic(ClarisWksTextInternal::Zone const &zone) const
 {
   size_t numSection=zone.m_sectionList.size();
   if (numSection>1) return false;
   if (numSection==1 && zone.m_sectionList[0].m_numColumns>1)
     return false;
   for (size_t t=0; t < zone.m_tokenList.size(); ++t) {
-    CWTextInternal::Token const &tok=zone.m_tokenList[t];
-    if (tok.m_type!=CWTextInternal::TKN_UNKNOWN &&
-        tok.m_type!=CWTextInternal::TKN_PAGENUMBER &&
-        tok.m_type!=CWTextInternal::TKN_FIELD)
+    ClarisWksTextInternal::Token const &tok=zone.m_tokenList[t];
+    if (tok.m_type!=ClarisWksTextInternal::TKN_UNKNOWN &&
+        tok.m_type!=ClarisWksTextInternal::TKN_PAGENUMBER &&
+        tok.m_type!=ClarisWksTextInternal::TKN_FIELD)
       return false;
   }
   return true;
 }
 
-bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
+bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGraphic)
 {
   MWAWBasicListenerPtr listener;
   zone.m_parsed=true;
@@ -1281,7 +1281,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
   else
     listener=m_parserState->m_textListener;
   if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("CWText::sendText: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not find a listener\n"));
     return false;
   }
   // Removeme when all is ok
@@ -1297,7 +1297,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
     if (!asGraphic)
       m_mainParser->newPage(actPage);
     else {
-      MWAW_DEBUG_MSG(("CWText::sendText: try to send main zone as graphic\n"));
+      MWAW_DEBUG_MSG(("ClarisWksText::sendText: try to send main zone as graphic\n"));
       main=false;
     }
   }
@@ -1313,7 +1313,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
   long actListCPos=-1;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
-  std::multimap<long, CWTextInternal::PLC>::const_iterator plcIt;
+  std::multimap<long, ClarisWksTextInternal::PLC>::const_iterator plcIt;
   for (size_t z = 0; z < numZones; z++) {
     MWAWEntry const &entry  =  zone.m_zones[z];
     long pos = entry.begin();
@@ -1325,7 +1325,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
     for (int i = 0; i < numC; i++) {
       if (nextSectionPos!=-1 && actC >= nextSectionPos) {
         if (actC != nextSectionPos) {
-          MWAW_DEBUG_MSG(("CWText::sendText: find a section inside a complex char!!!\n"));
+          MWAW_DEBUG_MSG(("ClarisWksText::sendText: find a section inside a complex char!!!\n"));
           f << "###";
         }
         numSection++;
@@ -1359,28 +1359,28 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
       bool seeToken = false;
       while (plcIt != zone.m_plcMap.end() && plcIt->first<=actC) {
         if (actC != plcIt->first) {
-          MWAW_DEBUG_MSG(("CWText::sendText: find a plc inside a complex char!!!\n"));
+          MWAW_DEBUG_MSG(("ClarisWksText::sendText: find a plc inside a complex char!!!\n"));
           f << "###";
         }
-        CWTextInternal::PLC const &plc = plcIt++->second;
+        ClarisWksTextInternal::PLC const &plc = plcIt++->second;
         f << "[" << plc << "]";
         switch (plc.m_type) {
-        case CWTextInternal::P_Font:
+        case ClarisWksTextInternal::P_Font:
           if (plc.m_id < 0 || plc.m_id >= int(zone.m_fontList.size())) {
-            MWAW_DEBUG_MSG(("CWText::sendText: can not find font %d\n", plc.m_id));
+            MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not find font %d\n", plc.m_id));
             f << "###";
             break;
           }
           listener->setFont(zone.m_fontList[size_t(plc.m_id)]);
           break;
-        case CWTextInternal::P_Ruler: {
+        case ClarisWksTextInternal::P_Ruler: {
           if (plc.m_id < 0 || plc.m_id >= numParaPLC)
             break;
-          CWTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
+          ClarisWksTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
           f << "[" << paraPLC << "]";
           if (paraPLC.m_rulerId < 0 || paraPLC.m_rulerId >= numParagraphs)
             break;
-          CWTextInternal::Paragraph para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
+          ClarisWksTextInternal::Paragraph para = m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
           if (*para.m_listLevelIndex>0 && actC >= actListCPos)
             actListId=findListId(zone, actListId, actC, actListCPos);
 #if 0
@@ -1403,21 +1403,21 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
           setProperty(*listener, para, actListId);
           break;
         }
-        case CWTextInternal::P_Token: {
+        case ClarisWksTextInternal::P_Token: {
           if (plc.m_id < 0 || plc.m_id >= int(zone.m_tokenList.size())) {
-            MWAW_DEBUG_MSG(("CWText::sendText: can not find the token %d\n", plc.m_id));
+            MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not find the token %d\n", plc.m_id));
             f << "###";
             break;
           }
-          CWTextInternal::Token const &token = zone.m_tokenList[size_t(plc.m_id)];
+          ClarisWksTextInternal::Token const &token = zone.m_tokenList[size_t(plc.m_id)];
           switch (token.m_type) {
-          case CWTextInternal::TKN_FOOTNOTE:
+          case ClarisWksTextInternal::TKN_FOOTNOTE:
             if (zone.okChildId(token.m_zoneId))
               m_mainParser->sendFootnote(token.m_zoneId);
             else
               f << "###";
             break;
-          case CWTextInternal::TKN_PAGENUMBER:
+          case ClarisWksTextInternal::TKN_PAGENUMBER:
             switch (token.m_unknown[0]) {
             case 1:
             case 2: {
@@ -1435,7 +1435,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               listener->insertField(MWAWField(MWAWField::PageNumber));
             }
             break;
-          case CWTextInternal::TKN_GRAPHIC:
+          case ClarisWksTextInternal::TKN_GRAPHIC:
             if (zone.okChildId(token.m_zoneId)) {
               // fixme
               MWAWPosition tPos;
@@ -1448,7 +1448,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
             else
               f << "###";
             break;
-          case CWTextInternal::TKN_FIELD:
+          case ClarisWksTextInternal::TKN_FIELD:
             listener->insertUnicode(0xab);
             if (token.m_fieldEntry.valid() &&
                 input->checkPosition(token.m_fieldEntry.end())) {
@@ -1460,22 +1460,22 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
               input->seek(actPos, librevenge::RVNG_SEEK_SET);
             }
             else {
-              MWAW_DEBUG_MSG(("CWText::sendText: can not find field token data\n"));
+              MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not find field token data\n"));
               listener->insertCharacter(' ');
             }
             listener->insertUnicode(0xbb);
             break;
-          case CWTextInternal::TKN_UNKNOWN:
+          case ClarisWksTextInternal::TKN_UNKNOWN:
           default:
             break;
           }
           seeToken = true;
           break;
         }
-        case CWTextInternal::P_Child:
-        case CWTextInternal::P_Section:
-        case CWTextInternal::P_TextZone:
-        case CWTextInternal::P_Unknown:
+        case ClarisWksTextInternal::P_Child:
+        case ClarisWksTextInternal::P_Section:
+        case ClarisWksTextInternal::P_TextZone:
+        case ClarisWksTextInternal::P_Unknown:
         default:
           break;
         }
@@ -1484,7 +1484,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
       actC++;
       if (c == '\0') {
         if (i == numC-1) break;
-        MWAW_DEBUG_MSG(("CWText::sendText: OOPS, find 0 reading the text\n"));
+        MWAW_DEBUG_MSG(("ClarisWksText::sendText: OOPS, find 0 reading the text\n"));
         f << "###0x0";
         continue;
       }
@@ -1496,7 +1496,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
           listener->insertBreak(MWAWTextListener::ColumnBreak);
           break;
         }
-        MWAW_DEBUG_MSG(("CWText::sendText: Find unexpected char 1\n"));
+        MWAW_DEBUG_MSG(("ClarisWksText::sendText: Find unexpected char 1\n"));
         f << "###";
       case 0xb: // page break
         numSectionInPage = 0;
@@ -1565,7 +1565,7 @@ bool CWText::sendText(CWTextInternal::Zone const &zone, bool asGraphic)
   return true;
 }
 
-int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long actC, long &lastPos)
+int ClarisWksText::findListId(ClarisWksTextInternal::Zone const &zone, int actListId, long actC, long &lastPos)
 {
   // retrieve the actual list
   shared_ptr<MWAWList> actList;
@@ -1574,22 +1574,22 @@ int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long act
 
   int numParaPLC= int(zone.m_paragraphList.size());
   int numParagraphs = int(m_state->m_paragraphsList.size());
-  std::multimap<long, CWTextInternal::PLC>::const_iterator plcIt;
+  std::multimap<long, ClarisWksTextInternal::PLC>::const_iterator plcIt;
   plcIt=zone.m_plcMap.find(actC);
   int listId = -1;
   int maxLevelSet = -1;
   // find the last position which can correspond to the actual list
   while (plcIt!=zone.m_plcMap.end()) {
     lastPos = plcIt->first;
-    CWTextInternal::PLC const &plc = plcIt++->second;
-    if (plc.m_type != CWTextInternal::P_Ruler)
+    ClarisWksTextInternal::PLC const &plc = plcIt++->second;
+    if (plc.m_type != ClarisWksTextInternal::P_Ruler)
       continue;
     if (plc.m_id < 0 || plc.m_id >= numParaPLC)
       break;
-    CWTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
+    ClarisWksTextInternal::ParagraphPLC const &paraPLC = zone.m_paragraphList[(size_t) plc.m_id];
     if (paraPLC.m_rulerId < 0 || paraPLC.m_rulerId >= numParagraphs)
       break;
-    CWTextInternal::Paragraph const &para=m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
+    ClarisWksTextInternal::Paragraph const &para=m_state->m_paragraphsList[(size_t) paraPLC.m_rulerId];
     int level = *para.m_listLevelIndex;
     if (level<=0)
       continue;
@@ -1610,11 +1610,11 @@ int CWText::findListId(CWTextInternal::Zone const &zone, int actListId, long act
 // the style definition?
 ////////////////////////////////////////////////////////////
 
-bool CWText::readSTYL_RULR(int N, int fSz)
+bool ClarisWksText::readSTYL_RULR(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   if (fSz != 108) {
-    MWAW_DEBUG_MSG(("CWText::readSTYL_RULR: Find odd ruler size %d\n", fSz));
+    MWAW_DEBUG_MSG(("ClarisWksText::readSTYL_RULR: Find odd ruler size %d\n", fSz));
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1638,7 +1638,7 @@ bool CWText::readSTYL_RULR(int N, int fSz)
 ////////////////////////////////////////////////////////////
 // read a list of rulers
 ////////////////////////////////////////////////////////////
-bool CWText::readParagraphs()
+bool ClarisWksText::readParagraphs()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -1647,7 +1647,7 @@ bool CWText::readParagraphs()
 
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (input->isEnd()) {
-    MWAW_DEBUG_MSG(("CWText::readParagraphs: ruler zone is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readParagraphs: ruler zone is too short\n"));
     return false;
   }
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -1659,7 +1659,7 @@ bool CWText::readParagraphs()
 
   if (sz != 12+fSz*N) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWText::readParagraphs: find odd ruler size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readParagraphs: find odd ruler size\n"));
     return false;
   }
 
@@ -1690,7 +1690,7 @@ bool CWText::readParagraphs()
 ////////////////////////////////////////////////////////////
 // read a ruler zone
 ////////////////////////////////////////////////////////////
-bool CWText::readParagraph(int id)
+bool ClarisWksText::readParagraph(int id)
 {
   int dataSize = 0;
   int vers = version();
@@ -1709,11 +1709,11 @@ bool CWText::readParagraph(int id)
     else dataSize = 96;
     break;
   default:
-    MWAW_DEBUG_MSG(("CWText::readParagraph: unknown size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readParagraph: unknown size\n"));
     return false;
   }
 
-  CWTextInternal::Paragraph ruler;
+  ClarisWksTextInternal::Paragraph ruler;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long endPos = pos+dataSize;
@@ -1733,7 +1733,7 @@ bool CWText::readParagraph(int id)
     ruler.m_labelType = (int) input->readLong(1);
     int listLevel = (int) input->readLong(1);
     if (listLevel < 0 || listLevel > 10) {
-      MWAW_DEBUG_MSG(("CWText::readParagraph: can not determine list level\n"));
+      MWAW_DEBUG_MSG(("ClarisWksText::readParagraph: can not determine list level\n"));
       f << "##listLevel=" << listLevel << ",";
       listLevel = 0;
     }
@@ -1821,7 +1821,7 @@ bool CWText::readParagraph(int id)
     }
     if (ok) val = 0;
     else {
-      MWAW_DEBUG_MSG(("CWText::readParagraph: can not determine interline dimension\n"));
+      MWAW_DEBUG_MSG(("ClarisWksText::readParagraph: can not determine interline dimension\n"));
       interline = 0;
     }
     break;
@@ -1851,7 +1851,7 @@ bool CWText::readParagraph(int id)
   int numTabs = (int) input->readULong(1);
   if (long(input->tell())+numTabs*4 > endPos) {
     if (numTabs != 255) { // 0xFF seems to be used in v1, v2
-      MWAW_DEBUG_MSG(("CWText::readParagraph: numTabs is too big\n"));
+      MWAW_DEBUG_MSG(("ClarisWksText::readParagraph: numTabs is too big\n"));
     }
     f << "numTabs*=" << numTabs << ",";
     numTabs = 0;
@@ -1949,7 +1949,7 @@ bool CWText::readParagraph(int id)
   return true;
 }
 
-void CWText::setProperty(MWAWBasicListener &listener, CWTextInternal::Paragraph const &ruler, int listId)
+void ClarisWksText::setProperty(MWAWBasicListener &listener, ClarisWksTextInternal::Paragraph const &ruler, int listId)
 {
   if (listId <= 0) {
     listener.setParagraph(ruler);
@@ -1960,33 +1960,33 @@ void CWText::setProperty(MWAWBasicListener &listener, CWTextInternal::Paragraph 
   listener.setParagraph(para);
 }
 
-bool CWText::canSendTextAsGraphic(int number) const
+bool ClarisWksText::canSendTextAsGraphic(int number) const
 {
-  std::map<int, shared_ptr<CWTextInternal::Zone> >::const_iterator iter
+  std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::const_iterator iter
     = m_state->m_zoneMap.find(number);
   if (iter == m_state->m_zoneMap.end() || !iter->second)
     return false;
   return canSendTextAsGraphic(*iter->second);
 }
 
-bool CWText::sendZone(int number, bool asGraphic)
+bool ClarisWksText::sendZone(int number, bool asGraphic)
 {
-  std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.find(number);
   if (iter == m_state->m_zoneMap.end())
     return false;
-  shared_ptr<CWTextInternal::Zone> zone = iter->second;
+  shared_ptr<ClarisWksTextInternal::Zone> zone = iter->second;
   sendText(*zone, asGraphic);
   return true;
 }
 
-void CWText::flushExtra()
+void ClarisWksText::flushExtra()
 {
   if (!m_parserState->m_textListener) return;
-  std::map<int, shared_ptr<CWTextInternal::Zone> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
   for (; iter !=  m_state->m_zoneMap.end(); ++iter) {
-    shared_ptr<CWTextInternal::Zone> zone = iter->second;
+    shared_ptr<ClarisWksTextInternal::Zone> zone = iter->second;
     if (!zone || zone->m_parsed)
       continue;
     m_parserState->m_textListener->insertEOL();

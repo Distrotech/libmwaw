@@ -43,11 +43,11 @@
 #include "MWAWHeader.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "CWParser.hxx"
+#include "ClarisWksParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWStruct
+namespace ClarisWksStruct
 {
 //
 // DSET

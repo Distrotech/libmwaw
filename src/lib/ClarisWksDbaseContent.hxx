@@ -35,8 +35,8 @@
  * The main database content used by Claris Works parser to store spreedsheet/Databese
  *
  */
-#ifndef CW_DBASE_CONTENT
-#  define CW_DBASE_CONTENT
+#ifndef CLARIS_WKS_DBASE_CONTENT
+#  define CLARIS_WKS_DBASE_CONTENT
 
 #include <iostream>
 #include <map>
@@ -48,18 +48,18 @@
 #include "MWAWFont.hxx"
 
 // remove me
-#include "CWStyleManager.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-class CWStyleManager;
+class ClarisWksStyleManager;
 
 //! small structure used to parse main content of a spreadsheet/database zone
-class CWDbaseContent
+class ClarisWksDbaseContent
 {
 public:
   //! constructor
-  CWDbaseContent(MWAWParserStatePtr parserState, shared_ptr<CWStyleManager> styleManager, bool spreadsheet);
+  ClarisWksDbaseContent(MWAWParserStatePtr parserState, shared_ptr<ClarisWksStyleManager> styleManager, bool spreadsheet);
   //! destructor
-  ~CWDbaseContent();
+  ~ClarisWksDbaseContent();
   //! try to read the record structure
   bool readContent();
 
@@ -71,9 +71,9 @@ public:
   //! try to send a cell content to the listener
   bool send(Vec2i const &pos);
   //! set the field format ( for database )
-  void setDatabaseFormats(std::vector<CWStyleManager::CellFormat> const &format);
+  void setDatabaseFormats(std::vector<ClarisWksStyleManager::CellFormat> const &format);
 protected:
-  /** struct which stores a record in CWDbaseContent */
+  /** struct which stores a record in ClarisWksDbaseContent */
   struct Record {
     //! different result type
     enum Type { R_Unknown, R_Long, R_Double, R_String };
@@ -103,7 +103,7 @@ protected:
     //! the border in v1-3 spreadsheet
     int m_borders;
   };
-  /** struct which stores a column in CWDbaseContent */
+  /** struct which stores a column in ClarisWksDbaseContent */
   struct Column {
     //! constructor
     Column() : m_idRecordMap()
@@ -127,7 +127,7 @@ protected:
   bool readRecordDB(Vec2i const &where, long pos, Record &record);
 
   //! send a double with a corresponding cell format
-  void send(double val, bool isNotaNumber, CWStyleManager::CellFormat const &format);
+  void send(double val, bool isNotaNumber, ClarisWksStyleManager::CellFormat const &format);
 
   //! the file version
   int m_version;
@@ -137,12 +137,12 @@ protected:
   //! the parser state
   MWAWParserStatePtr m_parserState;
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 
   //! a map col id to column
   std::map<int, Column> m_idColumnMap;
   //! the databse format
-  std::vector<CWStyleManager::CellFormat> m_dbFormatList;
+  std::vector<ClarisWksStyleManager::CellFormat> m_dbFormatList;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -35,8 +35,8 @@
  * Parser to Claris Works text document
  *
  */
-#ifndef CW_MWAW_TEXT
-#  define CW_MWAW_TEXT
+#ifndef CLARIS_WKS_TEXT
+#  define CLARIS_WKS_TEXT
 
 #include <list>
 #include <string>
@@ -52,36 +52,36 @@
 
 #include "MWAWParser.hxx"
 
-namespace CWStruct
+namespace ClarisWksStruct
 {
 struct DSET;
 }
 
-namespace CWTextInternal
+namespace ClarisWksTextInternal
 {
 struct Paragraph;
 struct Zone;
 struct State;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWText
+class ClarisWksText
 {
-  friend class CWParser;
-  friend class CWStyleManager;
+  friend class ClarisWksParser;
+  friend class ClarisWksStyleManager;
 
 public:
   //! constructor
-  CWText(CWParser &parser);
+  ClarisWksText(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWText();
+  virtual ~ClarisWksText();
 
   /** returns the file version */
   int version() const;
@@ -90,11 +90,11 @@ public:
   int numPages() const;
 
   //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readDSETZone(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  shared_ptr<ClarisWksStruct::DSET> readDSETZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
 protected:
   /** sends a paragraph property to the listener */
-  void setProperty(MWAWBasicListener &listener, CWTextInternal::Paragraph const &ruler, int listId=-1);
+  void setProperty(MWAWBasicListener &listener, ClarisWksTextInternal::Paragraph const &ruler, int listId=-1);
 
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number, bool asGraphic=false);
@@ -109,27 +109,27 @@ protected:
   //
 
   //! try to read the paragraph
-  bool readParagraphs(MWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readParagraphs(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone);
 
   //! try to read a font sequence
-  bool readFonts(MWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readFonts(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone);
 
   //! try to the token zone)
-  bool readTokens(MWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readTokens(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone);
 
   //! try to read the text zone size
-  bool readTextZoneSize(MWAWEntry const &entry, CWTextInternal::Zone &zone);
+  bool readTextZoneSize(MWAWEntry const &entry, ClarisWksTextInternal::Zone &zone);
 
   //! try to read the section
-  bool readTextSection(CWTextInternal::Zone &zone);
+  bool readTextSection(ClarisWksTextInternal::Zone &zone);
 
   //! send the text zone to the listener
-  bool sendText(CWTextInternal::Zone const &zone, bool asGraphic);
+  bool sendText(ClarisWksTextInternal::Zone const &zone, bool asGraphic);
   //! check if we can send a textzone has graphic
-  bool canSendTextAsGraphic(CWTextInternal::Zone const &zone) const;
+  bool canSendTextAsGraphic(ClarisWksTextInternal::Zone const &zone) const;
 
   //! try to find a list id which corresponds to the list beginning in actPos
-  int findListId(CWTextInternal::Zone const &zone, int actListId, long cPos, long &lastPos);
+  int findListId(ClarisWksTextInternal::Zone const &zone, int actListId, long cPos, long &lastPos);
 
   //! try to read a font
   bool readFont(int id, int &posC, MWAWFont &font);
@@ -148,8 +148,8 @@ protected:
   bool readSTYL_RULR(int N, int fSz);
 
 private:
-  CWText(CWText const &orig);
-  CWText &operator=(CWText const &orig);
+  ClarisWksText(ClarisWksText const &orig);
+  ClarisWksText &operator=(ClarisWksText const &orig);
 
 protected:
   //
@@ -159,13 +159,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWTextInternal::State> m_state;
+  shared_ptr<ClarisWksTextInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

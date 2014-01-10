@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef DM_PARSER
-#  define DM_PARSER
+#ifndef DOC_MKR_PARSER
+#  define DOC_MKR_PARSER
 
 #include <string>
 #include <vector>
@@ -44,23 +44,23 @@
 
 #include "MWAWParser.hxx"
 
-namespace DMParserInternal
+namespace DocMkrParserInternal
 {
 struct State;
 }
 
-class DMText;
+class DocMkrText;
 
 /** \brief the main class to read a DocMake file
  */
-class DMParser : public MWAWTextParser
+class DocMkrParser : public MWAWTextParser
 {
-  friend class DMText;
+  friend class DocMkrText;
 public:
   //! constructor
-  DMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  DocMkrParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~DMParser();
+  virtual ~DocMkrParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -108,10 +108,10 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<DMParserInternal::State> m_state;
+  shared_ptr<DocMkrParserInternal::State> m_state;
 
   //! the text parser
-  shared_ptr<DMText> m_textParser;
+  shared_ptr<DocMkrText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

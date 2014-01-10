@@ -42,16 +42,16 @@
 #include "MWAWEntry.hxx"
 #include "MWAWFontConverter.hxx"
 
-#include "CWParser.hxx"
-#include "CWText.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksText.hxx"
 
-#include "CWStyleManager.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-/** Internal: the structures of a CWStyleManagerInternal */
-namespace CWStyleManagerInternal
+/** Internal: the structures of a ClarisWksStyleManagerInternal */
+namespace ClarisWksStyleManagerInternal
 {
 ////////////////////////////////////////
-//! Internal: the pattern of a CWStyleManager
+//! Internal: the pattern of a ClarisWksStyleManager
 struct Pattern : public MWAWGraphicStyle::Pattern {
   //! constructor ( 4 int by patterns )
   Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
@@ -81,7 +81,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
 };
 
 ////////////////////////////////////////
-//! Internal: the gradient of a CWStyleManager
+//! Internal: the gradient of a ClarisWksStyleManager
 struct Gradient {
   //! construtor
   Gradient(int type=0, int nColor=0, int angle=0, float decal=0) :
@@ -181,7 +181,7 @@ bool Gradient::update(MWAWGraphicStyle &style) const
   return true;
 }
 
-//! Internal: the state of a CWStyleManager
+//! Internal: the state of a ClarisWksStyleManager
 struct State {
   //! constructor
   State() : m_version(-1), m_localFIdMap(), m_stylesMap(), m_lookupMap(),
@@ -210,17 +210,17 @@ struct State {
   //! a map local fontId->fontId
   std::map<int, int> m_localFIdMap;
   //! the styles map id->style
-  std::map<int, CWStyleManager::Style> m_stylesMap;
+  std::map<int, ClarisWksStyleManager::Style> m_stylesMap;
   //! the style lookupMap
   std::map<int, int> m_lookupMap;
   //! the list of fonts
   std::vector<MWAWFont> m_fontList;
   //! the list of format
-  std::vector<CWStyleManager::CellFormat> m_cellFormatList;
+  std::vector<ClarisWksStyleManager::CellFormat> m_cellFormatList;
   //! the Graphic list
   std::vector<MWAWGraphicStyle> m_graphList;
   //! the KSEN list
-  std::vector<CWStyleManager::KSEN> m_ksenList;
+  std::vector<ClarisWksStyleManager::KSEN> m_ksenList;
   //! the style name list
   std::vector<std::string> m_nameList;
   //! a list colorId -> color
@@ -1458,7 +1458,7 @@ void State::setDefaultWallPaperList(int version)
 ////////////////////////////////////////////////////
 // KSEN function
 ////////////////////////////////////////////////////
-std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
+std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::KSEN const &ksen)
 {
   switch (ksen.m_valign) {
   case 0:
@@ -1528,7 +1528,7 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::KSEN const &ksen)
 ////////////////////////////////////////////////////
 // Style function
 ////////////////////////////////////////////////////
-std::ostream &operator<<(std::ostream &o, CWStyleManager::Style const &style)
+std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::Style const &style)
 {
   if (style.m_styleId != -1) {
     o << "styleId=[" << style.m_styleId ;
@@ -1557,23 +1557,23 @@ std::ostream &operator<<(std::ostream &o, CWStyleManager::Style const &style)
 ////////////////////////////////////////////////////
 // StyleManager function
 ////////////////////////////////////////////////////
-CWStyleManager::CWStyleManager(CWParser &parser) :
+ClarisWksStyleManager::ClarisWksStyleManager(ClarisWksParser &parser) :
   m_parserState(parser.getParserState()), m_mainParser(&parser), m_state()
 {
-  m_state.reset(new CWStyleManagerInternal::State);
+  m_state.reset(new ClarisWksStyleManagerInternal::State);
 }
 
-CWStyleManager::~CWStyleManager()
+ClarisWksStyleManager::~ClarisWksStyleManager()
 {
 }
 
-int CWStyleManager::version() const
+int ClarisWksStyleManager::version() const
 {
   if (m_state->m_version <= 0) m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-bool CWStyleManager::getRulerName(int id, std::string &name) const
+bool ClarisWksStyleManager::getRulerName(int id, std::string &name) const
 {
   Style style, parentStyle;
   if (!get(id, style) || style.m_rulerPId < 0 ||
@@ -1583,24 +1583,24 @@ bool CWStyleManager::getRulerName(int id, std::string &name) const
    */
   if (style.m_rulerId!=parentStyle.m_rulerId+1) return false;
   if (parentStyle.m_nameId >= (int) m_state->m_nameList.size()) {
-    MWAW_DEBUG_MSG(("CWStyleManager::getRulerName: oops something look bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::getRulerName: oops something look bad\n"));
     return false;
   }
   name=m_state->m_nameList[size_t(parentStyle.m_nameId)];
   return true;
 }
 
-bool CWStyleManager::get(int id, MWAWFont &ft) const
+bool ClarisWksStyleManager::get(int id, MWAWFont &ft) const
 {
   if (id < 0 || id >= int(m_state->m_fontList.size())) {
-    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find font %d\n", id));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::get: can not find font %d\n", id));
     return false;
   }
   ft=m_state->m_fontList[size_t(id)];
   return true;
 }
 
-bool CWStyleManager::getColor(int id, MWAWColor &col) const
+bool ClarisWksStyleManager::getColor(int id, MWAWColor &col) const
 {
   int numColor = (int) m_state->m_colorList.size();
   if (!numColor) {
@@ -1613,25 +1613,25 @@ bool CWStyleManager::getColor(int id, MWAWColor &col) const
   return true;
 }
 
-bool CWStyleManager::getPattern(int id, MWAWGraphicStyle::Pattern &pattern, float &percent) const
+bool ClarisWksStyleManager::getPattern(int id, MWAWGraphicStyle::Pattern &pattern, float &percent) const
 {
   if (m_state->m_patternList.empty())
     m_state->setDefaultPatternList(version());
   if (id <= 0 || id > int(m_state->m_patternList.size()))
     return false;
-  CWStyleManagerInternal::Pattern const &pat=m_state->m_patternList[size_t(id-1)];
+  ClarisWksStyleManagerInternal::Pattern const &pat=m_state->m_patternList[size_t(id-1)];
   pattern = pat;
   percent = pat.m_percent;
   return true;
 }
 
 // accessor
-int CWStyleManager::getFontId(int localId) const
+int ClarisWksStyleManager::getFontId(int localId) const
 {
   return m_state->getFontId(localId);
 }
 
-bool CWStyleManager::get(int styleId, CWStyleManager::Style &style) const
+bool ClarisWksStyleManager::get(int styleId, ClarisWksStyleManager::Style &style) const
 {
   style = Style();
   if (version() <= 2 || m_state->m_lookupMap.find(styleId) == m_state->m_lookupMap.end())
@@ -1643,47 +1643,47 @@ bool CWStyleManager::get(int styleId, CWStyleManager::Style &style) const
   return true;
 }
 
-bool CWStyleManager::get(int formatId, CWStyleManager::CellFormat &format) const
+bool ClarisWksStyleManager::get(int formatId, ClarisWksStyleManager::CellFormat &format) const
 {
   format = CellFormat();
   if (formatId<0||formatId>=int(m_state->m_cellFormatList.size())) {
-    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find format %d\n", formatId));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::get: can not find format %d\n", formatId));
     return false;
   }
   format = m_state->m_cellFormatList[size_t(formatId)];
   return true;
 }
 
-bool CWStyleManager::get(int ksenId, CWStyleManager::KSEN &ksen) const
+bool ClarisWksStyleManager::get(int ksenId, ClarisWksStyleManager::KSEN &ksen) const
 {
   ksen = KSEN();
   if (ksenId < 0) return false;
   if (ksenId >= int(m_state->m_ksenList.size())) {
-    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find ksen %d\n", ksenId));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::get: can not find ksen %d\n", ksenId));
     return false;
   }
   ksen = m_state->m_ksenList[size_t(ksenId)];
   return true;
 }
 
-bool CWStyleManager::get(int graphId, MWAWGraphicStyle &graph) const
+bool ClarisWksStyleManager::get(int graphId, MWAWGraphicStyle &graph) const
 {
   graph = MWAWGraphicStyle();
   if (graphId < 0) return false;
   if (graphId >= int(m_state->m_graphList.size())) {
-    MWAW_DEBUG_MSG(("CWStyleManager::get: can not find graph %d\n", graphId));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::get: can not find graph %d\n", graphId));
     return false;
   }
   graph = m_state->m_graphList[size_t(graphId)];
   return true;
 }
 
-bool CWStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
+bool ClarisWksStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
 {
   if (m_state->m_gradientList.empty())
     m_state->setDefaultGradientList(version());
   if (id < 0 || id>=int(m_state->m_gradientList.size())) {
-    MWAW_DEBUG_MSG(("CWStyleManager::updateGradiant: called with id=%d\n", id));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::updateGradiant: called with id=%d\n", id));
     return false;
   }
   if (!m_state->m_gradientList[size_t(id)].update(style)) return false;
@@ -1698,7 +1698,7 @@ bool CWStyleManager::updateGradient(int id, MWAWGraphicStyle &style) const
   return true;
 }
 
-bool CWStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
+bool ClarisWksStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
 {
   int numWallpaper = (int) m_state->m_wallpaperList.size();
   if (!numWallpaper) {
@@ -1706,7 +1706,7 @@ bool CWStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
     numWallpaper = int(m_state->m_wallpaperList.size());
   }
   if (id <= 0 || id > numWallpaper) {
-    MWAW_DEBUG_MSG(("CWStyleManager::updateWallPaper: can not find wall paper %d\n", int(id)));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::updateWallPaper: can not find wall paper %d\n", int(id)));
     return false;
   }
   MWAWGraphicStyle::Pattern const &pat=m_state->m_wallpaperList[size_t(id-1)];
@@ -1720,7 +1720,7 @@ bool CWStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) const
 ////////////////////////////////////////////////////////////
 // read file main structure
 ////////////////////////////////////////////////////////////
-bool CWStyleManager::readPatternList(long endPos)
+bool ClarisWksStyleManager::readPatternList(long endPos)
 {
   int vers=version();
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1732,7 +1732,7 @@ bool CWStyleManager::readPatternList(long endPos)
   if (sz<0 || (sz && sz < 140) || (endPos>0 && pos+sz+4>endPos) ||
       (endPos<=0 && !input->checkPosition(pos+sz+4))) {
     f << "###";
-    MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: can read pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readPatternList: can read pattern size\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos,librevenge::RVNG_SEEK_SET);
@@ -1761,7 +1761,7 @@ bool CWStyleManager::readPatternList(long endPos)
   }
   if (140+8*N!=sz) {
     f << "###";
-    MWAW_DEBUG_MSG(("CWStyleManager::readPatternList: unexpected pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readPatternList: unexpected pattern size\n"));
     ascFile.addDelimiter(input->tell(),'|');
   }
   else {
@@ -1769,7 +1769,7 @@ bool CWStyleManager::readPatternList(long endPos)
     for (int i=0; i < N; ++i) {
       uint16_t pat[4];
       for (int j=0; j<4; ++j) pat[j]=(uint16_t) input->readULong(2);
-      CWStyleManagerInternal::Pattern pattern(pat);
+      ClarisWksStyleManagerInternal::Pattern pattern(pat);
       m_state->m_patternList.push_back(pattern);
       f << "pat" << i+64 << "=[" << pattern << "],";
     }
@@ -1780,7 +1780,7 @@ bool CWStyleManager::readPatternList(long endPos)
   return true;
 }
 
-bool CWStyleManager::readGradientList(long endPos)
+bool ClarisWksStyleManager::readGradientList(long endPos)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
@@ -1792,7 +1792,7 @@ bool CWStyleManager::readGradientList(long endPos)
   if (sz<0 || (sz && sz < 76) || (endPos>0 && finalPos>endPos) ||
       (endPos<0 && !input->checkPosition(finalPos))) {
     f << "###";
-    MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: can read pattern size\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos,librevenge::RVNG_SEEK_SET);
@@ -1821,7 +1821,7 @@ bool CWStyleManager::readGradientList(long endPos)
   }
   if (76+40*N!=sz) {
     f << "###";
-    MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: unexpected pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: unexpected pattern size\n"));
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1836,7 +1836,7 @@ bool CWStyleManager::readGradientList(long endPos)
     pos=input->tell();
     f.str("");
     f << "GradientList-" << 32+i << ":";
-    CWStyleManagerInternal::Gradient grad;
+    ClarisWksStyleManagerInternal::Gradient grad;
     for (int j=0; j<4; ++j) {
       unsigned char color[3];
       for (int c=0; c < 3; c++) color[c] = (unsigned char)(input->readULong(2)/256);
@@ -1852,7 +1852,7 @@ bool CWStyleManager::readGradientList(long endPos)
     f << grad;
     if (!grad.ok()) {
       f << "##";
-      MWAW_DEBUG_MSG(("CWStyleManager::readGradientList: can read the number of color or type\n"));
+      MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: can read the number of color or type\n"));
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
       input->seek(finalPos,librevenge::RVNG_SEEK_SET);
@@ -1867,7 +1867,7 @@ bool CWStyleManager::readGradientList(long endPos)
   return true;
 }
 
-bool CWStyleManager::readColorList(MWAWEntry const &entry)
+bool ClarisWksStyleManager::readColorList(MWAWEntry const &entry)
 {
   if (!entry.valid()) return false;
   long pos = entry.begin();
@@ -1887,7 +1887,7 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
 
   int const fSz = 16;
   if (pos+10+N*fSz > entry.end()) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readColorList: can not read data\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readColorList: can not read data\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1916,7 +1916,7 @@ bool CWStyleManager::readColorList(MWAWEntry const &entry)
   return true;
 }
 
-bool CWStyleManager::readStyles(MWAWEntry const &entry)
+bool ClarisWksStyleManager::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "STYL")
     return false;
@@ -1926,7 +1926,7 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readStyles: pb with entry length"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readStyles: pb with entry length"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1965,14 +1965,14 @@ bool CWStyleManager::readStyles(MWAWEntry const &entry)
   return true;
 }
 
-bool CWStyleManager::readGenStyle(int id)
+bool ClarisWksStyleManager::readGenStyle(int id)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
   if (!input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: pb with sub zone: %d", id));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGenStyle: pb with sub zone: %d", id));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -2054,13 +2054,13 @@ bool CWStyleManager::readGenStyle(int id)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (name=="NAME") {
     if (!readPatternList()) {
-      MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the pattern list\n"));
+      MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGenStyle: can not find the pattern list\n"));
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
     }
     else if (version()==4) {
       endPos=input->tell();
       if (!readGradientList()) {
-        MWAW_DEBUG_MSG(("CWStyleManager::readGenStyle: can not find the gradient list\n"));
+        MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGenStyle: can not find the gradient list\n"));
         input->seek(endPos, librevenge::RVNG_SEEK_SET);
       }
     }
@@ -2069,13 +2069,13 @@ bool CWStyleManager::readGenStyle(int id)
   return true;
 }
 
-bool CWStyleManager::readStylesDef(int N, int fSz)
+bool ClarisWksStyleManager::readStylesDef(int N, int fSz)
 {
   m_state->m_stylesMap.clear();
   if (fSz == 0 || N== 0)
     return true;
   if (fSz < 28) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readStylesDef: Find old data size %d\n", fSz));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readStylesDef: Find old data size %d\n", fSz));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2113,7 +2113,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
     if (m_state->m_stylesMap.find(i)==m_state->m_stylesMap.end())
       m_state->m_stylesMap[i] = style;
     else {
-      MWAW_DEBUG_MSG(("CWStyleManager::readStylesDef: style %d already exists\n", i));
+      MWAW_DEBUG_MSG(("ClarisWksStyleManager::readStylesDef: style %d already exists\n", i));
     }
     if (long(input->tell()) != pos+fSz)
       ascFile.addDelimiter(input->tell(), '|');
@@ -2130,7 +2130,7 @@ bool CWStyleManager::readStylesDef(int N, int fSz)
   return true;
 }
 
-bool CWStyleManager::readLookUp(int N, int fSz)
+bool ClarisWksStyleManager::readLookUp(int N, int fSz)
 {
   m_state->m_lookupMap.clear();
 
@@ -2148,7 +2148,7 @@ bool CWStyleManager::readLookUp(int N, int fSz)
     if (m_state->m_stylesMap.find(val)!=m_state->m_stylesMap.end() &&
         m_state->m_stylesMap.find(val)->second.m_localStyleId != val &&
         m_state->m_stylesMap.find(val)->second.m_localStyleId != -1) {
-      MWAW_DEBUG_MSG(("CWStyleManager::readLookUp: find some incoherence between style and lookup\n"));
+      MWAW_DEBUG_MSG(("ClarisWksStyleManager::readLookUp: find some incoherence between style and lookup\n"));
       f << "##";
     }
     m_state->m_lookupMap[i] = val;
@@ -2167,7 +2167,7 @@ bool CWStyleManager::readLookUp(int N, int fSz)
 ////////////////////////////////////////////////////////////
 // small structure
 ////////////////////////////////////////////////////////////
-bool CWStyleManager::readFontNames(int N, int fSz)
+bool ClarisWksStyleManager::readFontNames(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   if (fSz < 16) return false;
@@ -2188,7 +2188,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
     if (5+nChar > fSz) {
       static bool first = true;
       if (first) {
-        MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: pb with name field %d", i));
+        MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: pb with name field %d", i));
         first = false;
       }
       f << "#";
@@ -2199,14 +2199,14 @@ bool CWStyleManager::readFontNames(int N, int fSz)
       for (int c = 0; c < nChar; c++) {
         char ch = (char) input->readULong(1);
         if (ch == '\0') {
-          MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: pb with name field %d\n", i));
+          MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: pb with name field %d\n", i));
           ok = false;
           break;
         }
         else if (ch & 0x80) {
           static bool first = true;
           if (first) {
-            MWAW_DEBUG_MSG(("CWStyleManager::readFontNames: find odd font\n"));
+            MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: find odd font\n"));
             first = false;
           }
           if (fontEncoding!=0x4000)
@@ -2231,7 +2231,7 @@ bool CWStyleManager::readFontNames(int N, int fSz)
   return true;
 }
 
-bool CWStyleManager::readFont(int id, int fontSize, MWAWFont &font)
+bool ClarisWksStyleManager::readFont(int id, int fontSize, MWAWFont &font)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -2307,13 +2307,13 @@ bool CWStyleManager::readFont(int id, int fontSize, MWAWFont &font)
   return true;
 }
 
-bool CWStyleManager::readStyleFonts(int N, int fSz)
+bool ClarisWksStyleManager::readStyleFonts(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   if (m_state->m_fontList.size()) {
-    MWAW_DEBUG_MSG(("CWText::readStyleFonts: font list already exists!!!\n"));
+    MWAW_DEBUG_MSG(("ClarisWksText::readStyleFonts: font list already exists!!!\n"));
   }
   m_state->m_fontList.resize((size_t)N);
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2336,7 +2336,7 @@ bool CWStyleManager::readStyleFonts(int N, int fSz)
   return true;
 }
 
-bool CWStyleManager::readStyleNames(int N, int fSz)
+bool ClarisWksStyleManager::readStyleNames(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2355,7 +2355,7 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
       if (3+nChar > fSz) {
         static bool first = true;
         if (first) {
-          MWAW_DEBUG_MSG(("CWStyleManager::readStyleNames: pb with name field %d\n", i));
+          MWAW_DEBUG_MSG(("ClarisWksStyleManager::readStyleNames: pb with name field %d\n", i));
           first = false;
         }
         f << "#";
@@ -2378,11 +2378,11 @@ bool CWStyleManager::readStyleNames(int N, int fSz)
   return true;
 }
 
-bool CWStyleManager::readCellStyles(int N, int fSz)
+bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   if (fSz < 18) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readCellStyles: Find old ruler size %d\n", fSz));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readCellStyles: Find old ruler size %d\n", fSz));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2441,12 +2441,12 @@ bool CWStyleManager::readCellStyles(int N, int fSz)
   return true;
 }
 
-bool CWStyleManager::readGraphStyles(int N, int fSz)
+bool ClarisWksStyleManager::readGraphStyles(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   int const vers = version();
   if ((vers <= 4 && fSz < 24) || (vers >= 5 && fSz < 28)) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readGraphStyles: Find old ruler size %d\n", fSz));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGraphStyles: Find old ruler size %d\n", fSz));
     return false;
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2535,12 +2535,12 @@ bool CWStyleManager::readGraphStyles(int N, int fSz)
 }
 
 
-bool CWStyleManager::readKSEN(int N, int fSz)
+bool ClarisWksStyleManager::readKSEN(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
   m_state->m_ksenList.resize(0);
   if (fSz != 14) {
-    MWAW_DEBUG_MSG(("CWStyleManager::readKSEN: Find odd ksen size %d\n", fSz));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readKSEN: Find odd ksen size %d\n", fSz));
   }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -2605,7 +2605,7 @@ bool CWStyleManager::readKSEN(int N, int fSz)
   return true;
 }
 
-std::ostream &operator<<(std::ostream &o, CWStyleManager::CellFormat const &form)
+std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat const &form)
 {
   switch (form.m_justify) {
   case 0:

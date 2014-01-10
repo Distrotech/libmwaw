@@ -45,28 +45,28 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWTable.hxx"
 
-#include "CWDbaseContent.hxx"
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksDbaseContent.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWSpreadsheet.hxx"
+#include "ClarisWksSpreadsheet.hxx"
 
-/** Internal: the structures of a CWSpreadsheet */
-namespace CWSpreadsheetInternal
+/** Internal: the structures of a ClarisWksSpreadsheet */
+namespace ClarisWksSpreadsheetInternal
 {
 //! Internal the spreadsheet
-struct Spreadsheet : public CWStruct::DSET {
+struct Spreadsheet : public ClarisWksStruct::DSET {
   // constructor
-  Spreadsheet(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_colWidths(), m_rowHeightMap(), m_content()
+  Spreadsheet(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
+    ClarisWksStruct::DSET(dset), m_colWidths(), m_rowHeightMap(), m_content()
   {
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Spreadsheet const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
   //! the columns width
@@ -74,10 +74,10 @@ struct Spreadsheet : public CWStruct::DSET {
   //! a map row to height
   std::map<int, int> m_rowHeightMap;
   //! the data
-  shared_ptr<CWDbaseContent> m_content;
+  shared_ptr<ClarisWksDbaseContent> m_content;
 };
 
-//! Internal: the state of a CWSpreadsheet
+//! Internal: the state of a ClarisWksSpreadsheet
 struct State {
   //! constructor
   State() : m_spreadsheetMap()
@@ -92,22 +92,22 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWSpreadsheet::CWSpreadsheet(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWSpreadsheetInternal::State),
+ClarisWksSpreadsheet::ClarisWksSpreadsheet(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksSpreadsheetInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWSpreadsheet::~CWSpreadsheet()
+ClarisWksSpreadsheet::~ClarisWksSpreadsheet()
 { }
 
-int CWSpreadsheet::version() const
+int ClarisWksSpreadsheet::version() const
 {
   return m_parserState->m_version;
 }
 
 // fixme
-int CWSpreadsheet::numPages() const
+int ClarisWksSpreadsheet::numPages() const
 {
   return 1;
 }
@@ -118,19 +118,19 @@ int CWSpreadsheet::numPages() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 2 || entry.length() < 256)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWSpreadsheetInternal::Spreadsheet>
-  sheet(new CWSpreadsheetInternal::Spreadsheet(zone));
+  shared_ptr<ClarisWksSpreadsheetInternal::Spreadsheet>
+  sheet(new ClarisWksSpreadsheetInternal::Spreadsheet(zone));
 
   f << "Entries(SpreadsheetDef):" << *sheet << ",";
   ascFile.addDelimiter(input->tell(), '|');
@@ -142,12 +142,12 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: unexpected size for zone definition, try to continue\n"));
   }
   int debColSize = 0;
   int vers = version();
@@ -213,7 +213,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   if (m_state->m_spreadsheetMap.find(sheet->m_id) != m_state->m_spreadsheetMap.end()) {
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readSpreadsheetZone: zone %d already exists!!!\n", sheet->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: zone %d already exists!!!\n", sheet->m_id));
   }
   else
     m_state->m_spreadsheetMap[sheet->m_id] = sheet;
@@ -228,7 +228,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
   }
   if (ok) {
     pos = input->tell();
-    shared_ptr<CWDbaseContent> content(new CWDbaseContent(m_parserState, m_styleManager, true));
+    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_parserState, m_styleManager, true));
     ok = content->readContent();
     if (ok) sheet->m_content=content;
   }
@@ -256,7 +256,7 @@ shared_ptr<CWStruct::DSET> CWSpreadsheet::readSpreadsheetZone
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool ClarisWksSpreadsheet::readZone1(ClarisWksSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -265,7 +265,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: spreadsheet\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readZone1: spreadsheet\n"));
     return false;
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -295,7 +295,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   long numElts = sz/fSize;
   if (numElts *fSize != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readZone1: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readZone1: unexpected size\n"));
     return false;
   }
 
@@ -323,7 +323,7 @@ bool CWSpreadsheet::readZone1(CWSpreadsheetInternal::Spreadsheet &/*sheet*/)
   return true;
 }
 
-bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
+bool ClarisWksSpreadsheet::readRowHeightZone(ClarisWksSpreadsheetInternal::Spreadsheet &sheet)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -331,7 +331,7 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
   long endPos=pos+4+sz;
   if (!input->checkPosition(endPos)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readRowHeightZone: unexpected size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readRowHeightZone: unexpected size\n"));
     return false;
   }
 
@@ -355,7 +355,7 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
   int hSz = (int) input->readULong(2);
   if (fSz!=4 || N *fSz+hSz+12 != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWSpreadsheet::readRowHeightZone: unexpected size for fieldSize\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readRowHeightZone: unexpected size for fieldSize\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -389,23 +389,23 @@ bool CWSpreadsheet::readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet)
 // send data
 //
 ////////////////////////////////////////////////////////////
-bool CWSpreadsheet::sendSpreadsheet(int zId)
+bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: called without any listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: called without any listener\n"));
     return false;
   }
-  std::map<int, shared_ptr<CWSpreadsheetInternal::Spreadsheet> >::iterator it=
+  std::map<int, shared_ptr<ClarisWksSpreadsheetInternal::Spreadsheet> >::iterator it=
     m_state->m_spreadsheetMap.find(zId);
   if (it == m_state->m_spreadsheetMap.end() || !it->second) {
-    MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: can not find zone %d!!!\n", zId));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: can not find zone %d!!!\n", zId));
     return false;
   }
-  CWSpreadsheetInternal::Spreadsheet &sheet=*it->second;
+  ClarisWksSpreadsheetInternal::Spreadsheet &sheet=*it->second;
   Vec2i minData, maxData;
   if (!sheet.m_content || !sheet.m_content->getExtrema(minData,maxData)) {
-    MWAW_DEBUG_MSG(("CWSpreadsheet::sendSpreadsheet: can not find content\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: can not find content\n"));
     return false;
   }
   std::vector<float> colSize((size_t)(maxData[0]-minData[0]+1),72);

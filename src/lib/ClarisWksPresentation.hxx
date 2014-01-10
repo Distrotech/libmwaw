@@ -32,14 +32,12 @@
 */
 
 /*
- * Parser to Claris Works text document ( database part )
+ * Parser to Claris Works text document ( presentation part )
  *
  */
-#ifndef CW_MWAW_DATABASE
-#  define CW_MWAW_DATABASE
+#ifndef CLARIS_WKS_PRESENTATION
+#  define CLARIS_WKS_PRESENTATION
 
-#include <list>
-#include <string>
 #include <vector>
 
 #include "MWAWEntry.hxx"
@@ -50,32 +48,31 @@
 
 #include "MWAWParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWDatabaseInternal
+namespace ClarisWksPresentationInternal
 {
-struct Database;
-struct Field;
+struct Presentation;
 struct State;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWDatabase
+class ClarisWksPresentation
 {
-  friend class CWParser;
+  friend class ClarisWksParser;
 
 public:
   //! constructor
-  CWDatabase(CWParser &parser);
+  ClarisWksPresentation(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWDatabase();
+  virtual ~ClarisWksPresentation();
 
   /** returns the file version */
   int version() const;
@@ -83,35 +80,38 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
-  //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readDatabaseZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
-  //! check if we can send a database as graphic
-  bool canSendDatabaseAsGraphic(int) const
-  {
-    return false;
-  }
-  //! sends the zone data to the listener (if it exists )
-  bool sendDatabase(int number);
+  //! reads the zone presentation DSET
+  shared_ptr<ClarisWksStruct::DSET> readPresentationZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+
+  //! returns the list of slide id
+  std::vector<int> getSlidesList() const;
 
 protected:
+  //! sends the zone data to the listener (if it exists )
+  bool sendZone(int number);
+
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
 
   //
   // Intermediate level
   //
-  //! try to read the database structure
-  bool readFields(CWDatabaseInternal::Database &dBase);
 
-  //! try to read the default structure
-  bool readDefaults(CWDatabaseInternal::Database &dBase);
+  /** try to read the first presentation zone ( the slide name ? ) */
+  bool readZone1(ClarisWksPresentationInternal::Presentation &pres);
+
+  /** try to read the second presentation zone ( title ) */
+  bool readZone2(ClarisWksPresentationInternal::Presentation &pres);
+
 
   //
   // low level
   //
 
 private:
-  CWDatabase(CWDatabase const &orig);
-  CWDatabase &operator=(CWDatabase const &orig);
+  ClarisWksPresentation(ClarisWksPresentation const &orig);
+  ClarisWksPresentation &operator=(ClarisWksPresentation const &orig);
 
 protected:
   //
@@ -121,13 +121,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWDatabaseInternal::State> m_state;
+  shared_ptr<ClarisWksPresentationInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -196,51 +196,51 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDatabase.cxx"
+				RelativePath="..\..\src\lib\ClarisWksDatabase.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDbaseContent.cxx"
+				RelativePath="..\..\src\lib\ClarisWksDbaseContent.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWGraph.cxx"
+				RelativePath="..\..\src\lib\ClarisWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWParser.cxx"
+				RelativePath="..\..\src\lib\ClarisWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWPresentation.cxx"
+				RelativePath="..\..\src\lib\ClarisWksPresentation.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWSpreadsheet.cxx"
+				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStruct.cxx"
+				RelativePath="..\..\src\lib\ClarisWksStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStyleManager.cxx"
+				RelativePath="..\..\src\lib\ClarisWksStyleManager.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWTable.cxx"
+				RelativePath="..\..\src\lib\ClarisWksTable.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWText.cxx"
+				RelativePath="..\..\src\lib\ClarisWksText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMParser.cxx"
+				RelativePath="..\..\src\lib\DocMkrParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMText.cxx"
+				RelativePath="..\..\src\lib\DocMkrText.cxx"
 				>
 			</File>
 			<File
@@ -593,51 +593,51 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDatabase.hxx"
+				RelativePath="..\..\src\lib\ClarisWksDatabase.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDbaseContent.hxx"
+				RelativePath="..\..\src\lib\ClarisWksDbaseContent.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWGraph.hxx"
+				RelativePath="..\..\src\lib\ClarisWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWParser.hxx"
+				RelativePath="..\..\src\lib\ClarisWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWPresentation.hxx"
+				RelativePath="..\..\src\lib\ClarisWksPresentation.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWSpreadsheet.hxx"
+				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStruct.hxx"
+				RelativePath="..\..\src\lib\ClarisWksStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStyleManager.hxx"
+				RelativePath="..\..\src\lib\ClarisWksStyleManager.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWTable.hxx"
+				RelativePath="..\..\src\lib\ClarisWksTable.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWText.hxx"
+				RelativePath="..\..\src\lib\ClarisWksText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMParser.hxx"
+				RelativePath="..\..\src\lib\DocMkrParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMText.hxx"
+				RelativePath="..\..\src\lib\DocMkrText.hxx"
 				>
 			</File>
 			<File

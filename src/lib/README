@@ -6,7 +6,7 @@
 - Acta*         : parser of Acta documents
 - BeagleWks*    : parser of BeagleWorks and WordPerfect Works documents
 - CW*           : parser of ClarisWorks and AppleWorks documents
-- DM*           : parser of DOCMaker documents
+- DocMkr*       : parser of DOCMaker documents
 - EDoc*         : parser of eDOC documents
 - FullWrt*      : parser of FullWrite documents
 - GreatWks*     : parser of GreatWorks documents
@@ -106,7 +106,7 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------------------
----  Acta/BeagleWks/CW/DM/EDoc/FullWrt                               ---
+---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
 ---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt/MindWrt ---
 ---  More/MsWks/MsWrd/NisusWrt/TeachTxt/WriteNow/WriterPls/ZWrt      ---
 ------------------------------------------------------------------------
@@ -123,18 +123,18 @@ BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfe
 -   BeagleWksText : class which reads the text in a word document
 -   BeagleWksStructManager : class to read structure partaged between different type of document
 
-CWParser : parser of ClarisWorks/AppleWorks document
--   CWGraph : class which reads the graphics and zone dispositions ...
--   CWDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
--   CWPresentation : class which reads the slide structures
--   CWTable : class which reads the table structures
--   CWText : class which reads the text and its structures
+ClarisWksParser : parser of ClarisWorks/AppleWorks document
+-   ClarisWksGraph : class which reads the graphics and zone dispositions ...
+-   ClarisWksDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
+-   ClarisWksPresentation : class which reads the slide structures
+-   ClarisWksTable : class which reads the table structures
+-   ClarisWksText : class which reads the text and its structures
   and
--   CWStruct : class which stores the main zone structures
--   CWStyleManager : class which reads/stores many styles
+-   ClarisWksStruct : class which stores the main zone structures
+-   ClarisWksStyleManager : class which reads/stores many styles
 
-DMParser: parser of DOCMaker : v4
--   DMText : class which reads the text
+DocMkrParser: parser of DOCMaker : v4
+-   DocMkrText : class which reads the text
 
 EDocParser: parser of eDOC : v2
 

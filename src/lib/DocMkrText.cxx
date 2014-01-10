@@ -49,15 +49,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "DMParser.hxx"
+#include "DocMkrParser.hxx"
 
-#include "DMText.hxx"
+#include "DocMkrText.hxx"
 
-/** Internal: the structures of a DMText */
-namespace DMTextInternal
+/** Internal: the structures of a DocMkrText */
+namespace DocMkrTextInternal
 {
 ////////////////////////////////////////
-//! Internal: structure to store a table of contents of a DMText
+//! Internal: structure to store a table of contents of a DocMkrText
 struct TOC {
   //! constructor
   TOC() : m_cIdList(), m_textList()
@@ -75,7 +75,7 @@ struct TOC {
 };
 
 ////////////////////////////////////////
-//! Internal: structure to store a footer data of a DMText
+//! Internal: structure to store a footer data of a DocMkrText
 struct Footer {
   //! constructor
   Footer() : m_font(3,9), m_chapterResetPage(false), m_userInfo(), m_extra("")
@@ -123,7 +123,7 @@ struct Footer {
 };
 
 ////////////////////////////////////////
-//! Internal: structure to store a the data of a DMText Zone
+//! Internal: structure to store a the data of a DocMkrText Zone
 struct Zone {
   //! constructor
   Zone() : m_pos(), m_justify(MWAWParagraph::JustificationLeft), m_backgroundColor(MWAWColor::white()),
@@ -152,7 +152,7 @@ struct Zone {
   mutable bool m_parsed;
 };
 ////////////////////////////////////////
-//! Internal: the state of a DMText
+//! Internal: the state of a DocMkrText
 struct State {
   //! constructor
   State() : m_version(-1), m_numPages(-1), m_actualPage(0), m_pageWidth(8.5), m_idZoneMap(), m_footer(), m_toc()
@@ -181,16 +181,16 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a DMText
+//! Internal: the subdocument of a DocMkrText
 class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor for a footer zone
-  SubDocument(DMText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
+  SubDocument(DocMkrText &pars, MWAWInputStreamPtr input, int id, libmwaw::SubDocumentType type) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(id), m_text(""), m_type(type) {}
 
   //! constructor for a comment zone
-  SubDocument(DMText &pars, MWAWInputStreamPtr input, std::string const &text, libmwaw::SubDocumentType type) :
+  SubDocument(DocMkrText &pars, MWAWInputStreamPtr input, std::string const &text, libmwaw::SubDocumentType type) :
     MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(-1), m_text(text), m_type(type) {}
 
   //! destructor
@@ -209,7 +209,7 @@ public:
 
 protected:
   /** the text parser */
-  DMText *m_textParser;
+  DocMkrText *m_textParser;
   //! the subdocument id
   int m_id;
   //! the string text
@@ -258,32 +258,32 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-DMText::DMText(DMParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new DMTextInternal::State), m_mainParser(&parser)
+DocMkrText::DocMkrText(DocMkrParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new DocMkrTextInternal::State), m_mainParser(&parser)
 {
 }
 
-DMText::~DMText()
+DocMkrText::~DocMkrText()
 { }
 
-int DMText::version() const
+int DocMkrText::version() const
 {
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
 
-int DMText::numPages() const
+int DocMkrText::numPages() const
 {
   if (m_state->m_numPages >= 0)
     return m_state->m_numPages;
   m_state->m_actualPage = 1;
 
   int nPages = 0;
-  std::map<int, DMTextInternal::Zone >::const_iterator it =
+  std::map<int, DocMkrTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
   for (; it != m_state->m_idZoneMap.end(); ++it) {
-    DMTextInternal::Zone const &zone= it->second;
+    DocMkrTextInternal::Zone const &zone= it->second;
     computeNumPages(zone);
     nPages += zone.m_numPages;
   }
@@ -291,27 +291,27 @@ int DMText::numPages() const
   return m_state->m_numPages;
 }
 
-int DMText::numChapters() const
+int DocMkrText::numChapters() const
 {
   return int(m_state->m_idZoneMap.size());
 }
 
-void DMText::sendComment(std::string const &str)
+void DocMkrText::sendComment(std::string const &str)
 {
   if (!m_parserState->m_textListener) {
-    MWAW_DEBUG_MSG(("DMText::sendComment: called without listener\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendComment: called without listener\n"));
     return;
   }
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
   shared_ptr<MWAWSubDocument> comment
-  (new DMTextInternal::SubDocument(*this, input, str, libmwaw::DOC_COMMENT_ANNOTATION));
+  (new DocMkrTextInternal::SubDocument(*this, input, str, libmwaw::DOC_COMMENT_ANNOTATION));
   m_parserState->m_textListener->insertComment(comment);
 }
 
 ////////////////////////////////////////////////////////////
 // pages/...
 ////////////////////////////////////////////////////////////
-void DMText::computeNumPages(DMTextInternal::Zone const &zone) const
+void DocMkrText::computeNumPages(DocMkrTextInternal::Zone const &zone) const
 {
   if (zone.m_numPages || !zone.m_pos.valid())
     return;
@@ -328,7 +328,7 @@ void DMText::computeNumPages(DMTextInternal::Zone const &zone) const
   zone.m_numPages = nPages;
 }
 
-void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
+void DocMkrText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
 {
   numPages();
   spanList.resize(0);
@@ -340,11 +340,11 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
   bool hasFooter = !m_state->m_footer.empty();
   bool needResetPage = m_state->m_footer.m_chapterResetPage;
   MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  std::map<int, DMTextInternal::Zone >::const_iterator it =
+  std::map<int, DocMkrTextInternal::Zone >::const_iterator it =
     m_state->m_idZoneMap.begin();
   for (; it != m_state->m_idZoneMap.end(); ++it) {
     int zId = it->first;
-    DMTextInternal::Zone const &zone= it->second;
+    DocMkrTextInternal::Zone const &zone= it->second;
     if (zone.m_numPages <= 0)
       continue;
     MWAWPageSpan span(ps);
@@ -362,7 +362,7 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
     if (hasFooter && zone.m_useFooter) {
       MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
       footer.m_subDocument.reset
-      (new DMTextInternal::SubDocument(*this, input, zId, libmwaw::DOC_HEADER_FOOTER));
+      (new DocMkrTextInternal::SubDocument(*this, input, zId, libmwaw::DOC_HEADER_FOOTER));
       span.setHeaderFooter(footer);
     }
     for (int i = 0; i < zone.m_numPages; i++) {
@@ -379,10 +379,10 @@ void DMText::updatePageSpanList(std::vector<MWAWPageSpan> &spanList)
 ////////////////////////////////////////////////////////////
 
 // find the different zones
-bool DMText::createZones()
+bool DocMkrText::createZones()
 {
   if (!m_mainParser->getRSRCParser()) {
-    MWAW_DEBUG_MSG(("DMText::createZones: can not find the entry map\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::createZones: can not find the entry map\n"));
     return false;
   }
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
@@ -479,15 +479,15 @@ bool DMText::createZones()
 ////////////////////////////////////////////////////////////
 //    Text
 ////////////////////////////////////////////////////////////
-bool DMText::sendText(DMTextInternal::Zone const &zone)
+bool DocMkrText::sendText(DocMkrTextInternal::Zone const &zone)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendText: can not find the listener\n"));
     return false;
   }
   if (!zone.m_pos.valid()) {
-    MWAW_DEBUG_MSG(("DMText::sendText: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendText: the entry is bad\n"));
     return false;
   }
   zone.m_parsed = true;
@@ -550,10 +550,10 @@ bool DMText::sendText(DMTextInternal::Zone const &zone)
 ////////////////////////////////////////////////////////////
 //     Fonts
 ////////////////////////////////////////////////////////////
-bool DMText::readFontNames(MWAWEntry const &entry)
+bool DocMkrText::readFontNames(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<2) {
-    MWAW_DEBUG_MSG(("DMText::readFontNames: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readFontNames: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -578,7 +578,7 @@ bool DMText::readFontNames(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("DMText::readFontNames: can not read fontname %d\n", i));
+      MWAW_DEBUG_MSG(("DocMkrText::readFontNames: can not read fontname %d\n", i));
       return false;
     }
     int sz = (int)input->readULong(1);
@@ -588,7 +588,7 @@ bool DMText::readFontNames(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("DMText::readFontNames: fontname size %d is bad\n", i));
+      MWAW_DEBUG_MSG(("DocMkrText::readFontNames: fontname size %d is bad\n", i));
       return false;
     }
 
@@ -606,7 +606,7 @@ bool DMText::readFontNames(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("DMText::readFontNames: fontname size %d is bad\n", i));
+      MWAW_DEBUG_MSG(("DocMkrText::readFontNames: fontname size %d is bad\n", i));
       return false;
     }
     f << "fontSz=[";
@@ -622,10 +622,10 @@ bool DMText::readFontNames(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // the styles
 ////////////////////////////////////////////////////////////
-bool DMText::readStyles(MWAWEntry const &entry)
+bool DocMkrText::readStyles(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<2) {
-    MWAW_DEBUG_MSG(("DMText::readStyles: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readStyles: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -638,14 +638,14 @@ bool DMText::readStyles(MWAWEntry const &entry)
   int N=(int) input->readULong(2);
   f << "Entries(Style)[" << entry.type() << "-" << entry.id() << "]:N="<<N;
   if (20*N+2 != entry.length()) {
-    MWAW_DEBUG_MSG(("DMText::readStyles: the number of values seems bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readStyles: the number of values seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
   }
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  DMTextInternal::Zone &zone = m_state->getZone(entry.id());
+  DocMkrTextInternal::Zone &zone = m_state->getZone(entry.id());
   for (int i = 0; i < N; i++) {
     MWAWFont font;
     f.str("");
@@ -675,7 +675,7 @@ bool DMText::readStyles(MWAWEntry const &entry)
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (zone.m_posFontMap.find(cPos) != zone.m_posFontMap.end()) {
-      MWAW_DEBUG_MSG(("DMText::readStyles: a style for pos=%lx already exist\n", cPos));
+      MWAW_DEBUG_MSG(("DocMkrText::readStyles: a style for pos=%lx already exist\n", cPos));
     }
     else
       zone.m_posFontMap[cPos] = font;
@@ -692,18 +692,18 @@ bool DMText::readStyles(MWAWEntry const &entry)
 
 //     Table of Content information
 ////////////////////////////////////////////////////////////
-bool DMText::sendTOC()
+bool DocMkrText::sendTOC()
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("DMText::sendTOC: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendTOC: can not find the listener\n"));
     return false;
   }
-  DMTextInternal::TOC const &toc=m_state->m_toc;
+  DocMkrTextInternal::TOC const &toc=m_state->m_toc;
   if (toc.empty())
     return true;
   if (toc.m_cIdList.size() != toc.m_textList.size()) {
-    MWAW_DEBUG_MSG(("DMText::sendTOC: the TOC is bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendTOC: the TOC is bad\n"));
     return false;
   }
 
@@ -746,10 +746,10 @@ bool DMText::sendTOC()
   return true;
 }
 
-bool DMText::readTOC(MWAWEntry const &entry)
+bool DocMkrText::readTOC(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<2) {
-    MWAW_DEBUG_MSG(("DMText::readTOC: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readTOC: the entry is bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -774,7 +774,7 @@ bool DMText::readTOC(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("DMText::readTOC: can not read string %d\n", i));
+      MWAW_DEBUG_MSG(("DocMkrText::readTOC: can not read string %d\n", i));
       return false;
     }
     int zId = (int) input->readLong(2);
@@ -790,7 +790,7 @@ bool DMText::readTOC(MWAWEntry const &entry)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
 
-      MWAW_DEBUG_MSG(("DMText::readTOC: string size %d is bad\n", i));
+      MWAW_DEBUG_MSG(("DocMkrText::readTOC: string size %d is bad\n", i));
       return false;
     }
 
@@ -808,10 +808,10 @@ bool DMText::readTOC(MWAWEntry const &entry)
 
 //     Windows information
 ////////////////////////////////////////////////////////////
-bool DMText::readWindows(MWAWEntry const &entry)
+bool DocMkrText::readWindows(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<20) {
-    MWAW_DEBUG_MSG(("DMText::readWindows: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readWindows: the entry seems very short\n"));
     return false;
   }
 
@@ -821,7 +821,7 @@ bool DMText::readWindows(MWAWEntry const &entry)
   libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  DMTextInternal::Zone &zone = m_state->getZone(entry.id());
+  DocMkrTextInternal::Zone &zone = m_state->getZone(entry.id());
   libmwaw::DebugStream f;
   f << "Entries(Windows)[" << entry.type() << "-" << entry.id() << "]:";
   int val=(int) input->readLong(2); // always 0?
@@ -871,25 +871,25 @@ bool DMText::readWindows(MWAWEntry const &entry)
 
 //     Footer
 ////////////////////////////////////////////////////////////
-bool DMText::sendFooter(int zId)
+bool DocMkrText::sendFooter(int zId)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("DMText::sendFooter: can not find my listener\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendFooter: can not find my listener\n"));
     return false;
   }
-  DMTextInternal::Footer const &ft=m_state->m_footer;
+  DocMkrTextInternal::Footer const &ft=m_state->m_footer;
   if (ft.empty()) {
-    MWAW_DEBUG_MSG(("DMText::sendFooter: oops, the footer is empty\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendFooter: oops, the footer is empty\n"));
     return false;
   }
   if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
-    MWAW_DEBUG_MSG(("DMText::sendFooter: oops, can not find the zone\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendFooter: oops, can not find the zone\n"));
     return false;
   }
   listener->setFont(ft.m_font);
 
-  DMTextInternal::Zone const &zone=m_state->getZone(zId);
+  DocMkrTextInternal::Zone const &zone=m_state->getZone(zId);
   double w = m_state->m_pageWidth-double(zone.m_margins[0]+zone.m_margins[2])/72.;
   MWAWParagraph para;
   MWAWTabStop tab;
@@ -945,10 +945,10 @@ bool DMText::sendFooter(int zId)
   return true;
 }
 
-bool DMText::readFooter(MWAWEntry const &entry)
+bool DocMkrText::readFooter(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<22) {
-    MWAW_DEBUG_MSG(("DMText::readFooter: the entry seems bad\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readFooter: the entry seems bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -958,7 +958,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
-  DMTextInternal::Footer &footer=m_state->m_footer;
+  DocMkrTextInternal::Footer &footer=m_state->m_footer;
   for (int i=0; i < 6; i++)
     footer.m_items[i]=(int) input->readLong(2);
   for (int i = 0; i < 6; i++) {
@@ -1007,7 +1007,7 @@ bool DMText::readFooter(MWAWEntry const &entry)
 //
 ////////////////////////////////////////////////////////////
 
-void DMText::sendString(std::string const &str) const
+void DocMkrText::sendString(std::string const &str) const
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return;
@@ -1016,13 +1016,13 @@ void DMText::sendString(std::string const &str) const
     listener->insertCharacter((unsigned char)str[s]);
 }
 
-bool DMText::sendMainText()
+bool DocMkrText::sendMainText()
 {
   if (!m_parserState->m_textListener) return true;
 
-  std::map<int, DMTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
+  std::map<int, DocMkrTextInternal::Zone >::const_iterator it = m_state->m_idZoneMap.begin();
   for (; it != m_state->m_idZoneMap.end(); ++it) {
-    DMTextInternal::Zone const &zone= it->second;
+    DocMkrTextInternal::Zone const &zone= it->second;
     if (zone.m_parsed)
       continue;
     if (sendText(zone))
@@ -1032,7 +1032,7 @@ bool DMText::sendMainText()
 }
 
 
-void DMText::flushExtra()
+void DocMkrText::flushExtra()
 {
   return;
 }

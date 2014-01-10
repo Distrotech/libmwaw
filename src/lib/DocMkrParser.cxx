@@ -48,15 +48,15 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "DMText.hxx"
+#include "DocMkrText.hxx"
 
-#include "DMParser.hxx"
+#include "DocMkrParser.hxx"
 
-/** Internal: the structures of a DMParser */
-namespace DMParserInternal
+/** Internal: the structures of a DocMkrParser */
+namespace DocMkrParserInternal
 {
 ////////////////////////////////////////
-//! Internal: store a picture information in DMParser
+//! Internal: store a picture information in DocMkrParser
 struct PictInfo {
   //! constructor
   PictInfo() : m_id(-1), m_sndId(-1), m_align(1), m_print(false), m_invert(false),
@@ -150,7 +150,7 @@ std::ostream &operator<<(std::ostream &o, PictInfo const &info)
   return o;
 }
 ////////////////////////////////////////
-//! Internal: the state of a DMParser
+//! Internal: the state of a DocMkrParser
 struct State {
   //! constructor
   State() : m_idPictEntryMap(), m_idPictInfoMap(), m_zonePictInfoUnit(100),
@@ -194,7 +194,7 @@ void State::findPictInfoUnit(int nZones)
   else if (is1000 && !is100)
     m_zonePictInfoUnit=1000;
   else {
-    MWAW_DEBUG_MSG(("DMParserInternal::State::findPictInfoUnit can not find unit\n"));
+    MWAW_DEBUG_MSG(("DocMkrParserInternal::State::findPictInfoUnit can not find unit\n"));
   }
 }
 }
@@ -202,31 +202,31 @@ void State::findPictInfoUnit(int nZones)
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-DMParser::DMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+DocMkrParser::DocMkrParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
 {
   init();
 }
 
-DMParser::~DMParser()
+DocMkrParser::~DocMkrParser()
 {
 }
 
-void DMParser::init()
+void DocMkrParser::init()
 {
   resetTextListener();
 
-  m_state.reset(new DMParserInternal::State);
+  m_state.reset(new DocMkrParserInternal::State);
 
-  m_textParser.reset(new DMText(*this));
+  m_textParser.reset(new DocMkrText(*this));
 }
 
-MWAWInputStreamPtr DMParser::rsrcInput()
+MWAWInputStreamPtr DocMkrParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &DMParser::rsrcAscii()
+libmwaw::DebugFile &DocMkrParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
@@ -234,7 +234,7 @@ libmwaw::DebugFile &DMParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void DMParser::newPage(int number)
+void DocMkrParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -250,7 +250,7 @@ void DMParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
+void DocMkrParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0 && getRSRCParser());
 
@@ -271,7 +271,7 @@ void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("DMParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("DocMkrParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -282,11 +282,11 @@ void DMParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void DMParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void DocMkrParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("DMParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("DocMkrParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -310,7 +310,7 @@ void DMParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool DMParser::createZones()
+bool DocMkrParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
@@ -404,7 +404,7 @@ bool DMParser::createZones()
   return true;
 }
 
-void DMParser::flushExtra()
+void DocMkrParser::flushExtra()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   std::map<int,MWAWEntry>::const_iterator it = m_state->m_idPictEntryMap.begin();
@@ -421,20 +421,20 @@ void DMParser::flushExtra()
 // Low level
 //
 ////////////////////////////////////////////////////////////
-bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
+bool DocMkrParser::sendPicture(int zId, int lId, double /*lineW*/)
 {
   int pictId=m_state->pictInfoId(zId,lId);
   if (m_state->m_idPictInfoMap.find(pictId)==m_state->m_idPictInfoMap.end()) {
-    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for zone=%d, id=%d\n",zId,lId));
+    MWAW_DEBUG_MSG(("DocMkrText::sendPicture: can not find picture for zone=%d, id=%d\n",zId,lId));
     return false;
   }
-  DMParserInternal::PictInfo const &info=m_state->m_idPictInfoMap.find(pictId)->second;
+  DocMkrParserInternal::PictInfo const &info=m_state->m_idPictInfoMap.find(pictId)->second;
   if (m_state->m_idPictEntryMap.find(info.m_id)==m_state->m_idPictEntryMap.end()) {
-    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find picture for id=%d\n",info.m_id));
+    MWAW_DEBUG_MSG(("DocMkrText::sendPicture: can not find picture for id=%d\n",info.m_id));
     return false;
   }
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendPicture: can not find the listener\n"));
     return false;
   }
 
@@ -455,13 +455,13 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
   }
   MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
   if (!pictInput) {
-    MWAW_DEBUG_MSG(("DMText::sendPicture: oops can not find an input\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendPicture: oops can not find an input\n"));
     return false;
   }
   Box2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
-    MWAW_DEBUG_MSG(("DMText::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::sendPicture: can not find the picture\n"));
     return false;
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
@@ -480,11 +480,11 @@ bool DMParser::sendPicture(int zId, int lId, double /*lineW*/)
   return true;
 }
 
-bool DMParser::readPictInfo(MWAWEntry const &entry)
+bool DocMkrParser::readPictInfo(MWAWEntry const &entry)
 {
   long length = entry.length();
   if (!entry.valid() || length<8) {
-    MWAW_DEBUG_MSG(("DMText::readPictInfo: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readPictInfo: the entry seems very short\n"));
     return false;
   }
 
@@ -496,7 +496,7 @@ bool DMParser::readPictInfo(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
-  DMParserInternal::PictInfo info;
+  DocMkrParserInternal::PictInfo info;
   info.m_id = (int) input->readULong(2);
   info.m_align = (int) input->readLong(2);
   int val =(int) input->readLong(2); // 0|1
@@ -607,10 +607,10 @@ bool DMParser::readPictInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read some unknown zone
 ////////////////////////////////////////////////////////////
-bool DMParser::readSTwD(MWAWEntry const &entry)
+bool DocMkrParser::readSTwD(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<10) {
-    MWAW_DEBUG_MSG(("DMText::readSTwD: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readSTwD: the entry seems very short\n"));
     return false;
   }
 
@@ -644,10 +644,10 @@ bool DMParser::readSTwD(MWAWEntry const &entry)
   return true;
 }
 
-bool DMParser::readXtr2(MWAWEntry const &entry)
+bool DocMkrParser::readXtr2(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<1) {
-    MWAW_DEBUG_MSG(("DMText::readXtr2: the entry seems very short\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readXtr2: the entry seems very short\n"));
     return false;
   }
 
@@ -661,7 +661,7 @@ bool DMParser::readXtr2(MWAWEntry const &entry)
   f << "Entries(Xtr2)[" << entry.type() << "-" << entry.id() << "]:";
   int N=1;
   if (entry.length() != 1) {
-    MWAW_DEBUG_MSG(("DMText::readXtr2: find more than one flag\n"));
+    MWAW_DEBUG_MSG(("DocMkrText::readXtr2: find more than one flag\n"));
     N = entry.length()>20 ? 20 : int(entry.length());
   }
   // f0=79|a8|b9|99
@@ -680,16 +680,16 @@ bool DMParser::readXtr2(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool DMParser::checkHeader(MWAWHeader *header, bool /*strict*/)
+bool DocMkrParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
-  *m_state = DMParserInternal::State();
+  *m_state = DocMkrParserInternal::State();
   /** no data fork, may be ok, but this means
       that the file contains no text, so... */
   MWAWInputStreamPtr input = getInput();
   if (!input || !getRSRCParser())
     return false;
   if (input->hasDataFork()) {
-    MWAW_DEBUG_MSG(("DMParser::checkHeader: find a datafork, odd!!!\n"));
+    MWAW_DEBUG_MSG(("DocMkrParser::checkHeader: find a datafork, odd!!!\n"));
   }
   MWAWRSRCParser::Version vers;
   // read the Docmaker version
@@ -698,7 +698,7 @@ bool DMParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (entry.valid() && getRSRCParser()->parseVers(entry, vers))
     docmakerVersion = vers.m_majorVersion;
   else if (docmakerVersion==-1) {
-    MWAW_DEBUG_MSG(("DMParser::checkHeader: can not find the DocMaker version\n"));
+    MWAW_DEBUG_MSG(("DocMkrParser::checkHeader: can not find the DocMaker version\n"));
   }
   setVersion(vers.m_majorVersion);
   if (header)

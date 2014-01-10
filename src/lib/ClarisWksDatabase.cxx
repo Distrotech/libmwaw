@@ -44,15 +44,15 @@
 #include "MWAWFont.hxx"
 #include "MWAWTable.hxx"
 
-#include "CWDbaseContent.hxx"
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksDbaseContent.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWDatabase.hxx"
+#include "ClarisWksDatabase.hxx"
 
-/** Internal: the structures of a CWDatabase */
-namespace CWDatabaseInternal
+/** Internal: the structures of a ClarisWksDatabase */
+namespace ClarisWksDatabaseInternal
 {
 struct Field {
   // the type
@@ -203,28 +203,28 @@ struct Field {
 ////////////////////////////////////////
 ////////////////////////////////////////
 
-//! Internal: the database of a CWDatabase
-struct Database : public CWStruct::DSET {
+//! Internal: the database of a ClarisWksDatabase
+struct Database : public ClarisWksStruct::DSET {
   //! constructor
-  Database(CWStruct::DSET const &dset = CWStruct::DSET()) :
-    CWStruct::DSET(dset), m_fields(), m_content()
+  Database(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
+    ClarisWksStruct::DSET(dset), m_fields(), m_content()
   {
   }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Database const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
   //! the list of field
   std::vector<Field> m_fields;
   //! the data
-  shared_ptr<CWDbaseContent> m_content;
+  shared_ptr<ClarisWksDbaseContent> m_content;
 };
 
 ////////////////////////////////////////
-//! Internal: the state of a CWDatabase
+//! Internal: the state of a ClarisWksDatabase
 struct State {
   //! constructor
   State() : m_databaseMap()
@@ -239,23 +239,23 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWDatabase::CWDatabase
-(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWDatabaseInternal::State),
+ClarisWksDatabase::ClarisWksDatabase
+(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksDatabaseInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWDatabase::~CWDatabase()
+ClarisWksDatabase::~ClarisWksDatabase()
 { }
 
-int CWDatabase::version() const
+int ClarisWksDatabase::version() const
 {
   return m_parserState->m_version;
 }
 
 // fixme
-int CWDatabase::numPages() const
+int ClarisWksDatabase::numPages() const
 {
   return 1;
 }
@@ -266,19 +266,19 @@ int CWDatabase::numPages() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 3 || entry.length() < 32)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWDatabaseInternal::Database>
-  databaseZone(new CWDatabaseInternal::Database(zone));
+  shared_ptr<ClarisWksDatabaseInternal::Database>
+  databaseZone(new ClarisWksDatabaseInternal::Database(zone));
 
   f << "Entries(DatabaseDef):" << *databaseZone << ",";
   ascFile.addDelimiter(input->tell(), '|');
@@ -290,12 +290,12 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: unexpected size for zone definition, try to continue\n"));
   }
 
   long dataEnd = entry.end()-N*data0Length;
@@ -314,7 +314,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
     numLast = 8;
     break;
   default:
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: unexpected version\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: unexpected version\n"));
     break;
   }
   if (numLast >= 0 && long(input->tell()) + data0Length + numLast <= dataEnd) {
@@ -340,7 +340,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
   if (m_state->m_databaseMap.find(databaseZone->m_id) != m_state->m_databaseMap.end()) {
-    MWAW_DEBUG_MSG(("CWDatabase::readDatabaseZone: zone %d already exists!!!\n", databaseZone->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: zone %d already exists!!!\n", databaseZone->m_id));
   }
   else
     m_state->m_databaseMap[databaseZone->m_id] = databaseZone;
@@ -365,7 +365,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    shared_ptr<CWDbaseContent> content(new CWDbaseContent(m_parserState, m_styleManager, false));
+    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_parserState, m_styleManager, false));
     ok = content->readContent();
     if (ok) databaseZone->m_content=content;
   }
@@ -397,7 +397,7 @@ shared_ptr<CWStruct::DSET> CWDatabase::readDatabaseZone
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
+bool ClarisWksDatabase::readFields(ClarisWksDatabaseInternal::Database &dBase)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -406,7 +406,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readFields: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readFields: file is too short\n"));
     return false;
   }
 
@@ -423,7 +423,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWDatabase::readFields: find odd data size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readFields: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
@@ -439,14 +439,14 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
     pos = input->tell();
     f.str("");
     f << "DatabaseField-" << i << ":";
-    CWDatabaseInternal::Field &field = dBase.m_fields[i];
+    ClarisWksDatabaseInternal::Field &field = dBase.m_fields[i];
 
     int fNameMaxSz = 64;
     std::string name("");
     sz = (long) input->readULong(1);
     if ((fNameMaxSz && sz > fNameMaxSz-1) || sz > fSz-1) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWDatabase::readFields: find odd field name\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDatabase::readFields: find odd field name\n"));
       return false;
     }
     for (int j = 0; j < sz; j++)
@@ -459,49 +459,49 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
     switch (type) {
     // or name
     case 0:
-      field.m_type = CWDatabaseInternal::Field::F_Text;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_Text;
       break;
     case 1:
-      field.m_type = CWDatabaseInternal::Field::F_Number;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_Number;
       break;
     case 2:
-      field.m_type = CWDatabaseInternal::Field::F_Date;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_Date;
       break;
     case 3:
-      field.m_type = CWDatabaseInternal::Field::F_Time;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_Time;
       break;
     case 4:
       if (version() <= 2)
-        field.m_type = CWDatabaseInternal::Field::F_Formula;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_Formula;
       else
-        field.m_type = CWDatabaseInternal::Field::F_PopupMenu;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_PopupMenu;
       break;
     case 5:
       if (version() <= 2)
-        field.m_type = CWDatabaseInternal::Field::F_FormulaSum;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_FormulaSum;
       else
-        field.m_type = CWDatabaseInternal::Field::F_Checkbox;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_Checkbox;
       break;
     case 6:
-      field.m_type = CWDatabaseInternal::Field::F_RadioButton;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_RadioButton;
       break;
     case 7:
       if (version() == 4)
-        field.m_type = CWDatabaseInternal::Field::F_Formula;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_Formula;
       else
-        field.m_type = CWDatabaseInternal::Field::F_Multimedia;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_Multimedia;
       break;
     case 8:
       if (version() == 4)
-        field.m_type = CWDatabaseInternal::Field::F_FormulaSum;
+        field.m_type = ClarisWksDatabaseInternal::Field::F_FormulaSum;
       else
         ok = false;
       break;
     case 10:
-      field.m_type = CWDatabaseInternal::Field::F_Formula;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_Formula;
       break;
     case 11:
-      field.m_type = CWDatabaseInternal::Field::F_FormulaSum;
+      field.m_type = ClarisWksDatabaseInternal::Field::F_FormulaSum;
       break;
     default:
       ok = false;
@@ -540,26 +540,26 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
         if (subType) f << "f17=" << std::hex << subType << std::dec << ",";
       }
       else {
-        if (subType & 0x80 && field.m_type == CWDatabaseInternal::Field::F_Text) {
-          field.m_type = CWDatabaseInternal::Field::F_ValueList;
+        if (subType & 0x80 && field.m_type == ClarisWksDatabaseInternal::Field::F_Text) {
+          field.m_type = ClarisWksDatabaseInternal::Field::F_ValueList;
           subType &= 0xFF7F;
         }
         ok = true;
         switch (subType) {
         case 0:
-          ok = field.m_type == CWDatabaseInternal::Field::F_Checkbox ||
-               field.m_type == CWDatabaseInternal::Field::F_PopupMenu ||
-               field.m_type == CWDatabaseInternal::Field::F_RadioButton ||
-               field.m_type == CWDatabaseInternal::Field::F_Multimedia;
+          ok = field.m_type == ClarisWksDatabaseInternal::Field::F_Checkbox ||
+               field.m_type == ClarisWksDatabaseInternal::Field::F_PopupMenu ||
+               field.m_type == ClarisWksDatabaseInternal::Field::F_RadioButton ||
+               field.m_type == ClarisWksDatabaseInternal::Field::F_Multimedia;
           break;
         case 2: // basic
           break;
         case 3:
-          ok = field.m_type == CWDatabaseInternal::Field::F_Text;
+          ok = field.m_type == ClarisWksDatabaseInternal::Field::F_Text;
           if (ok) f << "name[field],";
           break;
         case 6:
-          ok = version() == 4 && field.m_type == CWDatabaseInternal::Field::F_ValueList;;
+          ok = version() == 4 && field.m_type == ClarisWksDatabaseInternal::Field::F_ValueList;;
           break;
         default:
           ok = false;
@@ -584,7 +584,7 @@ bool CWDatabase::readFields(CWDatabaseInternal::Database &dBase)
   return true;
 }
 
-bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
+bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
 {
   size_t numFields = dBase.m_fields.size();
   int vers = version();
@@ -593,11 +593,11 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
   libmwaw::DebugStream f;
 
   for (size_t v = 0; v < numFields; v++) {
-    CWDatabaseInternal::Field const &field = dBase.m_fields[v];
+    ClarisWksDatabaseInternal::Field const &field = dBase.m_fields[v];
     int numExpected = field.getNumDefault(vers);
 
     bool formField = field.isFormula();
-    bool valueList = field.m_type == CWDatabaseInternal::Field::F_ValueList;
+    bool valueList = field.m_type == ClarisWksDatabaseInternal::Field::F_ValueList;
     for (int fi = 0; fi < numExpected; fi++) {
       // actually we guess which one are ok
       long pos = input->tell();
@@ -606,7 +606,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
       long endPos = pos+4+sz;
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
       if (long(input->tell()) != endPos) {
-        MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find value for field: %d\n", fi));
+        MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find value for field: %d\n", fi));
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         return false;
       }
@@ -616,7 +616,7 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
       f << "Entries(DatabaseDft)[" << v << "]:";
       if (formField) {
         if (length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find formula for field: %ld\n", long(v)));
+          MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find formula for field: %ld\n", long(v)));
           input->seek(pos, librevenge::RVNG_SEEK_SET);
           return false;
         }
@@ -629,14 +629,14 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
         else
           f << "string,";
         if (vers > 2 && !listField && length != sz-1) {
-          MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
+          MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
           input->seek(pos, librevenge::RVNG_SEEK_SET);
           return false;
         }
         while (1) {
           long actPos = input->tell();
           if (actPos+length > endPos) {
-            MWAW_DEBUG_MSG(("CWDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
+            MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
 
             input->seek(pos, librevenge::RVNG_SEEK_SET);
             return true;
@@ -663,44 +663,44 @@ bool CWDatabase::readDefaults(CWDatabaseInternal::Database &dBase)
 // send data
 //
 ////////////////////////////////////////////////////////////
-bool CWDatabase::sendDatabase(int zId)
+bool ClarisWksDatabase::sendDatabase(int zId)
 {
   if (zId!=1 || !m_mainParser->getHeader() ||
       m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_DATABASE) {
-    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: sending a database is not implemented\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: sending a database is not implemented\n"));
     return false;
   }
 
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) {
-    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: called without any listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: called without any listener\n"));
     return false;
   }
-  std::map<int, shared_ptr<CWDatabaseInternal::Database> >::iterator it=
+  std::map<int, shared_ptr<ClarisWksDatabaseInternal::Database> >::iterator it=
     m_state->m_databaseMap.find(zId);
   if (it == m_state->m_databaseMap.end() || !it->second) {
-    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: can not find zone %d!!!\n", zId));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: can not find zone %d!!!\n", zId));
     return false;
   }
-  CWDatabaseInternal::Database &dbase=*it->second;
+  ClarisWksDatabaseInternal::Database &dbase=*it->second;
   Vec2i minData, maxData;
   std::vector<int> recordsPos;
   if (!dbase.m_content || !dbase.m_content->getExtrema(minData,maxData) ||
       !dbase.m_content->getRecordList(recordsPos)) {
-    MWAW_DEBUG_MSG(("CWDatabase::sendDatabase: can not find content\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: can not find content\n"));
     return false;
   }
 
   int numFields = maxData[0]+1>int(dbase.m_fields.size()) ?
                   maxData[0]+1 : int(dbase.m_fields.size());
-  std::vector<CWStyleManager::CellFormat> formats;
-  formats.resize(size_t(numFields), CWStyleManager::CellFormat());
+  std::vector<ClarisWksStyleManager::CellFormat> formats;
+  formats.resize(size_t(numFields), ClarisWksStyleManager::CellFormat());
   for (size_t f=0; f < dbase.m_fields.size(); ++f) {
-    CWDatabaseInternal::Field const &field=dbase.m_fields[f];
+    ClarisWksDatabaseInternal::Field const &field=dbase.m_fields[f];
     // changme
-    if (field.m_type==CWDatabaseInternal::Field::F_Date)
+    if (field.m_type==ClarisWksDatabaseInternal::Field::F_Date)
       formats[f].m_format=5;
-    else if (field.m_type==CWDatabaseInternal::Field::F_Time)
+    else if (field.m_type==ClarisWksDatabaseInternal::Field::F_Time)
       formats[f].m_format=12;
     else if (field.m_resType==2)
       formats[f].m_format=5;

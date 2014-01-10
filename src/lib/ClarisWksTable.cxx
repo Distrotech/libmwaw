@@ -47,16 +47,16 @@
 #include "MWAWFontConverter.hxx"
 #include "MWAWTable.hxx"
 
-#include "CWParser.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
+#include "ClarisWksParser.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
 
-#include "CWTable.hxx"
+#include "ClarisWksTable.hxx"
 
-/** Internal: the structures of a CWTable */
-namespace CWTableInternal
+/** Internal: the structures of a ClarisWksTable */
+namespace ClarisWksTableInternal
 {
-/** Internal: the border of a CWTable */
+/** Internal: the border of a ClarisWksTable */
 struct Border {
   //! the constructor
   Border() : m_styleId(-1), m_isSent(false) {}
@@ -84,7 +84,7 @@ struct Border {
 };
 
 struct Table;
-/** Internal: a cell inside a CWTable */
+/** Internal: a cell inside a ClarisWksTable */
 struct TableCell : public MWAWCell {
   //! constructor
   TableCell() : MWAWCell(), m_zoneId(0), m_styleId(-1)
@@ -123,11 +123,11 @@ private:
 ////////////////////////////////////////
 ////////////////////////////////////////
 /** the struct which stores the Table */
-struct Table : public CWStruct::DSET, public MWAWTable {
+struct Table : public ClarisWksStruct::DSET, public MWAWTable {
   friend struct TableCell;
   //! constructor
-  Table(CWStruct::DSET const &dset, CWTable &parser) :
-    CWStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(parser.m_styleManager.get()), m_bordersList(), m_mainPtr(-1)
+  Table(ClarisWksStruct::DSET const &dset, ClarisWksTable &parser) :
+    ClarisWksStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(parser.m_styleManager.get()), m_bordersList(), m_mainPtr(-1)
   {
   }
 
@@ -135,7 +135,7 @@ struct Table : public CWStruct::DSET, public MWAWTable {
   TableCell *get(int id)
   {
     if (id < 0 || id >= numCells()) {
-      MWAW_DEBUG_MSG(("CWTableInteral::Table::get: cell %d does not exists\n",id));
+      MWAW_DEBUG_MSG(("ClarisWksTableInteral::Table::get: cell %d does not exists\n",id));
       return 0;
     }
     return reinterpret_cast<TableCell *>(MWAWTable::get(id).get());
@@ -143,7 +143,7 @@ struct Table : public CWStruct::DSET, public MWAWTable {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &doc)
   {
-    o << static_cast<CWStruct::DSET const &>(doc);
+    o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
   //! check that each child zone are valid
@@ -171,9 +171,9 @@ struct Table : public CWStruct::DSET, public MWAWTable {
   }
 
   /** the main parser */
-  CWTable *m_parser;
+  ClarisWksTable *m_parser;
   /** the style manager */
-  CWStyleManager *m_styleManager;
+  ClarisWksStyleManager *m_styleManager;
   /** the list of border */
   std::vector<Border> m_bordersList;
   /** the relative main pointer */
@@ -185,9 +185,9 @@ private:
 
 void TableCell::update(Table const &table)
 {
-  CWStyleManager *styleManager = table.m_styleManager;
+  ClarisWksStyleManager *styleManager = table.m_styleManager;
   if (!styleManager) {
-    MWAW_DEBUG_MSG(("CWTableInternal::TableCell::update: style manager is not defined\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTableInternal::TableCell::update: style manager is not defined\n"));
     return;
   }
 
@@ -208,11 +208,11 @@ void TableCell::update(Table const &table)
     /** fixme: check that the opposite has a border, if not print the first border */
     if (!sameBorders) continue;
     if (bId < 0 || bId >= numTableBorders) {
-      MWAW_DEBUG_MSG(("CWTableInternal::TableCell::get: can not find the border definition\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTableInternal::TableCell::get: can not find the border definition\n"));
       continue;
     }
     Border const &border = table.m_bordersList[size_t(bId)];
-    CWStyleManager::Style bStyle;
+    ClarisWksStyleManager::Style bStyle;
     if (border.m_isSent || border.m_styleId < 0 || !styleManager->get(border.m_styleId, bStyle))
       continue;
     border.m_isSent = true;
@@ -220,7 +220,7 @@ void TableCell::update(Table const &table)
     bool haveGraph = false;
     if (bStyle.m_graphicId >= 0)
       haveGraph = styleManager->get(bStyle.m_graphicId, graph);
-    CWStyleManager::KSEN ksen;
+    ClarisWksStyleManager::KSEN ksen;
     bool haveKSEN = false;
     if (bStyle.m_ksenId >= 0)
       haveKSEN = styleManager->get(bStyle.m_ksenId, ksen);
@@ -253,7 +253,7 @@ bool TableCell::sendContent(MWAWListenerPtr listener, MWAWTable &table)
 }
 
 ////////////////////////////////////////
-//! Internal: the state of a CWTable
+//! Internal: the state of a ClarisWksTable
 struct State {
   //! constructor
   State() : m_tableMap()
@@ -268,27 +268,27 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWTable::CWTable(CWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new CWTableInternal::State),
+ClarisWksTable::ClarisWksTable(ClarisWksParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new ClarisWksTableInternal::State),
   m_mainParser(&parser), m_styleManager(parser.m_styleManager)
 {
 }
 
-CWTable::~CWTable()
+ClarisWksTable::~ClarisWksTable()
 { }
 
-int CWTable::version() const
+int ClarisWksTable::version() const
 {
   return m_parserState->m_version;
 }
 
-bool CWTable::askMainToSendZone(int number)
+bool ClarisWksTable::askMainToSendZone(int number)
 {
   return m_mainParser->sendZone(number, false);
 }
 
 // fixme
-int CWTable::numPages() const
+int ClarisWksTable::numPages() const
 {
   return 1;
 }
@@ -299,18 +299,18 @@ int CWTable::numPages() const
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWTable::readTableZone
-(CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksTable::readTableZone
+(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
 {
   complete = false;
   if (!entry.valid() || zone.m_fileType != 6 || entry.length() < 32)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long pos = entry.begin();
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<CWTableInternal::Table> tableZone(new CWTableInternal::Table(zone, *this));
+  shared_ptr<ClarisWksTableInternal::Table> tableZone(new ClarisWksTableInternal::Table(zone, *this));
 
   f << "Entries(TableDef):" << *tableZone << ",";
   float dim[2];
@@ -348,20 +348,20 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   long N = zone.m_numData;
   if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
     if (data0Length == 0 && N) {
-      MWAW_DEBUG_MSG(("CWTable::readTableZone: can not find definition size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTable::readTableZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     }
 
-    MWAW_DEBUG_MSG(("CWTable::readTableZone: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableZone: unexpected size for zone definition, try to continue\n"));
   }
 
   if (long(input->tell())+N*data0Length > entry.end()) {
-    MWAW_DEBUG_MSG(("CWTable::readTableZone: file is too short\n"));
-    return shared_ptr<CWStruct::DSET>();
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableZone: file is too short\n"));
+    return shared_ptr<ClarisWksStruct::DSET>();
   }
   if (N) {
-    MWAW_DEBUG_MSG(("CWTable::readTableZone: find some tabledef !!!\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableZone: find some tabledef !!!\n"));
     input->seek(entry.end()-N*data0Length, librevenge::RVNG_SEEK_SET);
 
     for (int i = 0; i < N; i++) {
@@ -412,7 +412,7 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
 
   tableZone->updateCells();
   if (m_state->m_tableMap.find(tableZone->m_id) != m_state->m_tableMap.end()) {
-    MWAW_DEBUG_MSG(("CWTable::readTableZone: zone %d already exists!!!\n", tableZone->m_id));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableZone: zone %d already exists!!!\n", tableZone->m_id));
   }
   else
     m_state->m_tableMap[tableZone->m_id] = tableZone;
@@ -421,13 +421,13 @@ shared_ptr<CWStruct::DSET> CWTable::readTableZone
   return tableZone;
 }
 
-bool CWTable::sendZone(int number)
+bool ClarisWksTable::sendZone(int number)
 {
-  std::map<int, shared_ptr<CWTableInternal::Table> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksTableInternal::Table> >::iterator iter
     = m_state->m_tableMap.find(number);
   if (iter == m_state->m_tableMap.end())
     return false;
-  shared_ptr<CWTableInternal::Table> table = iter->second;
+  shared_ptr<ClarisWksTableInternal::Table> table = iter->second;
   table->m_parsed = true;
   if (table->okChildId(number+1))
     m_mainParser->forceParsed(number+1);
@@ -442,12 +442,12 @@ bool CWTable::sendZone(int number)
   return table->sendAsText(listener);
 }
 
-void CWTable::flushExtra()
+void ClarisWksTable::flushExtra()
 {
-  std::map<int, shared_ptr<CWTableInternal::Table> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksTableInternal::Table> >::iterator iter
     = m_state->m_tableMap.begin();
   for (; iter !=  m_state->m_tableMap.end(); ++iter) {
-    shared_ptr<CWTableInternal::Table> table = iter->second;
+    shared_ptr<ClarisWksTableInternal::Table> table = iter->second;
     if (table->m_parsed)
       continue;
     if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
@@ -460,7 +460,7 @@ void CWTable::flushExtra()
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWTable::readTableBorders(CWTableInternal::Table &table)
+bool ClarisWksTable::readTableBorders(ClarisWksTableInternal::Table &table)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -469,7 +469,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableBorders: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableBorders: file is too short\n"));
     return false;
   }
 
@@ -486,7 +486,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 18) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableBorders: find odd data size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableBorders: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
@@ -499,7 +499,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    CWTableInternal::Border border;
+    ClarisWksTableInternal::Border border;
     f.str("");
     f << "TableBorders-" << i << ":";
     int posi[4];
@@ -510,14 +510,14 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
     table.m_bordersList.push_back(border);
     f << border;
 
-    CWStyleManager::Style style;
+    ClarisWksStyleManager::Style style;
     if (border.m_styleId < 0) ;
     else if (!m_styleManager->get(border.m_styleId, style)) {
-      MWAW_DEBUG_MSG(("CWTable::readTableBorders: can not find cell style\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTable::readTableBorders: can not find cell style\n"));
       f << "###style";
     }
     else {
-      CWStyleManager::KSEN ksen;
+      ClarisWksStyleManager::KSEN ksen;
       if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
         f << "ksen=[" << ksen << "],";
       }
@@ -539,7 +539,7 @@ bool CWTable::readTableBorders(CWTableInternal::Table &table)
   return true;
 }
 
-bool CWTable::readTableCells(CWTableInternal::Table &table)
+bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -548,7 +548,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableCells: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableCells: file is too short\n"));
     return false;
   }
 
@@ -565,7 +565,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 32) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTableCells: find odd data size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTableCells: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) {
@@ -578,7 +578,7 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
 
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    shared_ptr<CWTableInternal::TableCell> cell(new CWTableInternal::TableCell());
+    shared_ptr<ClarisWksTableInternal::TableCell> cell(new ClarisWksTableInternal::TableCell());
     float posi[6];
     for (int j = 0; j < 6; j++) posi[j] = float(input->readLong(4))/256.f;
     cell->setBdBox(Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2])));
@@ -593,14 +593,14 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
       table.m_otherChilds.push_back(cell->m_zoneId);
     f.str("");
     f << "TableCell-" << i << ":";
-    CWStyleManager::Style style;
+    ClarisWksStyleManager::Style style;
     if (cell->m_styleId < 0) ;
     else if (!m_styleManager->get(cell->m_styleId, style)) {
-      MWAW_DEBUG_MSG(("CWTable::readTableCells: can not find cell style\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTable::readTableCells: can not find cell style\n"));
       f  << *cell << "###style";
     }
     else {
-      CWStyleManager::KSEN ksen;
+      ClarisWksStyleManager::KSEN ksen;
       bool hasExtraLines=false;
       if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
         switch (ksen.m_valign) {
@@ -658,21 +658,21 @@ bool CWTable::readTableCells(CWTableInternal::Table &table)
   return true;
 }
 
-bool CWTable::readTableBordersId(CWTableInternal::Table &table)
+bool ClarisWksTable::readTableBordersId(ClarisWksTableInternal::Table &table)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   int numCells = table.numCells();
   int numBorders = int(table.m_bordersList.size());
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   for (int i = 0; i < 4*numCells; i++) {
-    CWTableInternal::TableCell *cell = table.get(i/4);
+    ClarisWksTableInternal::TableCell *cell = table.get(i/4);
     long pos = input->tell();
     long sz = (long) input->readULong(4);
     long endPos = pos+4+sz;
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWTable::readTableBordersId: file is too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTable::readTableBordersId: file is too short\n"));
       return false;
     }
 
@@ -688,7 +688,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
     int fSz = (int)input->readLong(2);
     if (N==0 || sz != 12+fSz*N || fSz < 2) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWTable::readTableBordersId: find odd data size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksTable::readTableBordersId: find odd data size\n"));
       return false;
     }
     for (int j = 2; j < 4; j++) {
@@ -701,7 +701,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
       int id = (int)input->readLong(2);
       if (id < 0 || id >= numBorders) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
-        MWAW_DEBUG_MSG(("CWTable::readTableBordersId: unexpected id\n"));
+        MWAW_DEBUG_MSG(("ClarisWksTable::readTableBordersId: unexpected id\n"));
         return false;
       }
       idsList.push_back(id);
@@ -719,7 +719,7 @@ bool CWTable::readTableBordersId(CWTableInternal::Table &table)
   return true;
 }
 
-bool CWTable::readTablePointers(CWTableInternal::Table &table)
+bool ClarisWksTable::readTablePointers(ClarisWksTableInternal::Table &table)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
@@ -728,7 +728,7 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTablePointers: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTablePointers: file is too short\n"));
     return false;
   }
 
@@ -744,7 +744,7 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
   f << "Entries(TablePointers):";
   int N = (int) input->readULong(2);
   if (N != table.numCells()) {
-    MWAW_DEBUG_MSG(("CWTable::readTablePointers: the number of pointers seems odd\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTablePointers: the number of pointers seems odd\n"));
     f << "###";
   }
   f << "N=" << N << ",";
@@ -755,7 +755,7 @@ bool CWTable::readTablePointers(CWTableInternal::Table &table)
   int fSz = (int) input->readLong(2);
   if (sz != 12+fSz*N || fSz < 16) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWTable::readTablePointers: find odd data size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksTable::readTablePointers: find odd data size\n"));
     return false;
   }
   for (int i = 2; i < 4; i++) { // normally 0, 1

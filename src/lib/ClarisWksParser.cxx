@@ -50,23 +50,23 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSection.hxx"
 
-#include "CWDatabase.hxx"
-#include "CWGraph.hxx"
-#include "CWPresentation.hxx"
-#include "CWSpreadsheet.hxx"
-#include "CWStruct.hxx"
-#include "CWStyleManager.hxx"
-#include "CWTable.hxx"
-#include "CWText.hxx"
+#include "ClarisWksDatabase.hxx"
+#include "ClarisWksGraph.hxx"
+#include "ClarisWksPresentation.hxx"
+#include "ClarisWksSpreadsheet.hxx"
+#include "ClarisWksStruct.hxx"
+#include "ClarisWksStyleManager.hxx"
+#include "ClarisWksTable.hxx"
+#include "ClarisWksText.hxx"
 
-#include "CWParser.hxx"
+#include "ClarisWksParser.hxx"
 
-/** Internal: the structures of a CWParser */
-namespace CWParserInternal
+/** Internal: the structures of a ClarisWksParser */
+namespace ClarisWksParserInternal
 {
 
 ////////////////////////////////////////
-//! Internal: the state of a CWParser
+//! Internal: the state of a ClarisWksParser
 struct State {
   //! constructor
   State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_pages(0,0), m_EOF(-1L), m_actPage(0), m_numPages(0),
@@ -96,16 +96,16 @@ struct State {
 
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
-  std::map<int, shared_ptr<CWStruct::DSET> > m_zonesMap /** the map of zone*/;
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> > m_zonesMap /** the map of zone*/;
   std::vector<int> m_mainZonesList/** the list of main group */;
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a CWParser
+//! Internal: the subdocument of a ClarisWksParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(CWParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
+  SubDocument(ClarisWksParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_position(pos) {}
 
   //! destructor
@@ -139,7 +139,7 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id == -1) { // a number used to send linked frame
@@ -147,19 +147,19 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   if (m_id == 0) {
-    MWAW_DEBUG_MSG(("CWParserInternal::SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
 
   assert(m_parser);
-  reinterpret_cast<CWParser *>(m_parser)->sendZone(m_id, false,m_position);
+  reinterpret_cast<ClarisWksParser *>(m_parser)->sendZone(m_id, false,m_position);
 }
 }
 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+ClarisWksParser::ClarisWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(),
   m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
   m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
@@ -167,65 +167,65 @@ CWParser::CWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWH
   init();
 }
 
-CWParser::~CWParser()
+ClarisWksParser::~ClarisWksParser()
 {
 }
 
-void CWParser::init()
+void ClarisWksParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new CWParserInternal::State);
+  m_state.reset(new ClarisWksParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_styleManager.reset(new CWStyleManager(*this));
+  m_styleManager.reset(new ClarisWksStyleManager(*this));
 
-  m_databaseParser.reset(new CWDatabase(*this));
-  m_graphParser.reset(new CWGraph(*this));
-  m_presentationParser.reset(new CWPresentation(*this));
-  m_spreadsheetParser.reset(new CWSpreadsheet(*this));
-  m_tableParser.reset(new CWTable(*this));
-  m_textParser.reset(new CWText(*this));
+  m_databaseParser.reset(new ClarisWksDatabase(*this));
+  m_graphParser.reset(new ClarisWksGraph(*this));
+  m_presentationParser.reset(new ClarisWksPresentation(*this));
+  m_spreadsheetParser.reset(new ClarisWksSpreadsheet(*this));
+  m_tableParser.reset(new ClarisWksTable(*this));
+  m_textParser.reset(new ClarisWksText(*this));
 }
 
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2i CWParser::getDocumentPages() const
+Vec2i ClarisWksParser::getDocumentPages() const
 {
   return m_state->m_pages;
 }
 
-double CWParser::getTextHeight() const
+double ClarisWksParser::getTextHeight() const
 {
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
-Vec2f CWParser::getPageLeftTop() const
+Vec2f ClarisWksParser::getPageLeftTop() const
 {
   return Vec2f(float(getPageSpan().getMarginLeft()),
                float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-shared_ptr<CWStruct::DSET> CWParser::getZone(int zId) const
+shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::getZone(int zId) const
 {
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter
     = m_state->m_zonesMap.find(zId);
   if (iter != m_state->m_zonesMap.end())
     return iter->second;
-  return shared_ptr<CWStruct::DSET>();
+  return shared_ptr<ClarisWksStruct::DSET>();
 }
 
-void CWParser::getHeaderFooterId(int &headerId, int &footerId) const
+void ClarisWksParser::getHeaderFooterId(int &headerId, int &footerId) const
 {
   headerId = m_state->m_headerId;
   footerId = m_state->m_footerId;
 }
 
-void CWParser::checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const
+void ClarisWksParser::checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const
 {
   if (version() < 4) return;
   int numSmallEndian = 0, numBigEndian = 0;
@@ -259,7 +259,7 @@ void CWParser::checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void CWParser::newPage(int number)
+void ClarisWksParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -275,11 +275,11 @@ void CWParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 // interface with the different parser
 ////////////////////////////////////////////////////////////
-bool CWParser::canSendZoneAsGraphic(int zoneId) const
+bool ClarisWksParser::canSendZoneAsGraphic(int zoneId) const
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return false;
-  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
   switch (zMap->m_fileType) {
   case 0:
     return m_graphParser->canSendGroupAsGraphic(zoneId);
@@ -297,11 +297,11 @@ bool CWParser::canSendZoneAsGraphic(int zoneId) const
   return false;
 }
 
-bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
+bool ClarisWksParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return false;
-  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   bool res = false;
@@ -328,7 +328,7 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
     res = m_databaseParser->sendDatabase(zoneId);
     break;
   default:
-    MWAW_DEBUG_MSG(("CWParser::sendZone: can not send zone: %d\n", zoneId));
+    MWAW_DEBUG_MSG(("ClarisWksParser::sendZone: can not send zone: %d\n", zoneId));
     break;
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -339,7 +339,7 @@ bool CWParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
 ////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-MWAWSection CWParser::getMainSection() const
+MWAWSection ClarisWksParser::getMainSection() const
 {
   MWAWSection sec;
   if (m_state->m_columns <= 1)
@@ -371,26 +371,26 @@ MWAWSection CWParser::getMainSection() const
   return sec;
 }
 
-void CWParser::sendFootnote(int zoneId)
+void ClarisWksParser::sendFootnote(int zoneId)
 {
   if (!getTextListener()) return;
 
-  MWAWSubDocumentPtr subdoc(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+  MWAWSubDocumentPtr subdoc(new ClarisWksParserInternal::SubDocument(*this, getInput(), zoneId));
   getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
-void CWParser::forceParsed(int zoneId)
+void ClarisWksParser::forceParsed(int zoneId)
 {
   if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
     return;
-  shared_ptr<CWStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
   if (zMap) zMap->m_parsed = true;
 }
 
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
+void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -424,7 +424,7 @@ void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("CWParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -435,11 +435,11 @@ void CWParser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void CWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("CWParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -477,7 +477,7 @@ void CWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
     if (zoneId == 0)
       continue;
     MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new CWParserInternal::SubDocument(*this, getInput(), zoneId));
+    hF.m_subDocument.reset(new ClarisWksParserInternal::SubDocument(*this, getInput(), zoneId));
     ps.setHeaderFooter(hF);
   }
   ps.setPageSpan(m_state->m_numPages);
@@ -494,7 +494,7 @@ void CWParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool CWParser::createZones()
+bool ClarisWksParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
@@ -585,73 +585,73 @@ bool CWParser::createZones()
 ////////////////////////////////////////////////////////////
 // try to mark the zones
 ////////////////////////////////////////////////////////////
-void CWParser::typeMainZones()
+void ClarisWksParser::typeMainZones()
 {
   // first type the main zone and its father
-  typeMainZonesRec(1, CWStruct::DSET::T_Main, 100);
+  typeMainZonesRec(1, ClarisWksStruct::DSET::T_Main, 100);
 
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter;
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   // then type the slides
   std::vector<int> slidesList = m_presentationParser->getSlidesList();
   m_graphParser->setSlideList(slidesList);
   for (size_t slide = 0; slide < slidesList.size(); slide++) {
     iter = m_state->m_zonesMap.find(slidesList[slide]);
     if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = CWStruct::DSET::T_Slide;
+      iter->second->m_type = ClarisWksStruct::DSET::T_Slide;
   }
   // now check the header/footer
   if (m_state->m_headerId) {
     iter = m_state->m_zonesMap.find(m_state->m_headerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = CWStruct::DSET::T_Header;
+      iter->second->m_type = ClarisWksStruct::DSET::T_Header;
   }
   if (m_state->m_footerId) {
     iter = m_state->m_zonesMap.find(m_state->m_footerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = CWStruct::DSET::T_Footer;
+      iter->second->m_type = ClarisWksStruct::DSET::T_Footer;
   }
   iter = m_state->m_zonesMap.begin();
-  std::vector<int> listZonesId[CWStruct::DSET::T_Unknown];
+  std::vector<int> listZonesId[ClarisWksStruct::DSET::T_Unknown];
   while (iter != m_state->m_zonesMap.end()) {
     int id = iter->first;
-    shared_ptr<CWStruct::DSET> node = iter++->second;
-    CWStruct::DSET::Type type = node ? node->m_type : CWStruct::DSET::T_Unknown;
-    if (type == CWStruct::DSET::T_Unknown || type == CWStruct::DSET::T_Main)
+    shared_ptr<ClarisWksStruct::DSET> node = iter++->second;
+    ClarisWksStruct::DSET::Type type = node ? node->m_type : ClarisWksStruct::DSET::T_Unknown;
+    if (type == ClarisWksStruct::DSET::T_Unknown || type == ClarisWksStruct::DSET::T_Main)
       continue;
     if (node->m_fileType != 1) // only propage data from a text node
       continue;
-    if (type > CWStruct::DSET::T_Unknown || type < 0) {
-      MWAW_DEBUG_MSG(("CWParser::typeMainZones: OOPS, internal problem with type\n"));
+    if (type > ClarisWksStruct::DSET::T_Unknown || type < 0) {
+      MWAW_DEBUG_MSG(("ClarisWksParser::typeMainZones: OOPS, internal problem with type\n"));
       continue;
     }
     listZonesId[type].push_back(id);
   }
   bool isPres = getHeader() && getHeader()->getKind() == MWAWDocument::MWAW_K_PRESENTATION;
-  for (int type=CWStruct::DSET::T_Header; type < CWStruct::DSET::T_Slide;  type++) {
+  for (int type=ClarisWksStruct::DSET::T_Header; type < ClarisWksStruct::DSET::T_Slide;  type++) {
     for (size_t z = 0; z < listZonesId[type].size(); z++) {
-      int fId = typeMainZonesRec(listZonesId[type][z], CWStruct::DSET::Type(type), 1);
+      int fId = typeMainZonesRec(listZonesId[type][z], ClarisWksStruct::DSET::Type(type), 1);
       if (!fId)
         continue;
       if (isPres) // fixme: actually as the main type is not good too dangerous
         fId=listZonesId[type][z];
-      if (type==CWStruct::DSET::T_Header && !m_state->m_headerId)
+      if (type==ClarisWksStruct::DSET::T_Header && !m_state->m_headerId)
         m_state->m_headerId = fId;
-      else if (type==CWStruct::DSET::T_Footer && !m_state->m_footerId)
+      else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
         m_state->m_footerId = fId;
     }
   }
 }
 
-int CWParser::typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight)
+int ClarisWksParser::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight)
 {
   if (maxHeight < 0) return 0;
 
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter
     = m_state->m_zonesMap.find(zId);
   if (iter == m_state->m_zonesMap.end() || !iter->second)
     return 0;
-  shared_ptr<CWStruct::DSET> node = iter->second;
-  if (node->m_type == CWStruct::DSET::T_Unknown)
+  shared_ptr<ClarisWksStruct::DSET> node = iter->second;
+  if (node->m_type == ClarisWksStruct::DSET::T_Unknown)
     node->m_type = type;
   else if (node->m_type != type)
     return 0;
@@ -670,13 +670,13 @@ int CWParser::typeMainZonesRec(int zId, CWStruct::DSET::Type type, int maxHeight
 ////////////////////////////////////////////////////////////
 // try to order the zones
 ////////////////////////////////////////////////////////////
-bool CWParser::exploreZonesGraph()
+bool ClarisWksParser::exploreZonesGraph()
 {
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter, iter2;
   // first create the list of fathers
   iter = m_state->m_zonesMap.begin();
   for (; iter != m_state->m_zonesMap.end(); ++iter) {
-    shared_ptr<CWStruct::DSET> zone = iter->second;
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     if (!zone) continue;
 
     int id = zone->m_id;
@@ -686,13 +686,13 @@ bool CWParser::exploreZonesGraph()
         int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
         if (cId < 0) continue;
         if (cId == 0) {
-          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a zone with id=0\n"));
+          MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: find a zone with id=0\n"));
           continue;
         }
 
         iter2 = m_state->m_zonesMap.find(cId);
         if (iter2 == m_state->m_zonesMap.end()) {
-          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
+          MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: can not find zone %d\n", cId));
           continue;
         }
         iter2->second->m_fathersList.insert(id);
@@ -708,7 +708,7 @@ bool CWParser::exploreZonesGraph()
   std::set<int> notDoneList;
   iter = m_state->m_zonesMap.begin();
   for (; iter != m_state->m_zonesMap.end(); ++iter) {
-    shared_ptr<CWStruct::DSET> zone = iter->second;
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     if (!zone) continue;
     zone->m_internal = 0;
     notDoneList.insert(zone->m_id);
@@ -725,7 +725,7 @@ bool CWParser::exploreZonesGraph()
     }
     else {
       id = *notDoneList.begin();
-      MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle, choose new root %d\n", id));
+      MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: find a cycle, choose new root %d\n", id));
       rootList.push_back(id);
     }
     exploreZonesGraphRec(id, notDoneList);
@@ -744,14 +744,14 @@ bool CWParser::exploreZonesGraph()
     std::cerr << rootList[i] << ",";
   std::cerr << "\n";
   for (; iter != m_state->m_zonesMap.end(); ++iter) {
-    shared_ptr<CWStruct::DSET> zone = iter->second;
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     std::cerr << *zone << "\n";
   }
   std::cerr << "--------------------------------------------------------\n";
 #endif
   if (numMain == 0) {
     // we have a big problem here, no way to continue
-    MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: the graph contains no tree...\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: the graph contains no tree...\n"));
     return false;
   }
 
@@ -759,16 +759,16 @@ bool CWParser::exploreZonesGraph()
   return true;
 }
 
-bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
+bool ClarisWksParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
 {
-  std::map<int, shared_ptr<CWStruct::DSET> >::iterator iter, iter2;
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter, iter2;
   notDoneList.erase(zId);
   iter = m_state->m_zonesMap.find(zId);
   if (iter == m_state->m_zonesMap.end()) {
-    MWAW_DEBUG_MSG(("CWParser::exploreZonesGraphRec: internal problem (can not find zone %d)\n", zId));
+    MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraphRec: internal problem (can not find zone %d)\n", zId));
     return false;
   }
-  shared_ptr<CWStruct::DSET> zone = iter->second;
+  shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
   if (!zone) return true;
   zone->m_internal = 1;
   size_t numChilds = zone->m_childs.size();
@@ -779,10 +779,10 @@ bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
       if (notDoneList.find(cId) == notDoneList.end()) {
         iter2 = m_state->m_zonesMap.find(cId);
         if (iter2 == m_state->m_zonesMap.end()) {
-          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: can not find zone %d\n", cId));
+          MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: can not find zone %d\n", cId));
         }
         else if (iter2->second->m_internal==1) {
-          MWAW_DEBUG_MSG(("CWParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
+          MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
         }
         else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
           zone->m_validedChildList.insert(cId);
@@ -803,7 +803,7 @@ bool CWParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
 ////////////////////////////////////////////////////////////
 // the end zone (in some v2 file and after )
 ////////////////////////////////////////////////////////////
-bool CWParser::readEndTable()
+bool ClarisWksParser::readEndTable()
 {
   if (version() <= 1) return false;
 
@@ -828,7 +828,7 @@ bool CWParser::readEndTable()
 
   long sz = (long) input->readULong(4);
   if (sz <= 16 || (sz%8) != 0 || sz+entryPos+8 != m_state->m_EOF) {
-    MWAW_DEBUG_MSG(("CWParser::readEndTable: bad size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readEndTable: bad size\n"));
     return false;
   }
 
@@ -844,7 +844,7 @@ bool CWParser::readEndTable()
       name+=char(input->readULong(1));
     long pos = (long) input->readULong(4);
     if (pos < prevPos+4 || (i!=numEntries-1 && pos+4 > entryPos)) {
-      MWAW_DEBUG_MSG(("CWParser::readEndTable: bad pos\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readEndTable: bad pos\n"));
       return false;
     }
 
@@ -909,7 +909,7 @@ bool CWParser::readEndTable()
   return true;
 }
 
-bool CWParser::readZone()
+bool ClarisWksParser::readZone()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1025,9 +1025,9 @@ bool CWParser::readZone()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool CWParser::checkHeader(MWAWHeader *header, bool strict)
+bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = CWParserInternal::State();
+  *m_state = ClarisWksParserInternal::State();
 
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork())
@@ -1036,7 +1036,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   int const headerSize=8;
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != headerSize) {
-    MWAW_DEBUG_MSG(("CWParser::checkHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
@@ -1044,7 +1044,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
   int vers = (int) input->readLong(1);
   setVersion(vers);
   if (vers <=0 || vers > 6) {
-    MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown version: %d\n", vers));
+    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: unknown version: %d\n", vers));
     return false;
   }
   f << "vers=" << vers << ",";
@@ -1103,7 +1103,7 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
     m_state->m_kind=MWAWDocument::MWAW_K_PRESENTATION;
     break;
   default:
-    MWAW_DEBUG_MSG(("CWParser::checkHeader: unknown type=%d\n", type));
+    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: unknown type=%d\n", type));
     m_state->m_kind=MWAWDocument::MWAW_K_UNKNOWN;
     break;
   }
@@ -1131,28 +1131,28 @@ bool CWParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // a document part
 ////////////////////////////////////////////////////////////
-shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
+shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::readDSET(bool &complete)
 {
   complete = false;
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
   if (input->readULong(4) != 0x44534554L)
-    return shared_ptr<CWStruct::DSET>();
+    return shared_ptr<ClarisWksStruct::DSET>();
   long sz = (long) input->readULong(4);
   MWAWEntry entry;
   entry.setBegin(pos);
   entry.setLength(sz+8);
 
-  if (sz < 16) return shared_ptr<CWStruct::DSET>();
+  if (sz < 16) return shared_ptr<ClarisWksStruct::DSET>();
   long endPos = entry.end();
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWParser::readDSET: file is too short\n"));
-    return shared_ptr<CWStruct::DSET>();
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDSET: file is too short\n"));
+    return shared_ptr<ClarisWksStruct::DSET>();
   }
 
-  CWStruct::DSET dset;
+  ClarisWksStruct::DSET dset;
   input->seek(pos+8, librevenge::RVNG_SEEK_SET);
   dset.m_size = sz;
   dset.m_numData = (int) input->readULong(2);
@@ -1180,7 +1180,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   dset.m_id = (int) input->readULong(2) ;
 
   bool parsed = true;
-  shared_ptr<CWStruct::DSET> res;
+  shared_ptr<ClarisWksStruct::DSET> res;
   switch (dset.m_fileType) {
   case 0:
     res = m_graphParser->readGroupZone(dset, entry, complete);
@@ -1210,9 +1210,9 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
 
   if (parsed) {
     if (!res)
-      return shared_ptr<CWStruct::DSET>();
+      return shared_ptr<ClarisWksStruct::DSET>();
     if (m_state->m_zonesMap.find(res->m_id) != m_state->m_zonesMap.end()) {
-      MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDSET: zone %d already exists!!!!\n",
                       res->m_id));
     }
     else
@@ -1220,7 +1220,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
     return res;
   }
 
-  shared_ptr<CWStruct::DSET> zone(new CWStruct::DSET(dset));
+  shared_ptr<ClarisWksStruct::DSET> zone(new ClarisWksStruct::DSET(dset));
   f << "Entries(DSETU): " << *zone;
 
   int data0Length = (int) zone->m_dataSz;
@@ -1231,7 +1231,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   ascii().addNote(f.str().c_str());
 
   if (sz-12 != data0Length*N + zone->m_headerSz) {
-    MWAW_DEBUG_MSG(("CWParser::readDSET: unexpected size for zone definition, try to continue\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDSET: unexpected size for zone definition, try to continue\n"));
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     return zone;
   }
@@ -1253,7 +1253,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
   // in general, such a zone is followed by a small zone ( a container)
   zone->m_otherChilds.push_back(zone->m_id+1);
   if (m_state->m_zonesMap.find(zone->m_id) != m_state->m_zonesMap.end()) {
-    MWAW_DEBUG_MSG(("CWParser::readDSET: zone %d already exists!!!!\n",
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDSET: zone %d already exists!!!!\n",
                     zone->m_id));
   }
   else
@@ -1266,7 +1266,7 @@ shared_ptr<CWStruct::DSET> CWParser::readDSET(bool &complete)
 ///////////////////////////////////////////////////////////
 // try to read a unknown structured zone
 ////////////////////////////////////////////////////////////
-bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
+bool ClarisWksParser::readStructZone(char const *zoneName, bool hasEntete)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1274,7 +1274,7 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
   long endPos = pos+4+sz;
   if (!input->checkPosition(endPos)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readStructZone: unexpected size for %s\n", zoneName));
     return false;
   }
   libmwaw::DebugStream f;
@@ -1303,7 +1303,7 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
   int hSz = (int) input->readULong(2);
   if (!fSz || N *fSz+hSz+12 != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWParser::readStructZone: unexpected size for %s\n", zoneName));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readStructZone: unexpected size for %s\n", zoneName));
     return false;
   }
 
@@ -1330,11 +1330,11 @@ bool CWParser::readStructZone(char const *zoneName, bool hasEntete)
 }
 
 // try to read a list of structured zone
-bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
+bool ClarisWksParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
 {
   res.resize(0);
   if (intSz != 1 && intSz != 2 && intSz != 4) {
-    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unknown int size: %d\n", intSz));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unknown int size: %d\n", intSz));
     return false;
   }
 
@@ -1345,7 +1345,7 @@ bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected size for %s\n", zoneName));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unexpected size for %s\n", zoneName));
     return false;
   }
   libmwaw::DebugStream f;
@@ -1376,7 +1376,7 @@ bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz
   int hSz = (int) input->readULong(2);
   if (fSz != intSz || N *fSz+hSz+12 != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("CWParser::readStructIntZone: unexpected field size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unexpected field size\n"));
     return false;
   }
 
@@ -1404,7 +1404,7 @@ bool CWParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz
 ///////////////////////////////////////////////////////////
 // a list of snapshot
 ////////////////////////////////////////////////////////////
-bool CWParser::readSNAP(MWAWEntry const &entry)
+bool ClarisWksParser::readSNAP(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "SNAP")
     return false;
@@ -1413,7 +1413,7 @@ bool CWParser::readSNAP(MWAWEntry const &entry)
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with entry length"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readSNAP: pb with entry length"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1428,7 +1428,7 @@ bool CWParser::readSNAP(MWAWEntry const &entry)
     int type=(int) input->readLong(1);
     sz = (long) input->readULong(4);
     if (pos+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("CWParser::readSNAP: pb with sub zone: %d", id));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readSNAP: pb with sub zone: %d", id));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1459,7 +1459,7 @@ bool CWParser::readSNAP(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // a list the document property
 ////////////////////////////////////////////////////////////
-bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
+bool ClarisWksParser::readDSUM(MWAWEntry const &entry, bool inHeader)
 {
   if (!entry.valid() || (!inHeader && entry.type() != "DSUM"))
     return false;
@@ -1477,7 +1477,7 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
     if (!sz) continue;
     int strSize = (int) input->readULong(1);
     if (strSize != sz-1 || pos+4+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDSUM: unexpected string size\n"));
       if (pos+4+sz > entry.end() || strSize > sz-1) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         return false;
@@ -1491,7 +1491,7 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
         name += c;
         continue;
       }
-      MWAW_DEBUG_MSG(("CWParser::readDSUM: unexpected string char\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDSUM: unexpected string char\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1508,7 +1508,7 @@ bool CWParser::readDSUM(MWAWEntry const &entry, bool inHeader)
 ////////////////////////////////////////////////////////////
 // a string: temporary file name ?
 ////////////////////////////////////////////////////////////
-bool CWParser::readTNAM(MWAWEntry const &entry)
+bool ClarisWksParser::readTNAM(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "TNAM")
     return false;
@@ -1522,7 +1522,7 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
 
   int strSize = (int) input->readULong(1);
   if (strSize != sz-1 || pos+8+sz > entry.end()) {
-    MWAW_DEBUG_MSG(("CWParser::readTNAM: unexpected string size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readTNAM: unexpected string size\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1533,7 +1533,7 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
       name += c;
       continue;
     }
-    MWAW_DEBUG_MSG(("CWParser::readTNAM: unexpected string char\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readTNAM: unexpected string char\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1549,7 +1549,7 @@ bool CWParser::readTNAM(MWAWEntry const &entry)
   return true;
 }
 
-bool CWParser::readMARKList(MWAWEntry const &entry)
+bool ClarisWksParser::readMARKList(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "MARK")
     return false;
@@ -1563,7 +1563,7 @@ bool CWParser::readMARKList(MWAWEntry const &entry)
 
   if (input->readULong(4) !=0x4d41524b || input->readLong(4) != sz || sz < 30) {
     f << "###";
-    MWAW_DEBUG_MSG(("CWParser::readMARKList: find unexpected header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readMARKList: find unexpected header\n"));
     ascii().addPos(entry.begin());
     ascii().addNote(f.str().c_str());
 
@@ -1579,7 +1579,7 @@ bool CWParser::readMARKList(MWAWEntry const &entry)
   if (input->readULong(4)!=0x4d524b53) { // MRKS
     f << "###";
 
-    MWAW_DEBUG_MSG(("CWParser::readMARKList: find unexpected MRKS header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readMARKList: find unexpected MRKS header\n"));
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
 
@@ -1634,7 +1634,7 @@ bool CWParser::readMARKList(MWAWEntry const &entry)
     f << name << ",";
     if (vers < 6) {
       // I think mark in v5, but the code seem to differ from here
-      MWAW_DEBUG_MSG(("CWParser::readMARKList: OOOPS reading mark data is not implemented\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readMARKList: OOOPS reading mark data is not implemented\n"));
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       ascii().addPos(input->tell());
@@ -1711,7 +1711,7 @@ bool CWParser::readMARKList(MWAWEntry const &entry)
   return true;
 }
 
-bool CWParser::readURL(long endPos)
+bool ClarisWksParser::readURL(long endPos)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
@@ -1724,7 +1724,7 @@ bool CWParser::readURL(long endPos)
   if (type==0) {
   }
   else if (type!=0x554c6b64) {
-    MWAW_DEBUG_MSG(("CWParser::readURL: find unexpected header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readURL: find unexpected header\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1733,7 +1733,7 @@ bool CWParser::readURL(long endPos)
   }
   else { // ULkd
     if (input->tell()+32+256+8>endPos) {
-      MWAW_DEBUG_MSG(("CWParser::readURL: date seems too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readURL: date seems too short\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1745,7 +1745,7 @@ bool CWParser::readURL(long endPos)
       long actPos=input->tell();
       int tSz=(int) input->readULong(1);
       if (tSz >= maxSize) {
-        MWAW_DEBUG_MSG(("CWParser::readURL: find unexpected text size\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readURL: find unexpected text size\n"));
         f << "###";
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         ascii().addPos(pos);
@@ -1765,7 +1765,7 @@ bool CWParser::readURL(long endPos)
   return readEndMark(endPos);
 }
 
-bool CWParser::readDocumentMark(long endPos)
+bool ClarisWksParser::readDocumentMark(long endPos)
 {
   // Checkme...
   MWAWInputStreamPtr input = getInput();
@@ -1779,7 +1779,7 @@ bool CWParser::readDocumentMark(long endPos)
   if (type==0) {
   }
   else if (type!=0x444c6b64) {
-    MWAW_DEBUG_MSG(("CWParser::readDocumentMark: find unexpected header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDocumentMark: find unexpected header\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1788,7 +1788,7 @@ bool CWParser::readDocumentMark(long endPos)
   }
   else { // DLkd
     if (input->tell()+32+64+20+8>endPos) {
-      MWAW_DEBUG_MSG(("CWParser::readDocumentMark: date seems too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDocumentMark: date seems too short\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1800,7 +1800,7 @@ bool CWParser::readDocumentMark(long endPos)
       long actPos=input->tell();
       int tSz=(int) input->readULong(1);
       if (tSz >= maxSize) {
-        MWAW_DEBUG_MSG(("CWParser::readDocumentMark: find unexpected text size\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readDocumentMark: find unexpected text size\n"));
         f << "###";
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         ascii().addPos(pos);
@@ -1825,7 +1825,7 @@ bool CWParser::readDocumentMark(long endPos)
   return readEndMark(endPos);
 }
 
-bool CWParser::readBookmark(long endPos)
+bool ClarisWksParser::readBookmark(long endPos)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
@@ -1838,7 +1838,7 @@ bool CWParser::readBookmark(long endPos)
   if (type==0) {
   }
   else if (type!=0x424d6b64) {
-    MWAW_DEBUG_MSG(("CWParser::readBookmark: find unexpected header\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readBookmark: find unexpected header\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1847,7 +1847,7 @@ bool CWParser::readBookmark(long endPos)
   }
   else { // BMkd
     if (input->tell()+32+8>endPos) {
-      MWAW_DEBUG_MSG(("CWParser::readBookmark: date seems too short\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readBookmark: date seems too short\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1858,7 +1858,7 @@ bool CWParser::readBookmark(long endPos)
     long actPos=input->tell();
     int tSz=(int) input->readULong(1);
     if (tSz >= maxSize) {
-      MWAW_DEBUG_MSG(("CWParser::readBookmark: find unexpected text size\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readBookmark: find unexpected text size\n"));
       f << "###";
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ascii().addPos(pos);
@@ -1877,7 +1877,7 @@ bool CWParser::readBookmark(long endPos)
   return readEndMark(endPos);
 }
 
-bool CWParser::readEndMark(long endPos)
+bool ClarisWksParser::readEndMark(long endPos)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1899,7 +1899,7 @@ bool CWParser::readEndMark(long endPos)
   f << "type=" << val << ",";
   int numExpected=val==1 ? 4: 1;
   if (input->tell()+2*numExpected >endPos) {
-    MWAW_DEBUG_MSG(("CWParser::readEndMark: find unexpected number of element\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readEndMark: find unexpected number of element\n"));
     f << "###";
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
@@ -1918,7 +1918,7 @@ bool CWParser::readEndMark(long endPos)
 ////////////////////////////////////////////////////////////
 // a list of print info plist
 ////////////////////////////////////////////////////////////
-bool CWParser::readCPRT(MWAWEntry const &entry)
+bool ClarisWksParser::readCPRT(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.type() != "CPRT")
     return false;
@@ -1927,7 +1927,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
   long sz = (long) input->readULong(4);
   if (sz > entry.length()) {
-    MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with entry length"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readCPRT: pb with entry length"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
@@ -1941,7 +1941,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
     pos = input->tell();
     sz = (long) input->readULong(4);
     if (pos+sz > entry.end()) {
-      MWAW_DEBUG_MSG(("CWParser::readCPRT: pb with sub zone: %d", id));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readCPRT: pb with sub zone: %d", id));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1970,7 +1970,7 @@ bool CWParser::readCPRT(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool CWParser::readDocHeader()
+bool ClarisWksParser::readDocHeader()
 {
   MWAWInputStreamPtr input = getInput();
   int const vers=version();
@@ -2023,7 +2023,7 @@ bool CWParser::readDocHeader()
 
   input->seek(totalLength, librevenge::RVNG_SEEK_CUR);
   if (input->tell() != pos+totalLength) {
-    MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: file is too short\n"));
     return false;
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -2130,7 +2130,7 @@ bool CWParser::readDocHeader()
       f << "DocHeader(Col):";
       int numCols = (int) input->readLong(2);
       if (numCols < 1 || numCols > 9) {
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: pb reading number of columns\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: pb reading number of columns\n"));
         f << "###numCols=" << numCols;
         numCols = 1;
       }
@@ -2165,7 +2165,7 @@ bool CWParser::readDocHeader()
     ascii().addDelimiter(input->tell(), '|');
   input->seek(pos+zone1Length, librevenge::RVNG_SEEK_SET);
   if (input->isEnd()) {
-    MWAW_DEBUG_MSG(("CWParser::readDocHeader: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: file is too short\n"));
     return false;
   }
   switch (vers) {
@@ -2176,7 +2176,7 @@ bool CWParser::readDocHeader()
       return false;
     pos = input->tell();
     if (!readPrintInfo()) {
-      MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find print info\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -2201,7 +2201,7 @@ bool CWParser::readDocHeader()
     f << "Entries(DocUnkn1):";
     long sz=input->readLong(4);
     if (sz) {
-      MWAW_DEBUG_MSG(("CWParser::readDocHeader: oops find a size for DocUnkn2, we may have a problem\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: oops find a size for DocUnkn2, we may have a problem\n"));
       f << sz << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -2230,7 +2230,7 @@ bool CWParser::readDocHeader()
     else {
       long endPos = pos+4+sz;
       if (!input->checkPosition(endPos)) {
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: unexpected LinkInfo size\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: unexpected LinkInfo size\n"));
         return false;
       }
       ascii().addPos(pos);
@@ -2242,7 +2242,7 @@ bool CWParser::readDocHeader()
       val = (int) input->readULong(4);
       if (val != long(input->tell())) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find local position\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find local position\n"));
         ascii().addPos(pos);
         ascii().addNote("#");
 
@@ -2274,7 +2274,7 @@ bool CWParser::readDocHeader()
     }
 
     if (!readPrintInfo()) {
-      MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not find print info\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find print info\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -2291,7 +2291,7 @@ bool CWParser::readDocHeader()
       entry.setBegin(pos);
       entry.setLength(4+sz);
       if (!input->checkPosition(entry.end())) {
-        MWAW_DEBUG_MSG(("CWParser::readDocHeader: can not read final zones\n"));
+        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not read final zones\n"));
         return false;
       }
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -2329,7 +2329,7 @@ bool CWParser::readDocHeader()
   return true;
 }
 
-bool CWParser::readDocInfo()
+bool ClarisWksParser::readDocInfo()
 {
   MWAWInputStreamPtr input = getInput();
   int const vers=version();
@@ -2362,7 +2362,7 @@ bool CWParser::readDocInfo()
       (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind == MWAWDocument::MWAW_K_DRAW)))
     m_state->m_pages=Vec2i(pages[0],pages[1]);
   else {
-    MWAW_DEBUG_MSG(("CWParser::readDocInfo: the number of pages seems bad\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readDocInfo: the number of pages seems bad\n"));
     f << "###";
   }
   if (pages[0]!=1 || pages[1]!=1)
@@ -2374,7 +2374,7 @@ bool CWParser::readDocInfo()
 
     int numCols = (int) input->readLong(2);
     if (numCols < 1 || numCols > 9) {
-      MWAW_DEBUG_MSG(("CWParser::readDocInfo: pb reading number of columns\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readDocInfo: pb reading number of columns\n"));
       f << "###numCols=" << numCols;
       numCols = 1;
     }
@@ -2401,7 +2401,7 @@ bool CWParser::readDocInfo()
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool CWParser::readPrintInfo()
+bool ClarisWksParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -2412,7 +2412,7 @@ bool CWParser::readPrintInfo()
   long endPos = pos+4+sz;
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("CWParser::readPrintInfo: file is too short\n"));
+    MWAW_DEBUG_MSG(("ClarisWksParser::readPrintInfo: file is too short\n"));
     return false;
   }
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
@@ -2426,7 +2426,7 @@ bool CWParser::readPrintInfo()
       ascii().addPos(pos);
       ascii().addNote("Entries(PrintInfo):##");
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("CWParser::readPrintInfo: can not read print info, continue\n"));
+      MWAW_DEBUG_MSG(("ClarisWksParser::readPrintInfo: can not read print info, continue\n"));
       return true;
     }
     return false;

@@ -111,51 +111,51 @@ SOURCE=..\..\src\lib\BeagleWksText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDatabase.cxx
+SOURCE=..\..\src\lib\ClarisWksDatabase.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDbaseContent.cxx
+SOURCE=..\..\src\lib\ClarisWksDbaseContent.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWGraph.cxx
+SOURCE=..\..\src\lib\ClarisWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWParser.cxx
+SOURCE=..\..\src\lib\ClarisWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWPresentation.cxx
+SOURCE=..\..\src\lib\ClarisWksPresentation.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWSpreadsheet.cxx
+SOURCE=..\..\src\lib\ClarisWksSpreadsheet.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStruct.cxx
+SOURCE=..\..\src\lib\ClarisWksStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStyleManager.cxx
+SOURCE=..\..\src\lib\ClarisWksStyleManager.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWTable.cxx
+SOURCE=..\..\src\lib\ClarisWksTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWText.cxx
+SOURCE=..\..\src\lib\ClarisWksText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMParser.cxx
+SOURCE=..\..\src\lib\DocMkrParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMText.cxx
+SOURCE=..\..\src\lib\DocMkrText.cxx
 # End Source File
 # Begin Source File
 
@@ -507,51 +507,51 @@ SOURCE=..\..\src\lib\BeagleWksText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDatabase.hxx
+SOURCE=..\..\src\lib\ClarisWksDatabase.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDbaseContent.hxx
+SOURCE=..\..\src\lib\ClarisWksDbaseContent.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWGraph.hxx
+SOURCE=..\..\src\lib\ClarisWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWParser.hxx
+SOURCE=..\..\src\lib\ClarisWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWPresentation.hxx
+SOURCE=..\..\src\lib\ClarisWksPresentation.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWSpreadsheet.hxx
+SOURCE=..\..\src\lib\ClarisWksSpreadsheet.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStruct.hxx
+SOURCE=..\..\src\lib\ClarisWksStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStyleManager.hxx
+SOURCE=..\..\src\lib\ClarisWksStyleManager.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWTable.hxx
+SOURCE=..\..\src\lib\ClarisWksTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWText.hxx
+SOURCE=..\..\src\lib\ClarisWksText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMParser.hxx
+SOURCE=..\..\src\lib\DocMkrParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMText.hxx
+SOURCE=..\..\src\lib\DocMkrText.hxx
 # End Source File
 # Begin Source File
 

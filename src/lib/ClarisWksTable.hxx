@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to Claris Works text document ( spreadsheet part )
+ * Parser to Claris Works text document ( table part )
  *
  */
-#ifndef CW_MWAW_SPREADSHEET
-#  define CW_MWAW_SPREADSHEET
+#ifndef CLARIS_WKS_TABLE
+#  define CLARIS_WKS_TABLE
 
 #include <list>
 #include <string>
@@ -50,32 +50,32 @@
 
 #include "MWAWParser.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWSpreadsheetInternal
+namespace ClarisWksTableInternal
 {
-struct Spreadsheet;
-struct Field;
+struct Table;
 struct State;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the text part of Claris Works file
  *
  *
  *
  */
-class CWSpreadsheet
+class ClarisWksTable
 {
-  friend class CWParser;
+  friend class ClarisWksParser;
+  friend struct ClarisWksTableInternal::Table;
 
 public:
   //! constructor
-  CWSpreadsheet(CWParser &parser);
+  ClarisWksTable(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWSpreadsheet();
+  virtual ~ClarisWksTable();
 
   /** returns the file version */
   int version() const;
@@ -84,33 +84,38 @@ public:
   int numPages() const;
 
   //! reads the zone Text DSET
-  shared_ptr<CWStruct::DSET> readSpreadsheetZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
-  //! check if we can send a spreadsheet as graphic
-  bool canSendSpreadsheetAsGraphic(int) const
-  {
-    return false;
-  }
-  //! sends the zone data to the listener (if it exists )
-  bool sendSpreadsheet(int number);
+  shared_ptr<ClarisWksStruct::DSET> readTableZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
 protected:
+  //! sends the zone data to the listener (if it exists )
+  bool sendZone(int number);
+
+  //! ask the main parser to send a zone
+  bool askMainToSendZone(int number);
+
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
+
   //
   // Intermediate level
   //
 
-  /** try to read the first spreadsheet zone */
-  bool readZone1(CWSpreadsheetInternal::Spreadsheet &sheet);
-  /** try to read the row height zone */
-  bool readRowHeightZone(CWSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read the table border
+  bool readTableBorders(ClarisWksTableInternal::Table &table);
 
-  //
-  // low level
-  //
+  //! try to read the table cells
+  bool readTableCells(ClarisWksTableInternal::Table &table);
+
+  //! try to read the table border
+  bool readTableBordersId(ClarisWksTableInternal::Table &table);
+
+  //! try to read a list of pointer ( unknown meaning )
+  bool readTablePointers(ClarisWksTableInternal::Table &table);
 
 private:
-  CWSpreadsheet(CWSpreadsheet const &orig);
-  CWSpreadsheet &operator=(CWSpreadsheet const &orig);
+  ClarisWksTable(ClarisWksTable const &orig);
+  ClarisWksTable &operator=(ClarisWksTable const &orig);
 
 protected:
   //
@@ -120,13 +125,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWSpreadsheetInternal::State> m_state;
+  shared_ptr<ClarisWksTableInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

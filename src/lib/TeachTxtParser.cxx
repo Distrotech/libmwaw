@@ -259,7 +259,7 @@ int TeachTxtParser::computeNumPages() const
 bool TeachTxtParser::sendText()
 {
   if (!getTextListener()) {
-    MWAW_DEBUG_MSG(("DMText::sendText: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("TeachTxtText::sendText: can not find the listener\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();

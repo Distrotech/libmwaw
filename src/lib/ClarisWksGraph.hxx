@@ -35,8 +35,8 @@
  * Parser to Claris Works text document ( graphic part )
  *
  */
-#ifndef CW_GRAPH
-#  define CW_GRAPH
+#ifndef CLARIS_WKS_GRAPH
+#  define CLARIS_WKS_GRAPH
 
 #include <string>
 #include <vector>
@@ -49,9 +49,9 @@
 #include "MWAWInputStream.hxx"
 #include "MWAWPosition.hxx"
 
-#include "CWStruct.hxx"
+#include "ClarisWksStruct.hxx"
 
-namespace CWGraphInternal
+namespace ClarisWksGraphInternal
 {
 struct Group;
 struct State;
@@ -64,24 +64,24 @@ struct ZonePict;
 class SubDocument;
 }
 
-class CWParser;
-class CWStyleManager;
+class ClarisWksParser;
+class ClarisWksStyleManager;
 
 /** \brief the main class to read the graphic part of Claris Works file
  *
  *
  *
  */
-class CWGraph
+class ClarisWksGraph
 {
-  friend class CWGraphInternal::SubDocument;
-  friend class CWParser;
+  friend class ClarisWksGraphInternal::SubDocument;
+  friend class ClarisWksParser;
 
 public:
   //! constructor
-  CWGraph(CWParser &parser);
+  ClarisWksGraph(ClarisWksParser &parser);
   //! destructor
-  virtual ~CWGraph();
+  virtual ~ClarisWksGraph();
 
   /** returns the file version */
   int version() const;
@@ -90,15 +90,15 @@ public:
   int numPages() const;
 
   //! reads the zone Group DSET
-  shared_ptr<CWStruct::DSET> readGroupZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  shared_ptr<ClarisWksStruct::DSET> readGroupZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! reads the zone Bitmap DSET
-  shared_ptr<CWStruct::DSET> readBitmapZone
-  (CWStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
+  shared_ptr<ClarisWksStruct::DSET> readBitmapZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
   //! return the surface color which corresponds to some ids (if possible)
-  bool getSurfaceColor(CWGraphInternal::Style const &style, MWAWColor &col) const;
+  bool getSurfaceColor(ClarisWksGraphInternal::Style const &style, MWAWColor &col) const;
 protected:
   //! set the slide list ( for presentation )
   void setSlideList(std::vector<int> const &slideList);
@@ -124,81 +124,81 @@ protected:
   //
 
   //! check the number of accross page ( for draw document )
-  void checkNumberAccrossPages(CWGraphInternal::Group &group) const;
+  void checkNumberAccrossPages(ClarisWksGraphInternal::Group &group) const;
   //! update the group information to choose how to send the group data
-  void updateInformation(CWGraphInternal::Group &group) const;
+  void updateInformation(ClarisWksGraphInternal::Group &group) const;
   //! check if we can send a group as graphic
-  bool canSendAsGraphic(CWGraphInternal::Group &group) const;
+  bool canSendAsGraphic(ClarisWksGraphInternal::Group &group) const;
   //! send a group
-  bool sendGroup(CWGraphInternal::Group &group, MWAWPosition const &position);
+  bool sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position);
   //! send a group as graphic
-  bool sendGroup(CWGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener);
+  bool sendGroup(ClarisWksGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListener &listener);
   //! send a group child
-  bool sendGroupChild(CWGraphInternal::Group &group, size_t child, MWAWPosition position);
+  bool sendGroupChild(ClarisWksGraphInternal::Group &group, size_t child, MWAWPosition position);
   /* read a simple group */
-  shared_ptr<CWGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
+  shared_ptr<ClarisWksGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
 
   /* read a simple graphic zone */
   bool readShape(MWAWEntry const &entry,
-                 CWGraphInternal::ZoneShape &zone);
+                 ClarisWksGraphInternal::ZoneShape &zone);
 
   /* read the group data.
 
      \note \a beginGroupPos is only used to help debugging */
-  bool readGroupData(CWGraphInternal::Group &group, long beginGroupPos);
+  bool readGroupData(ClarisWksGraphInternal::Group &group, long beginGroupPos);
 
   /* try to read the polygon data */
-  bool readPolygonData(shared_ptr<CWGraphInternal::Zone> zone);
+  bool readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
 
   /////////////
   /* try to read a pict data zone */
-  bool readPictData(shared_ptr<CWGraphInternal::Zone> zone);
+  bool readPictData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
 
   /* read a picture */
-  bool readPICT(CWGraphInternal::ZonePict &zone);
+  bool readPICT(ClarisWksGraphInternal::ZonePict &zone);
 
   /* read a postcript zone */
-  bool readPS(CWGraphInternal::ZonePict &zone);
+  bool readPS(ClarisWksGraphInternal::ZonePict &zone);
 
   /* read a ole document zone */
-  bool readOLE(CWGraphInternal::ZonePict &zone);
+  bool readOLE(ClarisWksGraphInternal::ZonePict &zone);
 
   /////////////
   /* try to read the qtime data zone */
-  bool readQTimeData(shared_ptr<CWGraphInternal::Zone> zone);
+  bool readQTimeData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
 
   /* read a named picture */
-  bool readNamedPict(CWGraphInternal::ZonePict &zone);
+  bool readNamedPict(ClarisWksGraphInternal::ZonePict &zone);
 
   /////////////
   /* try to read a bitmap zone */
   bool readBitmapColorMap(std::vector<MWAWColor> &cMap);
 
   /* try to read the bitmap  */
-  bool readBitmapData(CWGraphInternal::Bitmap &zone);
+  bool readBitmapData(ClarisWksGraphInternal::Bitmap &zone);
   //
   // low level
   //
 
   /* read the first zone of a group type */
-  bool readGroupHeader(CWGraphInternal::Group &group);
+  bool readGroupHeader(ClarisWksGraphInternal::Group &group);
 
   /* read some unknown data in first zone */
-  bool readGroupUnknown(CWGraphInternal::Group &group, int zoneSz, int id);
+  bool readGroupUnknown(ClarisWksGraphInternal::Group &group, int zoneSz, int id);
 
   //! sends a picture zone
-  bool sendPicture(CWGraphInternal::ZonePict &pict, MWAWPosition pos,
+  bool sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPosition pos,
                    librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
 
   //! sends a basic graphic zone
-  bool sendShape(CWGraphInternal::ZoneShape &pict, MWAWPosition pos);
+  bool sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosition pos);
 
   //! sends a bitmap graphic zone
-  bool sendBitmap(CWGraphInternal::Bitmap &pict, bool asGraphic, MWAWPosition pos);
+  bool sendBitmap(ClarisWksGraphInternal::Bitmap &pict, bool asGraphic, MWAWPosition pos);
 
 private:
-  CWGraph(CWGraph const &orig);
-  CWGraph &operator=(CWGraph const &orig);
+  ClarisWksGraph(ClarisWksGraph const &orig);
+  ClarisWksGraph &operator=(ClarisWksGraph const &orig);
 
 protected:
   //
@@ -208,13 +208,13 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<CWGraphInternal::State> m_state;
+  shared_ptr<ClarisWksGraphInternal::State> m_state;
 
   //! the main parser;
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
 
   //! the style manager
-  shared_ptr<CWStyleManager> m_styleManager;
+  shared_ptr<ClarisWksStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -126,51 +126,51 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWDatabase.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksDatabase.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWDbaseContent.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksDbaseContent.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWParser.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWPresentation.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksPresentation.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWSpreadsheet.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksSpreadsheet.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWStruct.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWStyleManager.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksStyleManager.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWTable.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksTable.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWText.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\DMParser.cxx">
+    <ClCompile Include="..\..\src\lib\DocMkrParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\DMText.cxx">
+    <ClCompile Include="..\..\src\lib\DocMkrText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -504,18 +504,18 @@
     <ClInclude Include="..\..\src\lib\BeagleWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksStructManager.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksText.hxx" />
-    <ClInclude Include="..\..\src\lib\CWDatabase.hxx" />
-    <ClInclude Include="..\..\src\lib\CWDbaseContent.hxx" />
-    <ClInclude Include="..\..\src\lib\CWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\CWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\CWPresentation.hxx" />
-    <ClInclude Include="..\..\src\lib\CWSpreadsheet.hxx" />
-    <ClInclude Include="..\..\src\lib\CWStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\CWStyleManager.hxx" />
-    <ClInclude Include="..\..\src\lib\CWTable.hxx" />
-    <ClInclude Include="..\..\src\lib\CWText.hxx" />
-    <ClInclude Include="..\..\src\lib\DMParser.hxx" />
-    <ClInclude Include="..\..\src\lib\DMText.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksDatabase.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksDbaseContent.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksPresentation.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksSpreadsheet.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksStyleManager.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksTable.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksText.hxx" />
+    <ClInclude Include="..\..\src\lib\DocMkrParser.hxx" />
+    <ClInclude Include="..\..\src\lib\DocMkrText.hxx" />
     <ClInclude Include="..\..\src\lib\EDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\FullWrtGraph.hxx" />
     <ClInclude Include="..\..\src\lib\FullWrtParser.hxx" />

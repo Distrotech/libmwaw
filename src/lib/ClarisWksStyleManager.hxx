@@ -35,8 +35,8 @@
  * Class used to read main style by Claris Works parser
  *
  */
-#ifndef CW_STYLE_MANAGER
-#  define CW_STYLE_MANAGER
+#ifndef CLARIS_WKS_STYLE_MANAGER
+#  define CLARIS_WKS_STYLE_MANAGER
 
 #include <iostream>
 #include <string>
@@ -48,15 +48,15 @@
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
-class CWParser;
+class ClarisWksParser;
 
-namespace CWStyleManagerInternal
+namespace ClarisWksStyleManagerInternal
 {
 struct State;
 }
 
 //! a structure to store the style list and the lookup zone
-class CWStyleManager
+class ClarisWksStyleManager
 {
 public:
   struct CellFormat;
@@ -64,9 +64,9 @@ public:
   struct Style;
 public:
   //! constructor
-  CWStyleManager(CWParser &mainParser);
+  ClarisWksStyleManager(ClarisWksParser &mainParser);
   //! destructor
-  ~CWStyleManager();
+  ~ClarisWksStyleManager();
 
   //! reads a color map zone ( v4-v6)
   bool readColorList(MWAWEntry const &entry);
@@ -133,13 +133,13 @@ protected:
   //! the parser state
   MWAWParserStatePtr m_parserState;
   //! the main parser
-  CWParser *m_mainParser;
+  ClarisWksParser *m_mainParser;
   //! the state
-  shared_ptr<CWStyleManagerInternal::State> m_state;
+  shared_ptr<ClarisWksStyleManagerInternal::State> m_state;
 
 private:
-  CWStyleManager(CWStyleManager const &orig);
-  CWStyleManager &operator=(CWStyleManager const &orig);
+  ClarisWksStyleManager(ClarisWksStyleManager const &orig);
+  ClarisWksStyleManager &operator=(ClarisWksStyleManager const &orig);
 
 public:
   //! the CELL structure a structure related to number/date format
@@ -186,7 +186,7 @@ public:
     std::string m_extra;
   };
 
-  //! the structure to store the style in a CWStyleManager
+  //! the structure to store the style in a ClarisWksStyleManager
   struct Style {
     //! constructor
     Style() : m_fontId(-1), m_cellFormatId(-1), m_rulerId(-1), m_rulerPId(-1), m_nameId(-1), m_ksenId(-1), m_graphicId(-1), m_localStyleId(-1), m_styleId(-1), m_extra("")

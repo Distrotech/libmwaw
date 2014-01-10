@@ -47,8 +47,8 @@
 #include "ActaParser.hxx"
 #include "BeagleWksParser.hxx"
 #include "BeagleWksSSParser.hxx"
-#include "CWParser.hxx"
-#include "DMParser.hxx"
+#include "ClarisWksParser.hxx"
+#include "DocMkrParser.hxx"
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
 #include "GreatWksParser.hxx"
@@ -399,10 +399,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new BeagleWksParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_CLARISWORKS:
-      parser.reset(new CWParser(input, rsrcParser, header));
+      parser.reset(new ClarisWksParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_DOCMAKER:
-      parser.reset(new DMParser(input, rsrcParser, header));
+      parser.reset(new DocMkrParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_EDOC:
       parser.reset(new EDocParser(input, rsrcParser, header));
