@@ -283,7 +283,7 @@ SOURCE=..\..\src\lib\MsWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksParser.cxx
+SOURCE=..\..\src\lib\MsWksZone.cxx
 # End Source File
 # Begin Source File
 
@@ -683,7 +683,7 @@ SOURCE=..\..\src\lib\MsWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksParser.hxx
+SOURCE=..\..\src\lib\MsWksZone.hxx
 # End Source File
 # Begin Source File
 

@@ -41,11 +41,13 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MsWksParser.hxx"
+#include "MWAWParser.hxx"
+
+class MsWksGraph;
+class MsWksZone;
 
 class MsWks4Parser;
 class MsWks4Text;
-class MsWksGraph;
 
 namespace MsWks4ZoneInternal
 {
@@ -73,7 +75,7 @@ class SubDocument;
  * - SELN : the actual text/... selection
  *
  */
-class MsWks4Zone : public MsWksParser
+class MsWks4Zone : public MWAWTextParser
 {
   friend class MsWks4ParserInternal::SubDocument;
   friend class MsWks4Parser;
@@ -115,9 +117,6 @@ protected:
 
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
-
-  //! returns the page top left point
-  Vec2f getPageLeftTop() const;
 
   //! adds a new page
   void newPage(int number);
@@ -205,6 +204,9 @@ protected:
 
   //! the graph parser
   shared_ptr<MsWksGraph> m_graphParser;
+
+  //! the zone data
+  shared_ptr<MsWksZone> m_zone;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

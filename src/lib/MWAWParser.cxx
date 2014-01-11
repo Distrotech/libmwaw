@@ -40,8 +40,8 @@
 
 #include "MWAWParser.hxx"
 
-MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  m_version(0), m_input(input), m_header(header),
+MWAWParserState::MWAWParserState(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  m_type(type), m_version(0), m_input(input), m_header(header),
   m_rsrcParser(rsrcParser), m_fontConverter(),
   m_graphicListener(), m_listManager(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
 {
@@ -53,29 +53,13 @@ MWAWParserState::MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsr
 
 MWAWParserState::~MWAWParserState()
 {
-  if (m_spreadsheetListener.get()) try {
+  if (getMainListener()) try {
       /* must never happen, only sanity check....
 
             Ie. the parser which creates a listener, must delete it.
             */
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
-      m_spreadsheetListener->endDocument(false);
-    }
-    catch (const libmwaw::ParseException &) {
-      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
-      /* must never happen too...
-
-      Ie. the different parsers are responsable to create enough pages,
-      if we have exception here, this will indicate a second error in code
-      */
-    }
-  if (m_textListener.get()) try {
-      /* must never happen, only sanity check....
-
-      Ie. the parser which creates a listener, must delete it.
-      */
-      MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: the listener is NOT closed, call enddocument without any subdoc\n"));
-      m_textListener->endDocument(false);
+      getMainListener()->endDocument(false);
     }
     catch (const libmwaw::ParseException &) {
       MWAW_DEBUG_MSG(("MWAWParserState::~MWAWParserState: endDocument FAILS\n"));
@@ -87,10 +71,23 @@ MWAWParserState::~MWAWParserState()
     }
 }
 
-MWAWParser::MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
+MWAWListenerPtr MWAWParserState::getMainListener()
+{
+  switch (m_type) {
+  case Text:
+    return m_textListener;
+  case Spreadsheet:
+    return m_spreadsheetListener;
+  default:
+    MWAW_DEBUG_MSG(("MWAWParserState:::getMainListener unexpected document type\n"));
+  }
+  return MWAWListenerPtr();
+}
+
+MWAWParser::MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
   m_parserState(), m_pageSpan(), m_asciiName("")
 {
-  m_parserState.reset(new MWAWParserState(input, rsrcParser, header));
+  m_parserState.reset(new MWAWParserState(type, input, rsrcParser, header));
 }
 
 MWAWParser::~MWAWParser()
@@ -100,6 +97,11 @@ MWAWParser::~MWAWParser()
 void MWAWParser::setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener)
 {
   m_parserState->m_spreadsheetListener=listener;
+}
+
+MWAWListenerPtr MWAWParser::getMainListener()
+{
+  return m_parserState->getMainListener();
 }
 
 void MWAWParser::resetSpreadsheetListener()

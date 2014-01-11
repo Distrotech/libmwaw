@@ -39,11 +39,13 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
+#include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWTextListener.hxx"
 
+#include "MsWksZone.hxx"
 #include "MsWks3Parser.hxx"
 
 #include "MsWks3Text.hxx"
@@ -191,9 +193,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWks3Text::MsWks3Text(MsWks3Parser &parser) :
+MsWks3Text::MsWks3Text(MsWks3Parser &parser, MsWksZone &zone) :
   m_parserState(parser.getParserState()), m_state(new MsWks3TextInternal::State),
-  m_mainParser(&parser)
+  m_mainParser(&parser), m_zone(zone)
 {
 }
 
@@ -272,7 +274,7 @@ int MsWks3Text::createZones(int numLines, bool mainZone)
     actualZone.m_type = MsWks3TextInternal::TextZone::Main;
   bool hasNote=false;
   int firstNote=0;
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   while (!input->isEnd()) {
     if (numLines==0) break;
     if (numLines>0) numLines--;
@@ -332,7 +334,7 @@ void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
     return;
   }
 
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   MsWks3TextInternal::Font font;
   int noteId = -1;
   long lastIndentPos = -1;
@@ -390,7 +392,7 @@ void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
 bool MsWks3Text::readZoneHeader(MsWks3TextInternal::LineZone &zone) const
 {
   zone = MsWks3TextInternal::LineZone();
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
   if (!input->checkPosition(pos+6)) return false;
   zone.m_pos.setBegin(pos);
@@ -414,10 +416,10 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
     MWAW_DEBUG_MSG(("MsWks3Text::sendText: can not find the listener\n"));
     return true;
   }
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
   int vers = version();
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
   MsWks3TextInternal::Font font;
@@ -548,7 +550,7 @@ bool MsWks3Text::readFont(MsWks3TextInternal::Font &font, long endPos)
 {
   int vers = version();
   font = MsWks3TextInternal::Font();
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos  = input->tell();
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
   int type = (int) input->readLong(1);
@@ -595,7 +597,7 @@ bool MsWks3Text::readFont(MsWks3TextInternal::Font &font, long endPos)
   }
   if (color != 1) {
     MWAWColor col;
-    if (m_mainParser->getColor(color,col))
+    if (m_zone.getColor(color,col,vers))
       font.m_font.setColor(col);
     else
       f << "#fColor=" << color << ",";
@@ -611,11 +613,11 @@ bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph
 {
   int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
 
   parag = MWAWParagraph();
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
 
   int fl[2];
@@ -739,7 +741,7 @@ bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph
 std::string MsWks3Text::readHeaderFooterString(bool header)
 {
   std::string res("");
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   int numChar = (int) input->readULong(1);
   if (!numChar) return res;
   for (int i = 0; i < numChar; i++) {

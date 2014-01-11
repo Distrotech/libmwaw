@@ -49,7 +49,7 @@
 #include "MWAWTable.hxx"
 
 #include "MsWksGraph.hxx"
-#include "MsWksParser.hxx"
+#include "MsWksZone.hxx"
 
 #include "MsWksTable.hxx"
 
@@ -146,9 +146,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWksTable::MsWksTable(MsWksParser &parser, MsWksGraph &graph) :
+MsWksTable::MsWksTable(MWAWParser &parser, MsWksZone(&zone), MsWksGraph &graph) :
   m_parserState(parser.getParserState()), m_state(new MsWksTableInternal::State),
-  m_mainParser(&parser), m_graphParser(&graph)
+  m_mainParser(&parser), m_graphParser(&graph), m_zone(zone)
 {
 }
 
@@ -249,9 +249,9 @@ bool MsWksTable::sendTable(int zoneId)
 bool MsWksTable::readTable(int numCol, int numRow, int zoneId, MsWksGraph::Style const &style)
 {
   int vers=version();
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long actPos = input->tell();
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f, f2;
   f << "Entries(Table): ";
 
@@ -350,7 +350,7 @@ bool MsWksTable::readTable(int numCol, int numRow, int zoneId, MsWksGraph::Style
 
     if (fColors != 0xFF) {
       MWAWColor col;
-      if (m_mainParser->getColor(fColors,col,3))
+      if (m_zone.getColor(fColors,col,3))
         cell.m_font.setColor(col);
       else
         f << "#colId=" << fColors << ",";
@@ -401,7 +401,7 @@ bool MsWksTable::sendChart(int chartId)
   }
   MsWksTableInternal::Chart &chart = m_state->m_idChartMap.find(chartId)->second;
 
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   MWAWPosition chartPos;
   if (chart.m_zoneId < 0 || !m_graphParser->getZonePosition(chart.m_zoneId, MWAWPosition::Frame, chartPos)) {
     MWAW_DEBUG_MSG(("MsWksTable::sendChart: oops can not find chart bdbox %d[%d]\n", chartId, chart.m_zoneId));
@@ -458,12 +458,12 @@ bool MsWksTable::sendChart(int chartId)
 
 bool MsWksTable::readChart(int chartId, MsWksGraph::Style const &style)
 {
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
   if (version() <= 3 || !input->checkPosition(pos+306))
     return false;
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   f << "Entries(Chart):";
 

@@ -110,10 +110,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MoreText.hxx			\
 	MsWksGraph.cxx			\
 	MsWksGraph.hxx			\
-	MsWksParser.cxx			\
-	MsWksParser.hxx			\
 	MsWksTable.cxx			\
 	MsWksTable.hxx			\
+	MsWksZone.cxx			\
+	MsWksZone.hxx			\
 	MsWks3Parser.cxx		\
 	MsWks3Parser.hxx		\
 	MsWks3Text.cxx			\

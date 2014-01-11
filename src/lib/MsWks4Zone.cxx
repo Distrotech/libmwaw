@@ -45,8 +45,10 @@
 #include "MWAWSection.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MsWks4Parser.hxx"
 #include "MsWksGraph.hxx"
+#include "MsWksZone.hxx"
+
+#include "MsWks4Parser.hxx"
 #include "MsWks4Text.hxx"
 
 #include "MsWks4Zone.hxx"
@@ -165,8 +167,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                        MsWks4Parser &parser, std::string const &oleName) :
-  MsWksParser(input, parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser()
+  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser(), m_zone()
 {
+  m_zone.reset(new MsWksZone(input, *this));
   setAscii(oleName);
   setVersion(4);
   init();
@@ -184,13 +187,15 @@ void MsWks4Zone::init()
   m_state.reset(new MsWks4ZoneInternal::State);
   m_textParser.reset(new MsWks4Text(*this));
   m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser.reset(new MsWksGraph(*this));
+  m_graphParser.reset(new MsWksGraph(*this, *m_zone));
+  m_graphParser->setCallbacks(reinterpret_cast<MsWksGraph::FrameCallback>(&MsWks4Zone::sendFrameText),
+                              reinterpret_cast<MsWksGraph::OLECallback>(&MsWks4Zone::sendOLE));
 }
 
 void  MsWks4Zone::setAscii(std::string const &oleName)
 {
   std::string fName = libmwaw::Debug::flattenFileName(oleName);
-  ascii().open(fName);
+  m_zone->initAsciiFile(fName);
 }
 
 void MsWks4Zone::sendFootNote(int id)
@@ -199,7 +204,7 @@ void MsWks4Zone::sendFootNote(int id)
 }
 void MsWks4Zone::readFootNote(int id)
 {
-  m_textParser->readFootNote(getInput(), id);
+  m_textParser->readFootNote(m_zone->getInput(), id);
 }
 
 void MsWks4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -230,12 +235,6 @@ double MsWks4Zone::getTextHeight() const
   return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
-Vec2f MsWks4Zone::getPageLeftTop() const
-{
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
-}
-
 ////////////////////////////////////////////////////////////
 // new page/text positions
 ////////////////////////////////////////////////////////////
@@ -244,7 +243,7 @@ void MsWks4Zone::newPage(int number)
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
 
-  long pos = getInput()->tell();
+  long pos = m_zone->getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
     if (!getTextListener() || m_state->m_actPage == 1)
@@ -259,7 +258,7 @@ void MsWks4Zone::newPage(int number)
     sendData.m_page = m_state->m_actPage;
     m_graphParser->sendObjects(sendData);
   }
-  getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
+  m_zone->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 MWAWEntry MsWks4Zone::getTextPosition() const
@@ -294,6 +293,9 @@ MWAWTextListenerPtr MsWks4Zone::createListener
   std::vector<int> linesH, pagesH;
   pagesH.resize(size_t(numPages)+1, int(72.*getTextHeight()));
   m_graphParser->computePositions(-1, linesH, pagesH);
+  m_graphParser->setPageLeftTop
+  (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
+         72.f*float(getPageSpan().getMarginTop())+float(m_state->m_headerHeight)));
 
   // create all the pages + an empty page, if we have some remaining data...
   ps.setPageSpan(numPages+1);
@@ -311,7 +313,7 @@ MWAWTextListenerPtr MsWks4Zone::createListener
 bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 {
   long pos = input->tell();
-  ascii().addPos(pos);
+  m_zone->ascii().addPos(pos);
 
   libmwaw::DebugStream f;
 
@@ -321,7 +323,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
   if (input->tell() != pos+cch) {
     MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry error: incomplete entry\n"));
-    ascii().addNote("###IndexEntry incomplete (ignored)");
+    m_zone->ascii().addNote("###IndexEntry incomplete (ignored)");
     return false;
   }
   input->seek(pos + 2, librevenge::RVNG_SEEK_SET);
@@ -329,7 +331,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   if (0x18 != cch) {
     if (cch < 0x18) {
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
-      ascii().addNote("MsWks4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
+      m_zone->ascii().addNote("MsWks4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
       if (cch < 10) throw libmwaw::ParseException();
       return true;
     }
@@ -345,7 +347,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
         (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90)) {
       MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
                       (uint8_t)name[i], (uint8_t)name[i]));
-      ascii().addNote("###IndexEntry bad name(ignored)");
+      m_zone->ascii().addNote("###IndexEntry bad name(ignored)");
 
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
       return true;
@@ -376,14 +378,14 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   f << ", offset=" << std::hex << hie.begin() << ", length=" << hie.length();
 
   if (cch != 0x18) {
-    ascii().addDelimiter(pos+0x18, '|');
+    m_zone->ascii().addDelimiter(pos+0x18, '|');
     f << ",#extraData";
   }
 
   input->seek(hie.end(), librevenge::RVNG_SEEK_SET);
   if (input->tell() != hie.end()) {
     f << ", ###ignored";
-    ascii().addNote(f.str().c_str());
+    m_zone->ascii().addNote(f.str().c_str());
     input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -391,18 +393,18 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 
   m_entryMap.insert(std::multimap<std::string, MWAWEntry>::value_type(name, hie));
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(pos);
+  m_zone->ascii().addNote(f.str().c_str());
 
-  ascii().addPos(hie.begin());
+  m_zone->ascii().addPos(hie.begin());
   f.str("");
   f << name;
   if (name != name2) f << "/" << name2;
   f << ":" << std::dec << id;
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addNote(f.str().c_str());
 
-  ascii().addPos(hie.end());
-  ascii().addNote("_");
+  m_zone->ascii().addPos(hie.end());
+  m_zone->ascii().addNote("_");
 
   input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
   return true;
@@ -427,8 +429,8 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
   f << "), ";
   f << "end=" << std::hex << input->readLong(2);
 
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(pos);
+  m_zone->ascii().addNote(f.str().c_str());
 
   input->seek(0x18, librevenge::RVNG_SEEK_SET);
   bool readSome = false;
@@ -454,8 +456,8 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
       return readSome;
     }
 
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    m_zone->ascii().addPos(pos);
+    m_zone->ascii().addNote(f.str().c_str());
 
     do {
       if (!parseHeaderIndexEntry(input)) return readSome;
@@ -487,7 +489,7 @@ bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
 
-  MWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = m_zone->getInput();
   m_state->m_parsed = true;
 
   m_entryMap.clear();
@@ -577,7 +579,7 @@ bool MsWks4Zone::createZones(bool mainOle)
 ////////////////////////////////////////////////////////////
 void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 {
-  MWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = m_zone->getInput();
   bool oldMain = m_state->m_mainOle;
   m_state->m_mainOle = mainOle;
 
@@ -679,8 +681,8 @@ bool MsWks4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAW
     libmwaw::DebugStream f;
     f << info;
 
-    ascii().addPos(debPos);
-    ascii().addNote(f.str().c_str());
+    m_zone->ascii().addPos(debPos);
+    m_zone->ascii().addNote(f.str().c_str());
   }
   return true;
 }
@@ -838,8 +840,8 @@ bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWP
     if (ok) continue;
 
     if (!ok) {
-      ascii().addPos(debPos);
-      ascii().addNote("DOP ###");
+      m_zone->ascii().addPos(debPos);
+      m_zone->ascii().addNote("DOP ###");
 
       break;
     }
@@ -877,8 +879,8 @@ bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWP
     f << "),";
   }
   f << f2.str();
-  ascii().addPos(debPage);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(debPage);
+  m_zone->ascii().addNote(f.str().c_str());
 
   return dimOk;
 }
@@ -903,10 +905,10 @@ bool MsWks4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   for (int i = 0; i < 2; i++)
     f << input->readLong(1) << ", ";
 
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(input->tell());
-  ascii().addNote("RLRB(2)");
+  m_zone->ascii().addPos(debPos);
+  m_zone->ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(input->tell());
+  m_zone->ascii().addNote("RLRB(2)");
 
 
   debPos = entry.end()-32;
@@ -933,8 +935,8 @@ bool MsWks4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     f << input->readLong(2) << ", ";
   f << "), ";
 
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(debPos);
+  m_zone->ascii().addNote(f.str().c_str());
 
   return true;
 }
@@ -954,8 +956,8 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
   f << "N=" << numFram;
 
-  ascii().addPos(debPage);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(debPage);
+  m_zone->ascii().addNote(f.str().c_str());
 
   for (int i = 0; i < numFram; i++) {
     long debPos = input->tell();
@@ -1103,11 +1105,11 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
     m_state->m_framesList.push_back(frame);
 
     f << "FRAM(" << size << "):" << frame;
-    ascii().addPos(debPos);
-    ascii().addNote(f.str().c_str());
+    m_zone->ascii().addPos(debPos);
+    m_zone->ascii().addNote(f.str().c_str());
     if (!ok) {
-      ascii().addPos(input->tell());
-      ascii().addNote("FRAM###");
+      m_zone->ascii().addPos(input->tell());
+      m_zone->ascii().addNote("FRAM###");
     }
 
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -1165,12 +1167,12 @@ bool MsWks4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
     if (val) f << ",f" << i << "=" << val;
   }
 
-  ascii().addPos(debPage);
-  ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(debPage);
+  m_zone->ascii().addNote(f.str().c_str());
 
   if (long(input->tell()) != endPage) {
-    ascii().addPos(input->tell());
-    ascii().addNote("SELN###");
+    m_zone->ascii().addPos(input->tell());
+    m_zone->ascii().addNote("SELN###");
   }
   return true;
 }

@@ -41,7 +41,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
@@ -53,8 +53,8 @@
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MsWksParser.hxx"
 #include "MsWksTable.hxx"
+#include "MsWksZone.hxx"
 
 #include "MsWksGraph.hxx"
 
@@ -700,7 +700,7 @@ struct Patterns {
 //! Internal: the state of a MsWksGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_zonesList(), m_RBsMap(), m_font(20,12), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
+  State() : m_version(-1), m_leftTopPos(0,0), m_zonesList(), m_RBsMap(), m_font(20,12), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
   //! return the pattern corresponding to an id
   bool getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid=-1);
   //! return the percentage corresponding to a pattern
@@ -709,6 +709,8 @@ struct State {
   void initPatterns(int vers);
   //! the version
   int m_version;
+  //! the page left top position in points
+  Vec2f m_leftTopPos;
   //! the list of zone
   std::vector<shared_ptr<Zone> > m_zonesList;
   //! the RBIL zone id->list id
@@ -859,7 +861,7 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWksParser::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: no listener\n"));
     return;
   }
   assert(m_graphParser);
@@ -903,7 +905,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWksParser::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_type != TextBox) {
@@ -934,15 +936,20 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWksGraph::MsWksGraph(MsWksParser &parser) :
+MsWksGraph::MsWksGraph(MWAWParser &parser, MsWksZone &zone) :
   m_parserState(parser.getParserState()), m_state(new MsWksGraphInternal::State),
-  m_mainParser(&parser), m_tableParser()
+  m_mainParser(&parser), m_zone(zone), m_frameCallback(0), m_oleCallback(0), m_tableParser()
 {
-  m_tableParser.reset(new MsWksTable(parser, *this));
+  m_tableParser.reset(new MsWksTable(parser, m_zone, *this));
 }
 
 MsWksGraph::~MsWksGraph()
 { }
+
+void MsWksGraph::setPageLeftTop(Vec2f const &leftTop)
+{
+  m_state->m_leftTopPos=leftTop;
+}
 
 int MsWksGraph::version() const
 {
@@ -970,7 +977,13 @@ int MsWksGraph::numPages(int zoneId) const
 
 void MsWksGraph::sendFrameText(MWAWEntry const &entry, std::string const &frame)
 {
-  m_mainParser->sendFrameText(entry, frame);
+  if (m_frameCallback)
+    (m_mainParser->*m_frameCallback)(entry, frame);
+  else {
+    MWAW_DEBUG_MSG(("MsWksGraph::sendFrameText: the frame callback is not set\n"));
+    if (!m_parserState->getMainListener()) return;
+    m_parserState->getMainListener()->insertChar(' ');
+  }
 }
 
 void MsWksGraph::sendChart(int zoneId)
@@ -1010,7 +1023,7 @@ bool MsWksGraph::getZonePosition(int id, MWAWPosition::AnchorTo anchor, MWAWPosi
 
 bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
 {
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   if (input->readULong(1) != 0) return false;
   pict = MsWksGraphInternal::Zone();
   pict.m_subType = (int) input->readULong(1);
@@ -1035,7 +1048,7 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
     int rId = (int) input->readLong(2);
     int cId = (vers <= 2) ? rId+1 : rId;
     MWAWColor col;
-    if (m_mainParser->getColor(cId,col,vers <= 3 ? vers : 3)) {
+    if (m_zone.getColor(cId,col,vers <= 3 ? vers : 3)) {
       if (i) style.m_baseSurfaceColor = col;
       else style.m_baseLineColor = col;
     }
@@ -1212,7 +1225,7 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
 
 bool MsWksGraph::readGradient(MsWksGraph::Style &style)
 {
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
 
   if (!input->checkPosition(pos+22))
@@ -1312,14 +1325,14 @@ bool MsWksGraph::readGradient(MsWksGraph::Style &style)
 int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int order)
 {
   MsWksGraphInternal::Zone pict;
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
 
   if (!readPictHeader(pict))
     return -1;
   pict.m_zoneId = zoneId;
   pict.m_pos.setBegin(pos);
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   int vers = version();
   long debData = input->tell();
@@ -1866,13 +1879,13 @@ void MsWksGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vec
 
 int MsWksGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
 {
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   if (input->isEnd()) return -1;
 
   long pos = input->tell();
   if (input->readULong(1) != 1) return -1;
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   long ptr = (long) input->readULong(2);
   int flag = (int) input->readULong(1);
@@ -1933,7 +1946,7 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
 {
   if (entry.length() < 0x164) return false;
   entry.setParsed(true);
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   MsWksGraphInternal::RBZone zone;
   zone.m_isMain = entry.name()=="RBDR";
@@ -2120,7 +2133,7 @@ bool MsWksGraph::readPictureV4(MWAWInputStreamPtr /*input*/, MWAWEntry const &en
 
   MsWksGraphInternal::DataPict *pct  = new MsWksGraphInternal::DataPict(pict);
   shared_ptr<MsWksGraphInternal::Zone>res(pct);
-  m_mainParser->ascii().skipZone(entry.begin(), entry.end()-1);
+  m_zone.ascii().skipZone(entry.begin(), entry.end()-1);
 
   int zId = int(m_state->m_zonesList.size());
   res->m_fileId = zId;
@@ -2143,7 +2156,7 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MsWksGraph::sendGroup: can not find group %d\n", id));
     return;
   }
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return;
   MsWksGraphInternal::GroupZone &group=
     reinterpret_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
@@ -2161,7 +2174,7 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
   if (!canCreateGraphic(group)) {
     if (pos.m_anchorTo == MWAWPosition::Char || pos.m_anchorTo == MWAWPosition::CharBaseLine) {
       shared_ptr<MsWksGraphInternal::SubDocument> subdoc
-      (new MsWksGraphInternal::SubDocument(*this, m_mainParser->getInput(), MsWksGraphInternal::SubDocument::Group, id));
+      (new MsWksGraphInternal::SubDocument(*this, m_zone.getInput(), MsWksGraphInternal::SubDocument::Group, id));
       listener->insertTextBox(pos, subdoc);
       return;
     }
@@ -2185,14 +2198,14 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MsWksGraph::sendGroupChild: can not find group %d\n", id));
     return;
   }
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) return;
   MsWksGraphInternal::GroupZone &group=
     reinterpret_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
 
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   size_t numZones=m_state->m_zonesList.size();
   size_t numChild=group.m_childs.size(), childNotSent=0;
   int numDataToMerge=0;
@@ -2313,7 +2326,7 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
     return;
   }
   int numZones = int(m_state->m_zonesList.size());
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   for (size_t c=0; c < group.m_childs.size(); ++c) {
     int cId = group.m_childs[c];
     if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
@@ -2346,7 +2359,7 @@ shared_ptr<MsWksGraphInternal::GroupZone> MsWksGraph::readGroup(MsWksGraphIntern
 {
   shared_ptr<MsWksGraphInternal::GroupZone> group(new MsWksGraphInternal::GroupZone(header));
   libmwaw::DebugStream f;
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   input->seek(header.m_dataPos, librevenge::RVNG_SEEK_SET);
   float dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(4);
@@ -2387,10 +2400,10 @@ bool MsWksGraph::readText(MsWksGraphInternal::TextBox &textBox)
 {
   if (textBox.m_numPositions < 0) return false; // can an empty text exist
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_zone.ascii();
   libmwaw::DebugStream f;
   f << "Entries(SmallText):";
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
   if (!input->checkPosition(pos+4*(textBox.m_numPositions+1))) return false;
 
@@ -2533,7 +2546,7 @@ bool MsWksGraph::readText(MsWksGraphInternal::TextBox &textBox)
 bool MsWksGraph::readFont(MWAWFont &font)
 {
   int vers = version();
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
   if (!input->checkPosition(pos+18))
@@ -2653,7 +2666,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MsWksGraph::send: can not find zone %d\n", id));
     return;
   }
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return;
   shared_ptr<MsWksGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)id];
   zone->m_isSent = true;
@@ -2662,11 +2675,11 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   if (pos.size()[0]<=0 || pos.size()[1]<=0)
     pictPos = zone->getPosition(pos.m_anchorTo);
   if (pictPos.m_anchorTo == MWAWPosition::Page)
-    pictPos.setOrigin(pictPos.origin()+72.*m_mainParser->getPageLeftTop());
+    pictPos.setOrigin(pictPos.origin()+m_state->m_leftTopPos);
   librevenge::RVNGPropertyList extras;
   zone->fillFramePropertyList(extras);
 
-  MWAWInputStreamPtr input=m_mainParser->getInput();
+  MWAWInputStreamPtr input=m_zone.getInput();
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if ((zone->type()==MsWksGraphInternal::Zone::Shape || zone->type()==MsWksGraphInternal::Zone::Text) &&
       (!graphicListener || graphicListener->isDocumentStarted())) {
@@ -2714,9 +2727,9 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     MsWksGraphInternal::DataBitmap &bmap = reinterpret_cast<MsWksGraphInternal::DataBitmap &>(*zone);
     librevenge::RVNGBinaryData data;
     std::string type;
-    if (!bmap.getPictureData(input, data,type,m_mainParser->getPalette(4)))
+    if (!bmap.getPictureData(input, data,type,m_zone.getPalette(4)))
       break;
-    m_mainParser->ascii().skipZone(bmap.m_dataPos, bmap.m_pos.end()-1);
+    m_zone.ascii().skipZone(bmap.m_dataPos, bmap.m_pos.end()-1);
     listener->insertPicture(pictPos, data, type, extras);
     return;
   }
@@ -2752,8 +2765,12 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MsWksGraphInternal::Zone::OLE: {
+    if (!m_oleCallback)  {
+      MWAW_DEBUG_MSG(("MsWksGraph::send: can not find ole callback for zone %d\n", id));
+      return;
+    }
     MsWksGraphInternal::OLEZone &ole = reinterpret_cast<MsWksGraphInternal::OLEZone &>(*zone);
-    m_mainParser->sendOLE(ole.m_oleId, pictPos, extras);
+    (m_mainParser->*m_oleCallback)(ole.m_oleId, pictPos, extras);
     return;
   }
   case MsWksGraphInternal::Zone::Unknown:
@@ -2780,7 +2797,7 @@ void MsWksGraph::sendAll(int zoneId, bool mainZone)
 
 void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MsWksGraph::sendObjects: listener is not set\n"));
     return;
@@ -2817,7 +2834,7 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
       if (what.m_anchor == MWAWPosition::Char ||
           what.m_anchor == MWAWPosition::CharBaseLine) {
         shared_ptr<MsWksGraphInternal::SubDocument> subdoc
-        (new MsWksGraphInternal::SubDocument(*this, m_mainParser->getInput(), MsWksGraphInternal::SubDocument::RBILZone, what.m_id));
+        (new MsWksGraphInternal::SubDocument(*this, m_zone.getInput(), MsWksGraphInternal::SubDocument::RBILZone, what.m_id));
         MWAWPosition pictPos(Vec2f(0,0), what.m_size, librevenge::RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);

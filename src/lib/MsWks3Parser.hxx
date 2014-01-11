@@ -34,15 +34,13 @@
 #ifndef MS_WKS3_PARSER
 #  define MS_WKS3_PARSER
 
-#include <list>
-#include <string>
 #include <vector>
 
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
-#include "MsWksParser.hxx"
+#include "MWAWParser.hxx"
 
 namespace MsWks3ParserInternal
 {
@@ -52,6 +50,7 @@ class SubDocument;
 }
 
 class MsWksGraph;
+class MsWksZone;
 class MsWks3Text;
 
 /** \brief the main class to read a Microsoft Works file
@@ -59,10 +58,9 @@ class MsWks3Text;
  *
  *
  */
-class MsWks3Parser : public MsWksParser
+class MsWks3Parser : public MWAWTextParser
 {
   friend class MsWks3ParserInternal::SubDocument;
-  friend class MsWksGraph;
   friend class MsWks3Text;
 public:
   //! constructor
@@ -88,9 +86,6 @@ protected:
 
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
-
-  //! returns the page top left point
-  Vec2f getPageLeftTop() const;
 
   //! adds a new page
   void newPage(int number, bool softBreak=false);
@@ -138,6 +133,9 @@ protected:
 
   //! the text parser
   shared_ptr<MsWks3Text> m_textParser;
+
+  //! the actual zone
+  shared_ptr<MsWksZone> m_zone;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

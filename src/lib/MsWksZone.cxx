@@ -31,38 +31,21 @@
 * instead of those above.
 */
 
-#include "MWAWTextListener.hxx"
-#include "MWAWSubDocument.hxx"
+#include "MWAWDebug.hxx"
+#include "MWAWParser.hxx"
 
-#include "MsWksParser.hxx"
+#include "MsWksZone.hxx"
 
-MsWksParser::MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_input(input), m_asciiFile(input)
+MsWksZone::MsWksZone(MWAWInputStreamPtr input, MWAWParser &parser) :
+  m_parser(&parser), m_input(input), m_asciiFile(input)
 {
 }
 
-MsWksParser::MsWksParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState) :
-  MWAWTextParser(parserState), m_input(input), m_asciiFile(input)
+MsWksZone::~MsWksZone()
 {
 }
 
-MsWksParser::~MsWksParser()
-{
-}
-
-void MsWksParser::sendFrameText(MWAWEntry const &, std::string const &)
-{
-  MWAW_DEBUG_MSG(("MsWksParser::sendFrameText: must not be called\n"));
-  if (!getTextListener()) return;
-  getTextListener()->insertChar(' ');
-}
-
-void MsWksParser::sendOLE(int, MWAWPosition const &, librevenge::RVNGPropertyList)
-{
-  MWAW_DEBUG_MSG(("MsWksParser::sendOLE: must not be called\n"));
-}
-
-std::vector<MWAWColor> const &MsWksParser::getPalette(int vers)
+std::vector<MWAWColor> const &MsWksZone::getPalette(int vers)
 {
   switch (vers) {
   case 2: {
@@ -154,20 +137,19 @@ std::vector<MWAWColor> const &MsWksParser::getPalette(int vers)
   default:
     break;
   }
-  MWAW_DEBUG_MSG(("MsWksParser::getPalette: can not find palette for version %d\n", vers));
+  MWAW_DEBUG_MSG(("MsWksZone::getPalette: can not find palette for version %d\n", vers));
   static std::vector<MWAWColor> emptyPalette;
   return emptyPalette;
 }
 
-bool MsWksParser::getColor(int id, MWAWColor &col, int vers) const
+bool MsWksZone::getColor(int id, MWAWColor &col, int vers) const
 {
-  if (vers <= 0) vers = version();
   std::vector<MWAWColor> const &palette = getPalette(vers);
   if (palette.size()==0 || id < 0 || id >= int(palette.size()) ||
-      (version()==2 && id==0)) {
+      (vers==2 && id==0)) {
     static bool first = true;
     if (first) {
-      MWAW_DEBUG_MSG(("MsWksParser::getColor: unknown color=%d\n", id));
+      MWAW_DEBUG_MSG(("MsWksZone::getColor: unknown color=%d\n", id));
       first = false;
     }
     return false;
@@ -175,3 +157,10 @@ bool MsWksParser::getColor(int id, MWAWColor &col, int vers) const
   col = palette[size_t(id)];
   return true;
 }
+
+void MsWksZone::initAsciiFile(std::string const &name)
+{
+  m_asciiFile.setStream(m_input);
+  m_asciiFile.open(name);
+}
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

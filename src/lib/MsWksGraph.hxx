@@ -59,7 +59,7 @@ struct State;
 class SubDocument;
 }
 
-class MsWksParser;
+class MsWksZone;
 class MsWks3Parser;
 class MsWks4Zone;
 class MsWksTable;
@@ -73,14 +73,29 @@ class MsWksGraph
   friend class MsWksGraphInternal::SubDocument;
 public:
   struct Style;
+
+  /** callback used to send a frame */
+  typedef void (MWAWParser::* FrameCallback)(MWAWEntry const &entry, std::string const &frame);
+  /** callback used to send a OLE */
+  typedef void (MWAWParser::* OLECallback)(int id, MWAWPosition const &pos,
+      librevenge::RVNGPropertyList frameExtras);
+
   //! constructor
-  MsWksGraph(MsWksParser &parser);
+  MsWksGraph(MWAWParser &parser, MsWksZone &zone);
   //! destructor
   virtual ~MsWksGraph();
 
+  //! define the page left top dimension in point
+  void setPageLeftTop(Vec2f const &leftTop);
+  //! set the frame and the OLE callback
+  void setCallbacks(FrameCallback frameCallback, OLECallback oleCallback)
+  {
+    m_frameCallback=frameCallback;
+    m_oleCallback=oleCallback;
+  }
+
   /** returns the file version */
   int version() const;
-
   /** returns the number of pages */
   int numPages(int zoneId) const;
 
@@ -89,7 +104,6 @@ public:
    \note if pos.size() is not defined, this function will retrieve the
    position, .. using the corresponding zone's data */
   void send(int id, MWAWPosition const &pos);
-
   /** send all the picture corresponding to a zone */
   void sendAll(int zoneId, bool mainZone);
 
@@ -223,7 +237,13 @@ protected:
   shared_ptr<MsWksGraphInternal::State> m_state;
 
   //! the main parser;
-  MsWksParser *m_mainParser;
+  MWAWParser *m_mainParser;
+  //! the input zone
+  MsWksZone &m_zone;
+  //! the frame
+  FrameCallback m_frameCallback;
+  //! the OLE callback
+  OLECallback m_oleCallback;
 
   //! the table manager
   shared_ptr<MsWksTable> m_tableParser;

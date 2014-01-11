@@ -55,6 +55,7 @@ struct State;
 }
 
 class MsWks3Parser;
+class MsWksZone;
 
 /** \brief the main class to read the text part of Microsoft Works file
  *
@@ -66,7 +67,7 @@ class MsWks3Text
   friend class MsWks3Parser;
 public:
   //! constructor
-  MsWks3Text(MsWks3Parser &parser);
+  MsWks3Text(MsWks3Parser &parser, MsWksZone &zone);
   //! destructor
   virtual ~MsWks3Text();
 
@@ -148,6 +149,8 @@ protected:
 
   //! the main parser;
   MsWks3Parser *m_mainParser;
+  //! the input zone
+  MsWksZone &m_zone;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

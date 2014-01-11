@@ -31,35 +31,27 @@
 * instead of those above.
 */
 
-#ifndef MS_WKS_PARSER
-#  define MS_WKS_PARSER
+#ifndef MS_WKS_ZONE
+#  define MS_WKS_ZONE
 
 #include <string>
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWParser.hxx"
+#include "MWAWDebug.hxx"
 
-class MsWksGraph;
-class MsWksTable;
-
-/** \brief generic parser for Microsoft Works file
+/** \brief a zone in a Microsoft Works file
  *
  *
  *
  */
-class MsWksParser : public MWAWTextParser
+class MsWksZone
 {
-  friend class MsWksGraph;
-  friend class MsWksTable;
 public:
-  //! constructor
-  MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
-  //! constructor using the parser state
-  MsWksParser(MWAWInputStreamPtr input, MWAWParserStatePtr parserState);
-
+  //! constructor using the parser
+  MsWksZone(MWAWInputStreamPtr input, MWAWParser &parser);
   //! destructor
-  virtual ~MsWksParser();
+  virtual ~MsWksZone();
 
   //! returns the actual input
   MWAWInputStreamPtr &getInput()
@@ -68,31 +60,28 @@ public:
   }
 
   //! return the color which correspond to an index
-  bool getColor(int id, MWAWColor &col, int vers=-1) const;
-
+  bool getColor(int id, MWAWColor &col, int vers) const;
   //! return a list of color corresponding to a version
   static std::vector<MWAWColor> const &getPalette(int vers);
 
-  //! virtual function used to send the text of a frame (v4)
-  virtual void sendFrameText(MWAWEntry const &entry, std::string const &frame);
-
-  //! virtual function used to send an OLE (v4)
-  virtual void sendOLE(int id, MWAWPosition const &pos,
-                       librevenge::RVNGPropertyList frameExtras);
-
-  //! returns the page top left point
-  virtual Vec2f getPageLeftTop() const = 0;
-
+  //! inits the ascii file
+  void initAsciiFile(std::string const &name);
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii()
   {
     return m_asciiFile;
   }
 protected:
+  //! a pointer to the parser
+  MWAWParser *m_parser;
   //! the input which can be an OLE in MSWorks 4 file
   MWAWInputStreamPtr m_input;
   //! the debug file of the actual input
   libmwaw::DebugFile m_asciiFile;
+
+private:
+  MsWksZone(MsWksZone const &orig);
+  MsWksZone operator=(MsWksZone const &orig);
 };
 
 #endif

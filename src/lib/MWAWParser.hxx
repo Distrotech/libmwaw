@@ -49,11 +49,16 @@
 class MWAWParserState
 {
 public:
-  // Constructor
-  MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! the parser state type
+  enum Type { Spreadsheet, Text };
+  //! Constructor
+  MWAWParserState(Type m_type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   ~MWAWParserState();
-
+  //! returns the main listener
+  MWAWListenerPtr getMainListener();
+  //! the state type
+  Type m_type;
   //! the actual version
   int m_version;
   //! the input
@@ -101,18 +106,18 @@ public:
   {
     m_parserState->m_version = vers;
   }
-
-protected:
-  //! constructor (protected)
-  MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
-  //! constructor using a state
-  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
-
   //! returns the parser state
   MWAWParserStatePtr getParserState()
   {
     return m_parserState;
   }
+
+protected:
+  //! constructor (protected)
+  MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! constructor using a state
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
+
   //! returns the header
   MWAWHeader *getHeader()
   {
@@ -123,6 +128,8 @@ protected:
   {
     return m_parserState->m_input;
   }
+  //! returns the main listener
+  MWAWListenerPtr getMainListener();
   //! returns the graphic listener
   MWAWGraphicListenerPtr &getGraphicListener()
   {
@@ -227,7 +234,7 @@ public:
   virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
 protected:
   //! constructor (protected)
-  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(input, rsrcParser, header) {}
+  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Text, input, rsrcParser, header) {}
   //! constructor using a state
   MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
@@ -240,7 +247,7 @@ public:
   virtual void parse(librevenge::RVNGSpreadsheetInterface *documentInterface) = 0;
 protected:
   //! constructor (protected)
-  MWAWSpreadsheetParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(input, rsrcParser, header) {}
+  MWAWSpreadsheetParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Spreadsheet, input, rsrcParser, header) {}
   //! constructor using a state
   MWAWSpreadsheetParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
