@@ -283,11 +283,15 @@ SOURCE=..\..\src\lib\MsWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksZone.cxx
+SOURCE=..\..\src\lib\MsWksSSParser.cxx
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\MsWksTable.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MsWksZone.cxx
 # End Source File
 # Begin Source File
 
@@ -683,11 +687,15 @@ SOURCE=..\..\src\lib\MsWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksZone.hxx
+SOURCE=..\..\src\lib\MsWksSSParser.hxx
 # End Source File
 # Begin Source File
 
 SOURCE=..\..\src\lib\MsWksTable.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MsWksZone.hxx
 # End Source File
 # Begin Source File
 

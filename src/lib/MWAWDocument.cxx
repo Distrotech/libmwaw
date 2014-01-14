@@ -63,6 +63,7 @@
 #include "MoreParser.hxx"
 #include "MsWks3Parser.hxx"
 #include "MsWks4Parser.hxx"
+#include "MsWksSSParser.hxx"
 #include "MsWrd1Parser.hxx"
 #include "MsWrdParser.hxx"
 #include "NisusWrtParser.hxx"
@@ -372,11 +373,68 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
   shared_ptr<MWAWSpreadsheetParser> parser;
   if (!header)
     return parser;
+  if (header->getKind()!=MWAWDocument::MWAW_K_SPREADSHEET)
+    return parser;
 
-  if (header->getType()==MWAWDocument::MWAW_T_BEAGLEWORKS)
-    parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
-  else {
-    MWAW_DEBUG_MSG(("MWAWDocument::getSpreadsheetParserFromHeader: unexpected type\n"));
+  try {
+    switch (header->getType()) {
+    case MWAWDocument::MWAW_T_BEAGLEWORKS:
+      parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
+#ifdef DEBUG
+      parser.reset(new MsWksSSParser(input, rsrcParser, header));
+#endif
+      break;
+    // TODO
+    case MWAWDocument::MWAW_T_CLARISWORKS:
+    case MWAWDocument::MWAW_T_GREATWORKS:
+    // no spreadsheet
+    case MWAWDocument::MWAW_T_ACTA:
+    case MWAWDocument::MWAW_T_DOCMAKER:
+    case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FULLWRITE:
+    case MWAWDocument::MWAW_T_HANMACWORDJ:
+    case MWAWDocument::MWAW_T_HANMACWORDK:
+    case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
+    case MWAWDocument::MWAW_T_MACDOC:
+    case MWAWDocument::MWAW_T_MACWRITE:
+    case MWAWDocument::MWAW_T_MACWRITEPRO:
+    case MWAWDocument::MWAW_T_MARINERWRITE:
+    case MWAWDocument::MWAW_T_MINDWRITE:
+    case MWAWDocument::MWAW_T_MORE:
+    case MWAWDocument::MWAW_T_MICROSOFTWORD:
+    case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_TEACHTEXT:
+    case MWAWDocument::MWAW_T_TEXEDIT:
+    case MWAWDocument::MWAW_T_WRITENOW:
+    case MWAWDocument::MWAW_T_WRITERPLUS:
+    case MWAWDocument::MWAW_T_ZWRITE:
+
+    case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_MACDRAFT:
+    case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACPAINT:
+    case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_READYSETGO:
+    case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_XPRESS:
+
+    case MWAWDocument::MWAW_T_RESERVED1:
+    case MWAWDocument::MWAW_T_RESERVED2:
+    case MWAWDocument::MWAW_T_RESERVED3:
+    case MWAWDocument::MWAW_T_RESERVED4:
+    case MWAWDocument::MWAW_T_RESERVED5:
+    case MWAWDocument::MWAW_T_RESERVED6:
+    case MWAWDocument::MWAW_T_RESERVED7:
+    case MWAWDocument::MWAW_T_RESERVED8:
+    case MWAWDocument::MWAW_T_RESERVED9:
+    case MWAWDocument::MWAW_T_UNKNOWN:
+    default:
+      break;
+    }
+  }
+  catch (...) {
   }
   return parser;
 }

@@ -368,11 +368,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWksZone.cxx"
+				RelativePath="..\..\src\lib\MsWksSSParser.cxx"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MsWksTable.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MsWksZone.cxx"
 				>
 			</File>
 			<File
@@ -769,11 +773,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWksZone.hxx"
+				RelativePath="..\..\src\lib\MsWksSSParser.hxx"
 				>
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MsWksTable.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MsWksZone.hxx"
 				>
 			</File>
 			<File

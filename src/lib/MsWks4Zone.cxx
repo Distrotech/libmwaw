@@ -198,6 +198,11 @@ void  MsWks4Zone::setAscii(std::string const &oleName)
   m_zone->initAsciiFile(fName);
 }
 
+libmwaw::DebugFile &MsWks4Zone::ascii()
+{
+  return m_zone->ascii();
+}
+
 void MsWks4Zone::sendFootNote(int id)
 {
   m_mainParser->sendFootNote(id);
@@ -494,6 +499,8 @@ bool MsWks4Zone::createZones(bool mainOle)
 
   m_entryMap.clear();
 
+  m_zone->ascii().addPos(0);
+  m_zone->ascii().addNote("FileHeader");
   /* header index */
   if (!parseHeaderIndex(input)) return false;
   // the text structure

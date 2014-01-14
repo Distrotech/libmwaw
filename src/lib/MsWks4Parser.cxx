@@ -359,7 +359,7 @@ bool MsWks4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (!mmOle || mmOle->readULong(2) != 0x444e) return false;
 
   MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
-  if (!mainOle)
+  if (!mainOle || mainOle->readULong(4)!=0x43484e4b) // CHNKINK
     return false;
   MWAW_DEBUG_MSG(("MWAWHeader::checkHeader: find a Microsoft Works 4.0 file\n"));
   if (header)

@@ -52,10 +52,13 @@ struct Font;
 struct LineZone;
 struct TextZone;
 struct State;
+
+class SubDocument;
 }
 
-class MsWks3Parser;
+class MsWksSSParser;
 class MsWksZone;
+class MsWks3Parser;
 
 /** \brief the main class to read the text part of Microsoft Works file
  *
@@ -65,11 +68,23 @@ class MsWksZone;
 class MsWks3Text
 {
   friend class MsWks3Parser;
+  friend class MsWksSSParser;
+
+  friend class MsWks3TextInternal::SubDocument;
 public:
+  /** callback used to send a page break */
+  typedef void (MWAWParser::* NewPageCallback)(int page, bool softBreak);
+
   //! constructor
-  MsWks3Text(MsWks3Parser &parser, MsWksZone &zone);
+  MsWks3Text(MWAWParser &parser, MsWksZone &zone);
   //! destructor
   virtual ~MsWks3Text();
+
+  //! set the new page callback
+  void setCallbacks(NewPageCallback newPageCallback)
+  {
+    m_newPageCallback=newPageCallback;
+  }
 
   /** returns the file version */
   int version() const;
@@ -81,7 +96,7 @@ protected:
   //! finds the different text zones. Returns the zoneId or -1.
   int createZones(int numLines=-1, bool mainZone=false);
 
-  // reads the header/footer string : version v1-2
+  //! reads the header/footer string : version v1-2
   std::string readHeaderFooterString(bool header);
 
   //! sends the data which have not yet been sent to the listener
@@ -148,9 +163,12 @@ protected:
   shared_ptr<MsWks3TextInternal::State> m_state;
 
   //! the main parser;
-  MsWks3Parser *m_mainParser;
+  MWAWParser *m_mainParser;
   //! the input zone
   MsWksZone &m_zone;
+
+  //! the newPage
+  NewPageCallback m_newPageCallback;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

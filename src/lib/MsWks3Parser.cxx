@@ -76,7 +76,7 @@ struct State {
   //! constructor
   State() : m_docType(MWAWDocument::MWAW_K_TEXT), m_zoneMap(), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
-    m_pageLength(-1), m_headerHeight(0), m_footerHeight(0)
+    m_headerHeight(0), m_footerHeight(0)
   {
   }
 
@@ -101,8 +101,6 @@ struct State {
 
   std::string m_headerText /**header string v1-2*/, m_footerText /**footer string v1-2*/;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
-  //! the page length in point (if known)
-  int m_pageLength;
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
@@ -126,17 +124,6 @@ public:
   virtual bool operator==(MWAWSubDocument const &doc) const
   {
     return !operator!=(doc);
-  }
-
-  //! returns the subdocument \a id
-  int getId() const
-  {
-    return m_id;
-  }
-  //! sets the subdocument \a id
-  void setId(int vid)
-  {
-    m_id = vid;
   }
 
   //! the parser function
@@ -214,16 +201,7 @@ void MsWks3Parser::init()
 
   m_graphParser.reset(new MsWksGraph(*this, *m_zone));
   m_textParser.reset(new MsWks3Text(*this, *m_zone));
-}
-
-////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-double MsWks3Parser::getTextHeight() const
-{
-  if (m_state->m_pageLength > 0)
-    return (m_state->m_pageLength-m_state->m_headerHeight-m_state->m_footerHeight)/72.0;
-  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  m_textParser->setCallbacks(reinterpret_cast<MsWks3Text::NewPageCallback>(&MsWks3Parser::newPage));
 }
 
 ////////////////////////////////////////////////////////////
@@ -250,7 +228,7 @@ void MsWks3Parser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(m_zone && m_zone->getInput() != 0);
+  assert(m_zone && m_zone->getInput());
 
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
@@ -293,15 +271,6 @@ void MsWks3Parser::sendZone(int zoneType)
     m_graphParser->sendAll(zone.m_zoneId, zoneType==MsWks3ParserInternal::Zone::MAIN);
   if (zone.m_textId >= 0)
     m_textParser->sendZone(zone.m_textId);
-}
-
-bool MsWks3Parser::sendFootNote(int zoneId, int noteId)
-{
-  MWAWSubDocumentPtr subdoc
-  (new MsWks3ParserInternal::SubDocument(*this, m_zone->getInput(), MsWks3ParserInternal::SubDocument::Text, zoneId, noteId));
-  if (getTextListener())
-    getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
-  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -367,12 +336,11 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
   MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
   setTextListener(listen);
   listen->startDocument();
-  // update the graphic left top position
+  // time to send page information the graph parser and the text parser
   m_graphParser->setPageLeftTop
   (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
          72.f*float(getPageSpan().getMarginTop())+float(m_state->m_headerHeight)));
 }
-
 
 ////////////////////////////////////////////////////////////
 //
@@ -823,13 +791,6 @@ bool MsWks3Parser::readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry,
   m_zone->ascii().addPos(pos);
   m_zone->ascii().addNote(f.str().c_str());
 
-#if 0
-  if (check < 99) return true;
-  if (m_state->m_docId >= 0 && docId != m_state->m_docId)
-    MWAW_DEBUG_MSG(("MsWks3Parser::readGroup: find a different zone id 0x%x: not implemented\n", docId));
-  else
-    m_state->m_docId = docId;
-#endif
   MWAWEntry pictZone;
   for (int i = 0; i < N; i++) {
     pos = input->tell();

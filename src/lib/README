@@ -183,6 +183,7 @@ MoreParser: parser of More document : v2.0 v3.0 ( organization part )
 - MsWks4Parser : parser of Microsoft Works document : v4.0
 -   MsWks4Zone : parser of the text ole 
 -   MsWks4Text : class which reads the text
+- MsWksSSParser : parser of Microsoft Works spreadsheet document : v1.0-4.0, not functional
 
 MsWrd1Parser : parser of Microsoft Word document : v1.0 
 

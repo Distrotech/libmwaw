@@ -234,6 +234,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3));
         return res;
       }
+      if (type=="AWSS") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, input->isStructured() ? 104: 3,
+                                 MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
       if (type=="RLRB" || type=="sWRB") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
         return res;
@@ -406,8 +411,24 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)
   }
   // magic ole header
-  if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1)
-    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
+  if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1 && input->isStructured()) {
+    MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
+    if (mainOle && mainOle->readULong(4) == 0x43484e4b)
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
+    else if (mainOle && mainOle->size()>18) {
+      mainOle->seek(16, librevenge::RVNG_SEEK_SET);
+      int value=(int) mainOle->readULong(2);
+      switch (value) {
+      // case 2: database
+      case 3:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104, MWAWDocument::MWAW_K_SPREADSHEET));
+        break;
+      // case 12: draw
+      default:
+        break;
+      }
+    }
+  }
 
   if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
       (val[0] == 0xfe37 && (val[1] == 0x23 || val[1] == 0x1c))) {
@@ -472,17 +493,25 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     case 9:
       vers = 3;
       break;
-#ifdef DEBUG
-    case 11: // a msworks 4 file ( but not a text file)
-      vers = 4;
-      break;
-#endif
+    // case 11: version 4 in a ole file
     default:
       break;
     }
-    if (vers > 0) {
-      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Microsoft Works %d.0 file\n", vers));
-      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers));
+    if (vers > 0 && input->size()>16) {
+      input->seek(16, librevenge::RVNG_SEEK_SET);
+      int value=(int) input->readULong(2);
+      switch (value) {
+      case 1:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers));
+        break;
+      // case 2: database
+      case 3:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers, MWAWDocument::MWAW_K_SPREADSHEET));
+        break;
+      // case 12: draw
+      default:
+        break;
+      }
     }
   }
   if (val[0] == 3 || val[0] == 6) {

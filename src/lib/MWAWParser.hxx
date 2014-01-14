@@ -101,23 +101,11 @@ public:
   {
     return m_parserState->m_version;
   }
-  //! sets the works version
-  void setVersion(int vers)
-  {
-    m_parserState->m_version = vers;
-  }
   //! returns the parser state
   MWAWParserStatePtr getParserState()
   {
     return m_parserState;
   }
-
-protected:
-  //! constructor (protected)
-  MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
-  //! constructor using a state
-  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
-
   //! returns the header
   MWAWHeader *getHeader()
   {
@@ -144,6 +132,11 @@ protected:
   MWAWTextListenerPtr &getTextListener()
   {
     return m_parserState->m_textListener;
+  }
+  //! returns the font converter
+  MWAWFontConverterPtr &getFontConverter()
+  {
+    return m_parserState->m_fontConverter;
   }
   //! returns the actual page dimension
   MWAWPageSpan const &getPageSpan() const
@@ -180,6 +173,22 @@ protected:
   {
     return m_parserState->m_rsrcParser;
   }
+  //! a DebugFile used to write what we recognize when we parse the document
+  libmwaw::DebugFile &ascii()
+  {
+    return m_parserState->m_asciiFile;
+  }
+protected:
+  //! constructor (protected)
+  MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! constructor using a state
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
+
+  //! sets the works version
+  void setVersion(int vers)
+  {
+    m_parserState->m_version = vers;
+  }
   //! sets the spreadsheet listener
   void setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener);
   //! resets the listener
@@ -188,18 +197,8 @@ protected:
   void setTextListener(MWAWTextListenerPtr &listener);
   //! resets the listener
   void resetTextListener();
-  //! returns the font converter
-  MWAWFontConverterPtr &getFontConverter()
-  {
-    return m_parserState->m_fontConverter;
-  }
   //! sets the font convertor
   void setFontConverter(MWAWFontConverterPtr fontConverter);
-  //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii()
-  {
-    return m_parserState->m_asciiFile;
-  }
   //! Debugging: change the default ascii file
   void setAsciiName(char const *name)
   {

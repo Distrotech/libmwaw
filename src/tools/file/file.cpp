@@ -193,11 +193,17 @@ bool File::readFileInformation()
 
   input->seek(0, libmwaw_tools::InputStream::SK_SET);
   m_fInfoType = "";
-  for (int i = 0; i < 4; i++)
-    m_fInfoType+= input->read8();
+  for (int i = 0; i < 4; i++) {
+    char c= input->read8();
+    if (c==0) break;
+    m_fInfoType+= c;
+  }
   m_fInfoCreator="";
-  for (int i = 0; i < 4; i++)
-    m_fInfoCreator+= input->read8();
+  for (int i = 0; i < 4; i++) {
+    char c= input->read8();
+    if (c==0) break;
+    m_fInfoCreator+= c;
+  }
   delete input;
 
   if (m_fInfoCreator=="" || m_fInfoType=="")
@@ -350,6 +356,9 @@ bool File::readFileInformation()
   }
   else if (m_fInfoCreator=="MSWK") {
     checkFInfoType("AWWP","Microsoft Works 3") ||
+    checkFInfoType("AWDB","Microsoft Works 3-4[database]") ||
+    checkFInfoType("AWDR","Microsoft Works 3-4[draw]") ||
+    checkFInfoType("AWSS","Microsoft Works 3-4[spreadsheet]") ||
     checkFInfoType("RLRB","Microsoft Works 4") ||
     checkFInfoType("sWRB","Microsoft Works 4[template]") ||
     checkFInfoType("Microsoft Works 3-4");

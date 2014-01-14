@@ -31,74 +31,76 @@
 * instead of those above.
 */
 
-#ifndef MS_WKS3_PARSER
-#  define MS_WKS3_PARSER
+#ifndef MS_WKS_SS_PARSER
+#  define MS_WKS_SS_PARSER
 
+#include <list>
+#include <string>
 #include <vector>
 
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
 
-namespace MsWks3ParserInternal
+namespace MsWksSSParserInternal
 {
 struct State;
 struct Zone;
+
+class Cell;
 class SubDocument;
 }
 
 class MsWksGraph;
-class MsWksZone;
 class MsWks3Text;
+class MsWksZone;
 
-/** \brief the main class to read a Microsoft Works file
+/** \brief the main class to read a Microsoft Works spreadsheet file
  *
  *
  *
  */
-class MsWks3Parser : public MWAWTextParser
+class MsWksSSParser : public MWAWSpreadsheetParser
 {
-  friend class MsWks3ParserInternal::SubDocument;
-  friend class MsWks3Text;
+  friend class MsWksSSParserInternal::SubDocument;
+  friend class MsWksGraph;
 public:
   //! constructor
-  MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MsWks3Parser();
+  virtual ~MsWksSSParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(librevenge::RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(librevenge::RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
   //! finds the different objects zones
   bool createZones();
-
-  //! adds a new page
-  void newPage(int number, bool softBreak=false);
 
   //
   // intermediate level
   //
 
+  //! try to read the spreadsheet data zone
+  bool readSSheetZone();
   //! try to read a generic zone
-  bool readZone(MsWks3ParserInternal::Zone &zone);
+  bool readZone(MsWksSSParserInternal::Zone &zone);
   //! try to read the documentinfo ( zone2)
-  bool readDocumentInfo();
+  bool readDocumentInfo(long sz=-1);
   //! try to read a group zone (zone3)
-  bool readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
-  //! try to read a zone information (zone0)
-  bool readGroupHeaderInfo(bool header, int check);
+  bool readGroup(MsWksSSParserInternal::Zone &zone, MWAWEntry &entry, int check);
 
   /** try to send a text entry */
   void sendText(int id, int noteId=-1);
@@ -112,13 +114,31 @@ protected:
 
   //! read the print info zone
   bool readPrintInfo();
+  //!reads the end of the header
+  bool readEndHeader();
+  /** reads the <<RBIL>> zone, an unknown zone which seems to contain
+     extra graphic data: chart, line */
+  bool readRBILZone(long sz);
+  //!reads a cell content data
+  bool readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell);
+
+  /** reads a cell */
+  bool readCellInFormula(MWAWCellContent::FormulaInstruction &instr);
+
+  /** try to read a string */
+  bool readString(long endPos, std::string &res);
+  /** try to read a number */
+  bool readNumber(long endPos, double &res, bool &isNan, std::string &str);
+
+  /* reads a formula */
+  bool readFormula(long endPos, MWAWCellContent &content, std::string &extra);
 
 protected:
   //
   // data
   //
   //! the state
-  shared_ptr<MsWks3ParserInternal::State> m_state;
+  shared_ptr<MsWksSSParserInternal::State> m_state;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;

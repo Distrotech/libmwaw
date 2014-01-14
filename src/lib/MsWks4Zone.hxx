@@ -181,6 +181,8 @@ protected:
 
   //! inits the ascii file
   void setAscii(std::string const &oleName);
+  //! a DebugFile used to write what we recognize when we parse the document
+  libmwaw::DebugFile &ascii();
 
 private:
   MsWks4Zone(MsWks4Zone const &orig);

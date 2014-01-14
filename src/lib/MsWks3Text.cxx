@@ -42,11 +42,12 @@
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
-#include "MWAWTextListener.hxx"
+#include "MWAWParser.hxx"
+#include "MWAWSubDocument.hxx"
 
 #include "MsWksZone.hxx"
-#include "MsWks3Parser.hxx"
 
 #include "MsWks3Text.hxx"
 
@@ -181,21 +182,79 @@ struct State {
   }
   //! the file version
   mutable int m_version;
-
   //! the main zone
   std::vector<TextZone> m_zones;
 
   int m_numPages /* the number of pages */, m_actualPage /* the actual page */;
 };
 
+////////////////////////////////////////
+//! Internal: the subdocument of a MsWks3Text
+class SubDocument : public MWAWSubDocument
+{
+public:
+  enum Type { Zone, Text };
+  SubDocument(MsWks3Text &pars, MWAWInputStreamPtr input, int zoneId, int noteId) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_textParser(&pars), m_id(zoneId), m_noteId(noteId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  /** the text parser */
+  MsWks3Text *m_textParser;
+  /** the subdocument id*/
+  int m_id;
+  /** the note id */
+  int m_noteId;
+private:
+  SubDocument(SubDocument const &orig);
+  SubDocument operator=(SubDocument const &orig);
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("MsWks3Text::SubDocument::parse: no listener\n"));
+    return;
+  }
+  assert(m_textParser);
+
+  long pos = m_input->tell();
+  m_textParser->sendNote(m_id, m_noteId);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
+
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
+{
+  if (MWAWSubDocument::operator!=(doc)) return true;
+  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+  if (!sDoc) return true;
+  if (m_textParser != sDoc->m_textParser) return true;
+  if (m_id != sDoc->m_id) return true;
+  if (m_noteId != sDoc->m_noteId) return true;
+  return false;
+}
+
 }
 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWks3Text::MsWks3Text(MsWks3Parser &parser, MsWksZone &zone) :
+MsWks3Text::MsWks3Text(MWAWParser &parser, MsWksZone &zone) :
   m_parserState(parser.getParserState()), m_state(new MsWks3TextInternal::State),
-  m_mainParser(&parser), m_zone(zone)
+  m_mainParser(&parser), m_zone(zone), m_newPageCallback(0)
 {
 }
 
@@ -307,7 +366,7 @@ void MsWks3Text::update(MsWks3TextInternal::TextZone &zone)
   size_t numLineZones = zone.m_zonesList.size();
   if (numLineZones == 0) return;
 
-  int textHeight = int(72.*m_mainParser->getTextHeight());
+  int textHeight = int(72.0*m_mainParser->getPageSpan().getPageLength());
 
   int actH = 0, actualPH = 0;
   zone.m_linesHeight.push_back(0);
@@ -411,7 +470,7 @@ bool MsWks3Text::readZoneHeader(MsWks3TextInternal::LineZone &zone) const
 ////////////////////////////////////////////////////////////
 bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MsWks3Text::sendText: can not find the listener\n"));
     return true;
@@ -428,7 +487,6 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
     para.setInterline(zone.m_height, librevenge::RVNG_POINT);
     listener->setParagraph(para);
   }
-  bool firstChar = true;
   while (!input->isEnd()) {
     long pos = input->tell();
     if (pos >= zone.m_pos.end()) break;
@@ -474,8 +532,11 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
           MWAW_DEBUG_MSG(("MsWks3Text::sendText: find unknown field type 0x15\n"));
           break;
         case 0x14:
-          if (!zone.isNote() || !firstChar)
-            m_mainParser->sendFootNote(zoneId, id);
+          if (!zone.isNote()) {
+            MWAWSubDocumentPtr subdoc
+            (new MsWks3TextInternal::SubDocument(*this, m_zone.getInput(), zoneId, id));
+            listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+          }
           break;
         default:
           break;
@@ -488,7 +549,6 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
       }
       else
         listener->insertCharacter((unsigned char)c, input, zone.m_pos.end());
-      firstChar = false;
       break;
     }
   }
@@ -501,7 +561,7 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
 
 bool MsWks3Text::sendString(std::string &str)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener)
     return true;
   MsWks3TextInternal::Font defFont;
@@ -794,8 +854,8 @@ void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
 {
   int numZones = int(zone.m_zonesList.size());
   // set the default font
-  if (m_parserState->m_textListener)
-    m_parserState->m_textListener->setFont(MWAWFont(20,12));
+  if (m_parserState->getMainListener())
+    m_parserState->getMainListener()->setFont(MWAWFont(20,12));
   if (numZones == 0 && zone.m_text.length()) {
     sendString(zone.m_text);
     zone.m_isSent = true;
@@ -825,13 +885,19 @@ void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
       i = notePos[1]-1;
       continue;
     }
-    if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end())
-      m_mainParser->newPage(++m_state->m_actualPage, zone.m_pagesPosition[i]);
+    if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end()) {
+      ++m_state->m_actualPage;
+      if (!m_newPageCallback) {
+        MWAW_DEBUG_MSG(("MsWks3Text::send: can not find the page callback\n"));
+      }
+      else
+        (m_mainParser->*m_newPageCallback)(m_state->m_actualPage, zone.m_pagesPosition[i]);
+    }
     MsWks3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {
       MWAWParagraph parag;
-      if (readParagraph(z, parag) && m_parserState->m_textListener)
-        m_parserState->m_textListener->setParagraph(parag);
+      if (readParagraph(z, parag) && m_parserState->getMainListener())
+        m_parserState->getMainListener()->setParagraph(parag);
     }
     else
       sendText(z, zone.m_id);
@@ -841,7 +907,7 @@ void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
 
 void MsWks3Text::sendNote(int zoneId, int noteId)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (zoneId < 0 || zoneId >= int(m_state->m_zones.size())) {
     if (listener) listener->insertChar(' ');
     MWAW_DEBUG_MSG(("MsWks3Text::sendNote: unknown zone %d\n", zoneId));
