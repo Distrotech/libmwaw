@@ -1030,9 +1030,13 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
   if (pict.m_subType > 0x10 || pict.m_subType == 6 || pict.m_subType == 0xb)
     return false;
   int vers = version();
-  if (vers <= 3 && pict.m_subType > 9)
-    return false;
-
+  if (pict.m_subType>9) {
+    if (vers<=2)
+      return false;
+    // we can find chart in v3 spreadsheet file
+    else if (vers==3 && pict.m_subType != 0xa && m_parserState->m_type!=MWAWParserState::Spreadsheet)
+      return false;
+  }
   libmwaw::DebugStream f;
   int val;
   if (vers >= 3) {

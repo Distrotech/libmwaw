@@ -39,7 +39,7 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWCell.hxx"
-#include "MWAWTextListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicStyle.hxx"
@@ -167,7 +167,7 @@ int MsWksTable::version() const
 ////////////////////////////////////////////////////////////
 bool MsWksTable::sendTable(int zoneId)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return false;
 
   if (m_state->m_idTableMap.find(zoneId)==m_state->m_idTableMap.end()) {
@@ -390,7 +390,7 @@ void MsWksTable::setChartZoneId(int chartId, int zoneId)
 
 bool MsWksTable::sendChart(int chartId)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("MsWksTable::sendChart: can not find a listener\n"));
     return false;
@@ -458,9 +458,12 @@ bool MsWksTable::sendChart(int chartId)
 
 bool MsWksTable::readChart(int chartId, MsWksGraph::Style const &style)
 {
+  // checkme: works for some chart, but not sure that it can work for all chart...
   MWAWInputStreamPtr input=m_zone.getInput();
   long pos = input->tell();
-  if (version() <= 3 || !input->checkPosition(pos+306))
+  int const vers=version();
+  if (vers<=2 || (vers==3&&m_parserState->m_type!=MWAWParserState::Spreadsheet) ||
+      !input->checkPosition(pos+306))
     return false;
 
   libmwaw::DebugFile &ascFile = m_zone.ascii();
@@ -530,7 +533,7 @@ bool MsWksTable::readChart(int chartId, MsWksGraph::Style const &style)
   pos = input->tell();
   ascFile.addPos(pos);
   ascFile.addNote("Chart(II)");
-  input->seek(2428, librevenge::RVNG_SEEK_CUR);
+  input->seek(vers==3 ? 1992 : 2428, librevenge::RVNG_SEEK_CUR);
 
   // three textbox
   for (int i = 0; i < 3; i++) {
@@ -547,21 +550,19 @@ bool MsWksTable::readChart(int chartId, MsWksGraph::Style const &style)
   pos = input->tell();
   long dataSz = (long) input->readULong(4);
   long smDataSz = (long) input->readULong(2);
-  if (!dataSz || (dataSz&0xFFFF) != smDataSz || !input->checkPosition(pos+4+dataSz)) {
-    MWAW_DEBUG_MSG(("MsWksTable::readChart: last pict size seems odd\n"));
+  if (!dataSz || (dataSz&0xFFFF) != smDataSz || !input->checkPosition(pos+4+dataSz))
+    // background picture not always present ( at least in v3)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return false;
+  else {
+    MWAWEntry &background=chart.m_backgroundEntry;
+    background.setBegin(pos+4);
+    background.setLength(dataSz);
+    ascFile.skipZone(background.begin(), background.end()-1);
+
+    ascFile.addPos(pos);
+    ascFile.addNote("Chart(picture)");
+    input->seek(background.end(), librevenge::RVNG_SEEK_SET);
   }
-
-  MWAWEntry &background=chart.m_backgroundEntry;
-  background.setBegin(pos+4);
-  background.setLength(dataSz);
-  ascFile.skipZone(background.begin(), background.end()-1);
-
-  ascFile.addPos(pos);
-  ascFile.addNote("Chart(picture)");
-  input->seek(background.end(), librevenge::RVNG_SEEK_SET);
-
   // last the value ( by columns ? )
   for (int i = 0; i < 4; i++) {
     pos = input->tell();

@@ -52,7 +52,7 @@ public:
   //! the parser state type
   enum Type { Spreadsheet, Text };
   //! Constructor
-  MWAWParserState(Type m_type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MWAWParserState(Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   ~MWAWParserState();
   //! returns the main listener

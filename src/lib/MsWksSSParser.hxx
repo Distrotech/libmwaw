@@ -108,6 +108,9 @@ protected:
   /** try to send a zone */
   void sendZone(int zoneType);
 
+  //! try to send the main spreadsheet
+  bool sendSpreadsheet();
+
   //
   // low level
   //
@@ -116,9 +119,6 @@ protected:
   bool readPrintInfo();
   //!reads the end of the header
   bool readEndHeader();
-  /** reads the <<RBIL>> zone, an unknown zone which seems to contain
-     extra graphic data: chart, line */
-  bool readRBILZone(long sz);
   //!reads a cell content data
   bool readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell);
 
