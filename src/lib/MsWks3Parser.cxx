@@ -355,11 +355,11 @@ bool MsWks3Parser::createZones()
   if (version()>=3) {
     bool ok = true;
     if (m_state->m_hasHeader)
-      ok = readGroupHeaderInfo(true,99);
+      ok = readGroupHeaderFooter(true,99);
     if (ok) pos = input->tell();
     else input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (ok && m_state->m_hasFooter)
-      ok = readGroupHeaderInfo(false,99);
+      ok = readGroupHeaderFooter(false,99);
     if (ok) pos = input->tell();
     else input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
@@ -812,7 +812,7 @@ bool MsWks3Parser::readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry,
 ////////////////////////////////////////////////////////////
 // read a header/footer zone info
 ////////////////////////////////////////////////////////////
-bool MsWks3Parser::readGroupHeaderInfo(bool header, int check)
+bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
 {
   if (version() < 3) return false;
 
@@ -824,7 +824,7 @@ bool MsWks3Parser::readGroupHeaderInfo(bool header, int check)
   if (ptr) {
     if (check == 49) return false;
     if (check == 99) {
-      MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderInfo: find ptr=0x%lx\n", ptr));
+      MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderFooter: find ptr=0x%lx\n", ptr));
     }
   }
 
@@ -885,7 +885,7 @@ bool MsWks3Parser::readGroupHeaderInfo(bool header, int check)
     zone.m_textId = m_textParser->createZones(N-i, false);
     if (zone.m_textId >= 0)
       break;
-    MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderInfo: can not find end of group\n"));
+    MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderFooter: can not find end of group\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
   if (limitSet) input->popLimit();
@@ -900,7 +900,7 @@ bool MsWks3Parser::readGroupHeaderInfo(bool header, int check)
   }
   //  m_graphParser->addDeltaToPositions(zone.m_zoneId, -1*box[0]);
   if (m_state->m_zoneMap.find(int(type)) != m_state->m_zoneMap.end()) {
-    MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderInfo: the zone already exists\n"));
+    MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderFooter: the zone already exists\n"));
   }
   else
     m_state->m_zoneMap.insert(std::map<int,MsWks3ParserInternal::Zone>::value_type(int(type),zone));

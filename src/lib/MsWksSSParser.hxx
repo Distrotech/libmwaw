@@ -101,9 +101,14 @@ protected:
   bool readDocumentInfo(long sz=-1);
   //! try to read a group zone (zone3)
   bool readGroup(MsWksSSParserInternal::Zone &zone, MWAWEntry &entry, int check);
+  //! try to read a header/footer group (v>=3)
+  bool readGroupHeaderFooter(bool header);
 
-  /** try to send a text entry */
-  void sendText(int id, int noteId=-1);
+  /** try to send a note */
+  void sendNote(int id);
+
+  /** try to send a text zone */
+  void sendText(int id);
 
   /** try to send a zone */
   void sendZone(int zoneType);

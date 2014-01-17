@@ -378,7 +378,8 @@ bool File::readFileInformation()
     checkFInfoType("AWWP","Microsoft Works 1.0") || checkFInfoType("Microsoft Works 1.0");
   }
   else if (m_fInfoCreator=="PSI2") {
-    checkFInfoType("AWWP","Microsoft Works 2.0") || checkFInfoType("Microsoft Works 2.0");
+    checkFInfoType("AWWP","Microsoft Works 2.0") || checkFInfoType("AWSS","Microsoft Works 2.0[spreadsheet]") ||
+    checkFInfoType("Microsoft Works 2.0");
   }
   else if (m_fInfoCreator=="PWRI") {
     checkFInfoType("OUTL","MindWrite") || checkFInfoType("MindWrite");

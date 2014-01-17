@@ -372,7 +372,7 @@ public:
   bool empty() const
   {
     if (m_contentType == C_NUMBER) return false;
-    if (m_contentType == C_TEXT && !m_textEntry.valid()) return false;
+    if (m_contentType == C_TEXT && m_textEntry.valid()) return false;
     if (m_contentType == C_FORMULA && (m_formula.size() || isValueSet())) return false;
     return true;
   }

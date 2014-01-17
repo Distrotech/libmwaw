@@ -97,8 +97,8 @@ protected:
   bool readDocumentInfo();
   //! try to read a group zone (zone3)
   bool readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
-  //! try to read a zone information (zone0)
-  bool readGroupHeaderInfo(bool header, int check);
+  //! try to read a header/footer group
+  bool readGroupHeaderFooter(bool header, int check);
 
   /** try to send a text entry */
   void sendText(int id, int noteId=-1);

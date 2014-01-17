@@ -174,6 +174,13 @@ bool MsWksTable::sendTable(int zoneId)
     MWAW_DEBUG_MSG(("MsWksTable::sendTable: can not find textbox %d\n", zoneId));
     return false;
   }
+  if (m_parserState->m_type==MWAWParserState::Spreadsheet) {
+    /* inserting a table may cause problem when there happens in some
+       ods file, so... */
+    MWAW_DEBUG_MSG(("MsWksTable::sendTable: inserting a table in a spreadsheet is not implemented\n"));
+    return false;
+  }
+
   MsWksTableInternal::Table &table = m_state->m_idTableMap.find(zoneId)->second;
 
   // open the table

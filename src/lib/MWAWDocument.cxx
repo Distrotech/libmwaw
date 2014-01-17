@@ -382,9 +382,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
-#ifdef DEBUG
       parser.reset(new MsWksSSParser(input, rsrcParser, header));
-#endif
       break;
     // TODO
     case MWAWDocument::MWAW_T_CLARISWORKS:

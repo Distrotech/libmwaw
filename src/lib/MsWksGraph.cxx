@@ -1852,6 +1852,7 @@ void MsWksGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vec
   int numLines = int(linesH.size());
   int nPages = int(pagesH.size());
   size_t numZones = m_state->m_zonesList.size();
+  bool isSpreadsheet=m_parserState->m_type==MWAWParserState::Spreadsheet;
   for (size_t i = 0; i < numZones; i++) {
     shared_ptr<MsWksGraphInternal::Zone> zone = m_state->m_zonesList[i];
     if (zone->m_zoneId != -1 && zoneId != zone->m_zoneId) continue;
@@ -1866,7 +1867,7 @@ void MsWksGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vec
         h = linesH[(size_t) zone->m_line];
       zone->m_finalDecal = Vec2f(0, float(h));
     }
-    if (zone->m_page < 0 && zone->m_page != -2) {
+    if (zone->m_page < 0 && (isSpreadsheet || zone->m_page != -2)) {
       float h = zone->m_finalDecal.y();
       float middleH=zone->m_box.center().y();
       h+=middleH;

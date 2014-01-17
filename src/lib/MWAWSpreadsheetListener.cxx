@@ -76,7 +76,7 @@ struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
     m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_smallPictureNumber(0),
-    m_isDocumentStarted(false),
+    m_isDocumentStarted(false), m_isSheetOpened(false), m_isSheetRowOpened(false),
     m_sentListMarkers(), m_numberingIdMap(),
     m_subDocuments()
   {
@@ -95,6 +95,8 @@ struct DocumentState {
 
   int m_smallPictureNumber /** number of small picture */;
   bool m_isDocumentStarted /** a flag to know if the document is open */;
+  bool m_isSheetOpened /** a flag to know if a sheet is open */;
+  bool m_isSheetRowOpened /** a flag to know if a row is open */;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   /** a map cell's format to id */
@@ -144,8 +146,6 @@ struct State {
 
   bool m_firstParagraphInPageSpan;
 
-  bool m_isSheetOpened;
-  bool m_isSheetRowOpened;
   bool m_isSheetColumnOpened;
   bool m_isSheetCellOpened;
 
@@ -189,7 +189,7 @@ State::State() :
 
   m_firstParagraphInPageSpan(true),
 
-  m_isSheetOpened(false), m_isSheetRowOpened(false), m_isSheetColumnOpened(false),
+  m_isSheetColumnOpened(false),
   m_isSheetCellOpened(false),
 
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
@@ -553,7 +553,7 @@ void MWAWSpreadsheetListener::endDocument(bool sendDelayedSubDoc)
   _changeList(); // flush the list exterior
 
   // close the document nice and tight
-  if (m_ps->m_isSheetOpened)
+  if (m_ds->m_isSheetOpened)
     closeSheet();
 
   _closePageSpan();
@@ -994,12 +994,16 @@ void MWAWSpreadsheetListener::insertComment(MWAWSubDocumentPtr &subDocument)
     return;
   }
 
-  if (!m_ps->m_isParagraphOpened)
-    _openParagraph();
-  else {
-    _flushText();
-    _closeSpan();
+  if (!m_ps->m_isSheetCellOpened) {
+    if (!m_ps->m_isParagraphOpened)
+      _openParagraph();
+    else {
+      _flushText();
+      _closeSpan();
+    }
   }
+  else if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
 
   librevenge::RVNGPropertyList propList;
   m_documentInterface->openComment(propList);
@@ -1014,7 +1018,7 @@ void MWAWSpreadsheetListener::insertComment(MWAWSubDocumentPtr &subDocument)
 void MWAWSpreadsheetListener::insertTextBox
 (MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras, librevenge::RVNGPropertyList textboxExtras)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertTextBox insert a textbox outside a sheet is not implemented\n"));
     return;
   }
@@ -1033,7 +1037,7 @@ void MWAWSpreadsheetListener::insertTextBox
 void MWAWSpreadsheetListener::insertPicture
 (MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture insert a picture outside a sheet is not implemented\n"));
     return;
   }
@@ -1111,7 +1115,7 @@ void MWAWSpreadsheetListener::insertPicture
 (MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
  librevenge::RVNGPropertyList frameExtras)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture insert a picture outside a sheet is not implemented\n"));
     return;
   }
@@ -1140,7 +1144,7 @@ void MWAWSpreadsheetListener::insertPicture
 ///////////////////
 bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame insert a frame outside a sheet is not implemented\n"));
     return false;
   }
@@ -1506,6 +1510,8 @@ void MWAWSpreadsheetListener::_endSubDocument()
 {
   if (m_ps->m_isTableOpened)
     closeTable();
+  if (m_ps->m_isSpanOpened)
+    _closeSpan();
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
@@ -1518,7 +1524,7 @@ void MWAWSpreadsheetListener::_endSubDocument()
 ///////////////////
 void MWAWSpreadsheetListener::openSheet(std::vector<float> const &colWidth, librevenge::RVNGUnit unit, std::string const &name)
 {
-  if (m_ps->m_isSheetOpened) {
+  if (m_ds->m_isSheetOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheet: called with m_isSheetOpened=true\n"));
     return;
   }
@@ -1544,17 +1550,17 @@ void MWAWSpreadsheetListener::openSheet(std::vector<float> const &colWidth, libr
   if (!name.empty())
     propList.insert("librevenge:sheet-name", name.c_str());
   m_documentInterface->openSheet(propList);
-  m_ps->m_isSheetOpened = true;
+  m_ds->m_isSheetOpened = true;
 }
 
 void MWAWSpreadsheetListener::closeSheet()
 {
-  if (!m_ps->m_isSheetOpened) {
+  if (!m_ds->m_isSheetOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::closeSheet: called with m_isSheetOpened=false\n"));
     return;
   }
 
-  m_ps->m_isSheetOpened = false;
+  m_ds->m_isSheetOpened = false;
   m_documentInterface->closeSheet();
   _endSubDocument();
   _popParsingState();
@@ -1562,11 +1568,11 @@ void MWAWSpreadsheetListener::closeSheet()
 
 void MWAWSpreadsheetListener::openSheetRow(float h, librevenge::RVNGUnit unit)
 {
-  if (m_ps->m_isSheetRowOpened) {
+  if (m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheetRow: called with m_isSheetRowOpened=true\n"));
     return;
   }
-  if (!m_ps->m_isSheetOpened) {
+  if (!m_ds->m_isSheetOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheetRow: called with m_isSheetOpened=false\n"));
     return;
   }
@@ -1576,22 +1582,22 @@ void MWAWSpreadsheetListener::openSheetRow(float h, librevenge::RVNGUnit unit)
   else if (h < 0)
     propList.insert("style:min-row-height", -h, unit);
   m_documentInterface->openSheetRow(propList);
-  m_ps->m_isSheetRowOpened = true;
+  m_ds->m_isSheetRowOpened = true;
 }
 
 void MWAWSpreadsheetListener::closeSheetRow()
 {
-  if (!m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheetRow: called with m_isSheetRowOpened=false\n"));
     return;
   }
-  m_ps->m_isSheetRowOpened = false;
+  m_ds->m_isSheetRowOpened = false;
   m_documentInterface->closeSheetRow();
 }
 
 void MWAWSpreadsheetListener::openSheetCell(MWAWCell const &cell, MWAWCellContent const &content)
 {
-  if (!m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openSheetCell: called with m_isSheetRowOpened=false\n"));
     return;
   }
@@ -1705,7 +1711,7 @@ void MWAWSpreadsheetListener::closeSheetCell()
 void MWAWSpreadsheetListener::insertTable
 (MWAWPosition const &pos, MWAWTable &table, librevenge::RVNGPropertyList frameExtras)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertTable insert a table outside a sheet is not implemented\n"));
     return;
   }
@@ -1735,7 +1741,7 @@ void MWAWSpreadsheetListener::insertTable
 void MWAWSpreadsheetListener::insertChart
 (MWAWPosition const &pos, MWAWChart &chart, librevenge::RVNGPropertyList frameExtras)
 {
-  if (!m_ps->m_isSheetOpened || m_ps->m_isSheetRowOpened) {
+  if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertChart outside a chart in a sheet is not implemented\n"));
     return;
   }

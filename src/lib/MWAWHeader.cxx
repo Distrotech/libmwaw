@@ -266,6 +266,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 2));
         return res;
       }
+      if (type=="AWSS") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 2, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
     }
     else if (creator=="PWRI") {
       if (type=="OUTL") {
@@ -493,7 +497,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     case 9:
       vers = 3;
       break;
-    // case 11: version 4 in a ole file
+    case 11: // embedded data
+      vers = 4;
+      break;
     default:
       break;
     }

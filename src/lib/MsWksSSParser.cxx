@@ -43,7 +43,7 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWPictMac.hxx"
+#include "MWAWOLEParser.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSpreadsheetListener.hxx"
 #include "MWAWSubDocument.hxx"
@@ -80,10 +80,7 @@ public:
   //! returns true if the cell do contain any content
   bool isEmpty() const
   {
-    // fixme: if (!MWAWCell::empty()) return false;
-    if (hasBorders()) return false;
-    if (m_noteId) return false;
-    return true;
+    return m_content.empty() && !hasBorders() && !m_noteId;
   }
 
   //! operator<<
@@ -135,7 +132,7 @@ public:
   /** the list of page break */
   std::vector<int> m_listPageBreaks;
   /** a map id->note content */
-  std::map<int,std::string> m_idNoteMap;
+  std::map<int,MWAWEntry> m_idNoteMap;
   /** the spreadsheet name */
   std::string m_name;
 protected:
@@ -157,7 +154,7 @@ protected:
 //! Internal: the state of a MsWksSSParser
 struct State {
   //! constructor
-  State() : m_docType(MWAWDocument::MWAW_K_SPREADSHEET), m_spreadsheet(), m_zoneMap(), m_actPage(0), m_numPages(0),
+  State() : m_docType(MWAWDocument::MWAW_K_SPREADSHEET), m_sheetHeaderSize(0x56c), m_spreadsheet(), m_zoneMap(), m_actPage(0), m_numPages(0),
     m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
     m_pageLength(-1), m_headerHeight(0), m_footerHeight(0)
   {
@@ -173,6 +170,8 @@ struct State {
   }
   //! the type of document
   MWAWDocument::Kind m_docType;
+  //! the beginning of the spreadsheet data
+  long m_sheetHeaderSize;
   /** the spreadsheet */
   Spreadsheet m_spreadsheet;
   //! the list of zone
@@ -192,10 +191,10 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { Zone, Text };
+  enum Type { Note, Zone, Text };
   SubDocument(MsWksSSParser &pars, MWAWInputStreamPtr input, Type type,
-              int zoneId, int noteId=-1) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_type(type), m_id(zoneId), m_noteId(noteId) {}
+              int zoneId) :
+    MWAWSubDocument(&pars, input, MWAWEntry()), m_type(type), m_id(zoneId) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -227,8 +226,6 @@ protected:
   Type m_type;
   /** the subdocument id*/
   int m_id;
-  /** the note id */
-  int m_noteId;
 };
 
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
@@ -242,8 +239,11 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   long pos = m_input->tell();
   MsWksSSParser *parser = reinterpret_cast<MsWksSSParser *>(m_parser);
   switch (m_type) {
+  case Note:
+    parser->sendNote(m_id);
+    break;
   case Text:
-    parser->sendText(m_id, m_noteId);
+    parser->sendText(m_id);
     break;
   case Zone:
     parser->sendZone(m_id);
@@ -262,7 +262,6 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
   if (!sDoc) return true;
   if (m_id != sDoc->m_id) return true;
   if (m_type != sDoc->m_type) return true;
-  if (m_noteId != sDoc->m_noteId) return true;
   return false;
 }
 }
@@ -313,36 +312,97 @@ void MsWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
   if (!checkHeader(0L) || !m_zone)  throw(libmwaw::ParseException());
   bool ok = true;
   try {
+#ifdef DEBUG
+    MWAWInputStreamPtr &input= getInput();
+    if (input->isStructured()) {
+      shared_ptr<MWAWOLEParser> oleParser(new MWAWOLEParser("MN0"));
+      oleParser->parse(input);
+    }
+#endif
     // create the asciiFile
     m_zone->initAsciiFile(asciiName());
 
     checkHeader(0L);
-    long pos=m_zone->getInput()->tell();
-    if (!readDocumentInfo(0x9a))
-      m_zone->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
-    ok=readSSheetZone();
     createZones();
+    ok=!m_state->m_spreadsheet.m_cells.empty();
     if (ok) {
       createDocument(docInterface);
       sendSpreadsheet();
     }
-    m_zone->ascii().reset();
   }
   catch (...) {
     MWAW_DEBUG_MSG(("MsWksSSParser::parse: exception catched when parsing\n"));
     ok = false;
   }
+  m_zone->ascii().reset();
 
   resetSpreadsheetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
-void MsWksSSParser::sendText(int id, int noteId)
+void MsWksSSParser::sendText(int id)
 {
-  if (noteId < 0)
-    m_textParser->sendZone(id);
-  else
-    m_textParser->sendNote(id, noteId);
+  m_textParser->sendZone(id);
+}
+
+void MsWksSSParser::sendNote(int noteId)
+{
+  MWAWListenerPtr listener=getSpreadsheetListener();
+  if (!listener||
+      m_state->m_spreadsheet.m_idNoteMap.find(noteId)==m_state->m_spreadsheet.m_idNoteMap.end()) {
+    MWAW_DEBUG_MSG(("MsWksSSParser::sendNote: can not send note %d\n", noteId));
+    return;
+  }
+  MWAWEntry const &entry=m_state->m_spreadsheet.m_idNoteMap.find(noteId)->second;
+  int const vers=version();
+  if (!entry.valid()) return;
+  MWAWInputStreamPtr input = m_zone->getInput();
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  while (1) {
+    long pos=input->tell();
+    if (input->isEnd() || pos>=entry.end()) return;
+    int c = (int) input->readULong(1);
+    switch (c) {
+    case 0x9:
+      listener->insertTab();
+      break;
+    case 0x10: // cursor pos
+    case 0x11:
+      break;
+    default:
+      if (c >= 0x15 && c <= 0x19 && vers >= 3) {
+        int sz = (c==0x19) ? 0 : (c == 0x18) ? 1 : 2;
+        if (sz && pos+1+sz <=  entry.end())
+          input->seek(sz, librevenge::RVNG_SEEK_CUR);
+        switch (c) {
+        case 0x19:
+          listener->insertField(MWAWField(MWAWField::Title));
+          break;
+        case 0x18:
+          listener->insertField(MWAWField(MWAWField::PageNumber));
+          break;
+        case 0x16:
+          listener->insertField(MWAWField(MWAWField::Time));
+          break;
+        case 0x17: // id = 0 : short date ; id=9 : long date
+          listener->insertField(MWAWField(MWAWField::Date));
+          break;
+        case 0x15:
+          MWAW_DEBUG_MSG(("MsWksSSParser::sendNote: find unknown field type 0x15\n"));
+          break;
+        default:
+          break;
+        }
+      }
+      else if (c <= 0x1f) {
+        MWAW_DEBUG_MSG(("MsWksSSParser::sendNote: find char=%x\n",int(c)));
+      }
+      else
+        listener->insertCharacter((unsigned char)c, input, entry.end());
+      break;
+    }
+
+  }
 }
 
 void MsWksSSParser::sendZone(int zoneType)
@@ -433,15 +493,30 @@ void MsWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documen
 bool MsWksSSParser::createZones()
 {
   MWAWInputStreamPtr input = m_zone->getInput();
-  long pos = input->tell();
 
   MsWksSSParserInternal::Zone::Type const type = MsWksSSParserInternal::Zone::MAIN;
   MsWksSSParserInternal::Zone newZone(type, int(m_state->m_zoneMap.size()));
   m_state->m_zoneMap.insert(std::map<int,MsWksSSParserInternal::Zone>::value_type(int(type),newZone));
   MsWksSSParserInternal::Zone &mainZone = m_state->m_zoneMap.find(int(type))->second;
 
+  long pos;
+  if (version()>2) {
+    pos = input->tell();
+    if (!readDocumentInfo(0x9a))
+      m_zone->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
+    pos = input->tell();
+    if (m_state->m_hasHeader && !readGroupHeaderFooter(true))
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    pos = input->tell();
+    if (m_state->m_hasFooter && !readGroupHeaderFooter(false))
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
+  readSSheetZone();
+
   MWAWEntry group;
-  readGroup(mainZone, group, 2);
+  pos = input->tell();
+  if (!readGroup(mainZone, group, 2))
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   while (!input->isEnd()) {
     pos = input->tell();
@@ -461,6 +536,8 @@ bool MsWksSSParser::createZones()
 
   // ok, prepare the data
   m_state->m_numPages = 1;
+  std::vector<int> linesH, pagesH;
+  m_graphParser->computePositions(mainZone.m_zoneId, linesH, pagesH);
   return true;
 }
 
@@ -471,10 +548,11 @@ bool MsWksSSParser::readSSheetZone()
 {
   MsWksSSParserInternal::Spreadsheet &sheet=m_state->m_spreadsheet;
   sheet=MsWksSSParserInternal::Spreadsheet();
+  int const vers=version();
 
   MWAWInputStreamPtr input=m_zone->getInput();
   libmwaw::DebugFile &ascFile=m_zone->ascii();
-  long pos = input->tell();
+  long pos = input->tell(), sheetDebPos=pos;
   if (!input->checkPosition(pos+0x30+0x30+0x408)) {
     MWAW_DEBUG_MSG(("MsWksSSParser::readSSheetZone:Can not read part A/B\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -495,17 +573,19 @@ bool MsWksSSParser::readSSheetZone()
 
   f << "unk0=" << std::hex << input->readULong(4) << std::dec << ","; // big number
 
-  int val = (int) input->readLong(2);
-  if (val) f << "unkn0.1=" << val << ","; // 0e|7e
+  int zoneSize[3];
+  zoneSize[0] = (int) input->readLong(2);
+  if (zoneSize[0]) f << "zone[SheetF]=" << std::hex << zoneSize[0] << std::dec << ",";
   int numPageBreak = (int) input->readLong(2);
   if (numPageBreak) f << "nPgBreak=" << numPageBreak << ",";
-  int numPrinter = (int) input->readLong(2);
-  if (numPrinter) f << "nPrinters=" << numPrinter << ",";
-  val = (int) input->readLong(2);
-  if (val) f << "unkn0.2=" << val << ",";
+  int numColBreak = (int) input->readLong(2);
+  if (numColBreak) f << "nColBreak=" << numColBreak << ",";
+  zoneSize[1]= (int) input->readLong(2);
+  if (zoneSize[1]) f << "zone[DocInfo]=" << zoneSize[1] << ",";
   f << "unk1=" << std::hex << input->readULong(4) << std::dec << ","; // big number
   f << std::dec;
 
+  int val;
   for (int i = 0; i < 2; i++) {
     val = (int) input->readLong(2);
     if (val)
@@ -603,12 +683,36 @@ bool MsWksSSParser::readSSheetZone()
   pos = input->tell();
   f.str("");
   ascFile.addPos(pos);
+  long endPos=pos+256;
   f << "SSheetC:";
-  for (int i = 0; i < 128; i++) {
+  int numCharts=0;
+  for (int i=0; i < 8; ++i) {
+    // the chart names in v2, can we have more than 8 charts ?
+    long cPos=input->tell();
+    val = (int) input->readLong(2);
+    int sSz=(int) input->readULong(1);
+    if (!sSz || sSz>32-7) {
+      input->seek(cPos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    ++numCharts;
+    f << "Chart" << i << "=[";
+    if (val) f << "unkn=" << val << ",";
+    std::string name("");
+    for (int c=0; c<sSz; ++c)
+      name += (char) input->readULong(1);
+    f << name << ",";
+    if ((sSz%2)==0)   input->seek(1, librevenge::RVNG_SEEK_CUR);
+    f << "id=" << std::hex << input->readULong(4) << std::dec << "],";
+    input->seek(cPos+32, librevenge::RVNG_SEEK_SET);
+  }
+  int numRemains=int(endPos-input->tell())/2;
+  for (int i = 0; i < numRemains; i++) {
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascFile.addNote(f.str().c_str());
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
   pos = input->tell();
   f.str("");
@@ -623,14 +727,14 @@ bool MsWksSSParser::readSSheetZone()
   f << "SSheetD:";
   for (int i = 0; i < 5; i++) {
     val = (int) input->readLong(2);
-    if (val) {
-      if (i == 3)
-        f << "Y=" << val << ",";
-      else
-        f << "f" << i << "=" << val << ",";
+    if (i==3) {
+      if (val==44) continue;
+      f << "unkn=" << val << ",";
     }
+    else if (val)
+      f << "f" << i << "=" << val << ",";
   }
-  f << "dim?=["; // some dim rowm == 44 * Y, 44 * Y, 1, 1
+  f << "dim?=["; // in general 1,1,1,1 but can be X,X,1,1
   for (int i = 0; i < 4; i++)
     f << input->readLong(2) << ",";
   f << "]";
@@ -648,11 +752,13 @@ bool MsWksSSParser::readSSheetZone()
   for (int i = 0; i < 2; i++)
     f << input->readLong(2) << ",";
   f << "]";
-  for (int i = 0; i < 11; i++) {
+  int numRemain=int(sheetDebPos+m_state->m_sheetHeaderSize-input->tell())/2;
+  for (int i = 0; i < numRemain; i++) {
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascFile.addNote(f.str().c_str());
+  input->seek(sheetDebPos+m_state->m_sheetHeaderSize, librevenge::RVNG_SEEK_SET);
 
   // part E
   Vec2i cellPos(0,0);
@@ -736,56 +842,82 @@ bool MsWksSSParser::readSSheetZone()
   }
 
   pos = input->tell();
-  f.str("");
-  ascFile.addPos(pos);
-
-  long sz = (long) input->readULong(4);
-  f << "SSheetF:sz=" << sz;
-  ascFile.addNote(f.str().c_str());
-
-  if (!input->checkPosition(pos+4+sz)) {
+  if (!input->checkPosition(pos+zoneSize[0])) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MsWksSSParser::readSSheetZone:Can not read part F\n"));
     return false;
   }
 
-  input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-  long GDebPos = input->tell();
   f.str("");
-  f << "SSheetG:" << std::dec;
+  f << "SSheetF[A]:";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos+zoneSize[0]-10, librevenge::RVNG_SEEK_SET);
 
+  pos = input->tell();
+  f.str("");
+  f << "SSheetF[B]:" << std::dec;
   for (int i = 0; i < 4; i++) {
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   val = (int) input->readULong(2);
   if (val) f << std::hex << "fl=" << val << "," << std::dec;
-
-  if (numPageBreak > 0) {
-    sheet.m_listPageBreaks.resize((size_t) numPageBreak);
-    f << "pgBreak=[";
-    for (size_t pgBreak = 0; pgBreak < (size_t) numPageBreak; pgBreak++) {
-      val = (int) input->readULong(2);
-      sheet.m_listPageBreaks[pgBreak] = val;
-      f << val << ",";
-    }
-    f << "],";
-  }
-  if (numPrinter>0) {
-    for (int nPrint = 0; nPrint < numPrinter; nPrint++) {
-      f << "printer" << nPrint << "=" << input->readULong(2) << ",";
-      if (version() <= 2) {
-        // only version<=2 seems to contains the print data with size 0x15e
-        pos = input->tell();
-        MWAWEntry zone;
-        if (!readDocumentInfo(0x15e))
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-      }
-    }
-  }
-
-  ascFile.addPos(GDebPos);
+  ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
+
+  if (numPageBreak || numColBreak) {
+    pos=input->tell();
+    f.str("");
+    f << "SSheetG:";
+    if (numPageBreak > 0) {
+      sheet.m_listPageBreaks.resize((size_t) numPageBreak);
+      f << "pgBreak=[";
+      for (size_t pgBreak = 0; pgBreak < (size_t) numPageBreak; pgBreak++) {
+        val = (int) input->readULong(2);
+        sheet.m_listPageBreaks[pgBreak] = val;
+        f << val << ",";
+      }
+      f << "],";
+    }
+    // columns/notes break?
+    if (numColBreak) {
+      f << "colBreak=[";
+      for (int i = 0; i < numColBreak; i++)
+        f << input->readULong(2) << ",";
+      f << "],";
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  if (zoneSize[1]>0) {
+    // only version<=2 seems to contains the print data with size 0x15e
+    pos = input->tell();
+    MWAWEntry zone;
+    if (!readDocumentInfo(zoneSize[1])) {
+      input->seek(pos+zoneSize[1], librevenge::RVNG_SEEK_SET);
+      MWAW_DEBUG_MSG(("MsWksSSParser::readSSheetZone:can not read print info\n"));
+      ascii().addPos(pos);
+      ascii().addNote("SSheet[printInfo]:###");
+    }
+  }
+
+  if (vers==2) {
+    for (int i=0; i < numCharts; ++i) {
+      pos=input->tell();
+      if (!input->checkPosition(pos+256)) {
+        MWAW_DEBUG_MSG(("MsWksSSParser::readSSheetZone:can not find chart %d data\n", i));
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        return false;
+      }
+      f.str("");
+      f << "Entries(Chart)[" << i << "]:";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+256, librevenge::RVNG_SEEK_SET);
+    }
+  }
 
   long HDebPos = input->tell();
   f.str("");
@@ -802,6 +934,9 @@ bool MsWksSSParser::readSSheetZone()
     }
     // a pascal string
     int pSz = (int) input->readLong(2);
+    MWAWEntry note;
+    note.setBegin(input->tell());
+    note.setLength(pSz);
     std::string str="";
     for (int s = 0; s < pSz; s++)
       str += (char) input->readLong(1);
@@ -811,7 +946,7 @@ bool MsWksSSParser::readSSheetZone()
       return false;
     }
     if (pSz) {
-      sheet.m_idNoteMap[idNote] = str;
+      sheet.m_idNoteMap[idNote] = note;
       f << "Note" << idNote << "=\"" << str << "\",";
     }
   }
@@ -823,6 +958,7 @@ bool MsWksSSParser::readSSheetZone()
 
 bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell)
 {
+  int const vers=version();
   cell = MsWksSSParserInternal::Cell();
   cell.setPosition(cellPos);
   if (sz == 0xFF || sz < 5) return false;
@@ -845,7 +981,7 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   MWAWCellContent &content=cell.m_content;
   int style = 0;
   int subformat = 0;
-  if (version() >= 3) {
+  if (vers >= 3) {
     style = (fl[4]>>1) & 0x1f;
     switch (fl[4] >> 6) {
     case 0:
@@ -873,6 +1009,11 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   fl[3] = 0;
 
   cell.m_font=m_state->m_spreadsheet.m_font;
+  MWAWColor col;
+  if (vers>=3&&m_zone->getColor(fl[0],col,3)) {
+    cell.m_font.setColor(col);
+    fl[0]=0;
+  }
   uint32_t fflags = 0;
   if (style) {
     if (style & 1) fflags |= MWAWFont::shadowBit;
@@ -1130,6 +1271,11 @@ bool MsWksSSParser::sendSpreadsheet()
           listener->insertCharacter(c);
       }
     }
+    if (cell.m_noteId>0) {
+      MWAWSubDocumentPtr subDoc
+      (new MsWksSSParserInternal::SubDocument(*this, input, MsWksSSParserInternal::SubDocument::Note, cell.m_noteId));
+      listener->insertComment(subDoc);
+    }
     listener->closeSheetCell();
   }
   if (prevRow!=-1) listener->closeSheetRow();
@@ -1287,11 +1433,13 @@ bool MsWksSSParser::checkHeader(MWAWHeader *header, bool strict)
   f << ", windowdbdbox?=(";
   for (int i = 0; i < 4; i++) f << dim[i]<<",";
   f << "),";
-  for (int i = 0; i < 4; i++) {
-    static int const expectedVal[]= {0,0,5,0x6c};
-    val = (int) input->readULong(1);
-    if (val==expectedVal[i]) continue;
-    f << "##v" << i << "=" << std::hex << val <<",";
+  long sheetHSize=(long) input->readULong(4); // checkme
+  if (sheetHSize!=0x56c) {
+    /* CHECKME: normally 0x56c, but find one time 0x56a in a v2 file
+       which seems to imply that the spreadsheet begins earlier */
+    f << "#sheet[hSize]=" << std::hex << std::hex << sheetHSize << std::dec << ",";
+    if (sheetHSize > (long) 0x550 && input->checkPosition(sheetHSize+0x20))
+      m_state->m_sheetHeaderSize=sheetHSize;
   }
   type = (int) input->readULong(2);
   f << std::dec;
@@ -1385,13 +1533,13 @@ bool MsWksSSParser::readDocumentInfo(long sz)
   if (docId) f << "id=0x"<< std::hex << docId << ",";
   if (docExtra) f << "unk=" << docExtra << ","; // in v3: find 3, 7, 1x
   if (flag) f << "fl=" << flag << ","; // in v3: find 80, 84, e0
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
 
   if (!readPrintInfo()) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   pos = input->tell();
   if (sz < 0x9a) {
@@ -1400,7 +1548,7 @@ bool MsWksSSParser::readDocumentInfo(long sz)
   }
   pos = input->tell();
   f.str("");
-  f << "DocInfo-1:";
+  f << "Entries(DocInfo)[1]:";
   int val = (int) input->readLong(2);
   if ((val & 0x0400) && vers >= 3) {
     f << "titlepage,";
@@ -1545,6 +1693,91 @@ bool MsWksSSParser::readGroup(MsWksSSParserInternal::Zone &zone, MWAWEntry &entr
     input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   }
 
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read a header/footer zone info
+////////////////////////////////////////////////////////////
+bool MsWksSSParser::readGroupHeaderFooter(bool header)
+{
+  if (version() < 3) return false;
+
+  MWAWInputStreamPtr input=m_zone->getInput();
+  long debPos = input->tell();
+
+  if (input->readULong(2) || input->isEnd()) return false;
+
+  libmwaw::DebugStream f;
+  int size = (int) input->readLong(2)+4;
+  int realSize = 0x11;
+  if (size < realSize || !input->checkPosition(debPos+size)) return false;
+  if (input->readLong(2) != 0) return false;
+  f << "Entries(GroupHInfo)";
+  if (header)
+    f << "[header]";
+  else
+    f << "[footer]";
+  f << ": size=" << std::hex << size << std::dec << " BTXT";
+
+  input->seek(debPos+6, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readLong(2);
+  f << ", N=" << N;
+  int dim[4];
+  for (int i = 0; i < 4; i++)
+    dim[i] = (int) input->readLong(2);
+
+  Box2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  if (box.size().x() < -2000 || box.size().y() < -2000 ||
+      box.size().x() > 2000 || box.size().y() > 2000 ||
+      box.min().x() < -200 || box.min().y() < -200) return false;
+  f << ", BDBox =" << box;
+  int val = (int) input->readULong(1);
+  if (val) f << ", flag=" << val;
+
+  input->seek(debPos+size, librevenge::RVNG_SEEK_SET);
+  if (header) m_state->m_headerHeight = box.size().y();
+  else m_state->m_footerHeight = box.size().y();
+  MsWksSSParserInternal::Zone::Type type=
+    header ? MsWksSSParserInternal::Zone::HEADER : MsWksSSParserInternal::Zone::FOOTER;
+  MsWksSSParserInternal::Zone zone(type, int(m_state->m_zoneMap.size()));
+
+  m_zone->ascii().addPos(debPos);
+  m_zone->ascii().addNote(f.str().c_str());
+  m_zone->ascii().addPos(input->tell());
+
+  input->seek(debPos+realSize, librevenge::RVNG_SEEK_SET);
+  input->pushLimit(debPos+size);
+  bool limitSet = true;
+  for (int i = 0; i < N; i++) {
+    long pos = input->tell();
+    if (limitSet && pos==debPos+size) {
+      limitSet = false;
+      input->popLimit();
+    }
+    if (readZone(zone)) continue;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    zone.m_textId = m_textParser->createZones(N-i, false);
+    if (zone.m_textId >= 0)
+      break;
+    MWAW_DEBUG_MSG(("MsWksSSParser::readGroupHeaderFooter: can not find end of group\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
+  if (limitSet) input->popLimit();
+  if (long(input->tell()) < debPos+size) {
+    m_zone->ascii().addPos(input->tell());
+    m_zone->ascii().addNote("GroupHInfo-II");
+
+    input->seek(debPos+size, librevenge::RVNG_SEEK_SET);
+
+    m_zone->ascii().addPos(debPos + size);
+    m_zone->ascii().addNote("_");
+  }
+  if (m_state->m_zoneMap.find(int(type)) != m_state->m_zoneMap.end()) {
+    MWAW_DEBUG_MSG(("MsWksSSParser::readGroupHeaderFooter: the zone already exists\n"));
+  }
+  else
+    m_state->m_zoneMap.insert(std::map<int,MsWksSSParserInternal::Zone>::value_type(int(type),zone));
   return true;
 }
 

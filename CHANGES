@@ -1,4 +1,7 @@
 CHANGES:
+1/17/2014:
+- MicrosoftWorks: add a spreadsheet parser(main content + some graphics)
+
 1/10/2014:
 - rename all the parser files to recognize more easily the parser...
 
