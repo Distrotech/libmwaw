@@ -49,6 +49,7 @@ struct Zone;
 }
 
 class GreatWksParser;
+class GreatWksSSParser;
 
 /** \brief the main class to read the text part of GreatWorks Text file
  *
@@ -58,9 +59,10 @@ class GreatWksParser;
 class GreatWksText
 {
   friend class GreatWksParser;
+  friend class GreatWksSSParser;
 public:
   //! constructor
-  GreatWksText(GreatWksParser &parser);
+  GreatWksText(MWAWParser &parser);
   //! destructor
   virtual ~GreatWksText();
 
@@ -110,6 +112,42 @@ protected:
   //! heuristic function used to find the next zone
   bool findNextZone();
 
+  /** a struct used to defined the different callback */
+  struct Callback {
+    /** callback used to send a page break */
+    typedef void (MWAWParser::* NewPage)(int page);
+    //! callback used to send a picture
+    typedef bool (MWAWParser::* SendPicture)(MWAWEntry const &entry, MWAWPosition pos);
+    //! callback used to return the main section
+    typedef MWAWSection(MWAWParser::* GetMainSection)() const;
+
+    /** constructor */
+    Callback() : m_newPage(0), m_sendPicture(0), m_mainSection(0) { }
+    /** copy constructor */
+    Callback(Callback const &orig) : m_newPage(0), m_sendPicture(0), m_mainSection(0)
+    {
+      *this=orig;
+    }
+    /** copy operator */
+    Callback &operator=(Callback const &orig)
+    {
+      m_newPage=orig.m_newPage;
+      m_sendPicture=orig.m_sendPicture;
+      m_mainSection=orig.m_mainSection;
+      return *this;
+    }
+    /** the new page callback */
+    NewPage m_newPage;
+    /** the send picture callback */
+    SendPicture m_sendPicture;
+    /** the get main section callback */
+    GetMainSection m_mainSection;
+  };
+  //! set the callback
+  void setCallback(Callback const &callback)
+  {
+    m_callback=callback;
+  }
 private:
   GreatWksText(GreatWksText const &orig);
   GreatWksText &operator=(GreatWksText const &orig);
@@ -125,7 +163,10 @@ protected:
   shared_ptr<GreatWksTextInternal::State> m_state;
 
   //! the main parser;
-  GreatWksParser *m_mainParser;
+  MWAWParser *m_mainParser;
+
+  //! the different callbacks
+  Callback m_callback;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

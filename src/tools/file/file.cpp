@@ -422,9 +422,9 @@ bool File::readFileInformation()
   }
   else if (m_fInfoCreator=="ZEBR") {
     checkFInfoType("ZWRT","GreatWorks") || checkFInfoType("ZTRM","GreatWorks[comm]") ||
-    checkFInfoType("ZDBS","GreatWorks[database]") || checkFInfoType("ZCAL","GreatWorks[cal]") ||
+    checkFInfoType("ZDBS","GreatWorks[database]") || checkFInfoType("ZCAL","GreatWorks[spreadsheet]") ||
     checkFInfoType("ZOLN","GreatWorks[outline]") || checkFInfoType("PNTG","GreatWorks[paint]") ||
-    checkFInfoType("ZOBJ","GreatWorks[draw]") || checkFInfoType("ZCHT","GreatWorks[spreadsheet]") ||
+    checkFInfoType("ZOBJ","GreatWorks[draw]") || checkFInfoType("ZCHT","GreatWorks[chart]") ||
     checkFInfoType("GreatWorks");
   }
   else if (m_fInfoCreator=="ZWRT") {
@@ -619,7 +619,7 @@ bool File::readDataInformation()
       return true;
     }
     if (val[1]==0x5a43 && val[2]==0x414c) {
-      m_dataResult.push_back("GreatWorks[cal]");
+      m_dataResult.push_back("GreatWorks[spreadsheet]");
       return true;
     }
     if (val[1]==0x5a4f && val[2]==0x424a) {
@@ -627,7 +627,7 @@ bool File::readDataInformation()
       return true;
     }
     if (val[1]==0x5a43 && val[2]==0x4854) {
-      m_dataResult.push_back("GreatWorks[spreadsheet]");
+      m_dataResult.push_back("GreatWorks[chart]");
       return true;
     }
   }

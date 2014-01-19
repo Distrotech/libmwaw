@@ -68,6 +68,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	GreatWksGraph.hxx		\
 	GreatWksParser.cxx		\
 	GreatWksParser.hxx		\
+	GreatWksSSParser.cxx		\
+	GreatWksSSParser.hxx		\
 	GreatWksText.cxx		\
 	GreatWksText.hxx		\
 	HanMacWrdJGraph.cxx		\

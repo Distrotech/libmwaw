@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef GREAT_WKS_PARSER
-#  define GREAT_WKS_PARSER
+#ifndef GREAT_WKS_SS_PARSER
+#  define GREAT_WKS_SS_PARSER
 
 #include <string>
 #include <vector>
@@ -43,7 +43,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace GreatWksParserInternal
+namespace GreatWksSSParserInternal
 {
 struct State;
 class SubDocument;
@@ -52,32 +52,34 @@ class SubDocument;
 class GreatWksGraph;
 class GreatWksText;
 
-/** \brief the main class to read a GreatWorks text file
+/** \brief the main class to read a GreatWorks spreadsheet file
  */
-class GreatWksParser : public MWAWTextParser
+class GreatWksSSParser : public MWAWSpreadsheetParser
 {
-  friend class GreatWksParserInternal::SubDocument;
+  friend class GreatWksSSParserInternal::SubDocument;
   friend class GreatWksGraph;
   friend class GreatWksText;
 public:
   //! constructor
-  GreatWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  GreatWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~GreatWksParser();
+  virtual ~GreatWksSSParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(librevenge::RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(librevenge::RVNGTextInterface *documentInterface);
+  void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
+  //! returns the page left top point ( in inches)
+  Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
 
@@ -100,8 +102,6 @@ protected:
 protected:
   //! finds the different objects zones
   bool createZones();
-  //! finds the different objects zones ( for a draw file)
-  bool createDrawZones();
 
   //! read the resource fork zone
   bool readRSRCZones();
@@ -116,8 +116,8 @@ protected:
   //! read the windows positions ( WPSN resource block )
   bool readWPSN(MWAWEntry const &entry);
 
-  //! read the DocInfo block ( many unknown data )
-  bool readDocInfo();
+  //! read the spreadsheet block ( many unknown data )
+  bool readSpreadsheet();
   //! read a unknown zone ( ARRs resource block: v2 )
   bool readARRs(MWAWEntry const &entry);
   //! read a unknown zone ( DaHS resource block: v2 )
@@ -138,7 +138,7 @@ protected:
   //
 
   //! the state
-  shared_ptr<GreatWksParserInternal::State> m_state;
+  shared_ptr<GreatWksSSParserInternal::State> m_state;
 
   //! the graph parser
   shared_ptr<GreatWksGraph> m_graphParser;

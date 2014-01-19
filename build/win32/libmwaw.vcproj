@@ -272,6 +272,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GreatWksSSParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\GreatWksText.cxx"
 				>
 			</File>
@@ -670,6 +674,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\GreatWksParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GreatWksSSParser.hxx"
 				>
 			</File>
 			<File

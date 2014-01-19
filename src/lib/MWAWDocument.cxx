@@ -52,6 +52,7 @@
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
 #include "GreatWksParser.hxx"
+#include "GreatWksSSParser.hxx"
 #include "HanMacWrdJParser.hxx"
 #include "HanMacWrdKParser.hxx"
 #include "LightWayTxtParser.hxx"
@@ -384,9 +385,13 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       parser.reset(new MsWksSSParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_GREATWORKS:
+#ifdef DEBUG
+      parser.reset(new GreatWksSSParser(input, rsrcParser, header));
+#endif
+      break;
     // TODO
     case MWAWDocument::MWAW_T_CLARISWORKS:
-    case MWAWDocument::MWAW_T_GREATWORKS:
     // no spreadsheet
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_DOCMAKER:

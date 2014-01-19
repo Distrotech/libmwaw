@@ -41,13 +41,14 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "GreatWksParser.hxx"
@@ -433,9 +434,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksGraph::GreatWksGraph(GreatWksParser &parser) :
+GreatWksGraph::GreatWksGraph(MWAWParser &parser) :
   m_parserState(parser.getParserState()), m_state(new GreatWksGraphInternal::State),
-  m_mainParser(&parser)
+  m_mainParser(&parser), m_callback()
 {
 }
 
@@ -464,7 +465,7 @@ int GreatWksGraph::numPages() const
 
 bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
-  return m_mainParser->sendTextbox(entry, inGraphic);
+  return m_callback.m_sendTextbox && (m_mainParser->*m_callback.m_sendTextbox)(entry, inGraphic);
 }
 
 ////////////////////////////////////////////////////////////
@@ -484,8 +485,8 @@ bool GreatWksGraph::readPatterns(MWAWEntry const &entry)
   }
 
   long pos = entry.begin();
-  MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
@@ -527,8 +528,8 @@ bool GreatWksGraph::readPalettes(MWAWEntry const &entry)
   }
 
   long pos = entry.begin();
-  MWAWInputStreamPtr input = m_mainParser->rsrcInput();
-  libmwaw::DebugFile &ascFile = m_mainParser->rsrcAscii();
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
   libmwaw::DebugStream f;
   entry.setParsed(true);
 
@@ -578,7 +579,7 @@ bool GreatWksGraph::readPalettes(MWAWEntry const &entry)
 bool GreatWksGraph::isGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
+  bool isDraw=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   if (vers == 1 && !isDraw)
     return false;
   int headerSize;
@@ -616,7 +617,7 @@ bool GreatWksGraph::isGraphicZone()
 bool GreatWksGraph::readGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
+  bool isDraw=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   if (vers == 1 && !isDraw)
     return false;
 
@@ -694,7 +695,7 @@ bool GreatWksGraph::readGraphicZone()
 bool GreatWksGraph::findGraphicZone()
 {
   int const vers=version();
-  bool isDraw=m_mainParser->getDocumentType()==GreatWksParser::DRAW;
+  bool isDraw=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   if (vers == 1 && !isDraw)
     return false;
   int headerSize;
@@ -764,7 +765,7 @@ bool GreatWksGraph::findGraphicZone()
 bool GreatWksGraph::isPageFrames()
 {
   int const vers=version();
-  bool hasPageUnknown=vers==2 && m_mainParser->getDocumentType()==GreatWksParser::TEXT;
+  bool hasPageUnknown=vers==2 && m_parserState->m_kind==MWAWDocument::MWAW_K_TEXT;
   int const headerSize=hasPageUnknown ? 22 : vers==2 ? 12 : 16;
   int const nZones= vers==2 ? 3 : 4;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1106,7 +1107,7 @@ bool GreatWksGraph::readPageFrames()
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
   int const vers=version();
-  bool isDraw = m_mainParser->getDocumentType()==GreatWksParser::DRAW;
+  bool isDraw = m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   bool hasPageUnknown=vers==2 && !isDraw;
   int const nZones=hasPageUnknown ? 4 : vers==2 ? 3 : 4;
   long pos=input->tell();
@@ -1734,7 +1735,7 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
 ////////////////////////////////////////////////////////////
 bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendTextbox: can not find the listener\n"));
     return true;
@@ -1750,7 +1751,7 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
-      m_mainParser->canSendTextBoxAsGraphic(text.m_entry) &&
+      m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry) &&
       graphicListener && !graphicListener->isDocumentStarted()) {
     graphicListener->startGraphic(Box2f(Vec2f(0,0),newSz));
     librevenge::RVNGBinaryData data;
@@ -1796,7 +1797,7 @@ bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal
 ////////////////////////////////////////////////////////////
 bool GreatWksGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendPicture: can not find the listener\n"));
     return true;
@@ -1886,7 +1887,7 @@ bool GreatWksGraph::canCreateGraphic(GreatWksGraphInternal::FrameGroup const &gr
       break;
     case GreatWksGraphInternal::Frame::T_TEXT: {
       GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
-      if (!m_mainParser->canSendTextBoxAsGraphic(text.m_entry))
+      if (!m_callback.m_canSendTextBoxAsGraphic || !(m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry))
         return false;
       break;
     }
@@ -1940,7 +1941,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
 
 void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendGroupChild: can not find the listeners\n"));
@@ -1971,7 +1972,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         break;
       case GreatWksGraphInternal::Frame::T_TEXT: {
         GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
-        canMerge=m_mainParser->canSendTextBoxAsGraphic(text.m_entry);
+        canMerge=m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry);
         break;
       }
       case GreatWksGraphInternal::Frame::T_PICTURE:
@@ -2062,7 +2063,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
 ////////////////////////////////////////////////////////////
 bool GreatWksGraph::sendShape(GreatWksGraphInternal::FrameShape const &graph, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendShape: can not find a listener\n"));
     return false;
@@ -2089,8 +2090,8 @@ bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, Gr
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   Vec2f LTPos(0,0);
-  if (m_mainParser->getDocumentType()==GreatWksParser::DRAW)
-    LTPos=72.f*m_mainParser->getPageLeftTop();
+  if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
+    LTPos=72.0*Vec2f(float(m_mainParser->getPageSpan().getMarginLeft()), float(m_mainParser->getPageSpan().getMarginTop()));
   MWAWPosition fPos(frame->m_box[0]+LTPos,frame->m_box.size(),librevenge::RVNG_POINT);
   fPos.setRelativePosition(MWAWPosition::Page);
   fPos.setPage(frame->m_page<0 ? 1: frame->m_page);

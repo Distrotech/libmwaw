@@ -62,6 +62,7 @@ class SubDocument;
 }
 
 class GreatWksParser;
+class GreatWksSSParser;
 
 /** \brief the main class to read the graphic part of a HanMac Word-J file
  *
@@ -71,11 +72,12 @@ class GreatWksParser;
 class GreatWksGraph
 {
   friend class GreatWksParser;
+  friend class GreatWksSSParser;
   friend class GreatWksGraphInternal::SubDocument;
 
 public:
   //! constructor
-  GreatWksGraph(GreatWksParser &parser);
+  GreatWksGraph(MWAWParser &parser);
   //! destructor
   virtual ~GreatWksGraph();
 
@@ -161,6 +163,37 @@ protected:
   //! check if the graph of zones is ok (ie. does not form loop)
   bool checkGraph(GreatWksGraphInternal::Zone &zone, int id, std::set<int> &seens);
 
+  /** a struct used to defined the different callback */
+  struct Callback {
+    //! callback used check if a textbox can be send in a graphic zone, ie. does not contains any graphic
+    typedef bool (MWAWParser:: *CanSendTextBoxAsGraphic)(MWAWEntry const &entry);
+    //! callback used to send textbox
+    typedef bool (MWAWParser:: *SendTextbox)(MWAWEntry const &entry, bool inGraphic);
+
+    /** constructor */
+    Callback() : m_canSendTextBoxAsGraphic(0), m_sendTextbox(0) { }
+    /** copy constructor */
+    Callback(Callback const &orig) : m_canSendTextBoxAsGraphic(0), m_sendTextbox(0)
+    {
+      *this=orig;
+    }
+    /** copy operator */
+    Callback &operator=(Callback const &orig)
+    {
+      m_canSendTextBoxAsGraphic=orig.m_canSendTextBoxAsGraphic;
+      m_sendTextbox=orig.m_sendTextbox;
+      return *this;
+    }
+    /** the new page callback */
+    CanSendTextBoxAsGraphic m_canSendTextBoxAsGraphic;
+    /** the send textbox callback */
+    SendTextbox m_sendTextbox;
+  };
+  //! set the callback
+  void setCallback(Callback const &callback)
+  {
+    m_callback=callback;
+  }
 private:
   GreatWksGraph(GreatWksGraph const &orig);
   GreatWksGraph &operator=(GreatWksGraph const &orig);
@@ -171,12 +204,12 @@ protected:
   //
   //! the parser state
   MWAWParserStatePtr m_parserState;
-
   //! the state
   shared_ptr<GreatWksGraphInternal::State> m_state;
-
   //! the main parser;
-  GreatWksParser *m_mainParser;
+  MWAWParser *m_mainParser;
+  //! the different callback
+  Callback m_callback;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -292,6 +292,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
+      if (type=="ZCAL") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
       // can we treat also ZOLN ?
     }
     else if (creator=="ZWRT") {
@@ -410,6 +414,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     }
     if (val[1]==0x5a4f && val[2]==0x424a) {
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, val[0]==0x100 ? 1 : 2, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    }
+    if (val[1]==0x5a43 && val[2]==0x414C) {
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, val[0]==0x100 ? 1 : 2, MWAWDocument::MWAW_K_SPREADSHEET));
       return res;
     }
     // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)

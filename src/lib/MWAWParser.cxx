@@ -41,11 +41,14 @@
 #include "MWAWParser.hxx"
 
 MWAWParserState::MWAWParserState(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  m_type(type), m_version(0), m_input(input), m_header(header),
+  m_type(type), m_kind(MWAWDocument::MWAW_K_TEXT), m_version(0), m_input(input), m_header(header),
   m_rsrcParser(rsrcParser), m_fontConverter(),
   m_graphicListener(), m_listManager(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
 {
-  if (header) m_version=header->getMajorVersion();
+  if (header) {
+    m_version=header->getMajorVersion();
+    m_kind=header->getKind();
+  }
   m_fontConverter.reset(new MWAWFontConverter);
   m_listManager.reset(new MWAWListManager);
   m_graphicListener.reset(new MWAWGraphicListener(*this));

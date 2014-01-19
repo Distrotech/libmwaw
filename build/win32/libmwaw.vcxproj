@@ -202,6 +202,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\GreatWksSSParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\GreatWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -527,6 +531,7 @@
     <ClInclude Include="..\..\src\lib\FullWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\GreatWksGraph.hxx" />
     <ClInclude Include="..\..\src\lib\GreatWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\GreatWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\GreatWksText.hxx" />
     <ClInclude Include="..\..\src\lib\HanMacWrdJGraph.hxx" />
     <ClInclude Include="..\..\src\lib\HanMacWrdJParser.hxx" />

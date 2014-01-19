@@ -40,11 +40,11 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSection.hxx"
@@ -421,8 +421,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksText::GreatWksText(GreatWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new GreatWksTextInternal::State), m_mainParser(&parser)
+GreatWksText::GreatWksText(MWAWParser &parser) :
+  m_parserState(parser.getParserState()), m_state(new GreatWksTextInternal::State),
+  m_mainParser(&parser), m_callback()
 {
 }
 
@@ -481,7 +482,7 @@ bool GreatWksText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
 
 bool GreatWksText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
-  if (!m_parserState->m_textListener) {
+  if (!m_parserState->getMainListener()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendTextbox: can not find a listener\n"));
     return false;
   }
@@ -1156,7 +1157,7 @@ bool GreatWksText::sendHF(int id)
 
 void GreatWksText::flushExtra()
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksText::flushExtra: can not find a listener\n"));
     return;
@@ -1175,7 +1176,7 @@ bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   if (inGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_textListener;
+    listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: can not find a listener\n"));
     return false;
@@ -1332,7 +1333,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
   if (inGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_textListener;
+    listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendZone: can not find a listener\n"));
     return false;
@@ -1344,8 +1345,11 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
     isMain = false;
   }
   else if (isMain) {
-    m_mainParser->newPage(1);
-    MWAWSection sec=m_mainParser->getMainSection();
+    if (m_callback.m_newPage)
+      (m_mainParser->*m_callback.m_newPage)(1);
+    MWAWSection sec;
+    if (m_callback.m_mainSection)
+      sec=(m_mainParser->*m_callback.m_mainSection)();
     numCol = sec.numColumns();
     if (numCol>1) {
       if (listener->isSectionOpened())
@@ -1427,7 +1431,12 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
       }
       MWAWPosition pictPos(Vec2f(0,0), token.m_dim, librevenge::RVNG_POINT);
       pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
-      m_mainParser->sendPicture(token.m_pictEntry, pictPos);
+      if (m_callback.m_sendPicture)
+        (m_mainParser->*m_callback.m_sendPicture)(token.m_pictEntry, pictPos);
+      else {
+        MWAW_DEBUG_MSG(("GreatWksText::sendZone: oops, can not send the send picture callback\n"));
+        break;
+      }
       break;
     }
     case 0x9:
@@ -1445,7 +1454,9 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
       }
       else {
         actCol = 0;
-        m_mainParser->newPage(++actPage);
+        ++actPage;
+        if (m_callback.m_newPage)
+          (m_mainParser->*m_callback.m_newPage)(actPage);
       }
       break;
     case 0xc:
@@ -1455,7 +1466,9 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
         MWAW_DEBUG_MSG(("GreatWksText::sendZone: find page break in auxilliary zone\n"));
         break;
       }
-      m_mainParser->newPage(++actPage);
+      ++actPage;
+      if (m_callback.m_newPage)
+        (m_mainParser->*m_callback.m_newPage)(actPage);
       actCol = 0;
       break;
     case 0xd:

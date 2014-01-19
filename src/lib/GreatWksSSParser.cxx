@@ -39,7 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
@@ -51,14 +51,14 @@
 #include "GreatWksGraph.hxx"
 #include "GreatWksText.hxx"
 
-#include "GreatWksParser.hxx"
+#include "GreatWksSSParser.hxx"
 
-/** Internal: the structures of a GreatWksParser */
-namespace GreatWksParserInternal
+/** Internal: the structures of a GreatWksSSParser */
+namespace GreatWksSSParserInternal
 {
 
 ////////////////////////////////////////
-//! Internal: the state of a GreatWksParser
+//! Internal: the state of a GreatWksSSParser
 struct State {
   //! constructor
   State() : m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
@@ -114,11 +114,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a GreatWksParser
+//! Internal: the subdocument of a GreatWksSSParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(GreatWksParser &pars, MWAWInputStreamPtr input, int zoneId) :
+  SubDocument(GreatWksSSParser &pars, MWAWInputStreamPtr input, int zoneId) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
 
   //! destructor
@@ -143,18 +143,18 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("GreatWksParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (type!=libmwaw::DOC_HEADER_FOOTER) {
-    MWAW_DEBUG_MSG(("GreatWksParserInternal::SubDocument::parse: unknown type\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParserInternal::SubDocument::parse: unknown type\n"));
     return;
   }
 
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<GreatWksParser *>(m_parser)->sendHF(m_id);
+  reinterpret_cast<GreatWksSSParser *>(m_parser)->sendHF(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -171,64 +171,63 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksParser::GreatWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
+GreatWksSSParser::GreatWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWSpreadsheetParser(input, rsrcParser, header), m_state(), m_graphParser(), m_textParser()
 {
   init();
 }
 
-GreatWksParser::~GreatWksParser()
+GreatWksSSParser::~GreatWksSSParser()
 {
 }
 
-void GreatWksParser::init()
+void GreatWksSSParser::init()
 {
-  resetTextListener();
+  resetSpreadsheetListener();
   setAsciiName("main-1");
 
-  m_state.reset(new GreatWksParserInternal::State);
+  m_state.reset(new GreatWksSSParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
   m_graphParser.reset(new GreatWksGraph(*this));
-  GreatWksGraph::Callback callbackGraph;
-  callbackGraph.m_canSendTextBoxAsGraphic=reinterpret_cast<GreatWksGraph::Callback::CanSendTextBoxAsGraphic>(&GreatWksParser::canSendTextBoxAsGraphic);
-  callbackGraph.m_sendTextbox=reinterpret_cast<GreatWksGraph::Callback::SendTextbox>(&GreatWksParser::sendTextbox);
-  m_graphParser->setCallback(callbackGraph);
-
   m_textParser.reset(new GreatWksText(*this));
-  GreatWksText::Callback callbackText;
-  callbackText.m_newPage=reinterpret_cast<GreatWksText::Callback::NewPage>(&GreatWksParser::newPage);
-  callbackText.m_sendPicture=reinterpret_cast<GreatWksText::Callback::SendPicture>(&GreatWksParser::sendPicture);
-  callbackText.m_mainSection=reinterpret_cast<GreatWksText::Callback::GetMainSection>(&GreatWksParser::getMainSection);
-  m_textParser->setCallback(callbackText);
 }
 
-MWAWInputStreamPtr GreatWksParser::rsrcInput()
+MWAWInputStreamPtr GreatWksSSParser::rsrcInput()
 {
   return getRSRCParser()->getInput();
 }
 
-libmwaw::DebugFile &GreatWksParser::rsrcAscii()
+libmwaw::DebugFile &GreatWksSSParser::rsrcAscii()
 {
   return getRSRCParser()->ascii();
 }
 
 ////////////////////////////////////////////////////////////
+// position and height
+////////////////////////////////////////////////////////////
+Vec2f GreatWksSSParser::getPageLeftTop() const
+{
+  return Vec2f(float(getPageSpan().getMarginLeft()),
+               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+}
+
+////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-MWAWSection GreatWksParser::getMainSection() const
+MWAWSection GreatWksSSParser::getMainSection() const
 {
   return m_state->getSection();
 }
 
-bool GreatWksParser::sendHF(int id)
+bool GreatWksSSParser::sendHF(int id)
 {
   return m_textParser->sendHF(id);
 }
 
-bool GreatWksParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksSSParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
@@ -237,7 +236,7 @@ bool GreatWksParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
   return ok;
 }
 
-bool GreatWksParser::canSendTextBoxAsGraphic(MWAWEntry const &entry)
+bool GreatWksSSParser::canSendTextBoxAsGraphic(MWAWEntry const &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
@@ -249,7 +248,7 @@ bool GreatWksParser::canSendTextBoxAsGraphic(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
+bool GreatWksSSParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
@@ -261,23 +260,23 @@ bool GreatWksParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void GreatWksParser::newPage(int number)
+void GreatWksSSParser::newPage(int number)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
 
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getTextListener() || m_state->m_actPage == 1)
+    if (!getSpreadsheetListener() || m_state->m_actPage == 1)
       continue;
-    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
+    getSpreadsheetListener()->insertBreak(MWAWSpreadsheetListener::PageBreak);
   }
 }
 
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void GreatWksParser::parse(librevenge::RVNGTextInterface *docInterface)
+void GreatWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
   assert(getInput().get() != 0);
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
@@ -289,6 +288,7 @@ void GreatWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 
     checkHeader(0L);
     ok = createZones();
+    ok = false;
     if (ok) {
       createDocument(docInterface);
       m_graphParser->sendPageGraphics();
@@ -300,22 +300,22 @@ void GreatWksParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("GreatWksParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
-  resetTextListener();
+  resetSpreadsheetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void GreatWksParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void GreatWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getTextListener()) {
-    MWAW_DEBUG_MSG(("GreatWksParser::createDocument: listener already exist\n"));
+  if (getSpreadsheetListener()) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -333,7 +333,7 @@ void GreatWksParser::createDocument(librevenge::RVNGTextInterface *documentInter
   MWAWPageSpan ps(getPageSpan());
   int numHF=m_state->numHeaderFooters();
   if (numHF!=m_textParser->numHFZones()) {
-    MWAW_DEBUG_MSG(("GreatWksParser::createDocument: header/footer will be ignored\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::createDocument: header/footer will be ignored\n"));
     numHF=0;
   }
   std::vector<MWAWPageSpan> pageList;
@@ -351,22 +351,22 @@ void GreatWksParser::createDocument(librevenge::RVNGTextInterface *documentInter
       MWAWHeaderFooter hF;
       if (m_state->m_hfFlags[1]==false) {
         hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ALL);
-        hF.m_subDocument.reset(new GreatWksParserInternal::SubDocument(*this, getInput(), id++));
+        hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
         ps.setHeaderFooter(hF);
         continue;
       }
       hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ODD);
-      hF.m_subDocument.reset(new GreatWksParserInternal::SubDocument(*this, getInput(), id++));
+      hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
       ps.setHeaderFooter(hF);
       hF=MWAWHeaderFooter(type, MWAWHeaderFooter::EVEN);
-      hF.m_subDocument.reset(new GreatWksParserInternal::SubDocument(*this, getInput(), id++));
+      hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
       ps.setHeaderFooter(hF);
     }
   }
   ps.setPageSpan(numPages);
   pageList.push_back(ps);
-  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
-  setTextListener(listen);
+  MWAWSpreadsheetListenerPtr listen(new MWAWSpreadsheetListener(*getParserState(), pageList, documentInterface));
+  setSpreadsheetListener(listen);
   listen->startDocument();
 }
 
@@ -375,67 +375,38 @@ void GreatWksParser::createDocument(librevenge::RVNGTextInterface *documentInter
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::createZones()
+bool GreatWksSSParser::createZones()
 {
   readRSRCZones();
-  if (getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW)
-    return createDrawZones();
 
   MWAWInputStreamPtr input = getInput();
-  long pos=36;
+  long pos=18;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  if (!readDocInfo()) {
-    ascii().addPos(pos);
-    ascii().addNote("Entries(DocInfo):###");
-    return false;
-  }
+  if (!m_textParser->readFontNames())
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  bool ok=m_textParser->createZones(m_state->numHeaderFooters());
-  if (input->isEnd()) // v1 file end here
-    return ok;
+  if (!readSpreadsheet())
+    return false;
+
+  if (input->isEnd())
+    return true;
 
   pos = input->tell();
   if (!m_graphParser->readGraphicZone())
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!input->isEnd()) {
     pos = input->tell();
-    MWAW_DEBUG_MSG(("GreatWksParser::createZones: find some extra data\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::createZones: find some extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Loose):");
-    ascii().addPos(pos+200);
+    ascii().addPos(pos+2000);
     ascii().addNote("_");
   }
 
-  return ok;
+  return true;
 }
 
-bool GreatWksParser::createDrawZones()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos;
-  ascii().addPos(40);
-  ascii().addNote("Entries(GZoneHeader)");
-  ascii().addDelimiter(68,'|');
-  pos = 74;
-  input->seek(74, librevenge::RVNG_SEEK_SET);
-  if (!m_textParser->readFontNames())
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-  else
-    pos = input->tell();
-
-  bool ok=m_graphParser->readGraphicZone();
-  if (!input->isEnd()) {
-    pos = input->tell();
-    MWAW_DEBUG_MSG(("GreatWksParser::createZones: find some extra data\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Loose):");
-    ascii().addPos(pos+200);
-    ascii().addNote("_");
-  }
-  return ok;
-}
-
-bool GreatWksParser::readRSRCZones()
+bool GreatWksSSParser::readRSRCZones()
 {
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser)
@@ -494,10 +465,10 @@ bool GreatWksParser::readRSRCZones()
 ////////////////////////////////////////////////////////////
 // read the windows position blocks
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::readWPSN(MWAWEntry const &entry)
+bool GreatWksSSParser::readWPSN(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%24) != 2) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readWPSN: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readWPSN: the entry is bad\n"));
     return false;
   }
 
@@ -513,7 +484,7 @@ bool GreatWksParser::readWPSN(MWAWEntry const &entry)
   f << "N=" << N << ",";
   if (2+24*N!=int(entry.length())) {
     f << "###";
-    MWAW_DEBUG_MSG(("GreatWksParser::readWPSN: the number of entries seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readWPSN: the number of entries seems bad\n"));
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
     return true;
@@ -550,10 +521,10 @@ bool GreatWksParser::readWPSN(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::readPrintInfo(MWAWEntry const &entry)
+bool GreatWksSSParser::readPrintInfo(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() != 120) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readPrintInfo: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readPrintInfo: the entry is bad\n"));
     return false;
   }
 
@@ -604,10 +575,10 @@ bool GreatWksParser::readPrintInfo(MWAWEntry const &entry)
 ////////////////////////////////////////////////////////////
 // read some unknown zone in rsrc fork
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::readARRs(MWAWEntry const &entry)
+bool GreatWksSSParser::readARRs(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%32)) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readARRs: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readARRs: the entry is bad\n"));
     return false;
   }
 
@@ -631,10 +602,10 @@ bool GreatWksParser::readARRs(MWAWEntry const &entry)
   return true;
 }
 
-bool GreatWksParser::readDaHS(MWAWEntry const &entry)
+bool GreatWksSSParser::readDaHS(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length() < 44 || (entry.length()%12) != 8) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readDaHS: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readDaHS: the entry is bad\n"));
     return false;
   }
 
@@ -672,10 +643,10 @@ bool GreatWksParser::readDaHS(MWAWEntry const &entry)
   return true;
 }
 
-bool GreatWksParser::readGrDS(MWAWEntry const &entry)
+bool GreatWksSSParser::readGrDS(MWAWEntry const &entry)
 {
   if (!entry.valid() || (entry.length()%16)) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readGrDS: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readGrDS: the entry is bad\n"));
     return false;
   }
 
@@ -713,15 +684,15 @@ bool GreatWksParser::readGrDS(MWAWEntry const &entry)
   return true;
 }
 
-bool GreatWksParser::readNxEd(MWAWEntry const &entry)
+bool GreatWksSSParser::readNxEd(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<4) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readNxEd: the entry is bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readNxEd: the entry is bad\n"));
     return false;
   }
 
   if (entry.length()!=4) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readNxEd: OHHHH the entry is filled\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readNxEd: OHHHH the entry is filled\n"));
   }
 
   long pos = entry.begin();
@@ -743,139 +714,104 @@ bool GreatWksParser::readNxEd(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read some unknown zone in data fork
+// read the header
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::readDocInfo()
+bool GreatWksSSParser::readSpreadsheet()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  int const vers=version();
-  if (!input->checkPosition(pos+46+(vers==2?6:0)+12+38*16)) {
-    MWAW_DEBUG_MSG(("GreatWksParser::readDocInfo: the zone is too short\n"));
+  libmwaw::DebugStream f;
+
+  f << "Entries(Spreadsheet)[A]:";
+  int val=(int) input->readLong(2);
+  f << "f0=" << val << ",";
+  long sz=(long) input->readULong(4);
+  int expectedSize=version()==1 ? 18 : 40;
+  if (!input->checkPosition(pos+6+sz) || (sz%expectedSize)) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::createZones: can not find the spreadsheet zone\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
     return false;
   }
-  libmwaw::DebugStream f;
-  f << "Entries(DocInfo):";
-  int val;
-  for (int i=0; i < 4; ++i) {
-    static char const *(wh[])= {"fl0", "fl1", "smartquote","hidepict"};
-    val =(int) input->readLong(1);
-    if (!val) continue;
-    if (val==1) f << wh[i] << ",";
-    else f << "#" << wh[i] << "=" << val << ",";
-  }
-  val =(int) input->readLong(2);
-  if (val!=1) f << "first[page]=" << val << ",";
-  for (int i=0; i < 19; ++i) { // always 0
-    val =(int) input->readLong(2);
-    if (val)
-      f << "f" << i+1 << "=" << val << ",";
-  }
-  ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-
-  pos+=46+(vers==2?6:0);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  f.str("");
-  f << "DocInfo-II:";
-  for (int i=0; i < 4; ++i) {
-    val=(int) input->readLong(1);
-    if (!val) continue;
-    static char const *(wh[])= {"titlePage", "left/rightPage", "header","footer"};
-    if (val!=1) {
-      f << "#" << wh[i] << "=" << val << ",";
-      continue;
-    }
-    f << wh[i] << ",";
-    m_state->m_hfFlags[i]=true;
-  }
-
-  val=(int) input->readLong(2); // f1=1|2
-  if (val)
-    f << "f0=" << val << ",";
-  f << "colSep[w]=" << float(input->readLong(4))/65536.f << ",";
-  val=(int) input->readLong(1);
-  if (val==1) f << "same[colW]?,";
-  else if (val) f << "#same[colW]=" << val << ",";
-  val=(int) input->readLong(1);
-  if (val==1) {
-    f << "hasColSep,";
-    m_state->m_hasColSep = true;
-  }
-  else if (val) f << "#hasColSep=" << val << ",";
-  input->seek(pos+12, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  for (int i=0; i < 14; ++i) {
-    pos = input->tell();
-    f.str("");
-    if (i<4) {
-      static char const *wh[]= {"margins", "header/footer", "1", "pageDim" };
-      f << "DocInfo[" << wh[i] << "]:";
-    }
-    else
-      f << "DocInfo[" << i << "]:";
-
-    double dim[4];
-    for (int j=0; j<4; ++j)
-      dim[j]=double(input->readLong(4))/65536.;
-    if (dim[0]>0 || dim[1]>0||dim[2]>0||dim[3]>0) {
-      f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
-      if (i==0) {
-        getPageSpan().setMarginTop(dim[0]/72.0);
-        getPageSpan().setMarginBottom(dim[2]/72.0);
-        getPageSpan().setMarginLeft(dim[1]/72.0);
-        getPageSpan().setMarginRight(dim[3]/72.0);
-      }
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+16, librevenge::RVNG_SEEK_SET);
-  }
-  for (int st=0; st < 2; ++st) {
+  for (int i=0; i <sz/expectedSize; ++i) {
     pos=input->tell();
     f.str("");
-    if (st==0)
-      f << "DocInfo[leftPage]:";
-    else
-      f << "DocInfo[rightPage]:";
-    for (int i=0; i < 12; ++i) {
-      double dim[4];
-      for (int j=0; j<4; ++j)
-        dim[j]=double(input->readLong(4))/65536.;
-      if (dim[0]>0 || dim[1]>0||dim[2]>0||dim[3]>0) {
-        switch (i) {
-        case 0:
-          f << "header=";
-          break;
-        case 11:
-          f << "footer=";
-          break;
-        default:
-          f << "col" << i-1 << "=";
-          if (st==1)
-            continue;
-          m_state->m_columnsWidth.push_back(dim[1]);
-          m_state->m_columnsWidth.push_back(dim[3]);
-          break;
-        }
-        f << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+    f << "Spreadsheet-A" << i << ":";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
+  }
+  while (!input->isEnd()) { // always f7=13, f8=75, f12=13 ?
+    pos = input->tell();
+    f.str("");
+    f << "Spreadsheet-B:";
+    val=(int) input->readLong(2); // 7,8,c
+    f << "f" << val << "=";
+    if (input->readULong(4)!=2) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f << input->readLong(2) << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  while (!input->isEnd()) {
+    bool ok=true;
+    pos = input->tell();
+    f.str("");
+    f << "Spreadsheet-C:";
+    val=(int) input->readLong(2);
+    f << "Spreadsheet-C[" << val << "]:";
+    switch (val) {
+    case 3:
+    case 5: {
+      sz=(long) input->readULong(2);
+      ok = input->checkPosition(pos+4+sz);
+      if (!ok) break;
+      input->seek(sz, librevenge::RVNG_SEEK_CUR);
+      break;
+    }
+    case 4:
+      break;
+    case 6:
+      if (!input->checkPosition(pos+10)) {
+        ok=false;
+        break;
       }
+      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      break;
+    default: {
+      sz=(long) input->readULong(4);
+      if (val <= 6 || !input->checkPosition(pos+6+sz)) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    }
+    if (!ok) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
     }
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
-
+  /* fixme: find the limit of the last zone
+     case 0x13: cell contents
+     case 0x14: end of cell... */
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool GreatWksParser::checkHeader(MWAWHeader *header, bool strict)
+bool GreatWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = GreatWksParserInternal::State();
+  *m_state = GreatWksSSParserInternal::State();
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(0x4c))
     return false;
@@ -893,22 +829,14 @@ bool GreatWksParser::checkHeader(MWAWHeader *header, bool strict)
   std::string type("");
   for (int i=0; i < 4; ++i)
     type+=(char) input->readLong(1);
-  bool isDraw=false;
-  if (type=="ZOBJ") {
-    isDraw=true;
-    getParserState()->m_kind=MWAWDocument::MWAW_K_DRAW;
-    MWAW_DEBUG_MSG(("GreatWksParser::checkHeader: find a draw file\n"));
-  }
-  else if (type!="ZWRT")
+  if (type!="ZCAL")
     return false;
 
   if (strict) {
     // check that the fonts table is in expected position
-    long fontPos=vers==1 ? 0x302 : 0x308;
-    if (isDraw)
-      fontPos = 0x4a;
+    long fontPos=18;
     if (input->seek(fontPos, librevenge::RVNG_SEEK_SET) || !m_textParser->readFontNames()) {
-      MWAW_DEBUG_MSG(("GreatWksParser::checkHeader: can not find fonts table\n"));
+      MWAW_DEBUG_MSG(("GreatWksSSParser::checkHeader: can not find fonts table\n"));
       return false;
     }
   }
@@ -918,10 +846,10 @@ bool GreatWksParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addNote("FileHeader-II:");
 
   if (header)
-    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers);
+    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers, MWAWDocument::MWAW_K_SPREADSHEET);
+  else
+    getParserState()->m_kind=MWAWDocument::MWAW_K_SPREADSHEET;
   return true;
 }
-
-
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

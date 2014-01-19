@@ -59,6 +59,8 @@ public:
   MWAWListenerPtr getMainListener();
   //! the state type
   Type m_type;
+  //! the document kind
+  MWAWDocument::Kind m_kind;
   //! the actual version
   int m_version;
   //! the input
