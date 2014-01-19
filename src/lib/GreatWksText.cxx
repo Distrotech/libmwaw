@@ -455,6 +455,11 @@ int GreatWksText::numPages() const
   return m_state->m_numPages = nPages;
 }
 
+int GreatWksText::getFontId(int fileId) const
+{
+  return m_state->getFId(fileId);
+}
+
 int GreatWksText::numHFZones() const
 {
   int nHF=0;

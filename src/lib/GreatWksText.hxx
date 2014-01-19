@@ -87,6 +87,8 @@ protected:
   bool sendTextbox(MWAWEntry const &entry, bool inGraphic);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+  //! read the final font id corresponding to a file id
+  int getFontId(int fileId) const;
 
   //
   // intermediate level

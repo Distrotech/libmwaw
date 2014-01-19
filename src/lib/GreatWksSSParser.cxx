@@ -39,13 +39,15 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWSpreadsheetListener.hxx"
+#include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
-#include "MWAWSection.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSection.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "GreatWksGraph.hxx"
@@ -380,11 +382,8 @@ bool GreatWksSSParser::createZones()
   readRSRCZones();
 
   MWAWInputStreamPtr input = getInput();
-  long pos=18;
+  long pos=16;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  if (!m_textParser->readFontNames())
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-
   if (!readSpreadsheet())
     return false;
 
@@ -714,7 +713,7 @@ bool GreatWksSSParser::readNxEd(MWAWEntry const &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// read the header
+// read a spreadsheet
 ////////////////////////////////////////////////////////////
 bool GreatWksSSParser::readSpreadsheet()
 {
@@ -722,74 +721,125 @@ bool GreatWksSSParser::readSpreadsheet()
   long pos = input->tell();
   libmwaw::DebugStream f;
 
-  f << "Entries(Spreadsheet)[A]:";
-  int val=(int) input->readLong(2);
-  f << "f0=" << val << ",";
-  long sz=(long) input->readULong(4);
-  int expectedSize=version()==1 ? 18 : 40;
-  if (!input->checkPosition(pos+6+sz) || (sz%expectedSize)) {
-    MWAW_DEBUG_MSG(("GreatWksSSParser::createZones: can not find the spreadsheet zone\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  for (int i=0; i <sz/expectedSize; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Spreadsheet-A" << i << ":";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
-  }
-  while (!input->isEnd()) { // always f7=13, f8=75, f12=13 ?
-    pos = input->tell();
-    f.str("");
-    f << "Spreadsheet-B:";
-    val=(int) input->readLong(2); // 7,8,c
-    f << "f" << val << "=";
-    if (input->readULong(4)!=2) {
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      break;
-    }
-    f << input->readLong(2) << ",";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
   while (!input->isEnd()) {
-    bool ok=true;
+    bool ok=true, printDone=false;
     pos = input->tell();
     f.str("");
-    f << "Spreadsheet-C:";
-    val=(int) input->readLong(2);
-    f << "Spreadsheet-C[" << val << "]:";
-    switch (val) {
-    case 3:
-    case 5: {
-      sz=(long) input->readULong(2);
-      ok = input->checkPosition(pos+4+sz);
+    int type=(int) input->readLong(2);
+    if (type>=0 && type < 0x12) {
+      static char const *(wh[0x12]) = {
+        "_", "FontNames", "FontDef", "Column", "Column", "Row", "Zone6", "Row",
+        "Column", "Zone9", "Zonea", "Zoneb", "Row", "Screen", "DocOptions", "Selection",
+        "DocInfo", "CalcMode"
+      };
+      f << "Entries(" << wh[type] << "):";
+    }
+    else
+      f << "Entries(Zone" << std::hex << type << std::dec << "):";
+    long endPos=0;
+    switch (type) {
+    case 1:
+      if (!m_textParser->readFontNames()) {
+        ok=false;
+        break;
+      }
+      printDone = true;
+      endPos=input->tell();
+      break;
+    case 2:
+      if (!readFonts()) {
+        ok=false;
+        break;
+      }
+      printDone = true;
+      endPos=input->tell();
+      break;
+    case 3: // column
+    case 5: { // row :
+      long sz=(long) input->readULong(2);
+      endPos=pos+4+(long) sz;
+      ok = (sz>=4 && input->checkPosition(endPos));
       if (!ok) break;
-      input->seek(sz, librevenge::RVNG_SEEK_CUR);
+      f << "pos=" << input->readLong(2) << ",";
+      f << "size=" << input->readLong(2) << ",";
+      // readULong(1)&1 -> page break?
       break;
     }
     case 4:
+      f << "end";
+      endPos=pos+2;
       break;
     case 6:
-      if (!input->checkPosition(pos+10)) {
+      endPos=pos+10;
+      if (!input->checkPosition(endPos)) {
         ok=false;
         break;
       }
-      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      for (int i=0; i < 4; ++i) {
+        int val=(int) input->readLong(2);
+        static int const expected[]= {9,0,2,0x2e};
+        if (val!=expected[i])
+          f << "f" << i << "=" << val << ",";
+      }
       break;
-    default: {
-      sz=(long) input->readULong(4);
-      if (val <= 6 || !input->checkPosition(pos+6+sz)) {
+    // case 0x10: dim ? + string + select cell...
+
+    case 7: // d default row size
+    case 8: // 4b default column size
+    case 0xb: // 0|4
+    case 0xc: // d
+    case 0x11: // 0
+    case 0x1a: { // 1
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
         ok=false;
         break;
       }
-      input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
+      if (sz<2) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of zone %d seems odd\n", type));
+        break;
+      }
+      int val=(int)input->readULong(2);
+      switch (type) {
+      case 7:
+        f << "height[def]=" << val << ",";
+        break;
+      case 8:
+        f << "width[def]=" << val << ",";
+        break;
+      case 0xc: // similar to 7 related to header?
+        f << "height[def2]=" << val << ",";
+        break;
+      case 0x11:
+        if (val==1) f << "manual,";
+        else if (val) f << "##val=" << val << ",";
+        break;
+      default:
+        f << "f0=" << val << ",";
+        break;
+      }
+      break;
+    }
+    case 0x13:
+      if (!readCell()) {
+        ok=false;
+        break;
+      }
+      printDone = true;
+      endPos=input->tell();
+      break;
+    case 0x14:
+      ascii().addPos(pos);
+      ascii().addNote("_");
+      return true;
+    default: {
+      endPos=pos+6+(long) input->readULong(4);
+      if (type <= 0 || !input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
       break;
     }
     }
@@ -797,12 +847,190 @@ bool GreatWksSSParser::readSpreadsheet()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
+    if (input->tell()!=endPos)
+      ascii().addDelimiter(input->tell(),'|');
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    if (printDone)
+      continue;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
   /* fixme: find the limit of the last zone
-     case 0x13: cell contents
      case 0x14: end of cell... */
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read a cell
+////////////////////////////////////////////////////////////
+bool GreatWksSSParser::readCell()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw::DebugStream f;
+
+  f << "Entries(Cell):";
+  long sz=(long) input->readULong(4);
+  long endPos=pos+4+sz;
+  if (sz < 12 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not find a cell\n"));
+    f << "###";
+    ascii().addPos(pos-2);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int cPos[2];
+  for (int i=0; i<2; ++i)
+    cPos[i]=(int) input->readLong(2);
+  f << "cell" << cPos[0] << "x" << cPos[1] << ",";
+  f << "style" << (int) input->readLong(2) << ",";
+  int val=(int) input->readULong(2);
+  switch ((val>>8)&0x1f) {
+  case 0:
+    break;
+  case 1:
+    f << "currency,";
+    break;
+  case 2:
+    f << "percent,";
+    break;
+  case 3:
+    f << "fixed,";
+    break;
+  case 4:
+    f << "scientific,";
+    break;
+  case 5:
+    f << "bool,";
+    break;
+  default:
+    f << "#format=" << ((val>>8)&0x1f) << ",";
+    break;
+  }
+  val &=0xE0FF;
+  if (val)
+    f << "fl0=" << std::hex << val << std::dec << ",";
+  val=(int) input->readULong(2);
+  if (val&0xf) {
+    f << "bord=";
+    if (val&1) f << "T";
+    if (val&2) f << "R";
+    if (val&4) f << "B";
+    if (val&8) f << "L";
+    f << ",";
+  }
+  switch ((val>>8)&0x7) {
+  case 0: // none
+    break;
+  case 1:
+    f << "align=left,";
+    break;
+  case 2:
+    f << "align=center,";
+    break;
+  case 3:
+    f << "align=right,";
+    break;
+  case 4:
+    f << "align=repeat,";
+    break;
+  default:
+    f << "#align=" << ((val>>8)&0x7) << ",";
+  }
+  if (val&0x8000) f << "protected,";
+  val &= 0x78F0;
+  if (val)
+    f << "fl1=" << std::hex << val << std::dec << ",";
+  if (input->tell()!=endPos) {
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  }
+  ascii().addPos(pos-2);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read the fonts
+////////////////////////////////////////////////////////////
+bool GreatWksSSParser::readFonts()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  int const vers=version();
+  libmwaw::DebugStream f;
+
+  f << "Entries(FontDef):";
+  long sz=(long) input->readULong(4);
+  long endPos=pos+4+sz;
+  int expectedSize=vers==1 ? 18 : 40;
+  if (!input->checkPosition(endPos) || (sz%expectedSize)) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readFonts: can not find the font defs zone\n"));
+    f << "###";
+    ascii().addPos(pos-2);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos-2);
+  ascii().addNote(f.str().c_str());
+  int numFonts=int(sz/expectedSize);
+  for (int i=0; i <numFonts; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "FontDef-" << i << ":";
+    MWAWFont font;
+    int val=(int) input->readLong(2); // always 0 ?
+    if (val) f << "#unkn=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val!=1) f << "used?=" << val << ",";
+
+    font.setId(m_textParser->getFontId((int) input->readULong(2)));
+    int flag =(int) input->readULong(2);
+    uint32_t flags=0;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
+    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
+    if (flag&0x20) font.setDeltaLetterSpacing(-1);
+    if (flag&0x40) font.setDeltaLetterSpacing(1);
+    if (flag&0x100) font.set(MWAWFont::Script::super100());
+    if (flag&0x200) font.set(MWAWFont::Script::sub100());
+    if (flag&0x800) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+    if (flag&0x2000) {
+      font.setUnderlineStyle(MWAWFont::Line::Simple);
+      font.setUnderlineType(MWAWFont::Line::Double);
+    }
+    flag &=0xD480;
+    if (flag) f << "#fl=" << std::hex << flag << std::dec << ",";
+    font.setFlags(flags);
+    font.setSize((float) input->readULong(2));
+    unsigned char color[3];
+    for (int c=0; c<3; ++c)
+      color[c] = (unsigned char)(input->readULong(2)>>8);
+    font.setColor(MWAWColor(color[0],color[1],color[2]));
+    f << font.getDebugString(getParserState()->m_fontConverter) << ",";
+    f << "h[line]?=" << input->readULong(2) << ",";
+    if (vers==1) {
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    for (int j=0; j<2; ++j) {  // front/back color?
+      for (int c=0; c<3; ++c)
+        color[c] = (unsigned char)(input->readULong(2)>>8);
+      MWAWColor col(color[0],color[1],color[2]);
+      if ((j==0 && col.isBlack()) || (j==1 && col.isWhite())) continue;
+      f << "col" << j << "=" << MWAWColor(color[0],color[1],color[2]) << ",";
+    }
+    val=(int) input->readLong(2);
+    if (val) f << "pattern[id]=" << val << ",";
+    // followed by pattern(readme)
+    ascii().addDelimiter(input->tell(), '|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
+  }
   return true;
 }
 

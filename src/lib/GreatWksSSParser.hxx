@@ -116,8 +116,12 @@ protected:
   //! read the windows positions ( WPSN resource block )
   bool readWPSN(MWAWEntry const &entry);
 
+  //! try to read the fonts
+  bool readFonts();
   //! read the spreadsheet block ( many unknown data )
   bool readSpreadsheet();
+  //! try to read a cell
+  bool readCell();
   //! read a unknown zone ( ARRs resource block: v2 )
   bool readARRs(MWAWEntry const &entry);
   //! read a unknown zone ( DaHS resource block: v2 )
