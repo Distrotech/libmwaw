@@ -1889,7 +1889,7 @@ bool BeagleWksSSParser::readFormula(long endPos, Vec2i const &position,
     default:
       if (wh >= 0x70 || (wh < 0x20 && BeagleWksSSParserInternal::s_listFunctions[wh].m_arity == -2)) {
         f.str("");
-        f << "##Funct" << std::hex << wh;
+        f << "##Funct" << std::hex << wh << std::dec;
         error=f.str();
         ok = false;
         break;

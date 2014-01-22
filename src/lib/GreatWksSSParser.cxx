@@ -58,57 +58,83 @@
 /** Internal: the structures of a GreatWksSSParser */
 namespace GreatWksSSParserInternal
 {
+/** a cell of a GreatWksSSParser */
+class Cell : public MWAWCell
+{
+public:
+  /// constructor
+  Cell() : m_font(3,12), m_content(), m_style(-1) { }
+  //! returns true if the cell do contain any content
+  bool isEmpty() const
+  {
+    return m_content.empty() && !hasBorders();
+  }
+
+  /** the font */
+  MWAWFont m_font;
+  //! the cell content
+  MWAWCellContent m_content;
+  /** the cell style */
+  int m_style;
+};
+
+/** the spreadsheet of a of a MsWksSSParser */
+class Spreadsheet
+{
+public:
+  //! constructor
+  Spreadsheet() : m_widthDefault(75), m_widthCols(), m_heightDefault(13), m_heightRows(),
+    m_cells(), m_name("Sheet0")
+  {
+  }
+  //! convert the m_widthCols in a vector of of point size
+  std::vector<float> convertInPoint(std::vector<int> const &list) const
+  {
+    size_t numCols=size_t(getRightBottomPosition()[0]+1);
+    std::vector<float> res;
+    res.resize(numCols);
+    for (size_t i = 0; i < numCols; i++) {
+      if (i>=list.size() || list[i] < 0) res[i] = float(m_widthDefault);
+      else res[i] = float(list[i]);
+    }
+    return res;
+  }
+  /** the default column width */
+  int m_widthDefault;
+  /** the column size in points */
+  std::vector<int> m_widthCols;
+  /** the default row height */
+  int m_heightDefault;
+  /** the row height in points */
+  std::vector<int> m_heightRows;
+  /** the list of not empty cells */
+  std::vector<Cell> m_cells;
+  /** the spreadsheet name */
+  std::string m_name;
+protected:
+  /** returns the last Right Bottom cell position */
+  Vec2i getRightBottomPosition() const
+  {
+    int maxX = 0, maxY = 0;
+    size_t numCell = m_cells.size();
+    for (size_t i = 0; i < numCell; i++) {
+      Vec2i const &p = m_cells[i].position();
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] > maxY) maxY = p[1];
+    }
+    return Vec2i(maxX, maxY);
+  }
+};
 
 ////////////////////////////////////////
 //! Internal: the state of a GreatWksSSParser
 struct State {
   //! constructor
-  State() : m_columnsWidth(), m_hasColSep(false), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_spreadsheet(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
-    for (int i=0; i<4; ++i)
-      m_hfFlags[i]=false;
   }
-  //! returns the number of expected header/footer zones
-  int numHeaderFooters() const
-  {
-    int num=0;
-    if (m_hfFlags[2]) num++; // header
-    if (m_hfFlags[3]) num++; // footer
-    if (m_hfFlags[1]) num*=2; // lf page
-    return num;
-  }
-
-  //! returns a section
-  MWAWSection getSection() const
-  {
-    MWAWSection sec;
-    size_t numCols = m_columnsWidth.size()/2;
-    if (numCols <= 1)
-      return sec;
-    sec.m_columns.resize(size_t(numCols));
-    if (m_hasColSep)
-      sec.m_columnSeparator=MWAWBorder();
-    for (size_t c=0; c < numCols; c++) {
-      double wSep=0;
-      if (c)
-        wSep += sec.m_columns[c].m_margins[libmwaw::Left]=
-                  double(m_columnsWidth[2*c]-m_columnsWidth[2*c-1])/72./2.;
-      if (c+1!=numCols)
-        wSep+=sec.m_columns[c].m_margins[libmwaw::Right]=
-                double(m_columnsWidth[2*c+2]-m_columnsWidth[2*c+1])/72./2.;
-      sec.m_columns[c].m_width =
-        double(m_columnsWidth[2*c+1]-m_columnsWidth[2*c])+72.*wSep;
-      sec.m_columns[c].m_widthUnit = librevenge::RVNG_POINT;
-    }
-    return sec;
-  }
-
-  //! the columns dimension
-  std::vector<double> m_columnsWidth;
-  //! flags to define header/footer (titlePage, l/rPage, header, footer)
-  bool m_hfFlags[4];
-  //! true if columns have columns separator
-  bool m_hasColSep;
+  /** the spreadsheet */
+  Spreadsheet m_spreadsheet;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -194,7 +220,14 @@ void GreatWksSSParser::init()
   getPageSpan().setMargins(0.1);
 
   m_graphParser.reset(new GreatWksGraph(*this));
+  GreatWksGraph::Callback callbackGraph;
+  callbackGraph.m_canSendTextBoxAsGraphic=reinterpret_cast<GreatWksGraph::Callback::CanSendTextBoxAsGraphic>(&GreatWksSSParser::canSendTextBoxAsGraphic);
+  callbackGraph.m_sendTextbox=reinterpret_cast<GreatWksGraph::Callback::SendTextbox>(&GreatWksSSParser::sendTextbox);
+  m_graphParser->setCallback(callbackGraph);
+
   m_textParser.reset(new GreatWksText(*this));
+  GreatWksText::Callback callbackText;
+  callbackText.m_sendPicture=reinterpret_cast<GreatWksText::Callback::SendPicture>(&GreatWksSSParser::sendPicture);
 }
 
 MWAWInputStreamPtr GreatWksSSParser::rsrcInput()
@@ -208,22 +241,8 @@ libmwaw::DebugFile &GreatWksSSParser::rsrcAscii()
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
-////////////////////////////////////////////////////////////
-Vec2f GreatWksSSParser::getPageLeftTop() const
-{
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
-}
-
-////////////////////////////////////////////////////////////
 // interface with the text parser
 ////////////////////////////////////////////////////////////
-MWAWSection GreatWksSSParser::getMainSection() const
-{
-  return m_state->getSection();
-}
-
 bool GreatWksSSParser::sendHF(int id)
 {
   return m_textParser->sendHF(id);
@@ -257,22 +276,6 @@ bool GreatWksSSParser::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
   bool ok=m_graphParser->sendPicture(entry, pos);
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
   return ok;
-}
-
-////////////////////////////////////////////////////////////
-// new page
-////////////////////////////////////////////////////////////
-void GreatWksSSParser::newPage(int number)
-{
-  if (number <= m_state->m_actPage || number > m_state->m_numPages)
-    return;
-
-  while (m_state->m_actPage < number) {
-    m_state->m_actPage++;
-    if (!getSpreadsheetListener() || m_state->m_actPage == 1)
-      continue;
-    getSpreadsheetListener()->insertBreak(MWAWSpreadsheetListener::PageBreak);
-  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -333,38 +336,7 @@ void GreatWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *docu
   m_state->m_numPages = numPages;
 
   MWAWPageSpan ps(getPageSpan());
-  int numHF=m_state->numHeaderFooters();
-  if (numHF!=m_textParser->numHFZones()) {
-    MWAW_DEBUG_MSG(("GreatWksSSParser::createDocument: header/footer will be ignored\n"));
-    numHF=0;
-  }
   std::vector<MWAWPageSpan> pageList;
-  if (numHF && m_state->m_hfFlags[0]) // title page have no header/footer
-    pageList.push_back(ps);
-  else
-    numPages++;
-  if (numHF) {
-    int id=0;
-    for (int w=0; w<2; ++w) {
-      if (!m_state->m_hfFlags[w+2])
-        continue;
-      MWAWHeaderFooter::Type type=
-        w==0 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER;
-      MWAWHeaderFooter hF;
-      if (m_state->m_hfFlags[1]==false) {
-        hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ALL);
-        hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
-        ps.setHeaderFooter(hF);
-        continue;
-      }
-      hF=MWAWHeaderFooter(type, MWAWHeaderFooter::ODD);
-      hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
-      ps.setHeaderFooter(hF);
-      hF=MWAWHeaderFooter(type, MWAWHeaderFooter::EVEN);
-      hF.m_subDocument.reset(new GreatWksSSParserInternal::SubDocument(*this, getInput(), id++));
-      ps.setHeaderFooter(hF);
-    }
-  }
   ps.setPageSpan(numPages);
   pageList.push_back(ps);
   MWAWSpreadsheetListenerPtr listen(new MWAWSpreadsheetListener(*getParserState(), pageList, documentInterface));
@@ -387,18 +359,12 @@ bool GreatWksSSParser::createZones()
   if (!readSpreadsheet())
     return false;
 
-  if (input->isEnd())
-    return true;
-
-  pos = input->tell();
-  if (!m_graphParser->readGraphicZone())
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!input->isEnd()) {
     pos = input->tell();
     MWAW_DEBUG_MSG(("GreatWksSSParser::createZones: find some extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Loose):");
-    ascii().addPos(pos+2000);
+    ascii().addPos(pos+100);
     ascii().addNote("_");
   }
 
@@ -718,6 +684,7 @@ bool GreatWksSSParser::readNxEd(MWAWEntry const &entry)
 bool GreatWksSSParser::readSpreadsheet()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long pos = input->tell();
   libmwaw::DebugStream f;
 
@@ -726,14 +693,23 @@ bool GreatWksSSParser::readSpreadsheet()
     pos = input->tell();
     f.str("");
     int type=(int) input->readLong(2);
-    if (type>=0 && type < 0x12) {
-      static char const *(wh[0x12]) = {
-        "_", "FontNames", "FontDef", "Column", "Column", "Row", "Zone6", "Row",
+    if (type==0x10) {
+      if (vers==1)
+        f << "Entries(DocInfo):";
+      else // some patterns?
+        f << "Entries(Zone10):";
+    }
+    else if (type>=0 && type < 0x1a) {
+      static char const *(wh[0x1a]) = {
+        "_", "FontNames", "Style", "Column", "Column", "Row", "Zone6", "Row",
         "Column", "Zone9", "Zonea", "Zoneb", "Row", "Screen", "DocOptions", "Selection",
-        "DocInfo", "CalcMode"
+        "DocInfo", "CalcMode", "Zone12", "Zone13", "Zone14", "GridOptions", "DocInfo", "Header",
+        "Footer", "Chart"
       };
       f << "Entries(" << wh[type] << "):";
     }
+    else if (type==0x1c)
+      f << "Entries(Graphic):";
     else
       f << "Entries(Zone" << std::hex << type << std::dec << "):";
     long endPos=0;
@@ -747,7 +723,7 @@ bool GreatWksSSParser::readSpreadsheet()
       endPos=input->tell();
       break;
     case 2:
-      if (!readFonts()) {
+      if (!readStyles()) {
         ok=false;
         break;
       }
@@ -796,7 +772,7 @@ bool GreatWksSSParser::readSpreadsheet()
         ok=false;
         break;
       }
-      if (sz<2) {
+      if (sz!=2) {
         f << "###";
         MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of zone %d seems odd\n", type));
         break;
@@ -822,18 +798,192 @@ bool GreatWksSSParser::readSpreadsheet()
       }
       break;
     }
-    case 0x13:
-      if (!readCell()) {
+    case 0xd: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if ((vers==1 && sz!=0x8) || (vers==2 && sz!=0x18)) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of screen zone seems odd\n"));
+        break;
+      }
+      int dim[4];
+      for (int i=0; i<4; ++i)
+        dim[i]=(int)input->readLong(2);
+      f << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+      if (vers==1) break;
+      for (int i=0; i<4; ++i)
+        dim[i]=(int)input->readLong(2);
+      f << "screen2?=" << dim[0] << "x" << dim[1] << "<->" << dim[1] << "x" << dim[2] << ",";
+      // now find 00000003cccc3333
+      break;
+    }
+    case 0xe: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if (sz!=0xa) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of selection zone seems odd\n"));
+        break;
+      }
+      int val;
+      for (int i=0; i<9; ++i) {
+        val=(int)input->readULong(1);
+        if (!val) continue;
+        // checkme: same value in v2 ?
+        static char const *(what[])= {"grid[display]", "headerRC[display]", "zero[doc]", "formula[doc]", "grid[print]", "headerRC[print]", "header[print]", "footer[print]", "protected" };
+        if (val==1)
+          f << what[i] << ",";
+        else
+          f << "###" << what[i] << "=" << val << ",";
+      }
+      val=(int)input->readULong(1);
+      if (val!=1) f << "first[page]=" << val << ",";
+      break;
+    }
+    case 0xf: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if (sz!=0xe) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of selection zone seems odd\n"));
+        break;
+      }
+      int val=(int)input->readULong(2);
+      if (val != 4) f << "f0=" << val << ",";
+      f << "cells=[";
+      for (int i=0; i<3; ++i) // probably selected cell, followed by a cell range
+        f << input->readLong(2) << "x" << input->readLong(2) << ",";
+      f << "],";
+      break;
+    }
+    case 0x10: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if (vers==2) break;
+      if (sz!=0x12) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of docinfo zone seems odd\n"));
+        break;
+      }
+      int dim[4];
+      for (int i=0; i<4; ++i)
+        dim[i]=(int)input->readLong(2);
+      f << "page=" << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+      if (input->readLong(1)!=1) break;
+      input->seek(1,librevenge::RVNG_SEEK_CUR);
+      for (int i=0; i<4; ++i)
+        dim[i]=(int)input->readLong(2);
+      f << "select=" << dim[0] << "x" << dim[1] << "<->" << dim[2] << "x" << dim[3] << ",";
+      break;
+    }
+    case 0x13: {
+      GreatWksSSParserInternal::Cell cell;
+      if (!readCell(cell)) {
         ok=false;
         break;
       }
       printDone = true;
       endPos=input->tell();
       break;
+    }
     case 0x14:
       ascii().addPos(pos);
       ascii().addNote("_");
       return true;
+    case 0x15: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if (sz!=0xa || vers!=2) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of grid option zone seems odd\n"));
+        break;
+      }
+      int val=(int)input->readLong(2);
+      if (val!=1) f << "unit=" << val << ",";
+      val=(int)input->readLong(2);
+      if (val!=5) f << "subdiv=" << val << ",";
+      break;
+    }
+    case 0x16: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      if (sz!=0x30 || vers!=2) {
+        f << "###";
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readSpreadsheet: size of doc info zone seems odd\n"));
+        break;
+      }
+      f << "margins=[";
+      for (int j=0; j<4; ++j)
+        f << double(input->readLong(4))/65536. << ",";
+      f << "],";
+      for (int c=0; c<2; ++c) {
+        // two times the same values: related to header/footer ?
+        f << "unkn" << c << "=[";
+        for (int j=0; j<8; ++j) {
+          int val=(int)input->readLong(2);
+          if (val)
+            f << val << ",";
+          else
+            f << "_,";
+        }
+        f << "],";
+      }
+      break;
+    }
+    case 0x17:
+    case 0x18: {
+      long sz=(long) input->readULong(4);
+      endPos=pos+6+sz;
+      if (!input->checkPosition(endPos)) {
+        ok=false;
+        break;
+      }
+      /* TODO:  a simple or a complex text zone
+         need to store the entry and then call m_textParser->sendTextbox
+      */
+      break;
+    }
+    case 0x19:
+      if (!readChart()) {
+        ok=false;
+        break;
+      }
+      printDone = true;
+      endPos=input->tell();
+      break;
+    case 0x1c:
+      input->seek(-2, librevenge::RVNG_SEEK_CUR);
+      if (!m_graphParser->readPageFrames()) {
+        ok=false;
+        break;
+      }
+      printDone = true;
+      endPos=input->tell();
+      break;
     default: {
       endPos=pos+6+(long) input->readULong(4);
       if (type <= 0 || !input->checkPosition(endPos)) {
@@ -842,6 +992,13 @@ bool GreatWksSSParser::readSpreadsheet()
       }
       break;
     }
+    }
+    if (!ok && type>=7) {
+      // try to use the default value
+      input->seek(pos+2, librevenge::RVNG_SEEK_SET);
+      long sz=type==0x14 ? 0 : (long) input->readULong(4);
+      endPos=pos+6+sz;
+      ok=input->checkPosition(endPos);
     }
     if (!ok) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -861,10 +1018,56 @@ bool GreatWksSSParser::readSpreadsheet()
 }
 
 ////////////////////////////////////////////////////////////
+// read the chart zone
+////////////////////////////////////////////////////////////
+bool GreatWksSSParser::readChart()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw::DebugStream f;
+
+  f << "Entries(Chart):";
+  long sz=(long) input->readULong(4);
+  long endPos=pos+4+sz;
+  if (sz < 4 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readChart: can not find the chart zone size\n"));
+    f << "###";
+    ascii().addPos(pos-2);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int N=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  if (N) f << "N=" << N << ",";
+  if ((N && fSz!=0x14) || long(4+N*fSz)!=sz) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readChart: can not find the number of chart\n"));
+    f << "###";
+    ascii().addPos(pos-2);
+    ascii().addNote(f.str().c_str());
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  ascii().addPos(pos-2);
+  ascii().addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "Chart-" << i << ":";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+20, librevenge::RVNG_SEEK_SET);
+  }
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read a cell
 ////////////////////////////////////////////////////////////
-bool GreatWksSSParser::readCell()
+bool GreatWksSSParser::readCell(GreatWksSSParserInternal::Cell &cell)
 {
+  cell=GreatWksSSParserInternal::Cell();
+
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
@@ -872,7 +1075,7 @@ bool GreatWksSSParser::readCell()
   f << "Entries(Cell):";
   long sz=(long) input->readULong(4);
   long endPos=pos+4+sz;
-  if (sz < 12 || !input->checkPosition(endPos)) {
+  if (sz < 0x12 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not find a cell\n"));
     f << "###";
     ascii().addPos(pos-2);
@@ -882,36 +1085,88 @@ bool GreatWksSSParser::readCell()
   int cPos[2];
   for (int i=0; i<2; ++i)
     cPos[i]=(int) input->readLong(2);
-  f << "cell" << cPos[0] << "x" << cPos[1] << ",";
-  f << "style" << (int) input->readLong(2) << ",";
+  Vec2i cellPos(cPos[0]-1,cPos[1]-1);
+  cell.setPosition(cellPos);
+  f << "cell=" << cellPos << ",";
+  cell.m_style=(int) input->readLong(2);
+  f << "style" << cell.m_style << ",";
   int val=(int) input->readULong(2);
-  switch ((val>>8)&0x1f) {
+  int form=(val>>8)&0x1f;
+  MWAWCell::Format format;
+  format.m_format=MWAWCell::F_TEXT;
+  switch (form) {
   case 0:
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     break;
   case 1:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
     f << "currency,";
     break;
   case 2:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
     f << "percent,";
     break;
   case 3:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
     f << "fixed,";
     break;
   case 4:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
     f << "scientific,";
     break;
   case 5:
+    format.m_format=MWAWCell::F_BOOLEAN;
     f << "bool,";
     break;
-  default:
-    f << "#format=" << ((val>>8)&0x1f) << ",";
+  case 10:
+  case 11:
+  case 12:
+  case 13:
+  case 14:
+  case 15:
+  case 16:
+  case 17:
+  case 18: {
+    static char const *(wh[]) = {
+      "%m/%d/%y", "%b %d, %Y", "%b %Y", "%b %d", "%B %d, %Y", "%B %Y", "%B %d", "%a, %b %d, %Y", "%A, %B %d, %Y"
+    };
+    format.m_format=MWAWCell::F_DATE;
+    format.m_DTFormat=wh[form-10];
+    f << wh[form-10] << ",";
     break;
   }
-  val &=0xE0FF;
+  case 20:
+  case 21:
+  case 22:
+  case 23: {
+    static char const *(wh[]) = {
+      "%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"
+    };
+    format.m_format=MWAWCell::F_TIME;
+    format.m_DTFormat=wh[form-20];
+    f << wh[form-20] << ",";
+    break;
+  }
+  default:
+    f << "#format=" <<form << ",";
+    break;
+  }
+  if ((val & 0xF)!=2) {
+    format.m_digits=(val & 0xF);
+    f << "decimal=" << format.m_digits << ",";
+  }
+  if (val & 0x4000) f << "parenthesis,";
+  if (val & 0x8000) f << "commas,";
+  val &=0x20F0;
   if (val)
     f << "fl0=" << std::hex << val << std::dec << ",";
   val=(int) input->readULong(2);
   if (val&0xf) {
+    cell.setBorders(val & 0xF, MWAWBorder()); // checkme
     f << "bord=";
     if (val&1) f << "T";
     if (val&2) f << "R";
@@ -923,12 +1178,15 @@ bool GreatWksSSParser::readCell()
   case 0: // none
     break;
   case 1:
+    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
     f << "align=left,";
     break;
   case 2:
+    cell.setHAlignement(MWAWCell::HALIGN_CENTER);
     f << "align=center,";
     break;
   case 3:
+    cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
     f << "align=right,";
     break;
   case 4:
@@ -937,10 +1195,151 @@ bool GreatWksSSParser::readCell()
   default:
     f << "#align=" << ((val>>8)&0x7) << ",";
   }
-  if (val&0x8000) f << "protected,";
+  if (val&0x8000) {
+    cell.setProtected(true);
+    f << "protected,";
+  }
   val &= 0x78F0;
   if (val)
     f << "fl1=" << std::hex << val << std::dec << ",";
+  val=(int) input->readULong(2); // small number between 0 and 255
+  if (val)
+    f << "f0=" << val << ",";
+  int formSz=(int) input->readULong(2);
+  if (formSz&0x8000) { // appear if now, rand, ... is used
+    f << "formula[update],";
+    formSz &= 0x7FFF;
+  }
+  bool ok=true;
+  MWAWCellContent &content=cell.m_content;
+  content.m_contentType=MWAWCellContent::C_NONE;
+  if (formSz) {
+    long formulaPos=input->tell();
+    f << "formula,";
+    if (formulaPos+formSz+4>=endPos) {
+      MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: formula size seems bad\n"));
+      f << "##formula[size]=" << formSz << ",";
+      ok=false;
+    }
+    else {
+      ascii().addDelimiter(formulaPos,'|');
+      ascii().addDelimiter(formulaPos+formSz,'|');
+      std::vector<MWAWCellContent::FormulaInstruction> formula;
+      std::string error("");
+      if (readFormula(cellPos,formulaPos+formSz,formula, error)) {
+        content.m_contentType=MWAWCellContent::C_FORMULA;
+        content.m_formula=formula;
+      }
+      f << "[";
+      for (size_t l=0; l < formula.size(); ++l)
+        f << formula[l];
+      f << "]" << error << ",";
+      if (formSz&1) formSz+=1;
+      input->seek(formulaPos+formSz, librevenge::RVNG_SEEK_SET);
+    }
+  }
+
+  if (ok && input->tell()+4<=endPos) {
+    int typeVal=(int) input->readLong(2);
+    long valuePos=input->tell();
+    switch (typeVal) {
+    case 1: // no value
+      break;
+    case 5: {
+      if (format.m_format==MWAWCell::F_TEXT)
+        format.m_format=MWAWCell::F_NUMBER;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (valuePos+10+2>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read a float value\n"));
+        f << "###";
+        ok=false;
+        break;
+      }
+      double value=0;
+      bool isNAN=false;
+      if (!input->readDouble10(value, isNAN)) {
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read a float value(II)\n"));
+        f << "###";
+      }
+      else
+        content.setValue(value);
+      f << value << ",";
+      break;
+    }
+    case 7: {
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_TEXT;
+      int sSz=(int) input->readULong(1);
+      if (valuePos+1+sSz+2>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read a string value\n"));
+        f << "###";
+        ok=false;
+        break;
+      }
+      content.m_textEntry.setBegin(valuePos+1);
+      content.m_textEntry.setLength(sSz);
+      std::string text("");
+      for (int i=0; i<sSz; ++i)
+        text += (char) input->readULong(1);
+      f << "\"" << text << "\",";
+      if ((sSz%2)==0)
+        input->seek(1, librevenge::RVNG_SEEK_CUR);
+      break;
+    }
+    case 8: { // often a boolean value
+      if (format.m_format==MWAWCell::F_TEXT)
+        format.m_format=MWAWCell::F_BOOLEAN;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (valuePos+4+2>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read a long value\n"));
+        ok = false;
+        f << "###";
+        break;
+      }
+      long value=input->readLong(4);
+      content.setValue(double(value));
+      f << value << ",";
+      break;
+    }
+    case 15: {
+      if (format.m_format==MWAWCell::F_TEXT)
+        format.m_format=MWAWCell::F_NUMBER;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (valuePos+4+2>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read a nan value\n"));
+        ok = false;
+        f << "###";
+        break;
+      }
+      input->seek(4, librevenge::RVNG_SEEK_CUR); // nan type
+      double value=std::numeric_limits<double>::quiet_NaN();
+      content.setValue(value);
+      f << value << ",";
+      break;
+    }
+    default:
+      ok=false;
+      MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: find unexpected type value\n"));
+      f << "#type[val]=" << typeVal << ",";
+    }
+  }
+  if (ok && input->tell()+2<=endPos) {
+    val =(int) input->readULong(2);
+    if (!input->checkPosition(input->tell()+4*val)) {
+      MWAW_DEBUG_MSG(("GreatWksSSParser::readCell: can not read the number of childs\n"));
+      f << "###";
+    }
+    else if (val) {
+      f << "childs=[";
+      for (int i=0; i<val; ++i)
+        f << input->readULong(2) << "x" << input->readULong(2) << ",";
+      f << "],";
+    }
+  }
+  cell.setFormat(format);
   if (input->tell()!=endPos) {
     ascii().addDelimiter(input->tell(),'|');
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -953,19 +1352,19 @@ bool GreatWksSSParser::readCell()
 ////////////////////////////////////////////////////////////
 // read the fonts
 ////////////////////////////////////////////////////////////
-bool GreatWksSSParser::readFonts()
+bool GreatWksSSParser::readStyles()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   int const vers=version();
   libmwaw::DebugStream f;
 
-  f << "Entries(FontDef):";
+  f << "Entries(Style):";
   long sz=(long) input->readULong(4);
   long endPos=pos+4+sz;
   int expectedSize=vers==1 ? 18 : 40;
   if (!input->checkPosition(endPos) || (sz%expectedSize)) {
-    MWAW_DEBUG_MSG(("GreatWksSSParser::readFonts: can not find the font defs zone\n"));
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readStyles: can not find the font defs zone\n"));
     f << "###";
     ascii().addPos(pos-2);
     ascii().addNote(f.str().c_str());
@@ -1021,10 +1420,23 @@ bool GreatWksSSParser::readFonts()
         color[c] = (unsigned char)(input->readULong(2)>>8);
       MWAWColor col(color[0],color[1],color[2]);
       if ((j==0 && col.isBlack()) || (j==1 && col.isWhite())) continue;
-      f << "col" << j << "=" << MWAWColor(color[0],color[1],color[2]) << ",";
+      if (j==0) f << "col[front]=" << MWAWColor(color[0],color[1],color[2]) << ",";
+      else f << "col[back]=" << MWAWColor(color[0],color[1],color[2]) << ",";
     }
     val=(int) input->readLong(2);
     if (val) f << "pattern[id]=" << val << ",";
+    int pattern[4];
+    bool hasPattern=false;
+    for (int j=0; j<4; ++j) {
+      pattern[j]=(int) input->readULong(2);
+      if (pattern[j]) hasPattern=true;
+    }
+    if (hasPattern) {
+      f << "pat=[" << std::hex;
+      for (int j=0; j<4; ++j)
+        f << pattern[j] << ",";
+      f << "]," << std::dec;
+    }
     // followed by pattern(readme)
     ascii().addDelimiter(input->tell(), '|');
     ascii().addPos(pos);
@@ -1078,6 +1490,305 @@ bool GreatWksSSParser::checkHeader(MWAWHeader *header, bool strict)
   else
     getParserState()->m_kind=MWAWDocument::MWAW_K_SPREADSHEET;
   return true;
+}
+
+////////////////////////////////////////////////////////////
+// read a formula
+////////////////////////////////////////////////////////////
+bool GreatWksSSParser::readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
+{
+  MWAWInputStreamPtr input=getInput();
+  instr=MWAWCellContent::FormulaInstruction();
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  bool absolute[2] = { true, true};
+  int cPos[2];
+  for (int i=0; i<2; ++i) {
+    int val = (int) input->readULong(2);
+    if (val & 0x8000) {
+      absolute[i]=0;
+      if (val&0x4000)
+        cPos[i] = pos[i]+(val-0xFFFF);
+      else
+        cPos[i] = pos[i]+(val-0x7FFF);
+    }
+    else
+      cPos[i]=val;
+  }
+
+  if (cPos[0] < 1 || cPos[1] < 1) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readCellInFormula: can not read cell position\n"));
+    return false;
+  }
+  instr.m_position[0]=Vec2i(cPos[1]-1,cPos[0]-1);
+  instr.m_positionRelative[0]=Vec2b(!absolute[1],!absolute[0]);
+  return true;
+}
+
+bool GreatWksSSParser::readString(long endPos, std::string &res)
+{
+  res="";
+  MWAWInputStreamPtr input=getInput();
+  long pos=input->tell();
+  int fSz=(int) input->readULong(1);
+  if (pos+1+fSz>endPos) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readString: can not read string size\n"));
+    return false;
+  }
+  for (int i=0; i<fSz; ++i)
+    res += (char) input->readULong(1);
+  return true;
+}
+
+bool GreatWksSSParser::readNumber(long endPos, double &res, bool &isNan)
+{
+  MWAWInputStreamPtr input=getInput();
+  long pos=input->tell();
+  if (pos+10>endPos) {
+    MWAW_DEBUG_MSG(("GreatWksSSParser::readNumber: can not read a number\n"));
+    return false;
+  }
+  return input->readDouble10(res, isNan);
+}
+
+namespace GreatWksSSParserInternal
+{
+struct Functions {
+  char const *m_name;
+  int m_arity;
+};
+
+static Functions const s_listFunctions[] = {
+  { "=", 1}, {"", -1} /*UNKN*/, {"", 0}/*SPEC:long*/, {"", -1} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", 0} /*SPEC:double*/,{ "", -2} /*UNKN*/,{ "", 0} /*SPEC:text*/,
+  { "", 0} /*SPEC:short*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { "", 0} /*SPEC:cell*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { ":", 2} /*SPEC:concatenate cell*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { "(", 1}, { "-", 1}, { "+", 1} /*checkme*/,{ "^", 2},
+  { "*", 2}, { "/", 2}, { "+", 2}, { "-", 2},
+  { "", -2} /*UNKN*/,{ "=", 2}, { "<", 2}, { "<=", 2},
+  { ">", 2}, { ">=", 2}, { "<>", 2}, { "", -2} /*UNKN*/,
+
+};
+}
+
+bool GreatWksSSParser::readFormula(Vec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+{
+  MWAWInputStreamPtr input=getInput();
+  libmwaw::DebugStream f;
+  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
+  bool ok=true;
+  while (!input->isEnd()) {
+    long pos=input->tell();
+    if (pos > endPos)
+      break;
+    int arity=0, val, type=(int) input->readULong(1);
+    MWAWCellContent::FormulaInstruction instr;
+    switch (type) {
+    case 2:
+      if (pos+1+2 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(2);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=val;
+      break;
+    case 5: {
+      double value;
+      bool isNan;
+      ok=readNumber(endPos, value, isNan);
+      if (!ok) break;
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=value;
+      break;
+    }
+    case 7: {
+      std::string text;
+      ok=readString(endPos, text);
+      if (!ok) break;
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+      instr.m_content=text;
+      break;
+    }
+    case 8:
+      if (pos+1+1 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(1);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=val;
+      break;
+    case 0x10: {
+      ok=readCellInFormula(cPos,instr);
+      if (!ok) break;
+      f << instr << ",";
+      break;
+    }
+    case 0x40: {
+      if (pos+1+1 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readULong(1);
+      arity= (int) input->readULong(1);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+
+      static char const* (s_functions[]) = {
+        "", "Abs", "Exp", "Fact", "Int", "Ln", "Log", "Log10",
+        "Mod", "Pi", "Product", "Rand", "Round", "Sign", "Sqrt", "Trunc",
+
+        "Average", "Count", "CountA", "Max", "Min", "StDev", "StDevP", "Sum",
+        "Var", "VarP", "Acos", "Asin", "Atan", "Atan2", "Cos", "Sin",
+
+        "Tan", "Degree", "Radians", "And", "Choose", "False", "If", "IsBlanck",
+        "IsErr", "IsError", "IsLogical", "IsNa", "IsNonText", "IsNum", "IsRef", "IsText",
+
+        "Not", "Or", "True", "Char", "Clean", "Code", "Dollar", "Exact",
+        "Find", "Fixed", "Left", "Len", "Lower", "Mid", "Proper"/*checkme: first majuscule*/, "Replace",
+
+        "Repeat"/*checkme*/, "Right", "Search", "Substitute", "Trim", "Upper", "DDB", "FV",
+        "IPMT", "IRR", "MIRR", "NPER", "NPV", "PMT", "PPMT", "PV",
+
+        "Rate", "SLN", "SYD", "Annuity", "Compound", "Date", "Day", "Hour",
+        "Minute", "Month", "Now", "Second", "Time", "Weekday", "Year", "HLookup",
+
+        "Index", "Lookup", "Match", "N", "Na", "T", "Type", "VLookup",
+        "", "", "", "", "", "", "", "",
+
+      };
+      std::string functName("");
+      if (val < 0x70) functName=s_functions[val];
+      if (!functName.empty())
+        instr.m_content=functName;
+      else {
+        std::stringstream s;
+        s << "Funct" << std::hex << val << std::dec << "#";
+        instr.m_content=s.str();
+      }
+      break;
+    }
+    default:
+      if (type >= 0x40 || GreatWksSSParserInternal::s_listFunctions[type].m_arity == -2) {
+        f.str("");
+        f << "##Funct" << std::hex << type << std::dec;
+        ok = false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+      instr.m_content=GreatWksSSParserInternal::s_listFunctions[type].m_name;
+      ok=!instr.m_content.empty();
+      arity = GreatWksSSParserInternal::s_listFunctions[type].m_arity;
+      if (arity == -1) arity = (int) input->readLong(1);
+      if (arity<0) ok=false;
+      break;
+    }
+    if (!ok) break;
+    std::vector<MWAWCellContent::FormulaInstruction> child;
+    if (instr.m_type!=MWAWCellContent::FormulaInstruction::F_Function) {
+      child.push_back(instr);
+      stack.push_back(child);
+      continue;
+    }
+    size_t numElt = stack.size();
+    if ((int) numElt < arity) {
+      f.str("");
+      f << instr.m_content << "[##" << arity << "]";
+      ok = false;
+      break;
+    }
+    if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(') {
+      if (instr.m_content[0] != '(')
+        child.push_back(instr);
+
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content="(";
+      child.push_back(instr);
+      for (int i = 0; i < arity; i++) {
+        if (i) {
+          instr.m_content=";";
+          child.push_back(instr);
+        }
+        std::vector<MWAWCellContent::FormulaInstruction> const &node=
+          stack[size_t((int)numElt-arity+i)];
+        child.insert(child.end(), node.begin(), node.end());
+      }
+      instr.m_content=")";
+      child.push_back(instr);
+
+      stack.resize(size_t((int) numElt-arity+1));
+      stack[size_t((int)numElt-arity)] = child;
+      continue;
+    }
+    if (arity==1) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-1].insert(stack[numElt-1].begin(), instr);
+      if (type==0 && pos+1==endPos)
+        break;
+      continue;
+    }
+    if (arity==2 && instr.m_content==":") {
+      if (stack[numElt-2].size()!=1 || stack[numElt-2][0].m_type!=MWAWCellContent::FormulaInstruction::F_Cell ||
+          stack[numElt-1].size()!=1 || stack[numElt-1][0].m_type!=MWAWCellContent::FormulaInstruction::F_Cell) {
+        f << "### unexpected type of concatenate argument";
+        ok=false;
+        break;
+      }
+      instr=stack[numElt-2][0];
+      MWAWCellContent::FormulaInstruction instr2=stack[numElt-1][0];
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      instr.m_position[1]=instr2.m_position[0];
+      instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+      stack[numElt-2][0]=instr;
+      stack.resize(numElt-1);
+      continue;
+    }
+    if (arity==2) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-2].push_back(instr);
+      stack[numElt-2].insert(stack[numElt-2].end(), stack[numElt-1].begin(), stack[numElt-1].end());
+      stack.resize(numElt-1);
+      continue;
+    }
+    ok=false;
+    f << "### unexpected arity";
+    break;
+  }
+
+  if (!ok) ;
+  else if (stack.size()==1 && stack[0].size()>1 && stack[0][0].m_content=="=") {
+    formula.insert(formula.begin(),stack[0].begin()+1,stack[0].end());
+    return true;
+  }
+  else
+    f << "###stack problem";
+
+  ascii().addDelimiter(input->tell(),'#');
+  static bool first = true;
+  if (first) {
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::readFormula: I can not read some formula\n"));
+    first = false;
+  }
+
+  error = f.str();
+  f.str("");
+  for (size_t i = 0; i < stack.size(); ++i) {
+    for (size_t j=0; j < stack[i].size(); ++j)
+      f << stack[i][j] << ",";
+  }
+  f << error;
+  error = f.str();
+  return false;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

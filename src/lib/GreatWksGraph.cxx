@@ -765,7 +765,7 @@ bool GreatWksGraph::findGraphicZone()
 bool GreatWksGraph::isPageFrames()
 {
   int const vers=version();
-  bool hasPageUnknown=vers==2 && m_parserState->m_kind==MWAWDocument::MWAW_K_TEXT;
+  bool hasPageUnknown=vers==2 && m_parserState->m_kind!=MWAWDocument::MWAW_K_DRAW;
   int const headerSize=hasPageUnknown ? 22 : vers==2 ? 12 : 16;
   int const nZones= vers==2 ? 3 : 4;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -1108,6 +1108,7 @@ bool GreatWksGraph::readPageFrames()
   MWAWInputStreamPtr &input= m_parserState->m_input;
   int const vers=version();
   bool isDraw = m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
+  bool isSpreadsheet = m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET;
   bool hasPageUnknown=vers==2 && !isDraw;
   int const nZones=hasPageUnknown ? 4 : vers==2 ? 3 : 4;
   long pos=input->tell();
@@ -1121,7 +1122,16 @@ bool GreatWksGraph::readPageFrames()
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   long endPos=-1;
   GreatWksGraphInternal::Zone pageZone;
-  if (hasPageUnknown) {
+  if (isSpreadsheet) {
+    int val=(int) input->readLong(2);
+    if (val != 0x1c) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: oops unexpected key word\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    endPos=pos+6+(long)input->readULong(4);
+  }
+  else if (hasPageUnknown) {
     pageZone.m_page = (int)input->readLong(2);
     f << "page=" << pageZone.m_page << ",";
     endPos=pos+6+(long)input->readULong(4);

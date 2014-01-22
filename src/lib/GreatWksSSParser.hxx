@@ -39,12 +39,14 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
 
 #include "MWAWParser.hxx"
 
 namespace GreatWksSSParserInternal
 {
+class Cell;
 struct State;
 class SubDocument;
 }
@@ -78,15 +80,8 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
-  //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
-  //! adds a new page
-  void newPage(int number);
-
   // interface with the text parser
 
-  //! return the main section
-  MWAWSection getMainSection() const;
   //! try to send the i^th header/footer
   bool sendHF(int id);
   //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
@@ -116,12 +111,25 @@ protected:
   //! read the windows positions ( WPSN resource block )
   bool readWPSN(MWAWEntry const &entry);
 
-  //! try to read the fonts
-  bool readFonts();
+  //! try to read the styles
+  bool readStyles();
   //! read the spreadsheet block ( many unknown data )
   bool readSpreadsheet();
+  //! try to read the chart zone: v2
+  bool readChart();
   //! try to read a cell
-  bool readCell();
+  bool readCell(GreatWksSSParserInternal::Cell &cell);
+
+  /** reads a cell */
+  bool readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
+  /** try to read a string */
+  bool readString(long endPos, std::string &res);
+  /** try to read a number */
+  bool readNumber(long endPos, double &res, bool &isNan);
+  //! read to read a formula
+  bool readFormula(Vec2i const &cPos, long endPos,
+                   std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
+
   //! read a unknown zone ( ARRs resource block: v2 )
   bool readARRs(MWAWEntry const &entry);
   //! read a unknown zone ( DaHS resource block: v2 )
