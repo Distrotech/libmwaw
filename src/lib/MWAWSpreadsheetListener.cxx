@@ -1026,10 +1026,8 @@ void MWAWSpreadsheetListener::insertTextBox
 
   librevenge::RVNGPropertyList propList(textboxExtras);
   m_documentInterface->openTextBox(propList);
-  m_ps->m_isTextboxOpened = true;
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
-  m_ps->m_isTextboxOpened = false;
 
   closeFrame();
 }
@@ -1192,6 +1190,8 @@ bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVN
   }
 
   librevenge::RVNGPropertyList propList(extras);
+  if (!propList["draw:fill"])
+    propList.insert("draw:fill","none");
   _handleFrameParameters(propList, fPos);
   m_documentInterface->openFrame(propList);
 
@@ -1441,6 +1441,7 @@ void MWAWSpreadsheetListener::handleSubDocument(MWAWSubDocumentPtr subDocument, 
 
   switch (subDocumentType) {
   case libmwaw::DOC_TEXT_BOX:
+    m_ps->m_isTextboxOpened = true;
     m_ps->m_pageSpan.setMargins(0.0);
     break;
   case libmwaw::DOC_HEADER_FOOTER:

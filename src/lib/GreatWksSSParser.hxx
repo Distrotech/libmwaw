@@ -82,6 +82,8 @@ protected:
 
   // interface with the text parser
 
+  //! try to send the main spreadsheet
+  bool sendSpreadsheet();
   //! try to send the i^th header/footer
   bool sendHF(int id);
   //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic

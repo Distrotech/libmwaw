@@ -1851,7 +1851,7 @@ bool GreatWksGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 bool GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendTextbox: can not find the listener\n"));
     return true;
@@ -2091,7 +2091,7 @@ bool GreatWksGraph::sendShape(GreatWksGraphInternal::FrameShape const &graph, Gr
 
 bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, GreatWksGraphInternal::Zone const &zone)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener || !frame) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendFrame: can not find a listener\n"));
     return false;
@@ -2131,7 +2131,7 @@ bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, Gr
 
 bool GreatWksGraph::sendPageFrames(GreatWksGraphInternal::Zone const &zone)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendPageFrames: can not find a listener\n"));
     return false;
@@ -2151,7 +2151,7 @@ bool GreatWksGraph::sendPageFrames(GreatWksGraphInternal::Zone const &zone)
 
 bool GreatWksGraph::sendPageGraphics()
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendPageGraphics: can not find a listener\n"));
     return false;
@@ -2166,7 +2166,7 @@ bool GreatWksGraph::sendPageGraphics()
 
 void GreatWksGraph::flushExtra()
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::flushExtra: can not find a listener\n"));
     return;

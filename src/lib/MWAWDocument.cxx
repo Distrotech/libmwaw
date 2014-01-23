@@ -386,9 +386,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new MsWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_GREATWORKS:
-#ifdef DEBUG
       parser.reset(new GreatWksSSParser(input, rsrcParser, header));
-#endif
       break;
     // TODO
     case MWAWDocument::MWAW_T_CLARISWORKS:
