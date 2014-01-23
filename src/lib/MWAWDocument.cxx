@@ -171,13 +171,18 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_ZWRITE:
       confidence = MWAW_C_EXCELLENT;
       break;
+    case MWAW_T_CLARISRESOLVE:
     case MWAW_T_FRAMEMAKER:
+    case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
     case MWAW_T_MACPAINT:
+    case MWAW_T_MICROSOFTMULTIPLAN:
     case MWAW_T_PAGEMAKER:
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
+    case MWAW_T_TRAPEZE:
+    case MWAW_T_WINGZ:
     case MWAW_T_XPRESS:
     case MWAW_T_RESERVED1:
     case MWAW_T_RESERVED2:
@@ -389,7 +394,13 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new GreatWksSSParser(input, rsrcParser, header));
       break;
     // TODO
+    case MWAWDocument::MWAW_T_CLARISRESOLVE:
     case MWAWDocument::MWAW_T_CLARISWORKS:
+    case MWAWDocument::MWAW_T_KALEIDAGRAPH:
+    case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
+    case MWAWDocument::MWAW_T_TRAPEZE:
+    case MWAWDocument::MWAW_T_WINGZ:
+
     // no spreadsheet
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_DOCMAKER:
@@ -528,13 +539,18 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new ZWrtParser(input, rsrcParser, header));
       break;
 
+    case MWAWDocument::MWAW_T_CLARISRESOLVE:
     case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
     case MWAWDocument::MWAW_T_MACPAINT:
+    case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_TRAPEZE:
+    case MWAWDocument::MWAW_T_WINGZ:
     case MWAWDocument::MWAW_T_XPRESS:
 
     case MWAWDocument::MWAW_T_RESERVED1:
