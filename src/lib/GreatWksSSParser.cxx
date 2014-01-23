@@ -1105,7 +1105,7 @@ bool GreatWksSSParser::sendSpreadsheet()
         if (prevRow != -1)
           listener->closeSheetRow();
         prevRow++;
-        listener->openSheetRow(sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
+        listener->openSheetRow((float)sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
       }
     }
 
