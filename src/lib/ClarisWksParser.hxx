@@ -57,13 +57,7 @@ struct State;
 class SubDocument;
 }
 
-class ClarisWksDatabase;
-class ClarisWksGraph;
-class ClarisWksPresentation;
-class ClarisWksSpreadsheet;
-class ClarisWksStyleManager;
-class ClarisWksTable;
-class ClarisWksText;
+class ClarisWksDocument;
 
 /** \brief the main class to read a Claris Works file
  *
@@ -73,13 +67,7 @@ class ClarisWksText;
 class ClarisWksParser : public MWAWTextParser
 {
   friend class ClarisWksParserInternal::SubDocument;
-  friend class ClarisWksDatabase;
-  friend class ClarisWksGraph;
-  friend class ClarisWksPresentation;
-  friend class ClarisWksSpreadsheet;
-  friend class ClarisWksStyleManager;
-  friend class ClarisWksTable;
-  friend class ClarisWksText;
+  friend class ClarisWksDocument;
 
 public:
   //! constructor
@@ -120,22 +108,6 @@ protected:
   //! read a zone
   bool readZone();
 
-  //! read the print info zone
-  bool readPrintInfo();
-
-  //! try to read a structured zone
-  bool readStructZone(char const *zoneName, bool hasEntete);
-
-  /** try to read a int structured zone
-      where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
-  bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
-
-  //! returns the number of expected pages ( accross pages x down page)
-  Vec2i getDocumentPages() const;
-  //! returns the page height, ie. paper size less margin (in inches) less header/footer size
-  double getTextHeight() const;
-  //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
   //! adds a new page
   void newPage(int number);
 
@@ -153,25 +125,9 @@ protected:
   /** creates a document to send a footnote */
   void sendFootnote(int zoneId);
 
-  //! returns the columns information
-  MWAWSection getMainSection() const;
-
-  //
-  // interface with the graph parser
-  //
-
-  //! returns the header/footer id
-  void getHeaderFooterId(int &headerId, int &footerId) const;
-
   //
   // low level
   //
-
-  //! reads the document header
-  bool readDocHeader();
-
-  //! reads the document info part ( end of the header)
-  bool readDocInfo();
 
   //! reads the end table ( appears in v3.0 : file version ? )
   bool readEndTable();
@@ -211,9 +167,6 @@ protected:
    */
   bool readCPRT(MWAWEntry const &entry);
 
-  /** small fonction used to check unusual endian ordering of a list of int16_t, int32_t*/
-  void checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const;
-
 protected:
 
 
@@ -223,29 +176,8 @@ protected:
   //! the state
   shared_ptr<ClarisWksParserInternal::State> m_state;
 
-  //! a flag to know if pageSpan is filled
-  bool m_pageSpanSet;
-
-  //! the database parser
-  shared_ptr<ClarisWksDatabase> m_databaseParser;
-
-  //! the graph parser
-  shared_ptr<ClarisWksGraph> m_graphParser;
-
-  //! the spreadsheet parser
-  shared_ptr<ClarisWksPresentation> m_presentationParser;
-
-  //! the spreadsheet parser
-  shared_ptr<ClarisWksSpreadsheet> m_spreadsheetParser;
-
   //! the style manager
-  shared_ptr<ClarisWksStyleManager> m_styleManager;
-
-  //! the table parser
-  shared_ptr<ClarisWksTable> m_tableParser;
-
-  //! the text parser
-  shared_ptr<ClarisWksText> m_textParser;
+  shared_ptr<ClarisWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

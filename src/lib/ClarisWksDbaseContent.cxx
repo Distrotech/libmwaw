@@ -43,19 +43,20 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStyleManager.hxx"
 
 #include "ClarisWksDbaseContent.hxx"
 
-ClarisWksDbaseContent::ClarisWksDbaseContent(MWAWParserStatePtr parserState, shared_ptr<ClarisWksStyleManager> styleManager, bool spreadsheet) :
-  m_version(0), m_isSpreadsheet(spreadsheet), m_parserState(parserState), m_styleManager(styleManager), m_idColumnMap(), m_dbFormatList()
+ClarisWksDbaseContent::ClarisWksDbaseContent(ClarisWksDocument &document, bool spreadsheet) :
+  m_version(0), m_isSpreadsheet(spreadsheet), m_document(document), m_parserState(document.m_parserState), m_idColumnMap(), m_dbFormatList()
 {
   if (!m_parserState || !m_parserState->m_header) {
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::ClarisWksDbaseContent: can not find the file header\n"));
@@ -430,7 +431,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       font = MWAWFont();
       int fId= (int) input->readULong(2);
       if (fId!=0xFFFF)
-        font.setId(m_styleManager->getFontId((int)fId));
+        font.setId(m_document.getStyleManager()->getFontId((int)fId));
       font.setSize((float) input->readULong(1));
       int flag =(int) input->readULong(1);
       uint32_t flags=0;
@@ -446,7 +447,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       int colId = (int) input->readULong(1);
       if (colId!=1) {
         MWAWColor col;
-        if (m_styleManager->getColor(colId, col))
+        if (m_document.getStyleManager()->getColor(colId, col))
           font.setColor(col);
         else {
           MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unknown color %d\n", colId));
@@ -648,8 +649,8 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   if (record.m_style) f << "style" << record.m_style << ",";
   ClarisWksStyleManager::Style style;
   ClarisWksStyleManager::CellFormat format;
-  if (m_styleManager->get(record.m_style, style) &&
-      m_styleManager->get(style.m_cellFormatId, format))
+  if (m_document.getStyleManager()->get(record.m_style, style) &&
+      m_document.getStyleManager()->get(style.m_cellFormatId, format))
     f << format << ",";
   switch (type) {
   case 0:
@@ -883,7 +884,7 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
 
 bool ClarisWksDbaseContent::send(Vec2i const &pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find the listener\n"));
     return false;
@@ -915,10 +916,10 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
     MWAWFont font;
     ClarisWksStyleManager::Style style;
     if (record.m_style>=0)
-      m_styleManager->get(record.m_style, style);
-    if (style.m_fontId>=0 && m_styleManager->get(style.m_fontId, font))
+      m_document.getStyleManager()->get(record.m_style, style);
+    if (style.m_fontId>=0 && m_document.getStyleManager()->get(style.m_fontId, font))
       listener->setFont(font);
-    if (style.m_cellFormatId>=0 && m_styleManager->get(style.m_cellFormatId, format))
+    if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format))
       justify=format.m_justify;
   }
   MWAWParagraph para;
@@ -965,7 +966,7 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
 
 void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleManager::CellFormat const &format)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener)
     return;
   std::stringstream s;

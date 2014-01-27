@@ -31,27 +31,22 @@
 * instead of those above.
 */
 
+#include <string.h>
+
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <map>
 #include <sstream>
 
 #include <librevenge/librevenge.h>
-
-#include "MWAWDebug.hxx"
-#include "MWAWHeader.hxx"
-#include "MWAWInputStream.hxx"
-
-#include "ClarisWksParser.hxx"
 
 #include "ClarisWksStruct.hxx"
 
 namespace ClarisWksStruct
 {
-//
+//------------------------------------------------------------
 // DSET
-//
+//------------------------------------------------------------
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
   switch (doc.m_type) {

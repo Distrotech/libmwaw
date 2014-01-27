@@ -48,7 +48,7 @@
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
-class ClarisWksParser;
+class ClarisWksDocument;
 
 namespace ClarisWksStyleManagerInternal
 {
@@ -64,7 +64,7 @@ public:
   struct Style;
 public:
   //! constructor
-  ClarisWksStyleManager(ClarisWksParser &mainParser);
+  ClarisWksStyleManager(ClarisWksDocument &document);
   //! destructor
   ~ClarisWksStyleManager();
 
@@ -130,10 +130,10 @@ protected:
   bool readStyleFonts(int N, int fSz);
 
 protected:
+  //! the document
+  ClarisWksDocument &m_document;
   //! the parser state
   MWAWParserStatePtr m_parserState;
-  //! the main parser
-  ClarisWksParser *m_mainParser;
   //! the state
   shared_ptr<ClarisWksStyleManagerInternal::State> m_state;
 

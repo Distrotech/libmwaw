@@ -39,14 +39,10 @@
 #  define CLARIS_WKS_STRUCT
 
 #include <iostream>
-#include <map>
 #include <set>
-#include <string>
 #include <vector>
 
 #include "libmwaw_internal.hxx"
-
-class ClarisWksParser;
 
 /** namespace to store the main structure which appears in a Claris Works file */
 namespace ClarisWksStruct

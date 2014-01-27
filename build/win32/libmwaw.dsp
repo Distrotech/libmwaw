@@ -119,6 +119,10 @@ SOURCE=..\..\src\lib\ClarisWksDbaseContent.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ClarisWksDocument.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\ClarisWksGraph.cxx
 # End Source File
 # Begin Source File
@@ -520,6 +524,10 @@ SOURCE=..\..\src\lib\ClarisWksDatabase.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\ClarisWksDbaseContent.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisWksDocument.hxx
 # End Source File
 # Begin Source File
 

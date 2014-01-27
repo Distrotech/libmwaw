@@ -59,6 +59,7 @@ struct Field;
 struct State;
 }
 
+class ClarisWksDocument;
 class ClarisWksParser;
 class ClarisWksStyleManager;
 
@@ -73,7 +74,7 @@ class ClarisWksDatabase
 
 public:
   //! constructor
-  ClarisWksDatabase(ClarisWksParser &parser);
+  ClarisWksDatabase(ClarisWksDocument &document);
   //! destructor
   virtual ~ClarisWksDatabase();
 
@@ -95,7 +96,6 @@ public:
   bool sendDatabase(int number);
 
 protected:
-
   //
   // Intermediate level
   //
@@ -117,6 +117,10 @@ protected:
   //
   // data
   //
+
+  //! the document
+  ClarisWksDocument &m_document;
+
   //! the parser state
   MWAWParserStatePtr m_parserState;
 
@@ -124,10 +128,7 @@ protected:
   shared_ptr<ClarisWksDatabaseInternal::State> m_state;
 
   //! the main parser;
-  ClarisWksParser *m_mainParser;
-
-  //! the style manager
-  shared_ptr<ClarisWksStyleManager> m_styleManager;
+  MWAWParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

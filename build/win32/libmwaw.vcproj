@@ -204,6 +204,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisWksDocument.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksGraph.cxx"
 				>
 			</File>
@@ -606,6 +610,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ClarisWksDbaseContent.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisWksDocument.hxx"
 				>
 			</File>
 			<File

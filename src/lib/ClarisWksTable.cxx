@@ -42,12 +42,14 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWListener.hxx"
+#include "MWAWParser.hxx"
+#include "MWAWPosition.hxx"
 #include "MWAWTable.hxx"
 
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStruct.hxx"
 #include "ClarisWksStyleManager.hxx"
 
@@ -126,8 +128,8 @@ private:
 struct Table : public ClarisWksStruct::DSET, public MWAWTable {
   friend struct TableCell;
   //! constructor
-  Table(ClarisWksStruct::DSET const &dset, ClarisWksTable &parser) :
-    ClarisWksStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(parser.m_styleManager.get()), m_bordersList(), m_mainPtr(-1)
+  Table(ClarisWksStruct::DSET const &dset, ClarisWksTable &parser,  ClarisWksStyleManager &styleManager) :
+    ClarisWksStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(&styleManager), m_bordersList(), m_mainPtr(-1)
   {
   }
 
@@ -268,9 +270,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksTable::ClarisWksTable(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ClarisWksTableInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
+ClarisWksTable::ClarisWksTable(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new ClarisWksTableInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -284,7 +286,7 @@ int ClarisWksTable::version() const
 
 bool ClarisWksTable::askMainToSendZone(int number)
 {
-  return m_mainParser->sendZone(number, false);
+  return m_document.sendZone(number, false);
 }
 
 // fixme
@@ -310,7 +312,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksTable::readTableZone
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<ClarisWksTableInternal::Table> tableZone(new ClarisWksTableInternal::Table(zone, *this));
+  shared_ptr<ClarisWksTableInternal::Table> tableZone(new ClarisWksTableInternal::Table(zone, *this, *m_document.getStyleManager()));
 
   f << "Entries(TableDef):" << *tableZone << ",";
   float dim[2];
@@ -392,14 +394,14 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksTable::readTableZone
     s << "TableUnknown-" << i;
     std::vector<int> res;
     pos = input->tell();
-    ok = m_mainParser->readStructIntZone(s.str().c_str(), false, 2, res);
+    ok = m_document.readStructIntZone(s.str().c_str(), false, 2, res);
   }
   if (ok) {
     pos = input->tell();
     ok = readTablePointers(*tableZone);
     if (!ok) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok = m_mainParser->readStructZone("TablePointers", false);
+      ok = m_document.readStructZone("TablePointers", false);
     }
   }
   if (ok) {
@@ -430,9 +432,9 @@ bool ClarisWksTable::sendZone(int number)
   shared_ptr<ClarisWksTableInternal::Table> table = iter->second;
   table->m_parsed = true;
   if (table->okChildId(number+1))
-    m_mainParser->forceParsed(number+1);
+    m_document.forceParsed(number+1);
 
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener)
     return true;
 
@@ -450,7 +452,7 @@ void ClarisWksTable::flushExtra()
     shared_ptr<ClarisWksTableInternal::Table> table = iter->second;
     if (table->m_parsed)
       continue;
-    if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
+    if (m_parserState->getMainListener()) m_parserState->getMainListener()->insertEOL();
     sendZone(iter->first);
   }
 }
@@ -512,17 +514,17 @@ bool ClarisWksTable::readTableBorders(ClarisWksTableInternal::Table &table)
 
     ClarisWksStyleManager::Style style;
     if (border.m_styleId < 0) ;
-    else if (!m_styleManager->get(border.m_styleId, style)) {
+    else if (!m_document.getStyleManager()->get(border.m_styleId, style)) {
       MWAW_DEBUG_MSG(("ClarisWksTable::readTableBorders: can not find cell style\n"));
       f << "###style";
     }
     else {
       ClarisWksStyleManager::KSEN ksen;
-      if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
+      if (style.m_ksenId >= 0 && m_document.getStyleManager()->get(style.m_ksenId, ksen)) {
         f << "ksen=[" << ksen << "],";
       }
       MWAWGraphicStyle graph;
-      if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
+      if (style.m_graphicId >= 0 && m_document.getStyleManager()->get(style.m_graphicId, graph)) {
         f << "graph=[" << graph << "],";
       }
       //f << "[" << style << "],";
@@ -595,14 +597,14 @@ bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
     f << "TableCell-" << i << ":";
     ClarisWksStyleManager::Style style;
     if (cell->m_styleId < 0) ;
-    else if (!m_styleManager->get(cell->m_styleId, style)) {
+    else if (!m_document.getStyleManager()->get(cell->m_styleId, style)) {
       MWAW_DEBUG_MSG(("ClarisWksTable::readTableCells: can not find cell style\n"));
       f  << *cell << "###style";
     }
     else {
       ClarisWksStyleManager::KSEN ksen;
       bool hasExtraLines=false;
-      if (style.m_ksenId >= 0 && m_styleManager->get(style.m_ksenId, ksen)) {
+      if (style.m_ksenId >= 0 && m_document.getStyleManager()->get(style.m_ksenId, ksen)) {
         switch (ksen.m_valign) {
         case 1:
           cell->setVAlignement(MWAWCell::VALIGN_CENTER);
@@ -631,7 +633,7 @@ bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
         f << "ksen=[" << ksen << "],";
       }
       MWAWGraphicStyle graph;
-      if (style.m_graphicId >= 0 && m_styleManager->get(style.m_graphicId, graph)) {
+      if (style.m_graphicId >= 0 && m_document.getStyleManager()->get(style.m_graphicId, graph)) {
         // checkme: no always there
         if (graph.hasSurfaceColor())
           cell->setBackgroundColor(graph.m_surfaceColor);

@@ -34,6 +34,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ClarisWksDatabase.hxx		\
 	ClarisWksDbaseContent.cxx	\
 	ClarisWksDbaseContent.hxx	\
+	ClarisWksDocument.cxx		\
+	ClarisWksDocument.hxx		\
 	ClarisWksGraph.cxx		\
 	ClarisWksGraph.hxx		\
 	ClarisWksParser.cxx		\

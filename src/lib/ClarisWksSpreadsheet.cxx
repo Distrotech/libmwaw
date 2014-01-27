@@ -40,13 +40,14 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWListener.hxx"
+#include "MWAWParser.hxx"
 #include "MWAWTable.hxx"
 
 #include "ClarisWksDbaseContent.hxx"
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStruct.hxx"
 #include "ClarisWksStyleManager.hxx"
 
@@ -92,9 +93,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksSpreadsheet::ClarisWksSpreadsheet(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ClarisWksSpreadsheetInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
+ClarisWksSpreadsheet::ClarisWksSpreadsheet(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new ClarisWksSpreadsheetInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -224,11 +225,11 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
   bool ok = readZone1(*sheet);
   if (ok) {
     pos = input->tell();
-    ok = m_mainParser->readStructZone("SpreadsheetZone2", false);
+    ok = m_document.readStructZone("SpreadsheetZone2", false);
   }
   if (ok) {
     pos = input->tell();
-    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_parserState, m_styleManager, true));
+    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_document, true));
     ok = content->readContent();
     if (ok) sheet->m_content=content;
   }
@@ -236,7 +237,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
     pos = input->tell();
     if (!readRowHeightZone(*sheet)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok = m_mainParser->readStructZone("SpreadsheetRowHeight", false);
+      ok = m_document.readStructZone("SpreadsheetRowHeight", false);
     }
   }
 
@@ -391,7 +392,7 @@ bool ClarisWksSpreadsheet::readRowHeightZone(ClarisWksSpreadsheetInternal::Sprea
 ////////////////////////////////////////////////////////////
 bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: called without any listener\n"));
     return false;
@@ -414,8 +415,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
       colSize[size_t(fC)]=2.0f*(float) sheet.m_colWidths[size_t(c)];
   }
   librevenge::RVNGPropertyList extras;
-  if (zId==1 && m_mainParser->getHeader() &&
-      m_mainParser->getHeader()->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
+  if (zId==1 && m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET)
     extras.insert("libmwaw:main_spreadsheet", 1);
   MWAWTable table(MWAWTable::TableDimBit);
   table.setColsSize(colSize);

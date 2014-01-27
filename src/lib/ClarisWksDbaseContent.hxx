@@ -47,17 +47,16 @@
 #include "MWAWEntry.hxx"
 #include "MWAWFont.hxx"
 
-// remove me
 #include "ClarisWksStyleManager.hxx"
 
-class ClarisWksStyleManager;
+class ClarisWksDocument;
 
 //! small structure used to parse main content of a spreadsheet/database zone
 class ClarisWksDbaseContent
 {
 public:
   //! constructor
-  ClarisWksDbaseContent(MWAWParserStatePtr parserState, shared_ptr<ClarisWksStyleManager> styleManager, bool spreadsheet);
+  ClarisWksDbaseContent(ClarisWksDocument &document, bool spreadsheet);
   //! destructor
   ~ClarisWksDbaseContent();
   //! try to read the record structure
@@ -134,10 +133,10 @@ protected:
   //! a bool to know if this is a spreadsheet or a database
   bool m_isSpreadsheet;
 
+  //! the document
+  ClarisWksDocument &m_document;
   //! the parser state
   MWAWParserStatePtr m_parserState;
-  //! the style manager
-  shared_ptr<ClarisWksStyleManager> m_styleManager;
 
   //! a map col id to column
   std::map<int, Column> m_idColumnMap;

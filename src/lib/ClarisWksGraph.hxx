@@ -64,8 +64,9 @@ struct ZonePict;
 class SubDocument;
 }
 
+class ClarisWksDocument;
 class ClarisWksParser;
-class ClarisWksStyleManager;
+class MWAWParser;
 
 /** \brief the main class to read the graphic part of Claris Works file
  *
@@ -79,7 +80,7 @@ class ClarisWksGraph
 
 public:
   //! constructor
-  ClarisWksGraph(ClarisWksParser &parser);
+  ClarisWksGraph(ClarisWksDocument &document);
   //! destructor
   virtual ~ClarisWksGraph();
 
@@ -204,6 +205,9 @@ protected:
   //
   // data
   //
+  //! the document
+  ClarisWksDocument &m_document;
+
   //! the parser state
   MWAWParserStatePtr m_parserState;
 
@@ -211,10 +215,7 @@ protected:
   shared_ptr<ClarisWksGraphInternal::State> m_state;
 
   //! the main parser;
-  ClarisWksParser *m_mainParser;
-
-  //! the style manager
-  shared_ptr<ClarisWksStyleManager> m_styleManager;
+  MWAWParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

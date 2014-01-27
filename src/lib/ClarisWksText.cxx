@@ -39,14 +39,16 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWParser.hxx"
+#include "MWAWPosition.hxx"
 #include "MWAWSection.hxx"
 
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStruct.hxx"
 #include "ClarisWksStyleManager.hxx"
 
@@ -480,9 +482,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksText::ClarisWksText(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ClarisWksTextInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
+ClarisWksText::ClarisWksText(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new ClarisWksTextInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -778,7 +780,7 @@ bool ClarisWksText::readFont(int id, int &posC, MWAWFont &font)
     f << "Font:";
 
   f << "pos=" << posC << ",";
-  font.setId(m_styleManager->getFontId((int) input->readULong(2)));
+  font.setId(m_document.getStyleManager()->getFontId((int) input->readULong(2)));
   int flag =(int) input->readULong(2);
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
@@ -803,7 +805,7 @@ bool ClarisWksText::readFont(int id, int &posC, MWAWFont &font)
   MWAWColor color(MWAWColor::black());
   if (colId!=1) {
     MWAWColor col;
-    if (m_styleManager->getColor(colId, col))
+    if (m_document.getStyleManager()->getColor(colId, col))
       color = col;
     else if (vers != 1) {
       MWAW_DEBUG_MSG(("ClarisWksText::readFont: unknown color %d\n", colId));
@@ -962,7 +964,7 @@ bool ClarisWksText::readParagraphs(MWAWEntry const &entry, ClarisWksTextInternal
     if (vers > 2) {
       info.m_styleId = info.m_rulerId;
       ClarisWksStyleManager::Style style;
-      if (m_styleManager->get(info.m_rulerId, style)) {
+      if (m_document.getStyleManager()->get(info.m_rulerId, style)) {
         info.m_rulerId = style.m_rulerId;
 #if 0
         f << "[style=" << style << "]";
@@ -1279,7 +1281,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
   if (asGraphic)
     listener=m_parserState->m_graphicListener;
   else
-    listener=m_parserState->m_textListener;
+    listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not find a listener\n"));
     return false;
@@ -1295,7 +1297,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
   size_t numZones = zone.m_zones.size();
   if (main) {
     if (!asGraphic)
-      m_mainParser->newPage(actPage);
+      m_document.newPage(actPage);
     else {
       MWAW_DEBUG_MSG(("ClarisWksText::sendText: try to send main zone as graphic\n"));
       main=false;
@@ -1341,7 +1343,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
           }
         }
         else {
-          section = m_mainParser->getMainSection();
+          section=m_document.getMainSection();
           nextSectionPos = -1;
           nextSection = -1;
         }
@@ -1387,7 +1389,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
           // to use when the style manager is able to retrieve the correct style name
           if (actListId <= 0 && paraPLC.m_styleId >= 0) {
             std::string styleName;
-            if (m_styleManager->getRulerName(paraPLC.m_styleId, styleName)) {
+            if (m_document.getStyleManager()->getRulerName(paraPLC.m_styleId, styleName)) {
               librevenge::RVNGString sfinalName("");
               for (size_t c=0; c < styleName.size(); ++c) {
                 int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) styleName[c]);
@@ -1413,7 +1415,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
           switch (token.m_type) {
           case ClarisWksTextInternal::TKN_FOOTNOTE:
             if (zone.okChildId(token.m_zoneId))
-              m_mainParser->sendFootnote(token.m_zoneId);
+              m_document.sendFootnote(token.m_zoneId);
             else
               f << "###";
             break;
@@ -1443,7 +1445,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
                 tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), librevenge::RVNG_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
-              m_mainParser->sendZone(token.m_zoneId, false, tPos);
+              m_document.sendZone(token.m_zoneId, false, tPos);
             }
             else
               f << "###";
@@ -1493,7 +1495,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
       switch (c) {
       case 0x1: // fixme: column break
         if (numCols) {
-          listener->insertBreak(MWAWTextListener::ColumnBreak);
+          listener->insertBreak(MWAWListener::ColumnBreak);
           break;
         }
         MWAW_DEBUG_MSG(("ClarisWksText::sendText: Find unexpected char 1\n"));
@@ -1501,7 +1503,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
       case 0xb: // page break
         numSectionInPage = 0;
         if (main)
-          m_mainParser->newPage(++actPage);
+          m_document.newPage(++actPage);
         break;
       case 0x2: // token footnote ( normally already done)
         break;
@@ -1982,14 +1984,15 @@ bool ClarisWksText::sendZone(int number, bool asGraphic)
 
 void ClarisWksText::flushExtra()
 {
-  if (!m_parserState->m_textListener) return;
+  shared_ptr<MWAWListener> listener=m_parserState->getMainListener();
+  if (!listener) return;
   std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.begin();
   for (; iter !=  m_state->m_zoneMap.end(); ++iter) {
     shared_ptr<ClarisWksTextInternal::Zone> zone = iter->second;
     if (!zone || zone->m_parsed)
       continue;
-    m_parserState->m_textListener->insertEOL();
+    listener->insertEOL();
     if (zone->m_parsed) // can be a header/footer in draw zone
       continue;
     sendText(*zone, false);

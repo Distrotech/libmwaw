@@ -42,7 +42,7 @@
 
 MWAWParserState::MWAWParserState(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   m_type(type), m_kind(MWAWDocument::MWAW_K_TEXT), m_version(0), m_input(input), m_header(header),
-  m_rsrcParser(rsrcParser), m_fontConverter(),
+  m_rsrcParser(rsrcParser), m_pageSpan(), m_fontConverter(),
   m_graphicListener(), m_listManager(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
 {
   if (header) {
@@ -88,7 +88,7 @@ MWAWListenerPtr MWAWParserState::getMainListener()
 }
 
 MWAWParser::MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header):
-  m_parserState(), m_pageSpan(), m_asciiName("")
+  m_parserState(), m_asciiName("")
 {
   m_parserState.reset(new MWAWParserState(type, input, rsrcParser, header));
 }

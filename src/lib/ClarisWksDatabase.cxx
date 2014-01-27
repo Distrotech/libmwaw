@@ -40,12 +40,13 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
+#include "MWAWListener.hxx"
+#include "MWAWParser.hxx"
 #include "MWAWTable.hxx"
 
 #include "ClarisWksDbaseContent.hxx"
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStruct.hxx"
 #include "ClarisWksStyleManager.hxx"
 
@@ -239,10 +240,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksDatabase::ClarisWksDatabase
-(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ClarisWksDatabaseInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
+ClarisWksDatabase::ClarisWksDatabase(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new ClarisWksDatabaseInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -356,35 +356,35 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    ok = m_mainParser->readStructZone("DatabaseListUnkn0", false);
+    ok = m_document.readStructZone("DatabaseListUnkn0", false);
   }
   if (ok) {
     pos = input->tell();
     // probably: field number followed by 1 : increasing, 2 : decreasing
-    ok = m_mainParser->readStructZone("DatabaseSortFunction", false);
+    ok = m_document.readStructZone("DatabaseSortFunction", false);
   }
   if (ok) {
     pos = input->tell();
-    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_parserState, m_styleManager, false));
+    shared_ptr<ClarisWksDbaseContent> content(new ClarisWksDbaseContent(m_document, false));
     ok = content->readContent();
     if (ok) databaseZone->m_content=content;
   }
   if (ok) {
     pos = input->tell();
     // a list of int32 ( almost always one int )
-    ok = m_mainParser->readStructZone("DatabaseListUnkn1", false);
+    ok = m_document.readStructZone("DatabaseListUnkn1", false);
   }
   if (ok) {
     pos = input->tell();
     // contains sometimes the string "Layout " : LayoutPref?
-    ok = m_mainParser->readStructZone("DatabaseListLayout", false);
+    ok = m_document.readStructZone("DatabaseListLayout", false);
   }
   if (ok) {
     pos = input->tell();
     /* a list of int16(increasing + 0xFFFF), 3 char (unknown), 1 char=id
        + an int16 for v6
      */
-    ok = m_mainParser->readStructZone("DatabaseListUnkn2", false);
+    ok = m_document.readStructZone("DatabaseListUnkn2", false);
   }
   // now the following seems to be different
   if (!ok)
@@ -665,13 +665,12 @@ bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
 ////////////////////////////////////////////////////////////
 bool ClarisWksDatabase::sendDatabase(int zId)
 {
-  if (zId!=1 || !m_mainParser->getHeader() ||
-      m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_DATABASE) {
+  if (zId!=1 || m_parserState->m_kind!=MWAWDocument::MWAW_K_DATABASE) {
     MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: sending a database is not implemented\n"));
     return false;
   }
 
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: called without any listener\n"));
     return false;

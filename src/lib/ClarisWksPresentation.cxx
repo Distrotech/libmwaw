@@ -39,12 +39,14 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWListener.hxx"
+#include "MWAWParser.hxx"
+#include "MWAWPosition.hxx"
 
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksStruct.hxx"
 #include "ClarisWksStyleManager.hxx"
 
@@ -87,10 +89,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksPresentation::ClarisWksPresentation
-(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new ClarisWksPresentationInternal::State),
-  m_mainParser(&parser), m_styleManager(parser.m_styleManager)
+ClarisWksPresentation::ClarisWksPresentation(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new ClarisWksPresentationInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -104,8 +105,7 @@ int ClarisWksPresentation::version() const
 
 int ClarisWksPresentation::numPages() const
 {
-  if (!m_mainParser->getHeader() ||
-      m_mainParser->getHeader()->getKind()!=MWAWDocument::MWAW_K_PRESENTATION ||
+  if (m_parserState->m_kind!=MWAWDocument::MWAW_K_PRESENTATION ||
       m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end())
     return 1;
   return int(m_state->m_presentationMap.find(1)->second->m_zoneIdList.size());
@@ -313,31 +313,33 @@ bool ClarisWksPresentation::sendZone(int number)
   if (iter == m_state->m_presentationMap.end())
     return false;
   shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
-  if (!presentation || !m_parserState->m_textListener)
+  if (!presentation || !m_parserState->getMainListener())
     return true;
   presentation->m_parsed = true;
   if (presentation->okChildId(number+1))
-    m_mainParser->forceParsed(number+1);
+    m_document.forceParsed(number+1);
   bool main = number == 1;
   int actPage = 1;
   for (size_t p = 0; p < presentation->m_zoneIdList.size(); p++) {
-    if (main) m_mainParser->newPage(actPage++);
+    if (main) m_document.newPage(actPage++);
     int id = presentation->m_zoneIdList[p];
     if (id > 0 && presentation->okChildId(id))
-      m_mainParser->sendZone(id, false);
+      m_document.sendZone(id, false);
   }
   return true;
 }
 
 void ClarisWksPresentation::flushExtra()
 {
+  shared_ptr<MWAWListener> listener=m_parserState->getMainListener();
+  if (!listener) return;
   std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.begin();
   for (; iter !=  m_state->m_presentationMap.end(); ++iter) {
     shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
     if (presentation->m_parsed)
       continue;
-    if (m_parserState->m_textListener) m_parserState->m_textListener->insertEOL();
+    listener->insertEOL();
     sendZone(iter->first);
   }
 }

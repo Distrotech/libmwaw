@@ -69,6 +69,8 @@ public:
   MWAWHeader *m_header;
   //! the resource parser
   MWAWRSRCParserPtr m_rsrcParser;
+  //! the actual document size
+  MWAWPageSpan m_pageSpan;
 
   //! the font converter
   MWAWFontConverterPtr m_fontConverter;
@@ -143,32 +145,32 @@ public:
   //! returns the actual page dimension
   MWAWPageSpan const &getPageSpan() const
   {
-    return m_pageSpan;
+    return m_parserState->m_pageSpan;
   }
   //! returns the actual page dimension
   MWAWPageSpan &getPageSpan()
   {
-    return m_pageSpan;
+    return m_parserState->m_pageSpan;
   }
   //! returns the form length
   double getFormLength() const
   {
-    return m_pageSpan.getFormLength();
+    return m_parserState->m_pageSpan.getFormLength();
   }
   //! returns the form width
   double getFormWidth() const
   {
-    return m_pageSpan.getFormWidth();
+    return m_parserState->m_pageSpan.getFormWidth();
   }
   //! returns the page length (form length without margin )
   double getPageLength() const
   {
-    return m_pageSpan.getPageLength();
+    return m_parserState->m_pageSpan.getPageLength();
   }
   //! returns the page width (form width without margin )
   double getPageWidth() const
   {
-    return m_pageSpan.getPageWidth();
+    return m_parserState->m_pageSpan.getPageWidth();
   }
   //! returns the rsrc parser
   MWAWRSRCParserPtr &getRSRCParser()
@@ -184,7 +186,7 @@ protected:
   //! constructor (protected)
   MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! constructor using a state
-  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
 
   //! sets the works version
   void setVersion(int vers)
@@ -220,8 +222,6 @@ private:
 
   //! the parser state
   MWAWParserStatePtr m_parserState;
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
   //! the debug file name
   std::string m_asciiName;
 };

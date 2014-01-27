@@ -51,6 +51,7 @@
 #include "MWAWSection.hxx"
 
 #include "ClarisWksDatabase.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksGraph.hxx"
 #include "ClarisWksPresentation.hxx"
 #include "ClarisWksSpreadsheet.hxx"
@@ -69,33 +70,18 @@ namespace ClarisWksParserInternal
 //! Internal: the state of a ClarisWksParser
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_pages(0,0), m_EOF(-1L), m_actPage(0), m_numPages(0),
-    m_columns(1), m_columnsWidth(), m_columnsSep(),
-    m_headerId(0), m_footerId(0), m_headerHeight(0), m_footerHeight(0),
+  State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_EOF(-1L), m_actPage(0), m_numPages(0),
     m_zonesMap(), m_mainZonesList()
   {
   }
 
   //! the document kind
   MWAWDocument::Kind m_kind;
-  //! the document number of pages ( if known )
-  Vec2i m_pages;
   //! the last position
   long m_EOF;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
-  /** the number of columns */
-  int m_columns;
-  /** the columns witdh in Points*/
-  std::vector<int> m_columnsWidth;
-  /** the columns separator in Points*/
-  std::vector<int> m_columnsSep;
-  int m_headerId /** the header zone if known */,
-      m_footerId /** the footer zone if known */;
-
-  int m_headerHeight /** the header height if known */,
-      m_footerHeight /** the footer height if known */;
   std::map<int, shared_ptr<ClarisWksStruct::DSET> > m_zonesMap /** the map of zone*/;
   std::vector<int> m_mainZonesList/** the list of main group */;
 };
@@ -160,9 +146,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 ClarisWksParser::ClarisWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(),
-  m_pageSpanSet(false), m_databaseParser(), m_graphParser(), m_presentationParser(),
-  m_spreadsheetParser(), m_styleManager(), m_tableParser(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_document()
 {
   init();
 }
@@ -177,39 +161,20 @@ void ClarisWksParser::init()
   setAsciiName("main-1");
 
   m_state.reset(new ClarisWksParserInternal::State);
-
+  m_document.reset(new ClarisWksDocument(*this));
+  m_document->m_canSendZoneAsGraphic=reinterpret_cast<ClarisWksDocument::CanSendZoneAsGraphic>(&ClarisWksParser::canSendZoneAsGraphic);
+  m_document->m_forceParsed=reinterpret_cast<ClarisWksDocument::ForceParsed>(&ClarisWksParser::forceParsed);
+  m_document->m_getZone=reinterpret_cast<ClarisWksDocument::GetZone>(&ClarisWksParser::getZone);
+  m_document->m_newPage=reinterpret_cast<ClarisWksDocument::NewPage>(&ClarisWksParser::newPage);
+  m_document->m_sendFootnote=reinterpret_cast<ClarisWksDocument::SendFootnote>(&ClarisWksParser::sendFootnote);
+  m_document->m_sendZone=reinterpret_cast<ClarisWksDocument::SendZone>(&ClarisWksParser::sendZone);
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
-
-  m_styleManager.reset(new ClarisWksStyleManager(*this));
-
-  m_databaseParser.reset(new ClarisWksDatabase(*this));
-  m_graphParser.reset(new ClarisWksGraph(*this));
-  m_presentationParser.reset(new ClarisWksPresentation(*this));
-  m_spreadsheetParser.reset(new ClarisWksSpreadsheet(*this));
-  m_tableParser.reset(new ClarisWksTable(*this));
-  m_textParser.reset(new ClarisWksText(*this));
 }
 
 ////////////////////////////////////////////////////////////
-// position and height
+// zone
 ////////////////////////////////////////////////////////////
-Vec2i ClarisWksParser::getDocumentPages() const
-{
-  return m_state->m_pages;
-}
-
-double ClarisWksParser::getTextHeight() const
-{
-  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
-}
-
-Vec2f ClarisWksParser::getPageLeftTop() const
-{
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
-}
-
 shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::getZone(int zId) const
 {
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter
@@ -217,43 +182,6 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::getZone(int zId) const
   if (iter != m_state->m_zonesMap.end())
     return iter->second;
   return shared_ptr<ClarisWksStruct::DSET>();
-}
-
-void ClarisWksParser::getHeaderFooterId(int &headerId, int &footerId) const
-{
-  headerId = m_state->m_headerId;
-  footerId = m_state->m_footerId;
-}
-
-void ClarisWksParser::checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const
-{
-  if (version() < 4) return;
-  int numSmallEndian = 0, numBigEndian = 0;
-  unsigned long val;
-  for (size_t i = 0; i < vec16.size(); i++) {
-    val = (unsigned long)(uint16_t) vec16[i];
-    if ((val & 0xFF00) && !(val & 0xFF))
-      numSmallEndian++;
-    else if ((val&0xFF) && !(val&0xFF00))
-      numBigEndian++;
-  }
-  for (size_t i = 0; i < vec32.size(); i++) {
-    val = (unsigned long)(uint32_t) vec32[i];
-    if ((val & 0xFFFF0000) && !(val & 0xFFFF))
-      numSmallEndian++;
-    else if ((val&0xFFFF) && !(val&0xFFFF0000))
-      numBigEndian++;
-  }
-  if (numBigEndian >= numSmallEndian)
-    return;
-  for (size_t i = 0; i < vec16.size(); i++) {
-    val = (unsigned long)(uint16_t) vec16[i];
-    vec16[i] = (int16_t)((val>>8) & ((val&0xFF)<<8));
-  }
-  for (size_t i = 0; i < vec32.size(); i++) {
-    val = (unsigned long)(uint32_t) vec32[i];
-    vec32[i] = (int32_t)((val>>16) & ((val&0xFFFF)<<16));
-  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -282,15 +210,15 @@ bool ClarisWksParser::canSendZoneAsGraphic(int zoneId) const
   shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
   switch (zMap->m_fileType) {
   case 0:
-    return m_graphParser->canSendGroupAsGraphic(zoneId);
+    return m_document->getGraphParser()->canSendGroupAsGraphic(zoneId);
   case 1:
-    return m_textParser->canSendTextAsGraphic(zoneId);
+    return m_document->getTextParser()->canSendTextAsGraphic(zoneId);
   case 2:
-    return m_spreadsheetParser->canSendSpreadsheetAsGraphic(zoneId);
+    return m_document->getSpreadsheetParser()->canSendSpreadsheetAsGraphic(zoneId);
   case 3:
-    return m_databaseParser->canSendDatabaseAsGraphic(zoneId);
+    return m_document->getDatabaseParser()->canSendDatabaseAsGraphic(zoneId);
   case 4:
-    return m_graphParser->canSendBitmapAsGraphic(zoneId);
+    return m_document->getGraphParser()->canSendBitmapAsGraphic(zoneId);
   default:
     break;
   }
@@ -307,25 +235,25 @@ bool ClarisWksParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position
   bool res = false;
   switch (zMap->m_fileType) {
   case 0:
-    res = m_graphParser->sendGroup(zoneId, asGraphic, position);
+    res = m_document->getGraphParser()->sendGroup(zoneId, asGraphic, position);
     break;
   case 1:
-    res = m_textParser->sendZone(zoneId, asGraphic);
+    res = m_document->getTextParser()->sendZone(zoneId, asGraphic);
     break;
   case 4:
-    res = m_graphParser->sendBitmap(zoneId, asGraphic, position);
+    res = m_document->getGraphParser()->sendBitmap(zoneId, asGraphic, position);
     break;
   case 5:
-    res = m_presentationParser->sendZone(zoneId);
+    res = m_document->getPresentationParser()->sendZone(zoneId);
     break;
   case 6:
-    res = m_tableParser->sendZone(zoneId);
+    res = m_document->getTableParser()->sendZone(zoneId);
     break;
   case 2:
-    res = m_spreadsheetParser->sendSpreadsheet(zoneId);
+    res = m_document->getSpreadsheetParser()->sendSpreadsheet(zoneId);
     break;
   case 3:
-    res = m_databaseParser->sendDatabase(zoneId);
+    res = m_document->getDatabaseParser()->sendDatabase(zoneId);
     break;
   default:
     MWAW_DEBUG_MSG(("ClarisWksParser::sendZone: can not send zone: %d\n", zoneId));
@@ -334,41 +262,6 @@ bool ClarisWksParser::sendZone(int zoneId, bool asGraphic, MWAWPosition position
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   zMap->m_parsed = true;
   return res;
-}
-
-////////////////////////////////////////////////////////////
-// interface with the text parser
-////////////////////////////////////////////////////////////
-MWAWSection ClarisWksParser::getMainSection() const
-{
-  MWAWSection sec;
-  if (m_state->m_columns <= 1)
-    return sec;
-  size_t numCols = size_t(m_state->m_columns);
-  bool hasSep = m_state->m_columnsSep.size()+1==numCols;
-  bool hasWidth = m_state->m_columnsWidth.size()==numCols;
-  double width=0.0;
-  if (!hasWidth) {
-    double totalWidth = 72.0*getPageWidth();
-    for (size_t c=0; c+1 < numCols; c++)
-      totalWidth -= double(m_state->m_columnsSep[c]);
-    width = totalWidth/double(numCols);
-  }
-  sec.m_columns.resize(numCols);
-  for (size_t c=0; c < numCols; c++) {
-    sec.m_columns[c].m_width =
-      hasWidth ? double(m_state->m_columnsWidth[c]) : width;
-    sec.m_columns[c].m_widthUnit = librevenge::RVNG_POINT;
-    if (!hasSep)
-      continue;
-    if (c)
-      sec.m_columns[c].m_margins[libmwaw::Left]=
-        double(m_state->m_columnsSep[c-1])/72./2.;
-    if (c+1!=numCols)
-      sec.m_columns[c].m_margins[libmwaw::Right]=
-        double(m_state->m_columnsSep[c])/72./2.;
-  }
-  return sec;
 }
 
 void ClarisWksParser::sendFootnote(int zoneId)
@@ -409,17 +302,19 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
       createDocument(docInterface);
       MWAWPosition pos;
       //pos.m_anchorTo=MWAWPosition::Page;
+      int headerId, footerId;
+      m_document->getHeaderFooterId(headerId,footerId);
       for (size_t i = 0; i < m_state->m_mainZonesList.size(); i++) {
         // can happens if mainZonesList is not fully reconstruct
-        if (m_state->m_mainZonesList[i]==m_state->m_headerId ||
-            m_state->m_mainZonesList[i]==m_state->m_footerId)
+        if (m_state->m_mainZonesList[i]==headerId ||
+            m_state->m_mainZonesList[i]==footerId)
           continue;
         sendZone(m_state->m_mainZonesList[i], false, pos);
       }
-      m_presentationParser->flushExtra();
-      m_graphParser->flushExtra();
-      m_tableParser->flushExtra();
-      m_textParser->flushExtra();
+      m_document->getPresentationParser()->flushExtra();
+      m_document->getGraphParser()->flushExtra();
+      m_document->getTableParser()->flushExtra();
+      m_document->getTextParser()->flushExtra();
     }
     ascii().reset();
   }
@@ -459,21 +354,23 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
   else
     ps.setMarginBottom(0);
 
-  int numPage = m_textParser->numPages();
-  if (m_databaseParser->numPages() > numPage)
-    numPage = m_databaseParser->numPages();
-  if (m_presentationParser->numPages() > numPage)
-    numPage = m_presentationParser->numPages();
-  if (m_graphParser->numPages() > numPage)
-    numPage = m_graphParser->numPages();
-  if (m_spreadsheetParser->numPages() > numPage)
-    numPage = m_spreadsheetParser->numPages();
-  if (m_tableParser->numPages() > numPage)
-    numPage = m_tableParser->numPages();
+  int numPage = m_document->getTextParser()->numPages();
+  if (m_document->getDatabaseParser()->numPages() > numPage)
+    numPage = m_document->getDatabaseParser()->numPages();
+  if (m_document->getPresentationParser()->numPages() > numPage)
+    numPage = m_document->getPresentationParser()->numPages();
+  if (m_document->getGraphParser()->numPages() > numPage)
+    numPage = m_document->getGraphParser()->numPages();
+  if (m_document->getSpreadsheetParser()->numPages() > numPage)
+    numPage = m_document->getSpreadsheetParser()->numPages();
+  if (m_document->getTableParser()->numPages() > numPage)
+    numPage = m_document->getTableParser()->numPages();
   m_state->m_numPages = numPage;
 
+  int headerId, footerId;
+  m_document->getHeaderFooterId(headerId,footerId);
   for (int i = 0; i < 2; i++) {
-    int zoneId = i == 0 ? m_state->m_headerId : m_state->m_footerId;
+    int zoneId = i == 0 ? headerId : footerId;
     if (zoneId == 0)
       continue;
     MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
@@ -507,7 +404,7 @@ bool ClarisWksParser::createZones()
 
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  if (readDocHeader() && readDocInfo()) {
+  if (m_document->readDocHeader() && m_document->readDocInfo()) {
     pos = input->tell();
     while (!input->isEnd()) {
       if (!readZone()) {
@@ -592,21 +489,23 @@ void ClarisWksParser::typeMainZones()
 
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   // then type the slides
-  std::vector<int> slidesList = m_presentationParser->getSlidesList();
-  m_graphParser->setSlideList(slidesList);
+  std::vector<int> slidesList = m_document->getPresentationParser()->getSlidesList();
+  m_document->getGraphParser()->setSlideList(slidesList);
   for (size_t slide = 0; slide < slidesList.size(); slide++) {
     iter = m_state->m_zonesMap.find(slidesList[slide]);
     if (iter != m_state->m_zonesMap.end() && iter->second)
       iter->second->m_type = ClarisWksStruct::DSET::T_Slide;
   }
   // now check the header/footer
-  if (m_state->m_headerId) {
-    iter = m_state->m_zonesMap.find(m_state->m_headerId);
+  int headerId, footerId;
+  m_document->getHeaderFooterId(headerId,footerId);
+  if (headerId) {
+    iter = m_state->m_zonesMap.find(headerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
       iter->second->m_type = ClarisWksStruct::DSET::T_Header;
   }
-  if (m_state->m_footerId) {
-    iter = m_state->m_zonesMap.find(m_state->m_footerId);
+  if (footerId) {
+    iter = m_state->m_zonesMap.find(footerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
       iter->second->m_type = ClarisWksStruct::DSET::T_Footer;
   }
@@ -634,10 +533,10 @@ void ClarisWksParser::typeMainZones()
         continue;
       if (isPres) // fixme: actually as the main type is not good too dangerous
         fId=listZonesId[type][z];
-      if (type==ClarisWksStruct::DSET::T_Header && !m_state->m_headerId)
-        m_state->m_headerId = fId;
-      else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
-        m_state->m_footerId = fId;
+      if (type==ClarisWksStruct::DSET::T_Header && !headerId)
+        m_document->setHeaderFooterId(fId,true);
+      else if (type==ClarisWksStruct::DSET::T_Footer && !footerId)
+        m_document->setHeaderFooterId(fId,false);
     }
   }
 }
@@ -772,6 +671,8 @@ bool ClarisWksParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
   if (!zone) return true;
   zone->m_internal = 1;
   size_t numChilds = zone->m_childs.size();
+  int headerId, footerId;
+  m_document->getHeaderFooterId(headerId,footerId);
   for (int step = 0; step < 2; step++) {
     for (size_t c = 0; c < numChilds; c++) {
       int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
@@ -784,11 +685,11 @@ bool ClarisWksParser::exploreZonesGraphRec(int zId, std::set<int> &notDoneList)
         else if (iter2->second->m_internal==1) {
           MWAW_DEBUG_MSG(("ClarisWksParser::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
         }
-        else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
+        else if (cId != headerId && cId != footerId)
           zone->m_validedChildList.insert(cId);
       }
       else {
-        if (cId != m_state->m_headerId && cId != m_state->m_footerId)
+        if (cId != headerId && cId != footerId)
           zone->m_validedChildList.insert(cId);
         exploreZonesGraphRec(cId, notDoneList);
       }
@@ -876,7 +777,7 @@ bool ClarisWksParser::readEndTable()
       parsed = true;
     }
     else if (entry.type() == "STYL") {
-      m_styleManager->readStyles(entry);
+      m_document->m_styleManager->readStyles(entry);
       parsed = true;
     }
     else if (entry.type() == "DSUM") {
@@ -964,7 +865,7 @@ bool ClarisWksParser::readZone()
     }
     if (name == "FNTM") {
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-      if (readStructZone("FNTM", true))
+      if (m_document->readStructZone("FNTM", true))
         return true;
     }
     if (name == "HDNI" && version() <= 4)
@@ -1107,6 +1008,7 @@ bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
     m_state->m_kind=MWAWDocument::MWAW_K_UNKNOWN;
     break;
   }
+  getParserState()->m_kind=m_state->m_kind;
   if (header) {
     header->reset(MWAWDocument::MWAW_T_CLARISWORKS, version());
     header->setKind(m_state->m_kind);
@@ -1183,25 +1085,25 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::readDSET(bool &complete)
   shared_ptr<ClarisWksStruct::DSET> res;
   switch (dset.m_fileType) {
   case 0:
-    res = m_graphParser->readGroupZone(dset, entry, complete);
+    res = m_document->getGraphParser()->readGroupZone(dset, entry, complete);
     break;
   case 1:
-    res = m_textParser->readDSETZone(dset, entry, complete);
+    res = m_document->getTextParser()->readDSETZone(dset, entry, complete);
     break;
   case 2:
-    res = m_spreadsheetParser->readSpreadsheetZone(dset, entry, complete);
+    res = m_document->getSpreadsheetParser()->readSpreadsheetZone(dset, entry, complete);
     break;
   case 3:
-    res = m_databaseParser->readDatabaseZone(dset, entry, complete);
+    res = m_document->getDatabaseParser()->readDatabaseZone(dset, entry, complete);
     break;
   case 4:
-    res = m_graphParser->readBitmapZone(dset, entry, complete);
+    res = m_document->getGraphParser()->readBitmapZone(dset, entry, complete);
     break;
   case 5:
-    res = m_presentationParser->readPresentationZone(dset, entry, complete);
+    res = m_document->getPresentationParser()->readPresentationZone(dset, entry, complete);
     break;
   case 6:
-    res = m_tableParser->readTableZone(dset, entry, complete);
+    res = m_document->getTableParser()->readTableZone(dset, entry, complete);
     break;
   default:
     parsed = false;
@@ -1261,144 +1163,6 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksParser::readDSET(bool &complete)
 
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return zone;
-}
-
-///////////////////////////////////////////////////////////
-// try to read a unknown structured zone
-////////////////////////////////////////////////////////////
-bool ClarisWksParser::readStructZone(char const *zoneName, bool hasEntete)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  long sz = (long) input->readULong(4);
-  long endPos = pos+4+sz;
-  if (!input->checkPosition(endPos)) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksParser::readStructZone: unexpected size for %s\n", zoneName));
-    return false;
-  }
-  libmwaw::DebugStream f;
-  f << "Entries(" << zoneName << "):";
-
-  if (sz == 0) {
-    if (hasEntete) {
-      ascii().addPos(pos-4);
-      ascii().addNote(f.str().c_str());
-    }
-    else {
-      ascii().addPos(pos);
-      ascii().addNote("NOP");
-    }
-    return true;
-  }
-
-  int N = (int) input->readLong(2);
-  f << "N=" << N << ",";
-  int type = (int) input->readLong(2);
-  if (type != -1)
-    f << "#type=" << type << ",";
-  int val = (int) input->readLong(2);
-  if (val) f << "#unkn=" << val << ",";
-  int fSz = (int) input->readULong(2);
-  int hSz = (int) input->readULong(2);
-  if (!fSz || N *fSz+hSz+12 != sz) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksParser::readStructZone: unexpected size for %s\n", zoneName));
-    return false;
-  }
-
-  if (long(input->tell()) != pos+4+hSz)
-    ascii().addDelimiter(input->tell(), '|');
-  ascii().addPos(hasEntete ? pos-4 : pos);
-  ascii().addNote(f.str().c_str());
-
-  long debPos = endPos-N*fSz;
-  for (int i = 0; i < N; i++) {
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    f.str("");
-    f << zoneName << "-" << i << ":";
-
-    long actPos = input->tell();
-    if (actPos != debPos && actPos != debPos+fSz)
-      ascii().addDelimiter(input->tell(),'|');
-    ascii().addPos(debPos);
-    ascii().addNote(f.str().c_str());
-    debPos += fSz;
-  }
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
-// try to read a list of structured zone
-bool ClarisWksParser::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
-{
-  res.resize(0);
-  if (intSz != 1 && intSz != 2 && intSz != 4) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unknown int size: %d\n", intSz));
-    return false;
-  }
-
-  MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  long sz = (long) input->readULong(4);
-  long endPos = pos+4+sz;
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unexpected size for %s\n", zoneName));
-    return false;
-  }
-  libmwaw::DebugStream f;
-  if (zoneName && strlen(zoneName))
-    f << "Entries(" << zoneName << "):";
-
-  if (sz == 0) {
-    if (hasEntete) {
-      ascii().addPos(pos-4);
-      ascii().addNote(f.str().c_str());
-    }
-    else {
-      ascii().addPos(pos);
-      ascii().addNote("NOP");
-    }
-    return true;
-  }
-
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-  int N = (int) input->readLong(2);
-  f << "N=" << N << ",";
-  int type = (int) input->readLong(2);
-  if (type != -1)
-    f << "#type=" << type << ",";
-  long val = input->readLong(2);
-  if (val) f << "#unkn=" << val << ",";
-  int fSz = (int) input->readULong(2);
-  int hSz = (int) input->readULong(2);
-  if (fSz != intSz || N *fSz+hSz+12 != sz) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksParser::readStructIntZone: unexpected field size\n"));
-    return false;
-  }
-
-  long debPos = endPos-N*fSz;
-  if (long(input->tell()) != debPos) {
-    ascii().addDelimiter(input->tell(), '|');
-    if (N) ascii().addDelimiter(debPos, '|');
-  }
-  input->seek(debPos, librevenge::RVNG_SEEK_SET);
-  f << "[";
-  for (int i = 0; i < N; i++) {
-    val = input->readLong(fSz);
-    res.push_back((int) val);
-    f << val << ",";
-  }
-  f << "]";
-
-  ascii().addPos(hasEntete ? pos-4 : pos);
-  ascii().addNote(f.str().c_str());
-
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  return true;
 }
 
 ///////////////////////////////////////////////////////////
@@ -1963,508 +1727,6 @@ bool ClarisWksParser::readCPRT(MWAWEntry const &entry)
 #endif
     input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
   }
-
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the print info
-////////////////////////////////////////////////////////////
-bool ClarisWksParser::readDocHeader()
-{
-  MWAWInputStreamPtr input = getInput();
-  int const vers=version();
-  long debPos = input->tell();
-  libmwaw::DebugStream f;
-  f << "Entries(DocHeader):";
-
-  int val;
-  if (vers >= 6) {
-    f << "unkn=[";
-    for (int i = 0; i < 4; i++) {
-      val = (int) input->readLong(1);
-      if (val) f << val << ", ";
-      else f << "_, ";
-    }
-    f << "],";
-    for (int i = 0; i < 4; i++) {
-      val = (int) input->readLong(2);
-      if (val) f << "e" << i << "=" << val << ",";
-    }
-  }
-  long pos = input->tell();
-  int zone0Length = 52, zone1Length=0;
-  switch (vers) {
-  case 1:
-    zone0Length = 114;
-    zone1Length=50;
-    break;
-  case 2:
-  case 3: // checkme: never see a v3 file
-    zone0Length = 116;
-    zone1Length=112;
-    break;
-  case 4:
-    zone0Length = 120;
-    zone1Length=92;
-    break;
-  case 5:
-    zone0Length = 132;
-    zone1Length = 92;
-    break;
-  case 6:
-    zone0Length = 124;
-    zone1Length = 1126;
-    break;
-  default:
-    break;
-  }
-  int totalLength = zone0Length+zone1Length;
-
-  input->seek(totalLength, librevenge::RVNG_SEEK_CUR);
-  if (input->tell() != pos+totalLength) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: file is too short\n"));
-    return false;
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  val = (int) input->readLong(2); // always find 1
-  if (val != 1)
-    f << "#unkn=" << std::hex << val << std::dec << ",";
-  for (int i = 0; i < 4; i++) {
-    val = (int) input->readULong(2);
-    if (val)
-      f << std::hex << "f" << i << "="  << std::hex << val << std::dec << ",";
-  }
-  int dim[2];
-  for (int i = 0; i < 2; i++)
-    dim[i] = (int) input->readLong(2);
-  f << "dim?=" << dim[1] << "x" << dim[0] << ",";
-  int margin[6];
-  f << "margin?=[";
-  for (int i = 0; i < 6; i++) {
-    margin[i] = (int) input->readLong(2);
-    f << margin[i] << ",";
-  }
-  f << "],";
-  if (dim[0] > 0 && dim[1] > 0 &&
-      margin[0] >= 0 && margin[1] >= 0 && margin[2] >= 0 && margin[3] >= 0 &&
-      dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
-
-    Vec2i paperSize(dim[1],dim[0]);
-    Vec2i lTopMargin(margin[1], margin[0]);
-    Vec2i rBotMargin(margin[3], margin[2]);
-
-    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
-    getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
-    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
-    getPageSpan().setMarginRight(rBotMargin.x()/72.0);
-    getPageSpan().setFormLength(paperSize.y()/72.);
-    getPageSpan().setFormWidth(paperSize.x()/72.);
-    m_pageSpanSet = true;
-  }
-  int dim2[2];
-  for (int i = 0; i < 2; i++)
-    dim2[i] = (int) input->readLong(2);
-  f << "dim2?=" << dim2[1] << "x" << dim2[0] << ",";
-  int fl[4];
-  f << "fl?=[";
-  for (int i = 0; i < 4; i++) {
-    fl[i] = (int) input->readULong(1);
-    if (fl[i])
-      f << fl[i] << ",";
-    else
-      f << "_,";
-  }
-  f << "],";
-  for (int i = 0; i < 9; i++) {
-    val = (int) input->readLong(2);
-    if (val)
-      f << "g" << i << "="  << val << ",";
-  }
-
-  if (long(input->tell()) != pos+zone0Length)
-    ascii().addDelimiter(input->tell(), '|');
-  input->seek(pos+zone0Length, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(debPos);
-  ascii().addNote(f.str().c_str());
-
-  /* zone 1 actual font, actul pos, .. */
-  if (!m_textParser->readParagraph())
-    return false;
-  pos = input->tell();
-  f.str("");
-  f << "DocHeader:zone?=" << input->readULong(2) << ",";
-  if (vers >= 4) f << "unkn=" << input->readULong(2) << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  MWAWFont font;
-  int posChar;
-  if (!m_textParser->readFont(-1, posChar, font))
-    return false;
-
-  /* zone 2, type, unknown */
-  pos = input->tell();
-  f.str("");
-  f << "DocHeader-1:";
-  for (int i = 0; i < 6; i++) {
-    val = (int) input->readULong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
-  input->seek(4, librevenge::RVNG_SEEK_CUR);
-  int type = (int) input->readULong(1);
-  f << "type=" << type << ",";
-  val = (int) input->readULong(1);
-  if (type != val) f << "#unkn=" << val << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  if (vers <= 2) {
-    // the document font ?
-    if (!m_textParser->readFont(-1, posChar, font))
-      return false;
-    ascii().addPos(input->tell());
-    ascii().addNote("DocHeader-2");
-    if (vers==2) {
-      input->seek(46, librevenge::RVNG_SEEK_CUR);
-      long actPos = input->tell();
-      f.str("");
-      f << "DocHeader(Col):";
-      int numCols = (int) input->readLong(2);
-      if (numCols < 1 || numCols > 9) {
-        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: pb reading number of columns\n"));
-        f << "###numCols=" << numCols;
-        numCols = 1;
-      }
-      if (numCols != 1)
-        f << "numCols=" << numCols << ",";
-      m_state->m_columns = numCols;
-      f << "colsW=[";
-      for (int i = 0; i < numCols; i++) {
-        val = (int) input->readULong(2);
-        m_state->m_columnsWidth.push_back(val);
-        f << val << ",";
-      }
-      f << "],";
-      input->seek(actPos+20, librevenge::RVNG_SEEK_SET);
-      if (numCols > 1) {
-        f << "colsS=[";
-        for (int i = 0; i < numCols-1; i++) {
-          val = (int) input->readULong(2);
-          m_state->m_columnsSep.push_back(val);
-          f << input->readULong(2) << ",";
-        }
-        f << "],";
-      }
-      input->seek(actPos+36, librevenge::RVNG_SEEK_SET);
-      val = (int) input->readLong(2);
-      if (val) f << "unkn=" << val << ",";
-      ascii().addPos(actPos);
-      ascii().addNote(f.str().c_str());
-    }
-  }
-  else if (long(input->tell()) != pos+zone1Length)
-    ascii().addDelimiter(input->tell(), '|');
-  input->seek(pos+zone1Length, librevenge::RVNG_SEEK_SET);
-  if (input->isEnd()) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: file is too short\n"));
-    return false;
-  }
-  switch (vers) {
-  case 1:
-  case 2: {
-    pos = input->tell();
-    if (!m_textParser->readParagraphs())
-      return false;
-    pos = input->tell();
-    if (!readPrintInfo()) {
-      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find print info\n"));
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    if (vers==1)
-      break;
-    pos = input->tell();
-    if (!m_styleManager->readPatternList() ||
-        !m_styleManager->readGradientList()) {
-      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    pos=input->tell();
-    ascii().addPos(pos);
-    ascii().addNote("Entries(DocUnkn0)");
-    input->seek(12, librevenge::RVNG_SEEK_CUR);
-    if (!readStructZone("DocH0", false)) {
-      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    pos=input->tell();
-    f.str("");
-    f << "Entries(DocUnkn1):";
-    long sz=input->readLong(4);
-    if (sz) {
-      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: oops find a size for DocUnkn2, we may have a problem\n"));
-      f << sz << "###";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-    }
-    else {
-      ascii().addPos(pos);
-      ascii().addNote("_");
-    }
-    break;
-  }
-  case 4:
-  case 5:
-  case 6: {
-    pos = input->tell();
-    MWAWEntry entry;
-    entry.setBegin(pos);
-    entry.setLength(6*260);
-    if (!readDSUM(entry, true))
-      return false;
-    pos = input->tell();
-    long sz = (long) input->readULong(4);
-    if (!sz) {
-      ascii().addPos(pos);
-      ascii().addNote("Nop");
-    }
-    else {
-      long endPos = pos+4+sz;
-      if (!input->checkPosition(endPos)) {
-        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: unexpected LinkInfo size\n"));
-        return false;
-      }
-      ascii().addPos(pos);
-      ascii().addNote("Entries(LinkInfo)");
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    }
-
-    if (vers > 4) {
-      val = (int) input->readULong(4);
-      if (val != long(input->tell())) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find local position\n"));
-        ascii().addPos(pos);
-        ascii().addNote("#");
-
-        return false;
-      }
-      pos = input->tell(); // series of data with size 42 or 46
-      if (!readStructZone("DocUnkn1", false)) {
-        input->seek(pos,librevenge::RVNG_SEEK_SET);
-        return false;
-      }
-    }
-
-    pos = input->tell(); // series of data with size 42 or 46
-    int expectedSize = 0;
-    switch (vers) {
-    case 5:
-      expectedSize=34;
-      break;
-    case 6:
-      expectedSize=32;
-      break;
-    default:
-      break;
-    }
-    if (expectedSize) {
-      ascii().addPos(pos);
-      ascii().addNote("DocHeader-3");
-      input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
-    }
-
-    if (!readPrintInfo()) {
-      MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not find print info\n"));
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-
-    for (int z = 0; z < 4; z++) { // zone0, zone1 : color palette, zone2 (val:2, id:2)
-      if (z==3 && vers!=4) break;
-      pos = input->tell();
-      sz = (long) input->readULong(4);
-      if (!sz) {
-        ascii().addPos(pos);
-        ascii().addNote("Nop");
-        continue;
-      }
-      entry.setBegin(pos);
-      entry.setLength(4+sz);
-      if (!input->checkPosition(entry.end())) {
-        MWAW_DEBUG_MSG(("ClarisWksParser::readDocHeader: can not read final zones\n"));
-        return false;
-      }
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      switch (z) {
-      case 0:
-        ascii().addPos(pos);
-        ascii().addNote("DocUnkn2");
-        break;
-      case 1:
-        if (!m_styleManager->readColorList(entry)) {
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-          return false;
-        }
-        break;
-      case 2: // a serie of id? num
-        if (!readStructZone("DocH0", false)) {
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-          return false;
-        }
-        break;
-      case 3: // checkme
-        ascii().addPos(pos);
-        ascii().addNote("DocUnkn4");
-        break;
-      default:
-        break;
-      }
-      input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    }
-    break;
-  }
-  default:
-    break;
-  }
-  return true;
-}
-
-bool ClarisWksParser::readDocInfo()
-{
-  MWAWInputStreamPtr input = getInput();
-  int const vers=version();
-  libmwaw::DebugStream f;
-  f << "Entries(DocInfo):";
-  long expectedSize=vers==1 ? 352 : vers < 6 ? 372 : 374;
-  long pos = input->tell();
-  long endPos=pos+expectedSize;
-  if (!input->checkPosition(endPos)) return false;
-  f << "ptr=" << std::hex << input->readULong(4) << std::dec << ",";
-  int val;
-  for (int i = 0; i < 6; i++) {
-    val = (int) input->readULong(2);
-    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  m_state->m_headerId = (int) input->readLong(2);
-  if (m_state->m_headerId) f << "headerId=" << m_state->m_headerId << ",";
-  val = (int) input->readLong(2);
-  if (val) f << "unkn=" << val << ",";
-  m_state->m_footerId = (int) input->readLong(2);
-  if (m_state->m_footerId) f << "footerId=" << m_state->m_footerId << ",";
-  for (int i=0; i < 4; ++i) {
-    val = (int) input->readLong(2);
-    if (val) f << "g" << i << "=" << val << ",";
-  }
-  int pages[2];
-  for (int i=0; i < 2; ++i)
-    pages[i]=(int) input->readLong(2);
-  if (pages[1]>=1 && pages[1] < 1000 &&
-      (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_state->m_kind == MWAWDocument::MWAW_K_DRAW)))
-    m_state->m_pages=Vec2i(pages[0],pages[1]);
-  else {
-    MWAW_DEBUG_MSG(("ClarisWksParser::readDocInfo: the number of pages seems bad\n"));
-    f << "###";
-  }
-  if (pages[0]!=1 || pages[1]!=1)
-    f << "pages[num]=" << pages[0] << "x" << pages[1] << ",";
-  if (vers==1) {
-    ascii().addDelimiter(input->tell(), '|');
-    input->seek(8, librevenge::RVNG_SEEK_CUR);
-    ascii().addDelimiter(input->tell(), '|');
-
-    int numCols = (int) input->readLong(2);
-    if (numCols < 1 || numCols > 9) {
-      MWAW_DEBUG_MSG(("ClarisWksParser::readDocInfo: pb reading number of columns\n"));
-      f << "###numCols=" << numCols;
-      numCols = 1;
-    }
-    if (numCols != 1)
-      f << "numCols=" << numCols << ",";
-    m_state->m_columns = numCols;
-    if (numCols > 1) {
-      int colSep = (int) input->readLong(2);
-      m_state->m_columnsSep.resize(size_t(numCols-1), colSep);
-      f << "colSep=" << colSep << ",";
-    }
-    else
-      input->seek(2, librevenge::RVNG_SEEK_CUR);
-  }
-  ascii().addDelimiter(input->tell(), '|');
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  ascii().addPos(pos+100);
-  ascii().addNote("DocInfo-2");
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the print info
-////////////////////////////////////////////////////////////
-bool ClarisWksParser::readPrintInfo()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  if (input->readULong(2) != 0) return false;
-  long sz = (long) input->readULong(2);
-  if (sz < 0x78)
-    return false;
-  long endPos = pos+4+sz;
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::readPrintInfo: file is too short\n"));
-    return false;
-  }
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-
-  libmwaw::DebugStream f;
-  // print info
-  libmwaw::PrinterInfo info;
-  if (!info.read(input)) {
-    if (sz == 0x78) {
-      // the size is ok, so let try to continue
-      ascii().addPos(pos);
-      ascii().addNote("Entries(PrintInfo):##");
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("ClarisWksParser::readPrintInfo: can not read print info, continue\n"));
-      return true;
-    }
-    return false;
-  }
-  f << "Entries(PrintInfo):"<< info;
-
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
-  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
-      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
-
-  if (!m_pageSpanSet) {
-    // define margin from print info
-    Vec2i lTopMargin= -1 * info.paper().pos(0);
-    Vec2i rBotMargin=info.paper().size() - info.page().size();
-
-    // move margin left | top
-    int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
-    int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-    lTopMargin -= Vec2i(decalX, decalY);
-    rBotMargin += Vec2i(decalX, decalY);
-
-    getPageSpan().setMarginTop(lTopMargin.y()/72.0);
-    getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
-    getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
-    getPageSpan().setMarginRight(rBotMargin.x()/72.0);
-    getPageSpan().setFormLength(paperSize.y()/72.);
-    getPageSpan().setFormWidth(paperSize.x()/72.);
-  }
-
-  if (long(input->tell()) !=endPos) {
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    f << ", #endPos";
-    ascii().addDelimiter(input->tell(), '|');
-  }
-
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
 
   return true;
 }

@@ -41,8 +41,9 @@
 
 #include "MWAWEntry.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWParser.hxx"
 
-#include "ClarisWksParser.hxx"
+#include "ClarisWksDocument.hxx"
 #include "ClarisWksText.hxx"
 
 #include "ClarisWksStyleManager.hxx"
@@ -1557,8 +1558,8 @@ std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::Style const &st
 ////////////////////////////////////////////////////
 // StyleManager function
 ////////////////////////////////////////////////////
-ClarisWksStyleManager::ClarisWksStyleManager(ClarisWksParser &parser) :
-  m_parserState(parser.getParserState()), m_mainParser(&parser), m_state()
+ClarisWksStyleManager::ClarisWksStyleManager(ClarisWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state()
 {
   m_state.reset(new ClarisWksStyleManagerInternal::State);
 }
@@ -2035,7 +2036,7 @@ bool ClarisWksStyleManager::readGenStyle(int id)
     else if (name == "NAME")
       ok = readStyleNames(N, fSz);
     else if (name == "RULR")
-      ok = m_mainParser->m_textParser->readSTYL_RULR(N, fSz);
+      ok = m_document.getTextParser() && m_document.getTextParser()->readSTYL_RULR(N, fSz);
     else if (name == "STYL")
       ok = readStylesDef(N, fSz);
     if (!ok) {
@@ -2481,7 +2482,7 @@ bool ClarisWksStyleManager::readGraphStyles(int N, int fSz)
     for (int j = 0; j < 3; j++)
       values16.push_back((int16_t)input->readLong(2));
 
-    m_mainParser->checkOrdering(values16, values32);
+    m_document.checkOrdering(values16, values32);
     if (values16[0] || values16[1])
       f << "dim=" << values16[0] << "x" << values16[1] << ",";
     for (size_t j = 0; j < 2; ++j) {

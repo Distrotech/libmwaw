@@ -52,10 +52,7 @@
 
 #include "MWAWParser.hxx"
 
-namespace ClarisWksStruct
-{
-struct DSET;
-}
+#include "ClarisWksStruct.hxx"
 
 namespace ClarisWksTextInternal
 {
@@ -64,6 +61,7 @@ struct Zone;
 struct State;
 }
 
+class ClarisWksDocument;
 class ClarisWksParser;
 class ClarisWksStyleManager;
 
@@ -74,12 +72,13 @@ class ClarisWksStyleManager;
  */
 class ClarisWksText
 {
+  friend class ClarisWksDocument;
   friend class ClarisWksParser;
   friend class ClarisWksStyleManager;
 
 public:
   //! constructor
-  ClarisWksText(ClarisWksParser &parser);
+  ClarisWksText(ClarisWksDocument &document);
   //! destructor
   virtual ~ClarisWksText();
 
@@ -155,6 +154,10 @@ protected:
   //
   // data
   //
+
+  //! the document
+  ClarisWksDocument &m_document;
+
   //! the parser state
   MWAWParserStatePtr m_parserState;
 
@@ -162,10 +165,7 @@ protected:
   shared_ptr<ClarisWksTextInternal::State> m_state;
 
   //! the main parser;
-  ClarisWksParser *m_mainParser;
-
-  //! the style manager
-  shared_ptr<ClarisWksStyleManager> m_styleManager;
+  MWAWParser *m_mainParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
