@@ -44,6 +44,8 @@
 
 #include "MWAWPosition.hxx"
 
+#include "ClarisWksStruct.hxx"
+
 class MWAWSection;
 
 namespace ClarisWksDocumentInternal
@@ -60,10 +62,6 @@ class ClarisWksSpreadsheet;
 class ClarisWksTable;
 class ClarisWksText;
 
-namespace ClarisWksStruct
-{
-struct DSET;
-}
 //! main document information used to create a ClarisWorks file
 class ClarisWksDocument
 {
@@ -74,6 +72,9 @@ public:
   //! virtual destructor
   ~ClarisWksDocument();
 
+  //! finds the different objects zones
+  bool createZones();
+
   //! returns the number of expected pages ( accross pages x down page)
   Vec2i getDocumentPages() const;
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
@@ -82,8 +83,23 @@ public:
   Vec2f getPageLeftTop() const;
   //! returns the header/footer id
   void getHeaderFooterId(int &headerId, int &footerId) const;
-  //! set the header/footer id
-  void setHeaderFooterId(int &id, bool header);
+
+  //! returns the main document section
+  MWAWSection getMainSection() const;
+  //! return the zone corresponding to an id ( low level)
+  shared_ptr<ClarisWksStruct::DSET> getZone(int zId) const;
+  /** send a page break */
+  void newPage(int page);
+  /** returns the list of the main zones */
+  std::vector<int> const &getMainZonesList() const;
+  //! indicates that a zone is parser
+  void forceParsed(int zoneId);
+  //! check if we can send a zone as a graphic
+  bool canSendZoneAsGraphic(int number) const;
+  //! try to send a zone
+  bool sendZone(int zoneId, bool asGraphic, MWAWPosition pos=MWAWPosition());
+  /** ask the main parser to create a document to send a footnote */
+  void sendFootnote(int zoneId);
 
   //! returns the main parser
   MWAWParser &getMainParser()
@@ -126,38 +142,67 @@ public:
     return m_textParser;
   }
 
+  //! read a zone
+  bool readZone();
   //! reads the document header
   bool readDocHeader();
   //! reads the document info part ( end of the header)
   bool readDocInfo();
   //! read the print info zone
   bool readPrintInfo();
+
+  // THE NAMED ENTRY
+
+  //! reads the end table ( appears in v3.0 : file version ? )
+  bool readEndTable(long &eof);
+
+  /* sequence of plist of printer : in v6 */
+  bool readCPRT(MWAWEntry const &entry);
+
+  /* read the list of mark */
+  bool readMARKList(MWAWEntry const &entry);
+  /* read a URL mark */
+  bool readURL(long endPos);
+  /* read a bookmark mark */
+  bool readBookmark(long endPos);
+  /* read a document mark */
+  bool readDocumentMark(long endPos);
+  /* read a end mark */
+  bool readEndMark(long endPos);
+
   /* read the document summary */
   bool readDSUM(MWAWEntry const &entry, bool inHeader);
+  /* SNAP (in v6) : size[4]/size[2] picture... */
+  bool readSNAP(MWAWEntry const &entry);
+  /* read the temporary file name ? */
+  bool readTNAM(MWAWEntry const &entry);
+
+
+  //
+  // low level
+  //
+
+  /** reads the zone DSET
+
+      \note set complete to true if we read all the zone */
+  shared_ptr<ClarisWksStruct::DSET> readDSET(bool &complete);
+  /** try to type the main zones */
+  void typeMainZones();
+  /** try to type the main zones recursif, returns the father id*/
+  int typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight);
+  /** try to find the zone dags structure... */
+  bool exploreZonesGraph();
+  /** try to find the zone tree graph ( DSF) function*/
+  bool exploreZonesGraphRec(int zId, std::set<int> &notDoneList);
 
   //! try to read a structured zone
   bool readStructZone(char const *zoneName, bool hasEntete);
   /** try to read a int structured zone
       where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
   bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
-
   /** small fonction used to check unusual endian ordering of a list of int16_t, int32_t*/
   void checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const;
 
-  //! returns the main document section
-  MWAWSection getMainSection() const;
-  //! return the zone corresponding to an id ( low level)
-  shared_ptr<ClarisWksStruct::DSET> getZone(int zId) const;
-  /** send a page break */
-  void newPage(int page);
-  //! indicates that a zone is parser
-  void forceParsed(int zoneId);
-  //! check if we can send a zone as a graphic
-  bool canSendZoneAsGraphic(int number) const;
-  //! try to send a zone
-  bool sendZone(int zoneId, bool asGraphic, MWAWPosition pos=MWAWPosition());
-  /** ask the main parser to create a document to send a footnote */
-  void sendFootnote(int zoneId);
 
 protected:
   //! the state
@@ -189,31 +234,15 @@ protected:
   // the callback
   //
 
-  //! callback used to check if we can send a zone as a graphic
-  typedef bool (MWAWParser::* CanSendZoneAsGraphic)(int number) const;
-  //! callback used to send a forceParsed
-  typedef void (MWAWParser::* ForceParsed)(int zoneId);
-  //! callback used to return a zone
-  typedef shared_ptr<ClarisWksStruct::DSET> (MWAWParser::* GetZone)(int zId) const;
   /** callback used to send a page break */
   typedef void (MWAWParser::* NewPage)(int page);
   //! callback used to send a footnote
   typedef void (MWAWParser::* SendFootnote)(int zoneId);
-  //! callback used to send a zone
-  typedef bool (MWAWParser::* SendZone)(int zoneId, bool asGraphic, MWAWPosition pos);
 
-  /** callback to check if we can send a zone as graphic */
-  CanSendZoneAsGraphic m_canSendZoneAsGraphic;
-  /** the force parsed callback */
-  ForceParsed m_forceParsed;
-  /** the callback used to return a zone*/
-  GetZone m_getZone;
   /** the new page callback */
   NewPage m_newPage;
   /** the send footnote callback */
   SendFootnote m_sendFootnote;
-  /** the send zone callback */
-  SendZone m_sendZone;
 
 private:
   ClarisWksDocument(ClarisWksDocument const &orig);

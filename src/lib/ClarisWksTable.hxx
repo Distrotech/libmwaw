@@ -68,6 +68,7 @@ class ClarisWksParser;
  */
 class ClarisWksTable
 {
+  friend class ClarisWksDocument;
   friend class ClarisWksParser;
   friend struct ClarisWksTableInternal::Table;
 

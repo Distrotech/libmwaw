@@ -76,6 +76,7 @@ class MWAWParser;
 class ClarisWksGraph
 {
   friend class ClarisWksGraphInternal::SubDocument;
+  friend class ClarisWksDocument;
   friend class ClarisWksParser;
 
 public:

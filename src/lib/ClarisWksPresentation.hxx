@@ -66,6 +66,7 @@ class ClarisWksDocument;
  */
 class ClarisWksPresentation
 {
+  friend class ClarisWksDocument;
   friend class ClarisWksParser;
 
 public:
