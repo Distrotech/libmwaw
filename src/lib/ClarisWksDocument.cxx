@@ -66,7 +66,7 @@ namespace ClarisWksDocumentInternal
 //! Internal: the state of a ClarisWksDocument
 struct State {
   //! constructor
-  State() : m_pageSpanSet(false),   m_pages(0,0), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
+  State() : m_pageSpanSet(false), m_pages(0,0), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_zonesMap(), m_mainZonesList()
   {
@@ -404,6 +404,114 @@ bool ClarisWksDocument::createZones()
   exploreZonesGraph();
   typeMainZones();
   return getMainZonesList().size() != 0;
+}
+
+////////////////////////////////////////////////////////////
+// read the header
+////////////////////////////////////////////////////////////
+bool ClarisWksDocument::checkHeader(MWAWHeader *header, bool strict)
+{
+  *m_state = ClarisWksDocumentInternal::State();
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  if (!input || !input->hasDataFork())
+    return false;
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+
+  int const headerSize=8;
+  if (!input->checkPosition(headerSize)) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::checkHeader: file is too short\n"));
+    return false;
+  }
+  input->seek(0,librevenge::RVNG_SEEK_SET);
+  f << "FileHeader:";
+  int vers = (int) input->readLong(1);
+  m_parserState->m_version = vers;
+  if (vers <=0 || vers > 6) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::checkHeader: unknown version: %d\n", vers));
+    return false;
+  }
+  f << "vers=" << vers << ",";
+  f << "unk=" << std::hex << input->readULong(2) << ",";
+  int val = (int) input->readLong(1);
+  if (val)
+    f << "unkn1=" << val << ",";
+  if (input->readULong(2) != 0x424f && input->readULong(2) != 0x424f)
+    return false;
+
+  ascFile.addPos(0);
+  ascFile.addNote(f.str().c_str());
+
+  int typePos = 0;
+  switch (vers) {
+  case 1:
+    typePos = 243;
+    break;
+  case 2:
+  case 3:
+    typePos = 249;
+    break;
+  case 4:
+    typePos = 256;
+    break;
+  case 5:
+    typePos = 268;
+    break;
+  case 6:
+    typePos = 278;
+    break;
+  default:
+    break;
+  }
+  input->seek(typePos, librevenge::RVNG_SEEK_SET);
+  if (long(input->tell()) != typePos)
+    return false;
+  int type = (int) input->readULong(1);
+
+  MWAWDocument::Kind kind=MWAWDocument::MWAW_K_UNKNOWN;
+  switch (type) {
+  case 0:
+    kind=MWAWDocument::MWAW_K_DRAW;
+    break;
+  case 1:
+    kind=MWAWDocument::MWAW_K_TEXT;
+    break;
+  case 2:
+    kind=MWAWDocument::MWAW_K_SPREADSHEET;
+    break;
+  case 3:
+    kind=MWAWDocument::MWAW_K_DATABASE;
+    break;
+  case 4:
+    kind=MWAWDocument::MWAW_K_PAINT;
+    break;
+  case 5:
+    kind=MWAWDocument::MWAW_K_PRESENTATION;
+    break;
+  default:
+    MWAW_DEBUG_MSG(("ClarisWksDocument::checkHeader: unknown type=%d\n", type));
+    break;
+  }
+  m_parserState->m_kind=kind;
+  if (header) {
+    header->reset(MWAWDocument::MWAW_T_CLARISWORKS, vers, kind);
+#ifdef DEBUG
+    if (type >= 0 && type < 5)
+      header->setKind(MWAWDocument::MWAW_K_TEXT);
+#else
+    if (type == 0 || type == 4)
+      header->setKind(MWAWDocument::MWAW_K_TEXT);
+#endif
+  }
+
+  if (strict && type > 5) return false;
+#ifndef DEBUG
+  if (type > 8) return false;
+#endif
+  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
+
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

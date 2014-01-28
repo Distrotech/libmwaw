@@ -58,7 +58,8 @@ public:
   /** a structure uses to define the format of a cell content */
   struct Format {
     //! constructor
-    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(1), m_denominatorDigits(1), m_thousandHasSeparator(false), m_currencySymbol("$"), m_DTFormat("")
+    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(1), m_denominatorDigits(1),
+      m_thousandHasSeparator(false), m_parenthesesForNegative(false), m_currencySymbol("$"), m_DTFormat("")
     {
     }
     //! destructor
@@ -93,6 +94,8 @@ public:
     int m_denominatorDigits;
     //! true if we must separate the thousand
     bool m_thousandHasSeparator;
+    //! true if we use parenthese to print negative number
+    bool m_parenthesesForNegative;
     //! the currency symbol ( default '$')
     std::string m_currencySymbol;
     //! a date/time format ( using a subset of strftime format )

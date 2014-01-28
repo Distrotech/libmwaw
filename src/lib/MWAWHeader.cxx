@@ -93,7 +93,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       if (type=="CWWP" || type=="CWW2" || type=="sWPP") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_TEXT));
         return res;
       }
       if (type=="CWPR") {
@@ -347,10 +347,37 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     val[i] = int(input->readULong(2));
 
   // ----------- clearly discriminant ------------------
-  if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 8) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Claris Works file[Limited parsing]\n"));
-    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, (val[0]) >> 8));
-    return res;
+  if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 7) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Claris Works file\n"));
+    int vers= (val[0] >> 8);
+    static int const(typePos[7])= {0, 243, 249, 249, 256, 268, 278};
+    int typeFile=-1;
+    if (vers >= 1 && vers <= 6 && input->checkPosition(typePos[vers])) {
+      input->seek(typePos[vers], librevenge::RVNG_SEEK_SET);
+      typeFile=int(input->readLong(1));
+    }
+    switch (typeFile) {
+    case 0:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    case 1:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_TEXT));
+      return res;
+    case 2:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_SPREADSHEET));
+      return res;
+    case 3:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_DATABASE));
+      return res;
+    case 4:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_PAINT));
+      return res;
+    case 5:
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, vers, MWAWDocument::MWAW_K_PRESENTATION));
+      return res;
+    default:
+      break;
+    }
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77) {
     input->seek(8, librevenge::RVNG_SEEK_SET);

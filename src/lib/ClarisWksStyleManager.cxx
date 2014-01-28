@@ -2408,23 +2408,42 @@ bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
       if (val)
         f << "g" << j << "=" << std::hex << val << std::dec << ",";
     }
-    format.m_format=(int) input->readULong(1);
-    format.m_numDigits=(int) input->readULong(1);
-    format.m_justify=(int) input->readULong(1);
+    MWAWCell::Format cFormat;
+    format.m_fileFormat=(int) input->readULong(1);
+    cFormat.m_digits=(int) input->readULong(1);
+    val = (int) input->readULong(1);
+    switch (val) {
+    case 0: // default
+      break;
+    case 1:
+      format.setHAlignement(MWAWCell::HALIGN_LEFT);
+      break;
+    case 2:
+      format.setHAlignement(MWAWCell::HALIGN_CENTER);
+      break;
+    case 3:
+      format.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      break;
+    default:
+      f << "#hAlign=" << val << ",";
+      break;
+    }
+
     val=(int) input->readULong(1); // 0-f
     if (val) f << "h0=" << val << ",";
     val = (int) input->readULong(1);
-    if (val==1) format.m_separateThousand=true;
+    if (val==1) cFormat.m_thousandHasSeparator=true;
     else if (val) f << "#separateThousand=" << val << ",";
     val = (int) input->readULong(1);
-    if (val==1) format.m_parentheseNegatif=true;
-    else if (val) f << "#parentheseNegatif=" << val << ",";
+    if (val==1) cFormat.m_parenthesesForNegative=true;
+    else if (val) f << "#parenthesesForNegative=" << val << ",";
     val = (int) input->readULong(1);
     if (val==1) format.m_wrap=true;
     else if (val) f << "#wrap=" << val << ",";
     val = (int) input->readULong(1);
     if (val==1) f << "lock,";
     else if (val) f << "#lock=" << val << ",";
+    format.setFormat(cFormat);
     format.m_extra=f.str();
     m_state->m_cellFormatList.push_back(format);
 
@@ -2606,38 +2625,69 @@ bool ClarisWksStyleManager::readKSEN(int N, int fSz)
   return true;
 }
 
-std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat const &form)
+void ClarisWksStyleManager::CellFormat::updateFormat()
 {
-  switch (form.m_justify) {
-  case 0:
+  switch (m_fileFormat) {
+  case -1: // unset
+  case 0: // general
     break;
   case 1:
-    o<<"left,";
+    m_format.m_format=MWAWCell::F_NUMBER;
+    m_format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
     break;
   case 2:
-    o<<"center,";
+    m_format.m_format=MWAWCell::F_NUMBER;
+    m_format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
     break;
   case 3:
-    o<<"right,";
+    m_format.m_format=MWAWCell::F_NUMBER;
+    m_format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
     break;
-  default:
-    o<<"#justify=" << form.m_justify << ",";
+  case 4:
+    m_format.m_format=MWAWCell::F_NUMBER;
+    m_format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+    break;
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: {
+    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
+    m_format.m_format=MWAWCell::F_DATE;
+    m_format.m_DTFormat=wh[m_fileFormat-5];
     break;
   }
-  if (form.m_format >= 0 && form.m_format < 16) {
+  case 10: // unknown
+  case 11: // unknown
+    break;
+  case 12:
+  case 13:
+  case 14:
+  case 15: {
+    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
+    m_format.m_format=MWAWCell::F_TIME;
+    m_format.m_DTFormat=wh[m_fileFormat-12];
+    break;
+  }
+  default: // unknown
+    break;
+  }
+}
+
+std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat const &form)
+{
+  o << reinterpret_cast<MWAWCell const &>(form) << ",";
+  if (form.m_fileFormat >= 0 && form.m_fileFormat < 16) {
     static char const *(wh[16])= {
       "general", "currency", "percent", "scientific", "fixed",
       "date[m/d/y]", "date[d B y]", "date[B d Y]", "date[a, b d Y]", "date[A, B d Y]",
       "form10", "form11",
       "time[H:M]", "time[H:M:S]", "time[I:M p]", "time[I:M:S p]"
     };
-    o << wh[form.m_format] << ",";
+    o << wh[form.m_fileFormat] << ",";
   }
-  else if (form.m_format > 0)
-    o << "#format=" << form.m_format << ",";
-  if (form.m_numDigits!=2) o << "num[digits]=" << form.m_numDigits << ",";
-  if (form.m_separateThousand) o << "thousand[sep],";
-  if (form.m_parentheseNegatif) o << "negatif[parenthese],";
+  else if (form.m_fileFormat > 0)
+    o << "#format=" << form.m_fileFormat << ",";
   if (form.m_wrap) o << "wrap[content],";
   o << form.m_extra;
   return o;

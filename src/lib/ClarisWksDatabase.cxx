@@ -698,13 +698,13 @@ bool ClarisWksDatabase::sendDatabase(int zId)
     ClarisWksDatabaseInternal::Field const &field=dbase.m_fields[f];
     // changme
     if (field.m_type==ClarisWksDatabaseInternal::Field::F_Date)
-      formats[f].m_format=5;
+      formats[f].m_fileFormat=5;
     else if (field.m_type==ClarisWksDatabaseInternal::Field::F_Time)
-      formats[f].m_format=12;
+      formats[f].m_fileFormat=12;
     else if (field.m_resType==2)
-      formats[f].m_format=5;
+      formats[f].m_fileFormat=5;
     else if (field.m_resType==3)
-      formats[f].m_format=12;
+      formats[f].m_fileFormat=12;
   }
   dbase.m_content->setDatabaseFormats(formats);
 

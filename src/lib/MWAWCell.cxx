@@ -281,6 +281,8 @@ std::ostream &operator<<(std::ostream &o, MWAWCell::Format const &format)
     }
     if (format.m_thousandHasSeparator)
       o << "[thousandSep]";
+    if (format.m_parenthesesForNegative)
+      o << "[parenthesis<0]";
     break;
   case MWAWCell::F_DATE:
     o << "date[" << format.m_DTFormat << "]";
@@ -316,6 +318,7 @@ int MWAWCell::Format::compare(MWAWCell::Format const &cell) const
   if (m_denominatorDigits<cell.m_denominatorDigits) return 1;
   if (m_denominatorDigits>cell.m_denominatorDigits) return -1;
   if (m_thousandHasSeparator!=cell.m_thousandHasSeparator) return m_thousandHasSeparator ? -1:1;
+  if (m_parenthesesForNegative!=cell.m_parenthesesForNegative) return m_parenthesesForNegative ? -1:1;
   if (m_DTFormat<cell.m_DTFormat) return 1;
   if (m_DTFormat>cell.m_DTFormat) return -1;
   if (m_currencySymbol<cell.m_currencySymbol) return 1;

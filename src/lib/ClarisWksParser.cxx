@@ -70,12 +70,9 @@ namespace ClarisWksParserInternal
 //! Internal: the state of a ClarisWksParser
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::MWAW_K_UNKNOWN), m_actPage(0), m_numPages(0)
+  State() : m_actPage(0), m_numPages(0)
   {
   }
-
-  //! the document kind
-  MWAWDocument::Kind m_kind;
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 };
@@ -189,6 +186,12 @@ void ClarisWksParser::sendFootnote(int zoneId)
   getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
+bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
+{
+  *m_state = ClarisWksParserInternal::State();
+  return m_document->checkHeader(header, strict);
+}
+
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -204,8 +207,6 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
     ascii().open(asciiName());
 
     checkHeader(0L);
-    // fixme: reset the real kind
-    if (getHeader()) getHeader()->setKind(m_state->m_kind);
     ok = m_document->createZones();
     if (ok) {
       createDocument(docInterface);
@@ -293,119 +294,6 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
   MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
   setTextListener(listen);
   listen->startDocument();
-}
-
-////////////////////////////////////////////////////////////
-//
-// Low level
-//
-////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-// read the header
-////////////////////////////////////////////////////////////
-bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
-{
-  *m_state = ClarisWksParserInternal::State();
-
-  MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork())
-    return false;
-  libmwaw::DebugStream f;
-  int const headerSize=8;
-  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
-  if (int(input->tell()) != headerSize) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: file is too short\n"));
-    return false;
-  }
-  input->seek(0,librevenge::RVNG_SEEK_SET);
-  f << "FileHeader:";
-  int vers = (int) input->readLong(1);
-  setVersion(vers);
-  if (vers <=0 || vers > 6) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: unknown version: %d\n", vers));
-    return false;
-  }
-  f << "vers=" << vers << ",";
-  f << "unk=" << std::hex << input->readULong(2) << ",";
-  int val = (int) input->readLong(1);
-  if (val)
-    f << "unkn1=" << val << ",";
-  if (input->readULong(2) != 0x424f && input->readULong(2) != 0x424f)
-    return false;
-
-  ascii().addPos(0);
-  ascii().addNote(f.str().c_str());
-
-  int typePos = 0;
-  switch (vers) {
-  case 1:
-    typePos = 243;
-    break;
-  case 2:
-  case 3:
-    typePos = 249;
-    break;
-  case 4:
-    typePos = 256;
-    break;
-  case 5:
-    typePos = 268;
-    break;
-  case 6:
-    typePos = 278;
-    break;
-  default:
-    break;
-  }
-  input->seek(typePos, librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != typePos)
-    return false;
-  int type = (int) input->readULong(1);
-  switch (type) {
-  case 0:
-    m_state->m_kind=MWAWDocument::MWAW_K_DRAW;
-    break;
-  case 1:
-    m_state->m_kind=MWAWDocument::MWAW_K_TEXT;
-    break;
-  case 2:
-    m_state->m_kind=MWAWDocument::MWAW_K_SPREADSHEET;
-    break;
-  case 3:
-    m_state->m_kind=MWAWDocument::MWAW_K_DATABASE;
-    break;
-  case 4:
-    m_state->m_kind=MWAWDocument::MWAW_K_PAINT;
-    break;
-  case 5:
-    m_state->m_kind=MWAWDocument::MWAW_K_PRESENTATION;
-    break;
-  default:
-    MWAW_DEBUG_MSG(("ClarisWksParser::checkHeader: unknown type=%d\n", type));
-    m_state->m_kind=MWAWDocument::MWAW_K_UNKNOWN;
-    break;
-  }
-  getParserState()->m_kind=m_state->m_kind;
-  if (header) {
-    header->reset(MWAWDocument::MWAW_T_CLARISWORKS, version());
-    header->setKind(m_state->m_kind);
-#ifdef DEBUG
-    if (type >= 0 && type < 5)
-      header->setKind(MWAWDocument::MWAW_K_TEXT);
-#else
-    if (type == 0 || type == 4)
-      header->setKind(MWAWDocument::MWAW_K_TEXT);
-#endif
-  }
-
-  if (strict && type > 5) return false;
-#ifndef DEBUG
-  if (type > 8) return false;
-#endif
-  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
-
-  return true;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

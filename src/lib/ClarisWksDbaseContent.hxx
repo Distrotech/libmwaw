@@ -44,6 +44,7 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWCell.hxx"
 #include "MWAWEntry.hxx"
 #include "MWAWFont.hxx"
 
@@ -74,31 +75,23 @@ public:
 protected:
   /** struct which stores a record in ClarisWksDbaseContent */
   struct Record {
-    //! different result type
-    enum Type { R_Unknown, R_Long, R_Double, R_String };
     //! contructor
-    Record() : m_style(-1), m_resType(R_Unknown), m_resLong(0), m_resDouble(0), m_resDoubleNaN(false), m_resString(), m_format(0), m_font(3,9), m_justify(0), m_borders(0)
+    Record() : m_style(-1), m_content(), m_hasNaNValue(false), m_format(0), m_font(3,9), m_justify(MWAWCell::HALIGN_DEFAULT), m_borders(0)
     {
     }
 
     //! the style if known
     int m_style;
-    //! the result type
-    Type m_resType;
-    //! the result if int/long
-    long m_resLong;
-    //! the result if double
-    double m_resDouble;
+    //! the content
+    MWAWCellContent m_content;
     //! a flag to know if a double result is nan or not
-    bool m_resDoubleNaN;
-    //! the result entry if string
-    MWAWEntry m_resString;
+    bool m_hasNaNValue;
     //! the format ( in a v1-3 spreadsheet)
     int m_format;
     //! the font ( in v1-3 spreadsheet)
     MWAWFont m_font;
     //! cell justify in v1-3 spreadsheet
-    int m_justify;
+    MWAWCell::HorizontalAlignment m_justify;
     //! the border in v1-3 spreadsheet
     int m_borders;
   };

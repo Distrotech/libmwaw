@@ -44,6 +44,7 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
@@ -143,23 +144,17 @@ private:
 
 public:
   //! the CELL structure a structure related to number/date format
-  struct CellFormat {
+  struct CellFormat : public MWAWCell {
     //! constructor
-    CellFormat() : m_justify(0), m_format(-1), m_numDigits(2), m_separateThousand(false), m_parentheseNegatif(false), m_wrap(false), m_extra("")
+    CellFormat() : MWAWCell(), m_fileFormat(-1), m_wrap(false), m_extra("")
     {
     }
+    //! update the final format ( using file format )
+    void updateFormat();
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, CellFormat const &form);
-    //! the justification: 0:default, 1: left, 2: center, 3: right
-    int m_justify;
     //! the field format: number, string, currency, ..
-    int m_format;
-    //! the number of digit after the commat
-    int m_numDigits;
-    //! true if we need to add separator for thousand
-    bool m_separateThousand;
-    //! true if negatif number are printed with parentheses
-    bool m_parentheseNegatif;
+    int m_fileFormat;
     //! true if the cell content is wrapped
     bool m_wrap;
     //! extra data

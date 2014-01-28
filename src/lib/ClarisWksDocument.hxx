@@ -72,6 +72,9 @@ public:
   //! virtual destructor
   ~ClarisWksDocument();
 
+  //! checks if the document header is correct (or not)
+  bool checkHeader(MWAWHeader *header, bool strict=false);
+
   //! finds the different objects zones
   bool createZones();
 

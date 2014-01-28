@@ -465,15 +465,17 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         f << ",";
       }
       val &=0xF;
-      record.m_justify = (val>>2);
-      switch (record.m_justify) {
+      switch ((val>>2)) {
       case 1:
+        record.m_justify=MWAWCell::HALIGN_LEFT;
         f << "left,";
         break;
       case 2:
+        record.m_justify=MWAWCell::HALIGN_CENTER;
         f << "center,";
         break;
       case 3:
+        record.m_justify=MWAWCell::HALIGN_RIGHT;
         f << "right,";
         break;
       default:
@@ -492,6 +494,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
     f << "###ord=" << std::hex << ord << std::dec;
     ok = false;
   }
+  MWAWCellContent &content=record.m_content;
   if (ok) {
     long actPos=input->tell();
     switch (type) {
@@ -507,11 +510,11 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         ok = false;
         break;
       }
-      record.m_resType=Record::R_Long;
-      record.m_resLong=input->readLong(2+2*type);
-      f << "val=" << record.m_resLong << ",";
+      content.m_contentType=MWAWCellContent::C_NUMBER;
+      content.setValue(double(2+2*type));
+      f << "val=" << content.m_value << ",";
       break;
-    case 2:
+    case 2: {
       f << "float,";
       if (!input->checkPosition(actPos+10)) {
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a float\n"));
@@ -519,14 +522,18 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         ok=false;
         break;
       }
-      record.m_resType=Record::R_Double;
-      if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
-        f << record.m_resDouble << ",";
+      content.m_contentType=MWAWCellContent::C_NUMBER;
+      double value;
+      if (input->readDouble10(value, record.m_hasNaNValue)) {
+        content.setValue(value);
+        f << value << ",";
+      }
       else {
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a float\n"));
         f << "###,";
       }
       break;
+    }
     case 3: {
       f << "string,";
       int fSz = (int) input->readULong(1);
@@ -536,9 +543,9 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         ok=false;
         break;
       }
-      record.m_resType=Record::R_String;
-      record.m_resString.setBegin(input->tell());
-      record.m_resString.setLength((long) fSz);
+      content.m_contentType=MWAWCellContent::C_TEXT;
+      content.m_textEntry.setBegin(input->tell());
+      content.m_textEntry.setLength((long) fSz);
       std::string data("");
       for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
       f << data << ",";
@@ -565,23 +572,26 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       case 0:
       case 1:
         if (input->checkPosition(resPos+2+2*rType)) {
-          record.m_resType=Record::R_Long;
-          record.m_resLong=input->readLong(2+2*rType);
-          f << "=" << record.m_resLong << ",";
+          content.m_contentType=MWAWCellContent::C_NUMBER;
+          content.setValue(double(input->readLong(2+2*rType)));
+          f << "=" << content.m_value << ",";
           break;
         }
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
         f << "###int" << rType << "[res],";
         break;
-      case 2:
-        if (input->checkPosition(resPos+10) && input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
-          record.m_resType=Record::R_Double;
-          f << "=" << record.m_resDouble << ",";
+      case 2: {
+        double value;
+        if (input->checkPosition(resPos+10) && input->readDouble10(value, record.m_hasNaNValue)) {
+          content.m_contentType=MWAWCellContent::C_NUMBER;
+          content.setValue(value);
+          f << "=" << value << ",";
           break;
         }
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
         f << "###float[res],";
         break;
+      }
       case 3: {
         int fSz = (int) input->readULong(1);
         if (!input->checkPosition(resPos+fSz+1)) {
@@ -589,9 +599,9 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
           f << "###string[res]";
           break;
         }
-        record.m_resType=Record::R_String;
-        record.m_resString.setBegin(input->tell());
-        record.m_resString.setLength((long) fSz);
+        content.m_contentType=MWAWCellContent::C_TEXT;
+        content.m_textEntry.setBegin(input->tell());
+        content.m_textEntry.setLength((long) fSz);
         std::string data("");
         for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
         f << "=" << data << ",";
@@ -652,6 +662,7 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   if (m_document.getStyleManager()->get(record.m_style, style) &&
       m_document.getStyleManager()->get(style.m_cellFormatId, format))
     f << format << ",";
+  MWAWCellContent &content=record.m_content;
   switch (type) {
   case 0:
   case 1:
@@ -664,9 +675,9 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    record.m_resType=Record::R_Long;
-    record.m_resLong=input->readLong(2+2*type);
-    f << "val=" << record.m_resLong << ",";
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    content.setValue(double(input->readLong(2+2*type)));
+    f << "val=" << content.m_value << ",";
     break;
   case 2: {
     f << "float,";
@@ -675,9 +686,12 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    record.m_resType=Record::R_Double;
-    if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN))
-      f << record.m_resDouble << ",";
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    double value;
+    if (input->readDouble10(value, record.m_hasNaNValue)) {
+      content.setValue(value);
+      f << value << ",";
+    }
     else {
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a float\n"));
       f << "###,";
@@ -697,9 +711,9 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    record.m_resType=Record::R_String;
-    record.m_resString.setBegin(input->tell());
-    record.m_resString.setLength((long) fSz);
+    content.m_contentType=MWAWCellContent::C_TEXT;
+    content.m_textEntry.setBegin(input->tell());
+    content.m_textEntry.setLength((long) fSz);
     std::string data("");
     for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
     f << data << ",";
@@ -729,23 +743,26 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
     case 0:
     case 1:
       if (remainSz>=2+2*rType) {
-        record.m_resType=Record::R_Long;
-        record.m_resLong=input->readLong(2+2*rType);
-        f << "=" << record.m_resLong << ",";
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+        content.setValue(double(input->readLong(2+2*rType)));
+        f << "=" << content.m_value << ",";
         break;
       }
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
       f << "###int" << rType << "[res],";
       break;
-    case 2:
-      if (remainSz>=10 && input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
-        record.m_resType=Record::R_Double;
-        f << "=" << record.m_resDouble << ",";
+    case 2: {
+      double value;
+      if (remainSz>=10 && input->readDouble10(value, record.m_hasNaNValue)) {
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+        content.setValue(value);
+        f << "=" << value << ",";
         break;
       }
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
       f << "###float[res],";
       break;
+    }
     case 3: {
       if (remainSz<1) {
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the res string seems bad\n"));
@@ -758,9 +775,9 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
         f << "###string[res]";
         break;
       }
-      record.m_resType=Record::R_String;
-      record.m_resString.setBegin(input->tell());
-      record.m_resString.setLength((long) fSz);
+      content.m_contentType=MWAWCellContent::C_TEXT;
+      content.m_textEntry.setBegin(input->tell());
+      content.m_textEntry.setLength((long) fSz);
       std::string data("");
       for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
       f << "=" << data << ",";
@@ -823,6 +840,7 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
   int val=(int) input->readULong(2);
   int type=(val>>12);
   val = int(val&0xFFF);
+  MWAWCellContent &content=record.m_content;
   switch (type) {
   case 0: {
     f << "string,";
@@ -832,9 +850,9 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    record.m_resType=Record::R_String;
-    record.m_resString.setBegin(input->tell());
-    record.m_resString.setLength((long) val);
+    content.m_contentType=MWAWCellContent::C_TEXT;
+    content.m_textEntry.setBegin(input->tell());
+    content.m_textEntry.setLength((long) val);
     std::string data("");
     for (int c=0; c < val; ++c) data+=(char) input->readULong(1);
     f << data << ",";
@@ -848,11 +866,11 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    record.m_resType=Record::R_Long;
-    record.m_resLong=(int) input->readLong(1);
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    content.setValue(double(input->readLong(1)));
     break;
   case 8:
-  case 9:
+  case 9: {
     if (val) f << "unkn=" << std::hex << val << std::dec << ",";
     f << "float" << type << ",";
     if ((m_version<=3&&!input->checkPosition(pos+12)) || (m_version>3 && sz!=12)) {
@@ -860,15 +878,18 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
       f << "###";
       break;
     }
-    if (input->readDouble10(record.m_resDouble, record.m_resDoubleNaN)) {
-      record.m_resType=Record::R_Double;
-      f << record.m_resDouble << ",";
+    double value;
+    if (input->readDouble10(value, record.m_hasNaNValue)) {
+      content.m_contentType=MWAWCellContent::C_NUMBER;
+      content.setValue(value);
+      f << value << ",";
     }
     else {
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: can not read a float\n"));
       f << "###,";
     }
     break;
+  }
   default:
     if (val) f << "unkn=" << std::hex << val << std::dec << ",";
     f << "#type=" << type << ",";
@@ -896,7 +917,7 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
   if (rIt==col.m_idRecordMap.end()) return true;
 
   Record const &record=rIt->second;
-  int justify=0;
+  MWAWCell::HorizontalAlignment justify=MWAWCell::HALIGN_DEFAULT;
   ClarisWksStyleManager::CellFormat format;
   if (!m_isSpreadsheet) {
     static bool first=true;
@@ -910,7 +931,7 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
   else if (m_version <= 3) {
     listener->setFont(record.m_font);
     justify=record.m_justify;
-    format.m_format=record.m_format;
+    format.m_fileFormat=record.m_format;
   }
   else {
     MWAWFont font;
@@ -920,36 +941,34 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
     if (style.m_fontId>=0 && m_document.getStyleManager()->get(style.m_fontId, font))
       listener->setFont(font);
     if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format))
-      justify=format.m_justify;
+      justify=format.hAlignement();
   }
+  MWAWCellContent const &content=record.m_content;
   MWAWParagraph para;
   para.m_justify =
-    justify==1 ? MWAWParagraph::JustificationLeft :
-    justify==2 ? MWAWParagraph::JustificationCenter :
-    justify==3 ? MWAWParagraph::JustificationRight :
-    record.m_resType==Record::R_String ? MWAWParagraph::JustificationLeft :
+    justify==MWAWCell::HALIGN_LEFT ? MWAWParagraph::JustificationLeft :
+    justify==MWAWCell::HALIGN_CENTER ? MWAWParagraph::JustificationCenter :
+    justify==MWAWCell::HALIGN_RIGHT ? MWAWParagraph::JustificationRight :
+    content.m_contentType==MWAWCellContent::C_TEXT ? MWAWParagraph::JustificationLeft :
     MWAWParagraph::JustificationRight;
   listener->setParagraph(para);
 
-  switch (record.m_resType) {
-  case Record::R_Long:
-    if (format.m_format)
-      send(double(record.m_resLong), false, format);
+  switch (content.m_contentType) {
+  case MWAWCellContent::C_NUMBER:
+    if (format.m_fileFormat)
+      send(content.m_value, record.m_hasNaNValue, format);
     else {
       std::stringstream s;
-      s << record.m_resLong;
+      s << content.m_value;
       listener->insertUnicodeString(s.str().c_str());
     }
     break;
-  case Record::R_Double:
-    send(record.m_resDouble, record.m_resDoubleNaN, format);
-    break;
-  case Record::R_String:
-    if (record.m_resString.valid()) {
+  case MWAWCellContent::C_TEXT:
+    if (content.m_textEntry.valid()) {
       MWAWInputStreamPtr &input= m_parserState->m_input;
       long fPos = input->tell();
-      input->seek(record.m_resString.begin(), librevenge::RVNG_SEEK_SET);
-      long endPos = record.m_resString.end();
+      input->seek(content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+      long endPos = content.m_textEntry.end();
       while (!input->isEnd() && input->tell() < endPos) {
         unsigned char c=(unsigned char) input->readULong(1);
         listener->insertCharacter(c, input, endPos);
@@ -957,7 +976,9 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
       input->seek(fPos,librevenge::RVNG_SEEK_SET);
     }
     break;
-  case Record::R_Unknown:
+  case MWAWCellContent::C_FORMULA:
+  case MWAWCellContent::C_NONE:
+  case MWAWCellContent::C_UNKNOWN:
   default:
     break;
   }
@@ -970,7 +991,7 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
   if (!listener)
     return;
   std::stringstream s;
-  int type=format.m_format;
+  int type=format.m_fileFormat;
   if (m_isSpreadsheet && m_version<=3) {
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
@@ -981,18 +1002,19 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
     listener->insertUnicodeString(s.str().c_str());
     return;
   }
+  int numDigits = format.getFormat().m_digits >= 0 ? format.getFormat().m_digits : 2;
   switch (type) {
   case 1: // currency
-    s << std::fixed << std::setprecision(format.m_numDigits) << val << "$";
+    s << std::fixed << std::setprecision(numDigits) << val << "$";
     break;
   case 2: // percent
-    s << std::fixed << std::setprecision(format.m_numDigits) << 100*val << "%";
+    s << std::fixed << std::setprecision(numDigits) << 100*val << "%";
     break;
   case 3: // scientific
-    s << std::scientific << std::setprecision(format.m_numDigits) << val;
+    s << std::scientific << std::setprecision(numDigits) << val;
     break;
   case 4: // fixed
-    s << std::fixed << std::setprecision(format.m_numDigits) << val;
+    s << std::fixed << std::setprecision(numDigits) << val;
     break;
   case 5:
   case 6:
