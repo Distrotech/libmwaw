@@ -2674,7 +2674,7 @@ void ClarisWksStyleManager::CellFormat::updateFormat()
 
 std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat const &form)
 {
-  o << reinterpret_cast<MWAWCell const &>(form) << ",";
+  o << reinterpret_cast<MWAWCell::Format const &>(form) << ",";
   if (form.m_fileFormat >= 0 && form.m_fileFormat < 16) {
     static char const *(wh[16])= {
       "general", "currency", "percent", "scientific", "fixed",
