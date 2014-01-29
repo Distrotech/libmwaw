@@ -595,6 +595,7 @@ bool MWAWCellContent::double2String(double val, MWAWCell::Format const &format, 
     case MWAWCell::F_NUMBER_FRACTION:
     case MWAWCell::F_NUMBER_GENERIC:
     case MWAWCell::F_NUMBER_UNKNOWN:
+    default:
       s << val;
       break;
     }
