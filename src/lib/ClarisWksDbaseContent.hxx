@@ -76,22 +76,25 @@ protected:
   /** struct which stores a record in ClarisWksDbaseContent */
   struct Record {
     //! contructor
-    Record() : m_style(-1), m_content(), m_hasNaNValue(false), m_format(0), m_font(3,9), m_justify(MWAWCell::HALIGN_DEFAULT), m_borders(0)
+    Record() : m_style(-1), m_format(), m_hAlign(MWAWCell::HALIGN_DEFAULT), m_fileFormat(0),
+      m_content(), m_hasNaNValue(false), m_font(3,9), m_borders(0)
     {
     }
 
     //! the style if known
     int m_style;
+    //! the format
+    MWAWCell::Format m_format;
+    //! the cell alignement : by default nothing
+    MWAWCell::HorizontalAlignment m_hAlign;
+    //! the format ( in a v1-3 spreadsheet)
+    int m_fileFormat;
     //! the content
     MWAWCellContent m_content;
     //! a flag to know if a double result is nan or not
     bool m_hasNaNValue;
-    //! the format ( in a v1-3 spreadsheet)
-    int m_format;
     //! the font ( in v1-3 spreadsheet)
     MWAWFont m_font;
-    //! cell justify in v1-3 spreadsheet
-    MWAWCell::HorizontalAlignment m_justify;
     //! the border in v1-3 spreadsheet
     int m_borders;
   };

@@ -2408,21 +2408,20 @@ bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
       if (val)
         f << "g" << j << "=" << std::hex << val << std::dec << ",";
     }
-    MWAWCell::Format cFormat;
     format.m_fileFormat=(int) input->readULong(1);
-    cFormat.m_digits=(int) input->readULong(1);
+    format.m_digits=(int) input->readULong(1);
     val = (int) input->readULong(1);
     switch (val) {
     case 0: // default
       break;
     case 1:
-      format.setHAlignement(MWAWCell::HALIGN_LEFT);
+      format.m_hAlign=MWAWCell::HALIGN_LEFT;
       break;
     case 2:
-      format.setHAlignement(MWAWCell::HALIGN_CENTER);
+      format.m_hAlign=MWAWCell::HALIGN_CENTER;
       break;
     case 3:
-      format.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      format.m_hAlign=MWAWCell::HALIGN_RIGHT;
       break;
     default:
       f << "#hAlign=" << val << ",";
@@ -2432,10 +2431,10 @@ bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
     val=(int) input->readULong(1); // 0-f
     if (val) f << "h0=" << val << ",";
     val = (int) input->readULong(1);
-    if (val==1) cFormat.m_thousandHasSeparator=true;
+    if (val==1) format.m_thousandHasSeparator=true;
     else if (val) f << "#separateThousand=" << val << ",";
     val = (int) input->readULong(1);
-    if (val==1) cFormat.m_parenthesesForNegative=true;
+    if (val==1) format.m_parenthesesForNegative=true;
     else if (val) f << "#parenthesesForNegative=" << val << ",";
     val = (int) input->readULong(1);
     if (val==1) format.m_wrap=true;
@@ -2443,7 +2442,6 @@ bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
     val = (int) input->readULong(1);
     if (val==1) f << "lock,";
     else if (val) f << "#lock=" << val << ",";
-    format.setFormat(cFormat);
     format.m_extra=f.str();
     m_state->m_cellFormatList.push_back(format);
 
@@ -2632,20 +2630,20 @@ void ClarisWksStyleManager::CellFormat::updateFormat()
   case 0: // general
     break;
   case 1:
-    m_format.m_format=MWAWCell::F_NUMBER;
-    m_format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+    m_format=MWAWCell::F_NUMBER;
+    m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
     break;
   case 2:
-    m_format.m_format=MWAWCell::F_NUMBER;
-    m_format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+    m_format=MWAWCell::F_NUMBER;
+    m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
     break;
   case 3:
-    m_format.m_format=MWAWCell::F_NUMBER;
-    m_format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+    m_format=MWAWCell::F_NUMBER;
+    m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
     break;
   case 4:
-    m_format.m_format=MWAWCell::F_NUMBER;
-    m_format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+    m_format=MWAWCell::F_NUMBER;
+    m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
     break;
   case 5:
   case 6:
@@ -2653,8 +2651,8 @@ void ClarisWksStyleManager::CellFormat::updateFormat()
   case 8:
   case 9: {
     static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
-    m_format.m_format=MWAWCell::F_DATE;
-    m_format.m_DTFormat=wh[m_fileFormat-5];
+    m_format=MWAWCell::F_DATE;
+    m_DTFormat=wh[m_fileFormat-5];
     break;
   }
   case 10: // unknown
@@ -2665,8 +2663,8 @@ void ClarisWksStyleManager::CellFormat::updateFormat()
   case 14:
   case 15: {
     static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
-    m_format.m_format=MWAWCell::F_TIME;
-    m_format.m_DTFormat=wh[m_fileFormat-12];
+    m_format=MWAWCell::F_TIME;
+    m_DTFormat=wh[m_fileFormat-12];
     break;
   }
   default: // unknown

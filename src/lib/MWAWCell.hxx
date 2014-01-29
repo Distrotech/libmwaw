@@ -399,7 +399,8 @@ public:
   static bool double2Date(double val, int &Y, int &M, int &D);
   /** conversion beetween double: second since 0:00 and time */
   static bool double2Time(double val, int &H, int &M, int &S);
-
+  /** conversion of the value in string knowing the cell format */
+  static bool double2String(double val, MWAWCell::Format const &format, std::string &str);
   //! the content type ( by default unknown )
   Type m_contentType;
   //! the cell value

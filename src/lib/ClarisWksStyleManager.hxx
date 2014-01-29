@@ -144,15 +144,18 @@ private:
 
 public:
   //! the CELL structure a structure related to number/date format
-  struct CellFormat : public MWAWCell {
-    //! constructor
-    CellFormat() : MWAWCell(), m_fileFormat(-1), m_wrap(false), m_extra("")
+  struct CellFormat : public MWAWCell::Format {
+    //! constructor from cell
+    CellFormat(MWAWCell::Format const &format=MWAWCell::Format()) :
+      MWAWCell::Format(format), m_hAlign(MWAWCell::HALIGN_DEFAULT), m_fileFormat(-1), m_wrap(false), m_extra("")
     {
     }
     //! update the final format ( using file format )
     void updateFormat();
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, CellFormat const &form);
+    //! the cell alignement : by default nothing
+    MWAWCell::HorizontalAlignment m_hAlign;
     //! the field format: number, string, currency, ..
     int m_fileFormat;
     //! true if the cell content is wrapped

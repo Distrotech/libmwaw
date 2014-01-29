@@ -403,8 +403,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int val=(int) input->readULong(1);
   int type=(val>>4);
-  record.m_format=(val&0xF);
-  if (record.m_format) f << "format=" << record.m_format << ",";
+  record.m_fileFormat=(val&0xF);
+  if (record.m_fileFormat) f << "format=" << record.m_fileFormat << ",";
   bool ok=true;
 
   int ord=(int) input->readULong(1);
@@ -467,15 +467,15 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       val &=0xF;
       switch ((val>>2)) {
       case 1:
-        record.m_justify=MWAWCell::HALIGN_LEFT;
+        record.m_hAlign=MWAWCell::HALIGN_LEFT;
         f << "left,";
         break;
       case 2:
-        record.m_justify=MWAWCell::HALIGN_CENTER;
+        record.m_hAlign=MWAWCell::HALIGN_CENTER;
         f << "center,";
         break;
       case 3:
-        record.m_justify=MWAWCell::HALIGN_RIGHT;
+        record.m_hAlign=MWAWCell::HALIGN_RIGHT;
         f << "right,";
         break;
       default:
@@ -930,8 +930,9 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
   }
   else if (m_version <= 3) {
     listener->setFont(record.m_font);
-    justify=record.m_justify;
-    format.m_fileFormat=record.m_format;
+    format=record.m_format;
+    format.m_fileFormat=record.m_fileFormat;
+    justify=format.m_hAlign=record.m_hAlign;
   }
   else {
     MWAWFont font;
@@ -941,7 +942,7 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
     if (style.m_fontId>=0 && m_document.getStyleManager()->get(style.m_fontId, font))
       listener->setFont(font);
     if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format))
-      justify=format.hAlignement();
+      justify=format.m_hAlign;
   }
   MWAWCellContent const &content=record.m_content;
   MWAWParagraph para;
@@ -992,6 +993,7 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
     return;
   std::stringstream s;
   int type=format.m_fileFormat;
+  // FIXME: must not be done here...
   if (m_isSpreadsheet && m_version<=3) {
     if (type>=10&&type<=11) type += 4;
     else if (type>=14) type=16;
@@ -1002,62 +1004,18 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
     listener->insertUnicodeString(s.str().c_str());
     return;
   }
-  int numDigits = format.getFormat().m_digits >= 0 ? format.getFormat().m_digits : 2;
-  switch (type) {
-  case 1: // currency
-    s << std::fixed << std::setprecision(numDigits) << val << "$";
-    break;
-  case 2: // percent
-    s << std::fixed << std::setprecision(numDigits) << 100*val << "%";
-    break;
-  case 3: // scientific
-    s << std::scientific << std::setprecision(numDigits) << val;
-    break;
-  case 4: // fixed
-    s << std::fixed << std::setprecision(numDigits) << val;
-    break;
-  case 5:
-  case 6:
-  case 7:
-  case 8:
-  case 9: { // number of second since 1904
-    time_t date= time_t((val-24107+0.4)*24.*3600);
-    struct tm timeinfo;
-    if (!gmtime_r(&date,&timeinfo)) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not convert a date\n"));
-      s << "###" << val;
-      break;
-    }
-    char buf[256];
-    static char const *(wh[])= {"%m/%d/%y", "%b %d, %y", "%B %d, %Y", "%a, %b %d, %Y", "%A, %B %d, %Y"};
-    strftime(buf, 256, wh[type-5], &timeinfo);
-    s << buf;
-    break;
-  }
-  case 12:
-  case 13:
-  case 14:
-  case 15: { // time: value between 0 and 1
-    struct tm timeinfo;
-    std::memset(&timeinfo, 0, sizeof(timeinfo));
-    if (val<0 || val>=1)
-      val=std::fmod(val,1.);
-    val *= 24.;
-    val -= double(timeinfo.tm_hour=int(std::floor(val)+0.5));
-    val *= 60.;
-    val -= double(timeinfo.tm_min=int(std::floor(val)+0.5));
-    val *= 60.;
-    timeinfo.tm_sec=int(std::floor(val)+0.5);
-    char buf[256];
-    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
-    strftime(buf, 256, wh[type-12], &timeinfo);
-    s << buf;
-    break;
-  }
-  default:
-    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: unknown format %d\n", type));
+
+  ClarisWksStyleManager::CellFormat finalFormat=format;
+  finalFormat.m_fileFormat=type;
+  finalFormat.updateFormat();
+
+  std::string value("");
+  // change the reference date from 1/1/1904 to 1/1/1900
+  if (MWAWCellContent::double2String(finalFormat.m_format==MWAWCell::F_DATE ? val+1462 : val, finalFormat, value))
+    s << value;
+  else {
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not convert the actual value\n"));
     s << val;
-    break;
   }
   listener->insertUnicodeString(s.str().c_str());
 }

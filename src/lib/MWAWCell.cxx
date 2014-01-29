@@ -36,7 +36,9 @@
  */
 #include <time.h>
 
+#include <cmath>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 
 #include <librevenge/librevenge.h>
@@ -563,6 +565,84 @@ bool MWAWCellContent::double2Time(double val, int &H, int &M, int &S)
   M=int(time/60.);
   time -= M*60.;
   S=int(time);
+  return true;
+}
+
+bool MWAWCellContent::double2String(double val, MWAWCell::Format const &format, std::string &str)
+{
+  std::stringstream s;
+  switch (format.m_format) {
+  case MWAWCell::F_BOOLEAN:
+    if (val<0 || val >0) s << "true";
+    else s << "false";
+    break;
+  case MWAWCell::F_NUMBER:
+    if (format.m_digits>=0 && format.m_numberFormat!=MWAWCell::F_NUMBER_GENERIC)
+      s << std::setprecision(format.m_digits);
+    switch (format.m_numberFormat) {
+    case MWAWCell::F_NUMBER_CURRENCY:
+      s << std::fixed << val << "$";
+      break;
+    case MWAWCell::F_NUMBER_DECIMAL:
+      s << val;
+      break;
+    case MWAWCell::F_NUMBER_SCIENTIFIC:
+      s << std::scientific << val;
+      break;
+    case MWAWCell::F_NUMBER_PERCENT:
+      s << std::fixed << 100*val << "%";
+      break;
+    case MWAWCell::F_NUMBER_FRACTION:
+    case MWAWCell::F_NUMBER_GENERIC:
+    case MWAWCell::F_NUMBER_UNKNOWN:
+      s << val;
+      break;
+    }
+    break;
+  case MWAWCell::F_DATE: {
+    int Y, M, D;
+    if (!double2Date(val, Y, M, D)) return false;
+    struct tm time;
+    time.tm_sec=time.tm_min=time.tm_hour=0;
+    time.tm_mday=D;
+    time.tm_mon=M;
+    time.tm_year=Y;
+    time.tm_wday=time.tm_yday=time.tm_isdst=-1;
+    time.tm_zone=0;
+    char buf[256];
+    if (mktime(&time)==-1 ||
+        !strftime(buf, 256, format.m_DTFormat.empty() ? "%m/%d/%y" : format.m_DTFormat.c_str(), &time))
+      return false;
+    s << buf;
+    break;
+  }
+  case MWAWCell::F_TIME: {
+    if (val<0 || val>=1)
+      val=std::fmod(val,1.);
+    int H, M, S;
+    if (!double2Time(val, H, M, S)) return false;
+    struct tm time;
+    time.tm_sec=S;
+    time.tm_min=M;
+    time.tm_hour=H;
+    time.tm_mday=time.tm_mon=1;
+    time.tm_year=100;
+    time.tm_wday=time.tm_yday=time.tm_isdst=-1;
+    time.tm_zone=0;
+    char buf[256];
+    if (mktime(&time)==-1 ||
+        !strftime(buf, 256, format.m_DTFormat.empty() ? "%H:%M:%S" : format.m_DTFormat.c_str(), &time))
+      return false;
+    s << buf;
+    break;
+  }
+  case MWAWCell::F_TEXT:
+  case MWAWCell::F_UNKNOWN:
+  default:
+    MWAW_DEBUG_MSG(("MWAWCellContent::double2String: called with bad format\n"));
+    return false;
+  }
+  str=s.str();
   return true;
 }
 
