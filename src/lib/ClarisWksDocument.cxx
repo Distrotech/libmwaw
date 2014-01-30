@@ -242,17 +242,14 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDocument::getZone(int zId) const
 
 void ClarisWksDocument::forceParsed(int zoneId)
 {
-  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
-    return;
-  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
   if (zMap) zMap->m_parsed = true;
 }
 
 bool ClarisWksDocument::canSendZoneAsGraphic(int zoneId) const
 {
-  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
-    return false;
-  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap.find(zoneId)->second;
+  shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
+  if (!zMap) return false;
   switch (zMap->m_fileType) {
   case 0:
     return m_graphParser->canSendGroupAsGraphic(zoneId);
@@ -272,9 +269,8 @@ bool ClarisWksDocument::canSendZoneAsGraphic(int zoneId) const
 
 bool ClarisWksDocument::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
 {
-  if (m_state->m_zonesMap.find(zoneId) == m_state->m_zonesMap.end())
-    return false;
-  shared_ptr<ClarisWksStruct::DSET> zMap = m_state->m_zonesMap[zoneId];
+  shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
+  if (!zMap) return false;
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos = input->tell();
   bool res = false;
@@ -496,13 +492,10 @@ bool ClarisWksDocument::checkHeader(MWAWHeader *header, bool strict)
   m_parserState->m_kind=kind;
   if (header) {
     header->reset(MWAWDocument::MWAW_T_CLARISWORKS, vers, kind);
-#ifdef DEBUG
-    if (type >= 0 && type < 5)
-      header->setKind(MWAWDocument::MWAW_K_TEXT);
-#else
     if (type == 0 || type == 4)
       header->setKind(MWAWDocument::MWAW_K_TEXT);
-#endif
+    if (type == 3)
+      header->setKind(MWAWDocument::MWAW_K_SPREADSHEET);
   }
 
   if (strict && type > 5) return false;

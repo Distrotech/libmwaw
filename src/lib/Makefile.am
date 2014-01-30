@@ -44,6 +44,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ClarisWksPresentation.hxx	\
 	ClarisWksSpreadsheet.cxx	\
 	ClarisWksSpreadsheet.hxx	\
+	ClarisWksSSParser.cxx		\
+	ClarisWksSSParser.hxx		\
 	ClarisWksStruct.cxx		\
 	ClarisWksStruct.hxx		\
 	ClarisWksStyleManager.cxx	\

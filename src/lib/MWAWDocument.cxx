@@ -48,6 +48,7 @@
 #include "BeagleWksParser.hxx"
 #include "BeagleWksSSParser.hxx"
 #include "ClarisWksParser.hxx"
+#include "ClarisWksSSParser.hxx"
 #include "DocMkrParser.hxx"
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
@@ -379,7 +380,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
   shared_ptr<MWAWSpreadsheetParser> parser;
   if (!header)
     return parser;
-  if (header->getKind()!=MWAWDocument::MWAW_K_SPREADSHEET)
+  if (header->getKind()!=MWAWDocument::MWAW_K_SPREADSHEET && header->getKind()!=MWAWDocument::MWAW_K_DATABASE)
     return parser;
 
   try {
@@ -393,9 +394,11 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_GREATWORKS:
       parser.reset(new GreatWksSSParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_CLARISWORKS:
+      parser.reset(new ClarisWksSSParser(input, rsrcParser, header));
+      break;
     // TODO
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
-    case MWAWDocument::MWAW_T_CLARISWORKS:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_TRAPEZE:
@@ -457,8 +460,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
   shared_ptr<MWAWTextParser> parser;
   if (!header)
     return parser;
-  if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET &&
-      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS)
+  if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET || header->getKind()==MWAWDocument::MWAW_K_DATABASE)
     return parser;
   try {
     switch (header->getType()) {

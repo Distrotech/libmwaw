@@ -903,6 +903,97 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
   return true;
 }
 
+bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record &record) const
+{
+  std::map<int, Column>::const_iterator it=m_idColumnMap.find(pos[0]);
+  if (it==m_idColumnMap.end()) return false;
+  Column const &col=it->second;
+  std::map<int, Record>::const_iterator rIt=col.m_idRecordMap.find(pos[1]);
+  if (rIt==col.m_idRecordMap.end()) return false;
+
+  record=rIt->second;
+  if (!m_isSpreadsheet) {
+    static bool first=true;
+    if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size())) {
+      ClarisWksStyleManager::CellFormat const &format=m_dbFormatList[size_t(pos[0])];
+      record.m_format=format;
+      record.m_fileFormat=format.m_fileFormat;
+      record.m_hAlign=format.m_hAlign;
+    }
+    else if (first) {
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find format for field %d\n", pos[0]));
+      first=false;
+    }
+  }
+  else if (m_version<=3) {
+    int &type=record.m_fileFormat;
+    if (type>=10&&type<=11) type += 4;
+    else if (type>=14) type=16;
+  }
+  else if (m_version > 3) {
+    MWAWFont font;
+    ClarisWksStyleManager::Style style;
+    if (record.m_style>=0)
+      m_document.getStyleManager()->get(record.m_style, style);
+    if (style.m_fontId>=0)
+      m_document.getStyleManager()->get(style.m_fontId, record.m_font);
+    ClarisWksStyleManager::CellFormat format;
+    if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format)) {
+      record.m_format=format;
+      record.m_fileFormat=format.m_fileFormat;
+      record.m_hAlign=format.m_hAlign;
+    }
+  }
+  // time to update the cell format
+  MWAWCell::Format &format=record.m_format;
+  switch (record.m_fileFormat) {
+  case -1: // unset
+  case 0: // general
+    break;
+  case 1:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+    break;
+  case 2:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+    break;
+  case 3:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+    break;
+  case 4:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+    break;
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: {
+    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
+    format.m_format=MWAWCell::F_DATE;
+    format.m_DTFormat=wh[record.m_fileFormat-5];
+    break;
+  }
+  case 10: // unknown
+  case 11: // unknown
+    break;
+  case 12:
+  case 13:
+  case 14:
+  case 15: {
+    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
+    format.m_format=MWAWCell::F_TIME;
+    format.m_DTFormat=wh[record.m_fileFormat-12];
+    break;
+  }
+  default: // unknown
+    break;
+  }
+  return true;
+}
+
 bool ClarisWksDbaseContent::send(Vec2i const &pos)
 {
   MWAWListenerPtr listener=m_parserState->getMainListener();
@@ -910,54 +1001,22 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find the listener\n"));
     return false;
   }
-  std::map<int, Column>::const_iterator it=m_idColumnMap.find(pos[0]);
-  if (it==m_idColumnMap.end()) return true;
-  Column const &col=it->second;
-  std::map<int, Record>::const_iterator rIt=col.m_idRecordMap.find(pos[1]);
-  if (rIt==col.m_idRecordMap.end()) return true;
-
-  Record const &record=rIt->second;
-  MWAWCell::HorizontalAlignment justify=MWAWCell::HALIGN_DEFAULT;
-  ClarisWksStyleManager::CellFormat format;
-  if (!m_isSpreadsheet) {
-    static bool first=true;
-    if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size()))
-      format=m_dbFormatList[size_t(pos[0])];
-    else if (first) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find format for field %d\n", pos[0]));
-      first=false;
-    }
-  }
-  else if (m_version <= 3) {
-    listener->setFont(record.m_font);
-    format=record.m_format;
-    format.m_fileFormat=record.m_fileFormat;
-    justify=format.m_hAlign=record.m_hAlign;
-  }
-  else {
-    MWAWFont font;
-    ClarisWksStyleManager::Style style;
-    if (record.m_style>=0)
-      m_document.getStyleManager()->get(record.m_style, style);
-    if (style.m_fontId>=0 && m_document.getStyleManager()->get(style.m_fontId, font))
-      listener->setFont(font);
-    if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format))
-      justify=format.m_hAlign;
-  }
+  Record record;
+  if (!get(pos, record)) return true;
   MWAWCellContent const &content=record.m_content;
+  listener->setFont(record.m_font);
   MWAWParagraph para;
   para.m_justify =
-    justify==MWAWCell::HALIGN_LEFT ? MWAWParagraph::JustificationLeft :
-    justify==MWAWCell::HALIGN_CENTER ? MWAWParagraph::JustificationCenter :
-    justify==MWAWCell::HALIGN_RIGHT ? MWAWParagraph::JustificationRight :
+    record.m_hAlign==MWAWCell::HALIGN_LEFT ? MWAWParagraph::JustificationLeft :
+    record.m_hAlign==MWAWCell::HALIGN_CENTER ? MWAWParagraph::JustificationCenter :
+    record.m_hAlign==MWAWCell::HALIGN_RIGHT ? MWAWParagraph::JustificationRight :
     content.m_contentType==MWAWCellContent::C_TEXT ? MWAWParagraph::JustificationLeft :
     MWAWParagraph::JustificationRight;
   listener->setParagraph(para);
-
   switch (content.m_contentType) {
   case MWAWCellContent::C_NUMBER:
-    if (format.m_fileFormat)
-      send(content.m_value, record.m_hasNaNValue, format);
+    if (record.m_fileFormat)
+      send(content.m_value, record.m_hasNaNValue, record.m_format);
     else {
       std::stringstream s;
       s << content.m_value;
@@ -992,26 +1051,16 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
   if (!listener)
     return;
   std::stringstream s;
-  int type=format.m_fileFormat;
-  // FIXME: must not be done here...
-  if (m_isSpreadsheet && m_version<=3) {
-    if (type>=10&&type<=11) type += 4;
-    else if (type>=14) type=16;
-  }
+  int const &type=format.m_fileFormat;
   // note: if val*0!=0, val is a NaN so better so simply print NaN
   if (type <= 0 || type >=16 || type==10 || type==11 || isNotANumber) {
     s << val;
     listener->insertUnicodeString(s.str().c_str());
     return;
   }
-
-  ClarisWksStyleManager::CellFormat finalFormat=format;
-  finalFormat.m_fileFormat=type;
-  finalFormat.updateFormat();
-
   std::string value("");
   // change the reference date from 1/1/1904 to 1/1/1900
-  if (MWAWCellContent::double2String(finalFormat.m_format==MWAWCell::F_DATE ? val+1462 : val, finalFormat, value))
+  if (MWAWCellContent::double2String(format.m_format==MWAWCell::F_DATE ? val+1462 : val, format, value))
     s << value;
   else {
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not convert the actual value\n"));

@@ -41,7 +41,6 @@
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
@@ -49,6 +48,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSection.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 
 #include "ClarisWksDatabase.hxx"
 #include "ClarisWksDocument.hxx"
@@ -60,14 +60,14 @@
 #include "ClarisWksTable.hxx"
 #include "ClarisWksText.hxx"
 
-#include "ClarisWksParser.hxx"
+#include "ClarisWksSSParser.hxx"
 
-/** Internal: the structures of a ClarisWksParser */
-namespace ClarisWksParserInternal
+/** Internal: the structures of a ClarisWksSSParser */
+namespace ClarisWksSSParserInternal
 {
 
 ////////////////////////////////////////
-//! Internal: the state of a ClarisWksParser
+//! Internal: the state of a ClarisWksSSParser
 struct State {
   //! constructor
   State() : m_actPage(0), m_numPages(0)
@@ -78,11 +78,11 @@ struct State {
 };
 
 ////////////////////////////////////////
-//! Internal: the subdocument of a ClarisWksParser
+//! Internal: the subdocument of a ClarisWksSSParser
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ClarisWksParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
+  SubDocument(ClarisWksSSParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
     MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_position(pos) {}
 
   //! destructor
@@ -116,7 +116,7 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("ClarisWksParserInternal::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSSParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id == -1) { // a number used to send linked frame
@@ -124,83 +124,64 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   if (m_id == 0) {
-    MWAW_DEBUG_MSG(("ClarisWksParserInternal::SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSSParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
 
   assert(m_parser);
-  reinterpret_cast<ClarisWksParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
+  reinterpret_cast<ClarisWksSSParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
 }
 }
 
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-ClarisWksParser::ClarisWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_document()
+ClarisWksSSParser::ClarisWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+  MWAWSpreadsheetParser(input, rsrcParser, header), m_state(), m_document()
 {
   init();
 }
 
-ClarisWksParser::~ClarisWksParser()
+ClarisWksSSParser::~ClarisWksSSParser()
 {
 }
 
-void ClarisWksParser::init()
+void ClarisWksSSParser::init()
 {
-  resetTextListener();
+  resetSpreadsheetListener();
   setAsciiName("main-1");
 
-  m_state.reset(new ClarisWksParserInternal::State);
+  m_state.reset(new ClarisWksSSParserInternal::State);
   m_document.reset(new ClarisWksDocument(*this));
-  m_document->m_newPage=reinterpret_cast<ClarisWksDocument::NewPage>(&ClarisWksParser::newPage);
-  m_document->m_sendFootnote=reinterpret_cast<ClarisWksDocument::SendFootnote>(&ClarisWksParser::sendFootnote);
+  m_document->m_sendFootnote=reinterpret_cast<ClarisWksDocument::SendFootnote>(&ClarisWksSSParser::sendFootnote);
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 }
 
 ////////////////////////////////////////////////////////////
-// new page
-////////////////////////////////////////////////////////////
-void ClarisWksParser::newPage(int number)
-{
-  if (number <= m_state->m_actPage || number > m_state->m_numPages)
-    return;
-
-  while (m_state->m_actPage < number) {
-    m_state->m_actPage++;
-    if (!getTextListener() || m_state->m_actPage == 1)
-      continue;
-    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
-  }
-}
-
-////////////////////////////////////////////////////////////
 // interface with the different parser
 ////////////////////////////////////////////////////////////
-void ClarisWksParser::sendFootnote(int zoneId)
+void ClarisWksSSParser::sendFootnote(int zoneId)
 {
-  if (!getTextListener()) return;
+  if (!getSpreadsheetListener()) return;
 
-  MWAWSubDocumentPtr subdoc(new ClarisWksParserInternal::SubDocument(*this, getInput(), zoneId));
-  getTextListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
+  MWAWSubDocumentPtr subdoc(new ClarisWksSSParserInternal::SubDocument(*this, getInput(), zoneId));
+  getSpreadsheetListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
-bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
+bool ClarisWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = ClarisWksParserInternal::State();
+  *m_state = ClarisWksSSParserInternal::State();
   if (!m_document->checkHeader(header, strict))
     return false;
-  return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_PAINT ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
+  return getParserState()->m_kind==MWAWDocument::MWAW_K_SPREADSHEET ||
+         getParserState()->m_kind==MWAWDocument::MWAW_K_DATABASE;
 }
 
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
+void ClarisWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -213,44 +194,39 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 
     checkHeader(0L);
     ok = m_document->createZones();
+    // check that we have at least read the main zone
+    if (ok) {
+      shared_ptr<ClarisWksStruct::DSET> zMap = m_document->getZone(1);
+      if (!zMap)
+        ok = false;
+      else if (getParserState()->m_kind==MWAWDocument::MWAW_K_SPREADSHEET)
+        ok = zMap->m_fileType==2;
+      else
+        ok = zMap->m_fileType==3;
+    }
     if (ok) {
       createDocument(docInterface);
-      MWAWPosition pos;
-      //pos.m_anchorTo=MWAWPosition::Page;
-      int headerId, footerId;
-      m_document->getHeaderFooterId(headerId,footerId);
-      std::vector<int> const &mainZonesList=m_document->getMainZonesList();
-      for (size_t i = 0; i < mainZonesList.size(); i++) {
-        // can happens if mainZonesList is not fully reconstruct
-        if (mainZonesList[i]==headerId ||
-            mainZonesList[i]==footerId)
-          continue;
-        m_document->sendZone(mainZonesList[i], false, pos);
-      }
-      m_document->getPresentationParser()->flushExtra();
-      m_document->getGraphParser()->flushExtra();
-      m_document->getTableParser()->flushExtra();
-      m_document->getTextParser()->flushExtra();
+      m_document->sendZone(1, false);
     }
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSSParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
-  resetTextListener();
+  resetSpreadsheetListener();
   if (!ok) throw(libmwaw::ParseException());
 }
 
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void ClarisWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface)
 {
   if (!documentInterface) return;
-  if (getTextListener()) {
-    MWAW_DEBUG_MSG(("ClarisWksParser::createDocument: listener already exist\n"));
+  if (getSpreadsheetListener()) {
+    MWAW_DEBUG_MSG(("ClarisWksSSParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -270,19 +246,8 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
   else
     ps.setMarginBottom(0);
 
-  int numPage = m_document->getTextParser()->numPages();
-  if (m_document->getDatabaseParser()->numPages() > numPage)
-    numPage = m_document->getDatabaseParser()->numPages();
-  if (m_document->getPresentationParser()->numPages() > numPage)
-    numPage = m_document->getPresentationParser()->numPages();
-  if (m_document->getGraphParser()->numPages() > numPage)
-    numPage = m_document->getGraphParser()->numPages();
-  if (m_document->getSpreadsheetParser()->numPages() > numPage)
-    numPage = m_document->getSpreadsheetParser()->numPages();
-  if (m_document->getTableParser()->numPages() > numPage)
-    numPage = m_document->getTableParser()->numPages();
-  m_state->m_numPages = numPage;
-
+  m_state->m_numPages=1;
+  m_document->m_graphParser->numPages();
   int headerId, footerId;
   m_document->getHeaderFooterId(headerId,footerId);
   for (int i = 0; i < 2; i++) {
@@ -290,14 +255,14 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
     if (zoneId == 0)
       continue;
     MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new ClarisWksParserInternal::SubDocument(*this, getInput(), zoneId));
+    hF.m_subDocument.reset(new ClarisWksSSParserInternal::SubDocument(*this, getInput(), zoneId));
     ps.setHeaderFooter(hF);
   }
   ps.setPageSpan(m_state->m_numPages);
   std::vector<MWAWPageSpan> pageList(1,ps);
   //
-  MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
-  setTextListener(listen);
+  MWAWSpreadsheetListenerPtr listen(new MWAWSpreadsheetListener(*getParserState(), pageList, documentInterface));
+  setSpreadsheetListener(listen);
   listen->startDocument();
 }
 

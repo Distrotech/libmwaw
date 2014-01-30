@@ -526,17 +526,11 @@ bool MsWks3Parser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   }
 
-#ifndef DEBUG
-  // I have never seen this file, so...
-  if (strict && version() == 1 && m_state->m_docType != MWAWDocument::MWAW_K_TEXT)
-    return false;
-
   if (m_state->m_docType != MWAWDocument::MWAW_K_TEXT)
     return false;
 
   if (version() < 1 || version() > 3)
     return false;
-#endif
 
   // ok, we can finish initialization
   MWAWEntry headerZone;

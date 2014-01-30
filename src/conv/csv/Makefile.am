@@ -21,8 +21,6 @@ mwaw2csv_LDADD = \
 endif
 
 mwaw2csv_SOURCES = \
-	CSVGenerator.cpp	 \
-	CSVGenerator.h		 \
 	mwaw2csv.cpp
 
 if OS_WIN32

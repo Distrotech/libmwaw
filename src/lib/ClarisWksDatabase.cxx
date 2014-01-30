@@ -41,7 +41,7 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWFont.hxx"
-#include "MWAWListener.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWTable.hxx"
 
@@ -670,7 +670,7 @@ bool ClarisWksDatabase::sendDatabase(int zId)
     return false;
   }
 
-  MWAWListenerPtr listener=m_parserState->getMainListener();
+  MWAWSpreadsheetListenerPtr listener=m_parserState->m_spreadsheetListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: called without any listener\n"));
     return false;
@@ -709,24 +709,37 @@ bool ClarisWksDatabase::sendDatabase(int zId)
   dbase.m_content->setDatabaseFormats(formats);
 
   std::vector<float> colSize(size_t(numFields),72);
-  librevenge::RVNGPropertyList extras;
-  extras.insert("libmwaw:main_database", 1);
-
-  MWAWTable table(MWAWTable::TableDimBit);
-  table.setColsSize(colSize);
-  listener->openTable(table, extras);
+  listener->openSheet(colSize, librevenge::RVNG_POINT);
+  MWAWInputStreamPtr &input= m_parserState->m_input;
   for (size_t r=0; r < recordsPos.size(); ++r) {
-    listener->openTableRow((float)14, librevenge::RVNG_POINT);
+    listener->openSheetRow((float)14, librevenge::RVNG_POINT);
     for (int c=0; c < numFields; ++c) {
+      Vec2i pos(c,int(r));
+      ClarisWksDbaseContent::Record rec;
+      if (!dbase.m_content->get(pos,rec)) continue;
       MWAWCell cell;
-      cell.setPosition(Vec2i(c,int(r)));
-      listener->openTableCell(cell);
-      dbase.m_content->send(Vec2i(c, recordsPos[r]));
-      listener->closeTableCell();
+      cell.setPosition(pos);
+      cell.setFormat(rec.m_format);
+      cell.setHAlignement(rec.m_hAlign);
+      listener->openSheetCell(cell, rec.m_content);
+      if (rec.m_content.m_textEntry.valid()) {
+        long fPos = input->tell();
+        input->seek(rec.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+        long endPos = rec.m_content.m_textEntry.end();
+        while (!input->isEnd() && input->tell() < endPos) {
+          unsigned char ch=(unsigned char) input->readULong(1);
+          if (ch==0xd)
+            listener->insertEOL();
+          else
+            listener->insertCharacter(ch, input, endPos);
+        }
+        input->seek(fPos,librevenge::RVNG_SEEK_SET);
+      }
+      listener->closeSheetCell();
     }
-    listener->closeTableRow();
+    listener->closeSheetRow();
   }
-  listener->closeTable();
+  listener->closeSheet();
   return true;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

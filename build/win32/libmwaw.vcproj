@@ -224,6 +224,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisWksSSParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksStruct.cxx"
 				>
 			</File>
@@ -630,6 +634,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisWksSSParser.hxx"
 				>
 			</File>
 			<File

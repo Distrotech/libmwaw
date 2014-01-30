@@ -93,6 +93,8 @@ public:
   }
   //! sends the zone data to the listener (if it exists )
   bool sendSpreadsheet(int number);
+  //! sends the zone data to the listener (if it exists )
+  bool sendSpreadsheetAsTable(int number);
 
 protected:
   //

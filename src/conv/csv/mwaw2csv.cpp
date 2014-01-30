@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <fstream>
 #include <iostream>
 
 #include <librevenge/librevenge.h>
@@ -43,8 +44,6 @@
 #include <librevenge-stream/librevenge-stream.h>
 
 #include <libmwaw/libmwaw.hxx>
-
-#include "CSVGenerator.h"
 
 int printUsage()
 {
@@ -119,8 +118,7 @@ int main(int argc, char *argv[])
     fprintf(stderr,"ERROR: Unsupported file format!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_SPREADSHEET &&
-      (type!=MWAWDocument::MWAW_T_CLARISWORKS && kind != MWAWDocument::MWAW_K_DATABASE)) {
+  if (kind != MWAWDocument::MWAW_K_SPREADSHEET) {
     fprintf(stderr,"ERROR: not a spreadsheet!\n");
     return 1;
   }
@@ -128,16 +126,10 @@ int main(int argc, char *argv[])
   librevenge::RVNGStringVector vec;
 
   try {
-    if (type == MWAWDocument::MWAW_T_CLARISWORKS) {
-      CSVGenerator documentGenerator(output);
-      error = MWAWDocument::parse(&input, &documentGenerator);
-    }
-    else {
-      librevenge::RVNGCSVSpreadsheetGenerator listenerImpl(vec, generateFormula);
-      listenerImpl.setSeparators(fieldSeparator, textSeparator, decSeparator);
-      listenerImpl.setDTFormats(dateFormat.c_str(),timeFormat.c_str());
-      error= MWAWDocument::parse(&input, &listenerImpl);
-    }
+    librevenge::RVNGCSVSpreadsheetGenerator listenerImpl(vec, generateFormula);
+    listenerImpl.setSeparators(fieldSeparator, textSeparator, decSeparator);
+    listenerImpl.setDTFormats(dateFormat.c_str(),timeFormat.c_str());
+    error= MWAWDocument::parse(&input, &listenerImpl);
   }
   catch (MWAWDocument::Result const &err) {
     error=err;
@@ -157,13 +149,11 @@ int main(int argc, char *argv[])
   if (error != MWAWDocument::MWAW_R_OK)
     return 1;
 
-  if (type != MWAWDocument::MWAW_T_CLARISWORKS) {
-    if (!output)
-      std::cout << vec[0].cstr() << std::endl;
-    else {
-      std::ofstream out(output);
-      out << vec[0].cstr() << std::endl;
-    }
+  if (!output)
+    std::cout << vec[0].cstr() << std::endl;
+  else {
+    std::ofstream out(output);
+    out << vec[0].cstr() << std::endl;
   }
   return 0;
 }

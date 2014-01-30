@@ -103,8 +103,7 @@ int main(int argc, char *argv[])
   bool useStringVector=false;
   MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    if (kind == MWAWDocument::MWAW_K_SPREADSHEET && type != MWAWDocument::MWAW_T_CLARISWORKS) {
-      // fixme: remove ClarisWorks when ....
+    if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
       librevenge::RVNGTextSpreadsheetGenerator documentGenerator(pages, isInfo);
       error=MWAWDocument::parse(&input, &documentGenerator);
       if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {

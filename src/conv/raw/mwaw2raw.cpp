@@ -86,8 +86,7 @@ int main(int argc, char *argv[])
 
   MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    if (kind == MWAWDocument::MWAW_K_SPREADSHEET && type != MWAWDocument::MWAW_T_CLARISWORKS) {
-      // fixme: remove ClarisWorks when ....
+    if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
       librevenge::RVNGRawSpreadsheetGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);
     }

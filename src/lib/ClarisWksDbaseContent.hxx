@@ -56,6 +56,8 @@ class ClarisWksDocument;
 class ClarisWksDbaseContent
 {
 public:
+  struct Record;
+
   //! constructor
   ClarisWksDbaseContent(ClarisWksDocument &document, bool spreadsheet);
   //! destructor
@@ -68,11 +70,12 @@ public:
   //! returns the list of filled record (for database)
   bool getRecordList(std::vector<int> &list) const;
 
+  //! retrieves the cell data
+  bool get(Vec2i const &pos, Record &data) const;
   //! try to send a cell content to the listener
   bool send(Vec2i const &pos);
   //! set the field format ( for database )
   void setDatabaseFormats(std::vector<ClarisWksStyleManager::CellFormat> const &format);
-protected:
   /** struct which stores a record in ClarisWksDbaseContent */
   struct Record {
     //! contructor
@@ -98,6 +101,7 @@ protected:
     //! the border in v1-3 spreadsheet
     int m_borders;
   };
+protected:
   /** struct which stores a column in ClarisWksDbaseContent */
   struct Column {
     //! constructor
