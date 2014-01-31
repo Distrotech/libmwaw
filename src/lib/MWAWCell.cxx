@@ -105,8 +105,8 @@ bool MWAWCell::Format::getNumberingProperties(librevenge::RVNGPropertyList &prop
     case F_NUMBER_FRACTION:
       propList.insert("librevenge:value-type", "fraction");
       propList.insert("number:min-integer-digits", 0);
-      propList.insert("number:min-numerator-digits", m_numeratorDigits);
-      propList.insert("number:min-denominator-digits", m_denominatorDigits);
+      propList.insert("number:min-numerator-digits", m_numeratorDigits>0 ? m_numeratorDigits : 1);
+      propList.insert("number:min-denominator-digits", m_denominatorDigits>0 ? m_denominatorDigits : 1);
       propList.remove("number:decimal-places");
       break;
     case F_NUMBER_CURRENCY: {

@@ -1215,7 +1215,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
   switch (frame.m_type) {
   case 3: {
     HanMacWrdKGraphInternal::FootnoteFrame const &ftnote=
-      reinterpret_cast<HanMacWrdKGraphInternal::FootnoteFrame const &>(frame);
+      static_cast<HanMacWrdKGraphInternal::FootnoteFrame const &>(frame);
     MWAWSubDocumentPtr subdoc
     (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text,
         ftnote.m_textFileId, ftnote.m_textFileSubId));
@@ -1226,7 +1226,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
     // fixme: check also for border
     if (frame.m_style.hasPattern()) {
       HanMacWrdKGraphInternal::TextBox const &textbox=
-        reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
+        static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
           graphicListener && !graphicListener->isDocumentStarted()) {
@@ -1245,10 +1245,10 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
       }
     }
   case 10:
-    return sendTextBox(reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame), pos, extras);
+    return sendTextBox(static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame), pos, extras);
   case 6: {
     HanMacWrdKGraphInternal::PictureFrame const &pict =
-      reinterpret_cast<HanMacWrdKGraphInternal::PictureFrame const &>(frame);
+      static_cast<HanMacWrdKGraphInternal::PictureFrame const &>(frame);
     if (pict.m_fileId==0) {
       if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
         pos.setSize(pict.getBdBox().size());
@@ -1266,7 +1266,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
     return sendPictureFrame(pict, pos, extras);
   }
   case 8:
-    return sendShapeGraph(reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame), pos);
+    return sendShapeGraph(static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame), pos);
   case 9: {
     HanMacWrdKGraphInternal::Table &table =
       const_cast<HanMacWrdKGraphInternal::Table &>
@@ -1297,7 +1297,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
     return table.sendAsText(listener);
   }
   case 11: {
-    HanMacWrdKGraphInternal::Group const &group=reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame);
+    HanMacWrdKGraphInternal::Group const &group=static_cast<HanMacWrdKGraphInternal::Group const &>(frame);
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
         (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
@@ -1403,7 +1403,7 @@ bool HanMacWrdKGraph::sendTableUnformatted(long fId)
     MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendTableUnformatted: can not find table %lx\n", fId));
     return false;
   }
-  HanMacWrdKGraphInternal::Table &table = reinterpret_cast<HanMacWrdKGraphInternal::Table &>(*fIt->second);
+  HanMacWrdKGraphInternal::Table &table = static_cast<HanMacWrdKGraphInternal::Table &>(*fIt->second);
   return table.sendAsText(m_parserState->m_textListener);
 }
 
@@ -1947,7 +1947,7 @@ bool HanMacWrdKGraph::sendGroup(long groupId, MWAWPosition pos)
     MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: %lx seems bad\n", groupId));
     return false;
   }
-  return sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(*frame), pos);
+  return sendGroup(static_cast<HanMacWrdKGraphInternal::Group const &>(*frame), pos);
 }
 
 bool HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWPosition pos)
@@ -1993,7 +1993,7 @@ bool HanMacWrdKGraph::canCreateGraphic(HanMacWrdKGraphInternal::Group const &gro
     if (frame.m_page!=page) return false;
     switch (frame.m_type) {
     case 4: {
-      HanMacWrdKGraphInternal::TextBox const &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
+      HanMacWrdKGraphInternal::TextBox const &text=static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_textFileId,0))
         return false;
       break;
@@ -2001,7 +2001,7 @@ bool HanMacWrdKGraph::canCreateGraphic(HanMacWrdKGraphInternal::Group const &gro
     case 8: // shape
       break;
     case 11:
-      if (!canCreateGraphic(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame)))
+      if (!canCreateGraphic(static_cast<HanMacWrdKGraphInternal::Group const &>(frame)))
         return false;
       break;
     default:
@@ -2028,7 +2028,7 @@ void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWA
     case 4: {
       frame.m_parsed=true;
       HanMacWrdKGraphInternal::TextBox const &textbox=
-        reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
+        static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
       listener->insertTextBox(box, subdoc, textbox.m_style);
@@ -2037,12 +2037,12 @@ void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWA
     case 8: {
       frame.m_parsed=true;
       HanMacWrdKGraphInternal::ShapeGraph const &shape=
-        reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame);
+        static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame);
       listener->insertPicture(box, shape.m_shape, shape.getStyle());
       break;
     }
     case 11:
-      sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame), listener);
+      sendGroup(static_cast<HanMacWrdKGraphInternal::Group const &>(frame), listener);
       break;
     default:
       MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: unexpected type %d\n", frame.m_type));
@@ -2079,7 +2079,7 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
     if (frame.m_page==group.m_page) {
       switch (frame.m_type) {
       case 4: {
-        HanMacWrdKGraphInternal::TextBox const &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
+        HanMacWrdKGraphInternal::TextBox const &text=static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
         canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_textFileId,0);
         break;
       }
@@ -2087,7 +2087,7 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
         canMerge = true;
         break;
       case 11:
-        canMerge = canCreateGraphic(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(frame));
+        canMerge = canCreateGraphic(static_cast<HanMacWrdKGraphInternal::Group const &>(frame));
         break;
       default:
         break;
@@ -2121,7 +2121,7 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
         case 4: {
           child.m_parsed=true;
           HanMacWrdKGraphInternal::TextBox const &textbox=
-            reinterpret_cast<HanMacWrdKGraphInternal::TextBox const &>(child);
+            static_cast<HanMacWrdKGraphInternal::TextBox const &>(child);
           MWAWSubDocumentPtr subdoc
           (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
           graphicListener->insertTextBox(box, subdoc, textbox.m_style);
@@ -2130,12 +2130,12 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
         case 8: {
           child.m_parsed=true;
           HanMacWrdKGraphInternal::ShapeGraph const &shape=
-            reinterpret_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(child);
+            static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(child);
           graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
           break;
         }
         case 11:
-          sendGroup(reinterpret_cast<HanMacWrdKGraphInternal::Group const &>(child), graphicListener);
+          sendGroup(static_cast<HanMacWrdKGraphInternal::Group const &>(child), graphicListener);
           break;
         default:
           MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: unexpected type %d\n", child.m_type));
@@ -2184,7 +2184,7 @@ void HanMacWrdKGraph::prepareStructures()
       checkGroupStructures(fIt->first, frame.m_fileSubId, seens, false);
     }
     if (frame.m_type==4) {
-      HanMacWrdKGraphInternal::TextBox &text=reinterpret_cast<HanMacWrdKGraphInternal::TextBox &>(frame);
+      HanMacWrdKGraphInternal::TextBox &text=static_cast<HanMacWrdKGraphInternal::TextBox &>(frame);
       size_t numLink=text.m_linkedIdList.size();
       for (size_t l=0; l < numLink; ++l) {
         fIt2=m_state->m_framesMap.find(text.m_linkedIdList[l]);
@@ -2193,7 +2193,7 @@ void HanMacWrdKGraph::prepareStructures()
           text.m_linkedIdList.resize(l);
           break;
         }
-        HanMacWrdKGraphInternal::TextBox &follow=reinterpret_cast<HanMacWrdKGraphInternal::TextBox &>(*fIt2->second);
+        HanMacWrdKGraphInternal::TextBox &follow=static_cast<HanMacWrdKGraphInternal::TextBox &>(*fIt2->second);
         follow.m_isLinked=true;
         if (l+1!=numLink)
           follow.m_linkedIdList.push_back(text.m_linkedIdList[l+1]);
@@ -2221,7 +2221,7 @@ bool HanMacWrdKGraph::checkGroupStructures(long fileId, long fileSubId, std::mul
     frame.m_inGroup=inGroup;
     if (frame.m_fileSubId != fileSubId) continue;
     if (frame.m_type==11) {
-      HanMacWrdKGraphInternal::Group &group=reinterpret_cast<HanMacWrdKGraphInternal::Group &>(frame);
+      HanMacWrdKGraphInternal::Group &group=static_cast<HanMacWrdKGraphInternal::Group &>(frame);
       for (size_t c=0; c < group.m_childsList.size(); ++c) {
         if (checkGroupStructures(group.m_childsList[c].m_fileId, 0, seens, true))
           continue;

@@ -403,10 +403,53 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   int val=(int) input->readULong(1);
   int type=(val>>4);
-  record.m_fileFormat=(val&0xF);
-  if (record.m_fileFormat) f << "format=" << record.m_fileFormat << ",";
-  bool ok=true;
+  int fileFormat=(val&0xF);
+  MWAWCell::Format &format=record.m_format;
+  switch (fileFormat) {
+  case 0: // general
+    break;
+  case 1:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+    break;
+  case 2:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+    break;
+  case 3:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+    break;
+  case 4:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+    break;
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: {
+    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
+    format.m_format=MWAWCell::F_DATE;
+    format.m_DTFormat=wh[fileFormat-5];
+    break;
+  }
+  case 10:
+  case 11:
+  case 12:
+  case 13: {
+    static char const *(wh[])= {"%I:%M %p", "%I:%M:%S %p", "%H:%M", "%H:%M:%S" };
+    format.m_format=MWAWCell::F_TIME;
+    format.m_DTFormat=wh[fileFormat-10];
+    break;
+  }
+  default: // unknown
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: find unknown format\n"));
+    f << "format=##" << fileFormat << ",";
+    break;
+  }
 
+  bool ok=true;
   int ord=(int) input->readULong(1);
   if (ord&8) {
     f << "commas[thousand],";
@@ -577,7 +620,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
           f << "=" << content.m_value << ",";
           break;
         }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a long[formula]\n"));
         f << "###int" << rType << "[res],";
         break;
       case 2: {
@@ -588,7 +631,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
           f << "=" << value << ",";
           break;
         }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not formula res\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a double[formula]\n"));
         f << "###float[res],";
         break;
       }
@@ -607,6 +650,31 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         f << "=" << data << ",";
         break;
       }
+      case 5: // bool
+        if (input->checkPosition(resPos+1)) {
+          if (!fileFormat)
+            format.m_format=MWAWCell::F_BOOLEAN;
+          content.m_contentType=MWAWCellContent::C_NUMBER;
+          content.setValue(double(input->readLong(1)));
+          f << "=" << content.m_value << ",";
+          break;
+        }
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a bool[formula]\n"));
+        f << "###bool[res],";
+        break;
+      case 6: // nan
+        if (input->checkPosition(resPos+1)) {
+          content.m_contentType=MWAWCellContent::C_NUMBER;
+          content.setValue(std::numeric_limits<double>::quiet_NaN());
+          record.m_hasNaNValue = true;
+          f << "=nan" << input->readLong(1) << ",";
+          break;
+        }
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a nanc[formula]\n"));
+        f << "###nan[res],";
+        break;
+      case 7: // empty
+        break;
       // type 8: find with 206b*: maybe to indicate an empty cell recovered by neighbour...
       default:
         f << "##type=" << rType << "[res],";
@@ -615,6 +683,31 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       }
       break;
     }
+    case 5: // bool
+      if (input->checkPosition(actPos+1)) {
+        if (!fileFormat)
+          format.m_format=MWAWCell::F_BOOLEAN;
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+        content.setValue(double(input->readLong(1)));
+        f << "=" << content.m_value << ",";
+        break;
+      }
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a bool\n"));
+      f << "###bool,";
+      break;
+    case 6:
+      if (input->checkPosition(actPos+1)) {
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+        content.setValue(std::numeric_limits<double>::quiet_NaN());
+        record.m_hasNaNValue = true;
+        f << "=nan" << input->readLong(1) << ",";
+        break;
+      }
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a nanc[formula]\n"));
+      f << "###nan[res],";
+      break;
+    case 7: // empty
+      break;
     default:
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected type\n"));
       f << "###type=" << type << ",";
@@ -622,7 +715,11 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       break;
     }
   }
-
+  if (format.m_format==MWAWCell::F_UNKNOWN && content.isValueSet()) {
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+  }
+  f << format << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   if (ok) {
@@ -925,12 +1022,9 @@ bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record 
       first=false;
     }
   }
-  else if (m_version<=3) {
-    int &type=record.m_fileFormat;
-    if (type>=10&&type<=11) type += 4;
-    else if (type>=14) type=16;
-  }
-  else if (m_version > 3) {
+  else if (m_version<=3)
+    return true;
+  else {
     MWAWFont font;
     ClarisWksStyleManager::Style style;
     if (record.m_style>=0)
@@ -948,7 +1042,12 @@ bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record 
   MWAWCell::Format &format=record.m_format;
   switch (record.m_fileFormat) {
   case -1: // unset
+    break;
   case 0: // general
+    if (!record.m_content.isValueSet())
+      break;
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     break;
   case 1:
     format.m_format=MWAWCell::F_NUMBER;

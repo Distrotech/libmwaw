@@ -154,7 +154,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<GreatWksParser *>(m_parser)->sendHF(m_id);
+  static_cast<GreatWksParser *>(m_parser)->sendHF(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -193,15 +193,15 @@ void GreatWksParser::init()
 
   m_graphParser.reset(new GreatWksGraph(*this));
   GreatWksGraph::Callback callbackGraph;
-  callbackGraph.m_canSendTextBoxAsGraphic=reinterpret_cast<GreatWksGraph::Callback::CanSendTextBoxAsGraphic>(&GreatWksParser::canSendTextBoxAsGraphic);
-  callbackGraph.m_sendTextbox=reinterpret_cast<GreatWksGraph::Callback::SendTextbox>(&GreatWksParser::sendTextbox);
+  callbackGraph.m_canSendTextBoxAsGraphic=static_cast<GreatWksGraph::Callback::CanSendTextBoxAsGraphic>(&GreatWksParser::canSendTextBoxAsGraphic);
+  callbackGraph.m_sendTextbox=static_cast<GreatWksGraph::Callback::SendTextbox>(&GreatWksParser::sendTextbox);
   m_graphParser->setCallback(callbackGraph);
 
   m_textParser.reset(new GreatWksText(*this));
   GreatWksText::Callback callbackText;
-  callbackText.m_newPage=reinterpret_cast<GreatWksText::Callback::NewPage>(&GreatWksParser::newPage);
-  callbackText.m_sendPicture=reinterpret_cast<GreatWksText::Callback::SendPicture>(&GreatWksParser::sendPicture);
-  callbackText.m_mainSection=reinterpret_cast<GreatWksText::Callback::GetMainSection>(&GreatWksParser::getMainSection);
+  callbackText.m_newPage=static_cast<GreatWksText::Callback::NewPage>(&GreatWksParser::newPage);
+  callbackText.m_sendPicture=static_cast<GreatWksText::Callback::SendPicture>(&GreatWksParser::sendPicture);
+  callbackText.m_mainSection=static_cast<GreatWksText::Callback::GetMainSection>(&GreatWksParser::getMainSection);
   m_textParser->setCallback(callbackText);
 }
 

@@ -2094,7 +2094,7 @@ bool HanMacWrdJGraph::sendTableUnformatted(long fId)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx\n", fId));
     return false;
   }
   int id = fIt->second;
@@ -2102,11 +2102,15 @@ bool HanMacWrdJGraph::sendTableUnformatted(long fId)
     return false;
   HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 9) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find table %lx(II)\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx(II)\n", fId));
     return false;
   }
-  HanMacWrdJGraphInternal::Table &table = reinterpret_cast<HanMacWrdJGraphInternal::Table &>(frame);
-  table.sendAsText(m_parserState->m_textListener);
+  HanMacWrdJGraphInternal::TableFrame &tableFrame = static_cast<HanMacWrdJGraphInternal::TableFrame &>(frame);
+  if (!tableFrame.m_table) {
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table\n"));
+    return false;
+  }
+  tableFrame.m_table->sendAsText(m_parserState->m_textListener);
   return true;
 }
 
@@ -2131,7 +2135,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
     HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
     if (format.m_style.hasPattern()) {
       HanMacWrdJGraphInternal::TextboxFrame const &textbox=
-        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
+        static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_zId,0) &&
           graphicListener && !graphicListener->isDocumentStarted()) {
@@ -2210,7 +2214,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
     frame.m_parsed = true;
     return sendComment(static_cast<HanMacWrdJGraphInternal::CommentFrame const &>(frame), pos, extras);
   case 11: {
-    HanMacWrdJGraphInternal::Group const &group=reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame);
+    HanMacWrdJGraphInternal::Group const &group=static_cast<HanMacWrdJGraphInternal::Group const &>(frame);
     MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
         (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
@@ -2617,7 +2621,7 @@ void HanMacWrdJGraph::prepareStructures()
     HanMacWrdJGraphInternal::Frame const &frame = *m_state->m_framesList[size_t(id)];
     if (!frame.valid() || frame.m_type!=4)
       continue;
-    HanMacWrdJGraphInternal::TextboxFrame const &text = reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
+    HanMacWrdJGraphInternal::TextboxFrame const &text = static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
     if (!text.m_zId) continue;
     textZoneFrameMap.insert(std::multimap<long,size_t>::value_type(text.m_zId, size_t(id)));
   }
@@ -2629,7 +2633,7 @@ void HanMacWrdJGraph::prepareStructures()
     while (tbIt!=textZoneFrameMap.end() && tbIt->first==textId) {
       size_t id=tbIt++->second;
       HanMacWrdJGraphInternal::TextboxFrame &text =
-        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
+        static_cast<HanMacWrdJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
       if (nCharTextMap.find(text.m_cPos)!=nCharTextMap.end()) {
         MWAW_DEBUG_MSG(("HanMacWrdJGraph::prepareStructures: pos %ld already exist for textZone %lx\n",
                         text.m_cPos, textId));
@@ -2682,7 +2686,7 @@ bool HanMacWrdJGraph::checkGroupStructures(long zId, std::set<long> &seens, bool
   frame.m_inGroup=inGroup;
   if (!frame.valid() || frame.m_type!=11)
     return true;
-  HanMacWrdJGraphInternal::Group &group = reinterpret_cast<HanMacWrdJGraphInternal::Group &>(frame);
+  HanMacWrdJGraphInternal::Group &group = static_cast<HanMacWrdJGraphInternal::Group &>(frame);
   for (size_t c=0; c < group.m_childsList.size(); ++c) {
     if (checkGroupStructures(group.m_childsList[c], seens, true))
       continue;
@@ -2712,7 +2716,7 @@ bool HanMacWrdJGraph::sendGroup(long fId, MWAWPosition pos)
     MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx(II)\n", fId));
     return false;
   }
-  return sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group &>(frame), pos);
+  return sendGroup(static_cast<HanMacWrdJGraphInternal::Group &>(frame), pos);
 }
 
 bool HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWAWPosition pos)
@@ -2761,7 +2765,7 @@ bool HanMacWrdJGraph::canCreateGraphic(HanMacWrdJGraphInternal::Group const &gro
     if (frame.m_page!=page) return false;
     switch (frame.m_type) {
     case 4: {
-      HanMacWrdJGraphInternal::TextboxFrame const &text=reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
+      HanMacWrdJGraphInternal::TextboxFrame const &text=static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       if (text.isLinked() || !m_mainParser->canSendTextAsGraphic(text.m_zId,0))
         return false;
       break;
@@ -2769,7 +2773,7 @@ bool HanMacWrdJGraph::canCreateGraphic(HanMacWrdJGraphInternal::Group const &gro
     case 8: // shape
       break;
     case 11:
-      if (!canCreateGraphic(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame)))
+      if (!canCreateGraphic(static_cast<HanMacWrdJGraphInternal::Group const &>(frame)))
         return false;
       break;
     default:
@@ -2799,7 +2803,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
     case 4: {
       frame.m_parsed=true;
       HanMacWrdJGraphInternal::TextboxFrame const &textbox=
-        reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
+        static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
       listener->insertTextBox(box, subdoc, format.m_style);
@@ -2808,7 +2812,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
     case 8: {
       frame.m_parsed=true;
       HanMacWrdJGraphInternal::ShapeGraph const &shape=
-        reinterpret_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(frame);
+        static_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(frame);
       MWAWGraphicStyle style(format.m_style);;
       if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
         if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
@@ -2818,7 +2822,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
       break;
     }
     case 11:
-      sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame), listener);
+      sendGroup(static_cast<HanMacWrdJGraphInternal::Group const &>(frame), listener);
       break;
     default:
       MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: unexpected type %d\n", frame.m_type));
@@ -2857,7 +2861,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
     if (frame.m_page==group.m_page) {
       switch (frame.m_type) {
       case 4: {
-        HanMacWrdJGraphInternal::TextboxFrame const &text=reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
+        HanMacWrdJGraphInternal::TextboxFrame const &text=static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
         canMerge=!text.isLinked()&&m_mainParser->canSendTextAsGraphic(text.m_zId,0);
         break;
       }
@@ -2865,7 +2869,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
         canMerge = true;
         break;
       case 11:
-        canMerge = canCreateGraphic(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(frame));
+        canMerge = canCreateGraphic(static_cast<HanMacWrdJGraphInternal::Group const &>(frame));
         break;
       default:
         break;
@@ -2901,7 +2905,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
         case 4: {
           child.m_parsed=true;
           HanMacWrdJGraphInternal::TextboxFrame const &textbox=
-            reinterpret_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(child);
+            static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(child);
           MWAWSubDocumentPtr subdoc
           (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
           graphicListener->insertTextBox(box, subdoc, format.m_style);
@@ -2910,7 +2914,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
         case 8: {
           child.m_parsed=true;
           HanMacWrdJGraphInternal::ShapeGraph const &shape=
-            reinterpret_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(child);
+            static_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(child);
           MWAWGraphicStyle style(format.m_style);
           if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
             if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
@@ -2920,7 +2924,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
           break;
         }
         case 11:
-          sendGroup(reinterpret_cast<HanMacWrdJGraphInternal::Group const &>(child), graphicListener);
+          sendGroup(static_cast<HanMacWrdJGraphInternal::Group const &>(child), graphicListener);
           break;
         default:
           MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: unexpected type %d\n", child.m_type));

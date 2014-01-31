@@ -116,7 +116,7 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   {
-    o << reinterpret_cast<MWAWParagraph const &>(ind) << ",";
+    o << static_cast<MWAWParagraph const &>(ind) << ",";
     static char const *(labelNames[]) = {
       "none", "diamond", "bullet", "checkbox", "hardvard", "leader", "legal",
       "upperalpha", "alpha", "numeric", "upperroman", "roman"

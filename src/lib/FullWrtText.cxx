@@ -452,7 +452,7 @@ struct Paragraph : public MWAWParagraph {
     if (ind.m_tableBorderId) o << "borderId[table]=" << ind.m_tableBorderId << ",";
     if (ind.m_align) o << "align=" << ind.m_align << ",";
     if (ind.m_dim[0]>0 || ind.m_dim[1]>0) o << "dim=" << ind.m_dim << ",";
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
+    o << static_cast<MWAWParagraph const &>(ind);
     return o;
   }
 

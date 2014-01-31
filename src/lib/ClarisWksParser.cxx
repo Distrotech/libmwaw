@@ -129,7 +129,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   }
 
   assert(m_parser);
-  reinterpret_cast<ClarisWksParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
+  static_cast<ClarisWksParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
 }
 }
 
@@ -153,8 +153,8 @@ void ClarisWksParser::init()
 
   m_state.reset(new ClarisWksParserInternal::State);
   m_document.reset(new ClarisWksDocument(*this));
-  m_document->m_newPage=reinterpret_cast<ClarisWksDocument::NewPage>(&ClarisWksParser::newPage);
-  m_document->m_sendFootnote=reinterpret_cast<ClarisWksDocument::SendFootnote>(&ClarisWksParser::sendFootnote);
+  m_document->m_newPage=static_cast<ClarisWksDocument::NewPage>(&ClarisWksParser::newPage);
+  m_document->m_sendFootnote=static_cast<ClarisWksDocument::SendFootnote>(&ClarisWksParser::sendFootnote);
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 }

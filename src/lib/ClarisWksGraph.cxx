@@ -113,7 +113,7 @@ struct Style : public MWAWGraphicStyle {
   friend std::ostream &operator<<(std::ostream &o, Style const &st)
   {
     if (st.m_id >= 0) o << "id=" << st.m_id << ",";
-    o << reinterpret_cast<MWAWGraphicStyle const &>(st);
+    o << static_cast<MWAWGraphicStyle const &>(st);
     switch (st.m_wrapping & 3) {
     case 0:
       o << "wrap=none,";
@@ -1609,7 +1609,7 @@ bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zo
   if (!zone || zone->getType() != ClarisWksGraphInternal::Zone::T_Shape)
     return false;
   ClarisWksGraphInternal::ZoneShape *bZone =
-    reinterpret_cast<ClarisWksGraphInternal::ZoneShape *>(zone.get());
+    static_cast<ClarisWksGraphInternal::ZoneShape *>(zone.get());
   MWAWGraphicShape &shape = bZone->m_shape;
   if (shape.m_type!=MWAWGraphicShape::Polygon)
     return false;
@@ -1713,7 +1713,7 @@ bool ClarisWksGraph::readPictData(shared_ptr<ClarisWksGraphInternal::Zone> zone)
                 zone->getSubType() != ClarisWksGraphInternal::Zone::T_Movie))
     return false;
   ClarisWksGraphInternal::ZonePict *pZone =
-    reinterpret_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
+    static_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   if (!readPICT(*pZone)) {
@@ -1906,7 +1906,7 @@ bool ClarisWksGraph::readQTimeData(shared_ptr<ClarisWksGraphInternal::Zone> zone
   if (!zone || zone->getSubType() != ClarisWksGraphInternal::Zone::T_QTim)
     return false;
   ClarisWksGraphInternal::ZonePict *pZone =
-    reinterpret_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
+    static_cast<ClarisWksGraphInternal::ZonePict *>(zone.get());
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   bool ok = true;
@@ -2142,7 +2142,7 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
     }
 
     ClarisWksGraphInternal::ZoneZone const &childZone =
-      reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
+      static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
     int zId = childZone.m_id;
     if (!group.okChildId(zId) || forbiddenZone.find(zId) != forbiddenZone.end())
       continue;
@@ -2304,7 +2304,7 @@ bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) cons
     ClarisWksGraphInternal::Zone::Type type=child->getType();
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
       ClarisWksGraphInternal::ZoneZone const &childZone =
-        reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
+        static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
       if (group.isLinked(childZone.m_id) || !m_document.canSendZoneAsGraphic(childZone.m_id))
         return false;
       continue;
@@ -2328,7 +2328,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
     ClarisWksGraphInternal::Zone::Type type=child->getType();
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
       ClarisWksGraphInternal::ZoneZone const &zone=
-        reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
+        static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zone.m_id);
       if (dset && dset->m_fileType==4) {
         MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
@@ -2343,7 +2343,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
     }
     else if (type==ClarisWksGraphInternal::Zone::T_Shape) {
       ClarisWksGraphInternal::ZoneShape const &shape=
-        reinterpret_cast<ClarisWksGraphInternal::ZoneShape const &>(*child);
+        static_cast<ClarisWksGraphInternal::ZoneShape const &>(*child);
       MWAWGraphicStyle style(shape.m_style);
       if (shape.m_shape.m_type!=MWAWGraphicShape::Line)
         style.m_arrows[0]=style.m_arrows[1]=false;
@@ -2458,7 +2458,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     }
     if (child->getType() == ClarisWksGraphInternal::Zone::T_Zone) {
       ClarisWksGraphInternal::ZoneZone const &childZone =
-        reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
+        static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
       int zId = childZone.m_id;
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
       if (dset && dset->m_type==ClarisWksStruct::DSET::T_Main) {
@@ -2492,7 +2492,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
           else if (page != child->m_page) break;
           if (type==ClarisWksGraphInternal::Zone::T_Zone) {
             ClarisWksGraphInternal::ZoneZone const &childZone =
-              reinterpret_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
+              static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
             if (group.isLinked(childZone.m_id) || !m_document.canSendZoneAsGraphic(childZone.m_id))
               break;
           }
@@ -2565,9 +2565,9 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   }
   ClarisWksGraphInternal::Zone::Type type = child->getType();
   if (type==ClarisWksGraphInternal::Zone::T_Picture)
-    return sendPicture(reinterpret_cast<ClarisWksGraphInternal::ZonePict &>(*child), pos);
+    return sendPicture(static_cast<ClarisWksGraphInternal::ZonePict &>(*child), pos);
   if (type==ClarisWksGraphInternal::Zone::T_Shape)
-    return sendShape(reinterpret_cast<ClarisWksGraphInternal::ZoneShape &>(*child), pos);
+    return sendShape(static_cast<ClarisWksGraphInternal::ZoneShape &>(*child), pos);
   if (type==ClarisWksGraphInternal::Zone::T_DataBox || type==ClarisWksGraphInternal::Zone::T_Chart ||
       type==ClarisWksGraphInternal::Zone::T_Unknown)
     return true;
@@ -2576,7 +2576,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     return false;
   }
 
-  ClarisWksGraphInternal::ZoneZone const &childZone = reinterpret_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
+  ClarisWksGraphInternal::ZoneZone const &childZone = static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
   int zId = childZone.m_id;
   shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
   ClarisWksGraphInternal::Style const cStyle = childZone.m_style;

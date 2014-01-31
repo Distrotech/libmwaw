@@ -58,7 +58,7 @@ public:
   /** a structure uses to define the format of a cell content */
   struct Format {
     //! constructor
-    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(1), m_denominatorDigits(1),
+    Format() : m_format(F_UNKNOWN), m_numberFormat(F_NUMBER_UNKNOWN), m_digits(-1), m_integerDigits(-1), m_numeratorDigits(-1), m_denominatorDigits(-1),
       m_thousandHasSeparator(false), m_parenthesesForNegative(false), m_currencySymbol("$"), m_DTFormat("")
     {
     }

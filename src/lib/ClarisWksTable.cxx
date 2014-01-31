@@ -140,7 +140,7 @@ struct Table : public ClarisWksStruct::DSET, public MWAWTable {
       MWAW_DEBUG_MSG(("ClarisWksTableInteral::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<TableCell *>(MWAWTable::get(id).get());
+    return static_cast<TableCell *>(MWAWTable::get(id).get());
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &doc)
@@ -152,7 +152,7 @@ struct Table : public ClarisWksStruct::DSET, public MWAWTable {
   void checkChildZones()
   {
     for (size_t i = 0; i < m_cellsList.size(); i++) {
-      TableCell *cell = reinterpret_cast<TableCell *>(m_cellsList[i].get());
+      TableCell *cell = static_cast<TableCell *>(m_cellsList[i].get());
       if (!cell) continue;
       if (cell->m_zoneId > 0 && !okChildId(cell->m_zoneId))
         cell->m_zoneId = 0;

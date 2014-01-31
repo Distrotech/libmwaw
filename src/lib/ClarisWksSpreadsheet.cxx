@@ -436,6 +436,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
         long fPos = input->tell();
         input->seek(rec.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
         long endPos = rec.m_content.m_textEntry.end();
+        listener->setFont(rec.m_font);
         while (!input->isEnd() && input->tell() < endPos) {
           unsigned char ch=(unsigned char) input->readULong(1);
           if (ch==0xd)

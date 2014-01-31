@@ -85,7 +85,7 @@ struct Paragraph : public MWAWParagraph {
       o << "#type=" << ind.m_type << ",";
       break;
     }
-    o << reinterpret_cast<MWAWParagraph const &>(ind) << ",";
+    o << static_cast<MWAWParagraph const &>(ind) << ",";
     if (ind.m_addPageBreak) o << "pageBreakBef,";
     return o;
   }

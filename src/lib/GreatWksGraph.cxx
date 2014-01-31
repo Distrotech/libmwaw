@@ -1367,7 +1367,7 @@ bool GreatWksGraph::checkGraph(GreatWksGraphInternal::Zone &zone, int id, std::s
   if (!frame) return true;
   if (frame->getType()!=GreatWksGraphInternal::Frame::T_GROUP)
     return true;
-  GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
+  GreatWksGraphInternal::FrameGroup &group=static_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
   for (size_t c=0; c < group.m_childList.size(); ++c) {
     if (!checkGraph(zone, group.m_childList[c]-1, seens)) {
       group.m_childList.resize(c);
@@ -1407,7 +1407,7 @@ bool GreatWksGraph::readFrameExtraDataRec(GreatWksGraphInternal::Zone &zone, int
   }
   if (frame->getType()!=GreatWksGraphInternal::Frame::T_GROUP)
     return true;
-  GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
+  GreatWksGraphInternal::FrameGroup &group=static_cast<GreatWksGraphInternal::FrameGroup &>(*frame);
   for (size_t c=0; c < group.m_childList.size(); ++c) {
     if (!readFrameExtraDataRec(zone, group.m_childList[c]-1, seens, endPos)) {
       group.m_childList.resize(c);
@@ -1602,7 +1602,7 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
       MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for text\n"));
       return false;
     }
-    GreatWksGraphInternal::FrameText &text=reinterpret_cast<GreatWksGraphInternal::FrameText &>(frame);
+    GreatWksGraphInternal::FrameText &text=static_cast<GreatWksGraphInternal::FrameText &>(frame);
     if (!input->checkPosition(pos+text.m_dataSize)) {
       MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: text size seems bad\n"));
       return false;
@@ -1640,7 +1640,7 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
     f << "dim=" << dim[1] << "x" << dim[0] << "<->"
       << dim[3] << "x" << dim[2] << ",";
     f << "pt=[";
-    GreatWksGraphInternal::FrameShape &graph=reinterpret_cast<GreatWksGraphInternal::FrameShape &>(frame);
+    GreatWksGraphInternal::FrameShape &graph=static_cast<GreatWksGraphInternal::FrameShape &>(frame);
     float pt[2];
     std::vector<Vec2f> vertices;
     for (int p=0; p<nPt; ++p) {
@@ -1691,7 +1691,7 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
       MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected type for picture\n"));
       return false;
     }
-    GreatWksGraphInternal::FramePicture &pict=reinterpret_cast<GreatWksGraphInternal::FramePicture &>(frame);
+    GreatWksGraphInternal::FramePicture &pict=static_cast<GreatWksGraphInternal::FramePicture &>(frame);
     if (!input->checkPosition(pos+pict.m_dataSize)) {
       MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: picture size seems bad\n"));
       return false;
@@ -1715,7 +1715,7 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
       f << "###[internal]";
       return false;
     }
-    GreatWksGraphInternal::FrameGroup &group=reinterpret_cast<GreatWksGraphInternal::FrameGroup &>(frame);
+    GreatWksGraphInternal::FrameGroup &group=static_cast<GreatWksGraphInternal::FrameGroup &>(frame);
     if (nGrp != group.m_numChild) {
       f << "###[N=" << group.m_numChild << "]";
       MWAW_DEBUG_MSG(("GreatWksGraph::readFrameExtraData: unexpected number of group child\n"));
@@ -1892,11 +1892,11 @@ bool GreatWksGraph::canCreateGraphic(GreatWksGraphInternal::FrameGroup const &gr
     case GreatWksGraphInternal::Frame::T_PICTURE:
       return false;
     case GreatWksGraphInternal::Frame::T_GROUP:
-      if (!canCreateGraphic(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone))
+      if (!canCreateGraphic(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone))
         return false;
       break;
     case GreatWksGraphInternal::Frame::T_TEXT: {
-      GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
+      GreatWksGraphInternal::FrameText const &text=static_cast<GreatWksGraphInternal::FrameText const &>(*frame);
       if (!m_callback.m_canSendTextBoxAsGraphic || !(m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry))
         return false;
       break;
@@ -1928,17 +1928,17 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
       style = zone.m_styleList[size_t(frame->m_styleId-1)];
     switch (frame->getType()) {
     case GreatWksGraphInternal::Frame::T_BASIC: {
-      GreatWksGraphInternal::FrameShape const &shape=reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*frame);
+      GreatWksGraphInternal::FrameShape const &shape=static_cast<GreatWksGraphInternal::FrameShape const &>(*frame);
       shape.updateStyle(style);
       listener->insertPicture(box, shape.m_shape, style);
       break;
     }
     case GreatWksGraphInternal::Frame::T_GROUP:
-      sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone,listener);
+      sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone,listener);
       break;
     case GreatWksGraphInternal::Frame::T_TEXT:
       sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                           reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame), style);
+                           static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style);
       break;
     case GreatWksGraphInternal::Frame::T_PICTURE:
     case GreatWksGraphInternal::Frame::T_BAD:
@@ -1978,10 +1978,10 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         canMerge=true;
         break;
       case GreatWksGraphInternal::Frame::T_GROUP:
-        canMerge=canCreateGraphic(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone);
+        canMerge=canCreateGraphic(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone);
         break;
       case GreatWksGraphInternal::Frame::T_TEXT: {
-        GreatWksGraphInternal::FrameText const &text=reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame);
+        GreatWksGraphInternal::FrameText const &text=static_cast<GreatWksGraphInternal::FrameText const &>(*frame);
         canMerge=m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry);
         break;
       }
@@ -2020,17 +2020,17 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           style = zone.m_styleList[size_t(child->m_styleId-1)];
         switch (child->getType()) {
         case GreatWksGraphInternal::Frame::T_BASIC: {
-          GreatWksGraphInternal::FrameShape const &shape=reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*child);
+          GreatWksGraphInternal::FrameShape const &shape=static_cast<GreatWksGraphInternal::FrameShape const &>(*child);
           shape.updateStyle(style);
           graphicListener->insertPicture(box, shape.m_shape, style);
           break;
         }
         case GreatWksGraphInternal::Frame::T_GROUP:
-          sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
+          sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_TEXT:
           sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                               reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*child), style);
+                               static_cast<GreatWksGraphInternal::FrameText const &>(*child), style);
           break;
         case GreatWksGraphInternal::Frame::T_PICTURE:
         case GreatWksGraphInternal::Frame::T_BAD:
@@ -2109,16 +2109,16 @@ bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, Gr
   bool ok=true;
   switch (frame->getType()) {
   case GreatWksGraphInternal::Frame::T_BASIC:
-    ok = sendShape(reinterpret_cast<GreatWksGraphInternal::FrameShape const &>(*frame), zone, fPos);
+    ok = sendShape(static_cast<GreatWksGraphInternal::FrameShape const &>(*frame), zone, fPos);
     break;
   case GreatWksGraphInternal::Frame::T_PICTURE:
-    ok = sendPicture(reinterpret_cast<GreatWksGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
+    ok = sendPicture(static_cast<GreatWksGraphInternal::FramePicture const &>(*frame).m_entry, fPos);
     break;
   case GreatWksGraphInternal::Frame::T_GROUP:
-    ok = sendGroup(reinterpret_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone, fPos);
+    ok = sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone, fPos);
     break;
   case GreatWksGraphInternal::Frame::T_TEXT:
-    ok = sendTextbox(reinterpret_cast<GreatWksGraphInternal::FrameText const &>(*frame), zone, fPos);
+    ok = sendTextbox(static_cast<GreatWksGraphInternal::FrameText const &>(*frame), zone, fPos);
     break;
   case GreatWksGraphInternal::Frame::T_BAD:
   case GreatWksGraphInternal::Frame::T_UNSET:

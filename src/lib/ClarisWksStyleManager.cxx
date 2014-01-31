@@ -2623,58 +2623,9 @@ bool ClarisWksStyleManager::readKSEN(int N, int fSz)
   return true;
 }
 
-void ClarisWksStyleManager::CellFormat::updateFormat()
-{
-  switch (m_fileFormat) {
-  case -1: // unset
-  case 0: // general
-    break;
-  case 1:
-    m_format=MWAWCell::F_NUMBER;
-    m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
-    break;
-  case 2:
-    m_format=MWAWCell::F_NUMBER;
-    m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
-    break;
-  case 3:
-    m_format=MWAWCell::F_NUMBER;
-    m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
-    break;
-  case 4:
-    m_format=MWAWCell::F_NUMBER;
-    m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
-    break;
-  case 5:
-  case 6:
-  case 7:
-  case 8:
-  case 9: {
-    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
-    m_format=MWAWCell::F_DATE;
-    m_DTFormat=wh[m_fileFormat-5];
-    break;
-  }
-  case 10: // unknown
-  case 11: // unknown
-    break;
-  case 12:
-  case 13:
-  case 14:
-  case 15: {
-    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
-    m_format=MWAWCell::F_TIME;
-    m_DTFormat=wh[m_fileFormat-12];
-    break;
-  }
-  default: // unknown
-    break;
-  }
-}
-
 std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat const &form)
 {
-  o << reinterpret_cast<MWAWCell::Format const &>(form) << ",";
+  o << static_cast<MWAWCell::Format const &>(form) << ",";
   if (form.m_fileFormat >= 0 && form.m_fileFormat < 16) {
     static char const *(wh[16])= {
       "general", "currency", "percent", "scientific", "fixed",

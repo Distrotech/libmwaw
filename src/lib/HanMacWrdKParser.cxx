@@ -128,7 +128,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
 
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<HanMacWrdKParser *>(m_parser)->sendText(m_id, 0);
+  static_cast<HanMacWrdKParser *>(m_parser)->sendText(m_id, 0);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
