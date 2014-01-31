@@ -40,6 +40,7 @@
 #include <iostream>
 #include <set>
 #include <sstream>
+#include <limits>
 
 #include <librevenge/librevenge.h>
 
