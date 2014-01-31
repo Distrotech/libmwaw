@@ -1644,7 +1644,7 @@ bool GreatWksSSParser::readCellInFormula(Vec2i const &pos, MWAWCellContent::Form
   for (int i=0; i<2; ++i) {
     int val = (int) input->readULong(2);
     if (val & 0x8000) {
-      absolute[i]=0;
+      absolute[i]=false;
       if (val&0x4000)
         cPos[i] = pos[i]+(val-0xFFFF);
       else
@@ -1728,7 +1728,7 @@ bool GreatWksSSParser::readFormula(Vec2i const &cPos, long endPos, std::vector<M
   bool ok=true;
   while (!input->isEnd()) {
     long pos=input->tell();
-    if (pos > endPos)
+    if (pos >= endPos)
       break;
     int arity=0, val, type=(int) input->readULong(1);
     MWAWCellContent::FormulaInstruction instr;

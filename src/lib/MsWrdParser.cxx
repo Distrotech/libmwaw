@@ -253,11 +253,11 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
 
   long pos = m_input->tell();
   if (m_type == libmwaw::DOC_NONE && m_pictCPos >= 0 && m_pictFPos > 0)
-    reinterpret_cast<MsWrdParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
+    static_cast<MsWrdParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
   else if (m_type == libmwaw::DOC_HEADER_FOOTER)
-    reinterpret_cast<MsWrdParser *>(m_parser)->send(m_zone);
+    static_cast<MsWrdParser *>(m_parser)->send(m_zone);
   else
-    reinterpret_cast<MsWrdParser *>(m_parser)->send(m_id, type);
+    static_cast<MsWrdParser *>(m_parser)->send(m_id, type);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 

@@ -2076,7 +2076,7 @@ void MsWksGraph::checkTextBoxLinks(int zId)
     shared_ptr<MsWksGraphInternal::Zone> zone = m_state->m_zonesList[size_t(id)];
     if (zone->type() != MsWksGraphInternal::Zone::Textv4)
       continue;
-    reinterpret_cast<MsWksGraphInternal::TextBoxv4 &>(*zone).m_frame = fName;
+    static_cast<MsWksGraphInternal::TextBoxv4 &>(*zone).m_frame = fName;
     if (textIds.find(zone->m_ids[0]) != textIds.end()) {
       MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks: id %lX already exists\n", zone->m_ids[0]));
       ok = false;
@@ -2164,7 +2164,7 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return;
   MsWksGraphInternal::GroupZone &group=
-    reinterpret_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
+    static_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
 
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
@@ -2207,7 +2207,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
   MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
   if (!listener || !graphicListener || graphicListener->isDocumentStarted()) return;
   MsWksGraphInternal::GroupZone &group=
-    reinterpret_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
+    static_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
 
   MWAWInputStreamPtr input=m_zone.getInput();
@@ -2234,7 +2234,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
       canMerge=true;
     }
     else if (child.type()==MsWksGraphInternal::Zone::Group &&
-             canCreateGraphic(reinterpret_cast<MsWksGraphInternal::GroupZone const &>(child))) {
+             canCreateGraphic(static_cast<MsWksGraphInternal::GroupZone const &>(child))) {
       if (numDataToMerge == 0)
         partialBdBox=child.getLocalBox();
       else
@@ -2260,9 +2260,9 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
         Vec2f decal=localChild.m_decal[0]+localChild.m_decal[1];
         Box2f box(origBdBox[0]+decal,origBdBox[1]+decal);
         if (localChild.type()==MsWksGraphInternal::Zone::Group)
-          sendGroup(reinterpret_cast<MsWksGraphInternal::GroupZone const &>(localChild), graphicListener);
+          sendGroup(static_cast<MsWksGraphInternal::GroupZone const &>(localChild), graphicListener);
         else if (localChild.type()==MsWksGraphInternal::Zone::Shape) {
-          MsWksGraphInternal::BasicShape const &shape=reinterpret_cast<MsWksGraphInternal::BasicShape const &>(localChild);
+          MsWksGraphInternal::BasicShape const &shape=static_cast<MsWksGraphInternal::BasicShape const &>(localChild);
           graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
         }
         else if (localChild.type()==MsWksGraphInternal::Zone::Text) {
@@ -2307,7 +2307,7 @@ bool MsWksGraph::canCreateGraphic(MsWksGraphInternal::GroupZone const &group) co
     case MsWksGraphInternal::Zone::Text:
       break;
     case MsWksGraphInternal::Zone::Group:
-      if (!canCreateGraphic(reinterpret_cast<MsWksGraphInternal::GroupZone const &>(child)))
+      if (!canCreateGraphic(static_cast<MsWksGraphInternal::GroupZone const &>(child)))
         return false;
       break;
     case MsWksGraphInternal::Zone::Bitmap:
@@ -2341,9 +2341,9 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
     Box2f box(child.m_box[0]+decal,child.m_box[1]+decal);
 
     if (child.type()==MsWksGraphInternal::Zone::Group)
-      sendGroup(reinterpret_cast<MsWksGraphInternal::GroupZone const &>(child), listener);
+      sendGroup(static_cast<MsWksGraphInternal::GroupZone const &>(child), listener);
     else if (child.type()==MsWksGraphInternal::Zone::Shape) {
-      MsWksGraphInternal::BasicShape const &shape=reinterpret_cast<MsWksGraphInternal::BasicShape const &>(child);
+      MsWksGraphInternal::BasicShape const &shape=static_cast<MsWksGraphInternal::BasicShape const &>(child);
       listener->insertPicture(box, shape.m_shape, shape.getStyle());
     }
     else if (child.type()==MsWksGraphInternal::Zone::Text) {
@@ -2609,7 +2609,7 @@ void MsWksGraph::sendTextBox(int zoneId)
   }
   shared_ptr<MsWksGraphInternal::Zone> zone = m_state->m_zonesList[(size_t)zoneId];
   if (!zone) return;
-  MsWksGraphInternal::TextBox &textBox = reinterpret_cast<MsWksGraphInternal::TextBox &>(*zone);
+  MsWksGraphInternal::TextBox &textBox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
   listener->setFont(MWAWFont(20,12));
   MWAWParagraph para;
   para.m_justify=textBox.m_justify;
@@ -2696,7 +2696,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   }
   switch (zone->type()) {
   case MsWksGraphInternal::Zone::Text: {
-    MsWksGraphInternal::TextBox &textbox = reinterpret_cast<MsWksGraphInternal::TextBox &>(*zone);
+    MsWksGraphInternal::TextBox &textbox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
     Box2f box(Vec2f(0,0),textbox.m_box.size());
     graphicListener->startGraphic(box);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
@@ -2712,14 +2712,14 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MsWksGraphInternal::Zone::TableZone: {
-    MsWksGraphInternal::Table &table = reinterpret_cast<MsWksGraphInternal::Table &>(*zone);
+    MsWksGraphInternal::Table &table = static_cast<MsWksGraphInternal::Table &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::Table, table.m_tableId));
     listener->insertTextBox(pictPos, subdoc, extras);
     return;
   }
   case MsWksGraphInternal::Zone::ChartZone: {
-    MsWksGraphInternal::Chart &chart = reinterpret_cast<MsWksGraphInternal::Chart &>(*zone);
+    MsWksGraphInternal::Chart &chart = static_cast<MsWksGraphInternal::Chart &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::Chart, chart.m_chartId));
     listener->insertTextBox(pictPos, subdoc, extras);
@@ -2729,7 +2729,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     sendGroup(id, pictPos);
     return;
   case MsWksGraphInternal::Zone::Bitmap: {
-    MsWksGraphInternal::DataBitmap &bmap = reinterpret_cast<MsWksGraphInternal::DataBitmap &>(*zone);
+    MsWksGraphInternal::DataBitmap &bmap = static_cast<MsWksGraphInternal::DataBitmap &>(*zone);
     librevenge::RVNGBinaryData data;
     std::string type;
     if (!bmap.getPictureData(input, data,type,m_zone.getPalette(4)))
@@ -2739,7 +2739,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MsWksGraphInternal::Zone::Shape: {
-    MsWksGraphInternal::BasicShape &shape = reinterpret_cast<MsWksGraphInternal::BasicShape &>(*zone);
+    MsWksGraphInternal::BasicShape &shape = static_cast<MsWksGraphInternal::BasicShape &>(*zone);
     listener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
     return;
   }
@@ -2752,7 +2752,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     return;
   }
   case MsWksGraphInternal::Zone::Textv4: {
-    MsWksGraphInternal::TextBoxv4 &textbox = reinterpret_cast<MsWksGraphInternal::TextBoxv4 &>(*zone);
+    MsWksGraphInternal::TextBoxv4 &textbox = static_cast<MsWksGraphInternal::TextBoxv4 &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBoxv4, textbox.m_text, textbox.m_frame));
     librevenge::RVNGPropertyList textboxExtra;
@@ -2774,7 +2774,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
       MWAW_DEBUG_MSG(("MsWksGraph::send: can not find ole callback for zone %d\n", id));
       return;
     }
-    MsWksGraphInternal::OLEZone &ole = reinterpret_cast<MsWksGraphInternal::OLEZone &>(*zone);
+    MsWksGraphInternal::OLEZone &ole = static_cast<MsWksGraphInternal::OLEZone &>(*zone);
     (m_mainParser->*m_oleCallback)(ole.m_oleId, pictPos, extras);
     return;
   }

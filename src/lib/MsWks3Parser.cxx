@@ -147,7 +147,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  MsWks3Parser *parser = reinterpret_cast<MsWks3Parser *>(m_parser);
+  MsWks3Parser *parser = static_cast<MsWks3Parser *>(m_parser);
   switch (m_type) {
   case Text:
     parser->sendText(m_id, m_noteId);
@@ -201,7 +201,7 @@ void MsWks3Parser::init()
 
   m_graphParser.reset(new MsWksGraph(*this, *m_zone));
   m_textParser.reset(new MsWks3Text(*this, *m_zone));
-  m_textParser->setCallbacks(reinterpret_cast<MsWks3Text::NewPageCallback>(&MsWks3Parser::newPage));
+  m_textParser->setCallbacks(static_cast<MsWks3Text::NewPageCallback>(&MsWks3Parser::newPage));
 }
 
 ////////////////////////////////////////////////////////////

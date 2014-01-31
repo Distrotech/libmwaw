@@ -116,7 +116,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   }
   assert(m_parser);
 
-  reinterpret_cast<LightWayTxtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  static_cast<LightWayTxtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
 }
 }
 

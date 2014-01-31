@@ -237,7 +237,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  MsWksSSParser *parser = reinterpret_cast<MsWksSSParser *>(m_parser);
+  MsWksSSParser *parser = static_cast<MsWksSSParser *>(m_parser);
   switch (m_type) {
   case Note:
     parser->sendNote(m_id);

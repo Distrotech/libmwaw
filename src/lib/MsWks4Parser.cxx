@@ -107,7 +107,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
       listener->insertChar(' ');
       return;
     }
-    MsWks4Zone *mnParser = reinterpret_cast<MsWks4Zone *>(m_parser);
+    MsWks4Zone *mnParser = static_cast<MsWks4Zone *>(m_parser);
     mnParser->createZones(false);
     mnParser->readFootNote(m_noteId);
     return;
@@ -130,7 +130,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     MWAW_DEBUG_MSG(("SubDocument::parse: send not MN entry is not implemented\n"));
     return;
   }
-  MsWks4Zone *mnParser = reinterpret_cast<MsWks4Zone *>(m_parser);
+  MsWks4Zone *mnParser = static_cast<MsWks4Zone *>(m_parser);
   mnParser->createZones(false);
   mnParser->readContentZones(m_zone, false);
 }

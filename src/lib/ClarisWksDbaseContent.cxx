@@ -603,7 +603,22 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         break;
       }
       ascFile.addDelimiter(input->tell(),'|');
-      input->seek(formSz+1-(formSz%2), librevenge::RVNG_SEEK_CUR);
+      std::vector<MWAWCellContent::FormulaInstruction> formula;
+      std::string error;
+      if (readFormula(id, actPos+1+formSz, formula, error)) {
+        content.m_contentType=MWAWCellContent::C_FORMULA;
+        content.m_formula=formula;
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a formule\n"));
+        f << "###";
+      }
+      f << "form=";
+      for (size_t i=0; i < formula.size(); ++i)
+        f << formula[i];
+      f << error << ",";
+      if ((formSz%2)==0) ++formSz;
+      input->seek(actPos+1+formSz, librevenge::RVNG_SEEK_SET);
       ascFile.addDelimiter(input->tell(),'|');
       val=(int) input->readULong(1);
       int rType=(val>>4);
@@ -615,7 +630,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       case 0:
       case 1:
         if (input->checkPosition(resPos+2+2*rType)) {
-          content.m_contentType=MWAWCellContent::C_NUMBER;
+          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+            content.m_contentType=MWAWCellContent::C_NUMBER;
           content.setValue(double(input->readLong(2+2*rType)));
           f << "=" << content.m_value << ",";
           break;
@@ -626,7 +642,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       case 2: {
         double value;
         if (input->checkPosition(resPos+10) && input->readDouble10(value, record.m_hasNaNValue)) {
-          content.m_contentType=MWAWCellContent::C_NUMBER;
+          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+            content.m_contentType=MWAWCellContent::C_NUMBER;
           content.setValue(value);
           f << "=" << value << ",";
           break;
@@ -642,7 +659,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
           f << "###string[res]";
           break;
         }
-        content.m_contentType=MWAWCellContent::C_TEXT;
+        if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+          content.m_contentType=MWAWCellContent::C_TEXT;
         content.m_textEntry.setBegin(input->tell());
         content.m_textEntry.setLength((long) fSz);
         std::string data("");
@@ -654,7 +672,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         if (input->checkPosition(resPos+1)) {
           if (!fileFormat)
             format.m_format=MWAWCell::F_BOOLEAN;
-          content.m_contentType=MWAWCellContent::C_NUMBER;
+          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+            content.m_contentType=MWAWCellContent::C_NUMBER;
           content.setValue(double(input->readLong(1)));
           f << "=" << content.m_value << ",";
           break;
@@ -664,7 +683,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         break;
       case 6: // nan
         if (input->checkPosition(resPos+1)) {
-          content.m_contentType=MWAWCellContent::C_NUMBER;
+          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+            content.m_contentType=MWAWCellContent::C_NUMBER;
           content.setValue(std::numeric_limits<double>::quiet_NaN());
           record.m_hasNaNValue = true;
           f << "=nan" << input->readLong(1) << ",";
@@ -1018,7 +1038,7 @@ bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record 
       record.m_hAlign=format.m_hAlign;
     }
     else if (first) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not find format for field %d\n", pos[0]));
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::get: can not find format for field %d\n", pos[0]));
       first=false;
     }
   }
@@ -1158,7 +1178,7 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
     return;
   }
   std::string value("");
-  // change the reference date from 1/1/1904 to 1/1/1900
+  // FIXME: must not be here, change the reference date from 1/1/1904 to 1/1/1900
   if (MWAWCellContent::double2String(format.m_format==MWAWCell::F_DATE ? val+1462 : val, format, value))
     s << value;
   else {
@@ -1168,4 +1188,236 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
   listener->insertUnicodeString(s.str().c_str());
 }
 
+////////////////////////////////////////////////////////////
+// formula
+////////////////////////////////////////////////////////////
+bool ClarisWksDbaseContent::readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  instr=MWAWCellContent::FormulaInstruction();
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  bool absolute[2] = { true, true};
+  int cPos[2];
+  for (int i=0; i<2; ++i) {
+    int val = (int) input->readULong(2);
+    if (val & 0x8000) {
+      absolute[1-i]=false;
+      if (val&0x4000)
+        cPos[1-i] = pos[1-i]-1+(val-0xFFFF);
+      else
+        cPos[1-i] = pos[1-i]-1+(val-0x7FFF);
+    }
+    else
+      cPos[1-i]=val;
+  }
+
+  if (cPos[0] < 0 || cPos[1] < 0) {
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readCellInFormula: can not read cell position\n"));
+    return false;
+  }
+  instr.m_position[0]=Vec2i(cPos[0],cPos[1]);
+  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  return true;
+}
+
+bool ClarisWksDbaseContent::readString(long endPos, std::string &res)
+{
+  res="";
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  long pos=input->tell();
+  int fSz=(int) input->readULong(1);
+  if (pos+1+fSz>endPos) {
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readString: can not read string size\n"));
+    return false;
+  }
+  for (int i=0; i<fSz; ++i)
+    res += (char) input->readULong(1);
+  return true;
+}
+
+bool ClarisWksDbaseContent::readNumber(long endPos, double &res, bool &isNan)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  long pos=input->tell();
+  if (pos+10>endPos) {
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readNumber: can not read a number\n"));
+    return false;
+  }
+  return input->readDouble10(res, isNan);
+}
+
+namespace ClarisWksDbaseContentInternal
+{
+struct Operators {
+  char const *m_name;
+  int m_arity;
+};
+
+static Operators const s_listOperators[] = {
+  { "<", 2}, { ">", 2}, { "=", 2}, { "<=", 2},
+  { ">=", 2}, { "<>", 2}, { "", -2} /*UNKN*/,{ "+", 2},
+
+  { "-", 2}, { "*", 2}, { "/", 2}, { "^", 2},
+  { "+", 1} /*checkme*/, { "-", 1}, { "(", 1}, { "", -2} /*UNKN*/,
+};
+}
+
+bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  libmwaw::DebugStream f;
+  bool ok=true;
+  long pos=input->tell();
+  if (input->isEnd() || pos >= endPos)
+    return false;
+  int arity=0, val, type=(int) input->readULong(1);
+  bool isFunction=false, isOperator=false;
+  MWAWCellContent::FormulaInstruction instr;
+  switch (type) {
+  case 0x10:
+    if (pos+1+2>endPos) {
+      ok=false;
+      break;
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+    instr.m_longValue=(int) input->readLong(2);
+    break;
+  case 0x12: {
+    double value;
+    bool isNan;
+    ok=readNumber(endPos, value, isNan);
+    if (!ok) break;
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+    instr.m_doubleValue=value;
+    break;
+  }
+  case 0x13: {
+    ok=readCellInFormula(cPos,instr);
+    if (!ok) break;
+    break;
+  }
+  case 0x14: {
+    if (pos+1+8 > endPos || !readCellInFormula(cPos, instr)) {
+      f << "###list cell short";
+      ok = false;
+      break;
+    }
+    MWAWCellContent::FormulaInstruction instr2;
+    if (!readCellInFormula(cPos, instr2)) {
+      f << "###list cell short";
+      ok = false;
+      break;
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+    instr.m_position[1]=instr2.m_position[0];
+    instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+    break;
+  }
+  case 0x15: {
+    std::string text;
+    ok=readString(endPos, text);
+    if (!ok) break;
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+    instr.m_content=text;
+    break;
+  }
+  case 0x16: {
+    if (pos+1+2>endPos) {
+      ok=false;
+      break;
+    }
+    isFunction=true;
+    val=(int) input->readULong(1);
+    arity=(int) input->readULong(1);
+    std::string name("");
+    static char const *(wh[]) = {
+      "Abs", "Acos", "Alert", "And", "Code", "Asin", "Atan", "Atan2",
+      "Average", "Choose", "Char", "Concat", "Cos", "Count", "Date", "DateToText",
+
+      "TextToDate", "Day", "DayName", "DayOfYear", "Degrees", "Error", "Exact", "Exp",
+      "Frac", "FV", "HLookup", "Hour", "If", "Index", "Int", "IRR",
+
+      "IsBlank", "IsError", "IsNA", "IsNumber", "IsText", "Left", "Ln", "Log",
+      "Log10", "LookUp", "Lower", "Match", "Max", "Mid", "Min", "Minute",
+
+      "MIRR", "Mod", "MonthName", "Now", "Not", "Now", "NPER", "NPV",
+      "NumToText", "Or", "Pi", "PMT", "Product", "Proper", "PV", "Radians",
+
+      "Rand", "Rate", "Replace", "Right", "Round", "Second", "Sign", "Sqrt",
+      "StDev", "Sum", "Tan", "Rept", "TextToNum", "Time", "TimeToText", "TextToTime",
+
+      "", "Trim", "Type", "Upper", "Var", "VLookUp", "WeekDay", "WeekOfYear",
+      "Year", "Find", "Column", "Row", "Fact", "Len", "Sin", "Month",
+
+      "Trunc", "Count2", "Macro", "Beep", "", "", "", "",
+      "", "", "", "", "", "", "", "",
+    };
+    if (val<0x70) name=wh[val];
+    if (name.empty()) {
+      f << "###";
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readFormula: find unknown function\n"));
+      std::stringstream s;
+      s << "Funct" << std::hex << val << std::dec;
+      name=s.str();
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+    instr.m_content=name;
+    formula.push_back(instr);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content="(";
+    break;
+  }
+  case 0x18: // bool
+    if (pos+1+1>endPos) {
+      ok=false;
+      break;
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+    instr.m_longValue=(int) input->readLong(1);
+    break;
+  case 0x1f: // final equal sign
+    return true;
+  default: {
+    std::string op("");
+    if (type<0x10) {
+      op=ClarisWksDbaseContentInternal::s_listOperators[type].m_name;
+      arity=ClarisWksDbaseContentInternal::s_listOperators[type].m_arity;
+    }
+    if (!op.empty()&&arity>0) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content=op;
+      isOperator=true;
+      break;
+    }
+    f << "##type=" << std::hex << type << std::dec << ",";
+    ok=false;
+    break;
+  }
+  }
+  error+=f.str();
+  if (!ok) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  if (!isOperator || arity==1)
+    formula.push_back(instr);
+  if (isFunction && arity>1) {
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content=";";
+  }
+  for (int i=0; i < arity; ++i) {
+    if (!readFormula(cPos, endPos, formula, error))
+      return false;
+    if (i+1==arity) break;
+    formula.push_back(instr);
+  }
+  pos=input->tell();
+  if (isFunction || instr.m_content=="(") {
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content=")";
+    formula.push_back(instr);
+  }
+
+  return true;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

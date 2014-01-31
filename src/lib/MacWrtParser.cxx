@@ -320,7 +320,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  reinterpret_cast<MacWrtParser *>(m_parser)->sendWindow(m_id);
+  static_cast<MacWrtParser *>(m_parser)->sendWindow(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 

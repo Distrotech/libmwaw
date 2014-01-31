@@ -164,7 +164,7 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
+    o << static_cast<MWAWParagraph const &>(ind);
     if (ind.m_deltaSpacing<0 || ind.m_deltaSpacing>0) o << "deltaSpacing=" << ind.m_deltaSpacing << ",";
     return o;
   }

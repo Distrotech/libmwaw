@@ -431,6 +431,16 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
       cell.setPosition(Vec2i(fC,fR));
       cell.setFormat(rec.m_format);
       cell.setHAlignement(rec.m_hAlign);
+      if (rec.m_borders) {
+        int wh=0;
+        for (int i=0, bit=1; i < 4; ++i, bit*=2) {
+          if ((rec.m_borders&bit)==0) continue;
+          static int const(what[])= {libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit};
+          wh |= what[i];
+        }
+        cell.setBorders(wh, MWAWBorder());
+      }
+
       listener->openSheetCell(cell, rec.m_content);
       if (rec.m_content.m_textEntry.valid()) {
         long fPos = input->tell();

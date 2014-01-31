@@ -148,7 +148,7 @@ struct Paragraph : public MWAWParagraph {
 
 std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 {
-  o << reinterpret_cast<MWAWParagraph const &>(para);
+  o << static_cast<MWAWParagraph const &>(para);
   // 0|80 frequent: means redefine paragraph? find also a7 in a footnote
   if (para.m_type) o << "type=" << std::hex << para.m_type << std::dec << ",";
 
@@ -253,7 +253,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   long pos = m_input->tell();
-  reinterpret_cast<MsWrd1Parser *>(m_parser)->sendText(m_zone);
+  static_cast<MsWrd1Parser *>(m_parser)->sendText(m_zone);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }

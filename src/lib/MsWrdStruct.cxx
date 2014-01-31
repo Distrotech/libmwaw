@@ -1104,7 +1104,7 @@ std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
     o << "interline=" << *ind.m_interline << ",";
   if (ind.m_info.isSet())
     o << "dim=[" << *ind.m_info << "],";
-  o << reinterpret_cast<MWAWParagraph const &>(ind);
+  o << static_cast<MWAWParagraph const &>(ind);
   if (ind.m_bordersStyle.isSet())
     o << "borders[style]=" << ind.m_bordersStyle.get() << ",";
   if (ind.m_section.isSet()) o << ind.m_section.get() << ",";

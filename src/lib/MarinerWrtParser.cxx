@@ -220,7 +220,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   }
   assert(m_parser);
   long pos = m_input->tell();
-  reinterpret_cast<MarinerWrtParser *>(m_parser)->sendText(m_id);
+  static_cast<MarinerWrtParser *>(m_parser)->sendText(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }

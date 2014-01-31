@@ -204,7 +204,7 @@ struct Paragraph : public MWAWParagraph {
 
 std::ostream &operator<<(std::ostream &o, Paragraph const &para)
 {
-  o << reinterpret_cast<MWAWParagraph const &>(para);
+  o << static_cast<MWAWParagraph const &>(para);
   if (para.m_cellWidth)
     o << "cellWidth=" << para.m_cellWidth << ",";
   if (para.m_cellHeight > 0)

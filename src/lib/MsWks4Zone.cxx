@@ -188,8 +188,8 @@ void MsWks4Zone::init()
   m_textParser.reset(new MsWks4Text(*this));
   m_textParser->setDefault(m_state->m_defFont);
   m_graphParser.reset(new MsWksGraph(*this, *m_zone));
-  m_graphParser->setCallbacks(reinterpret_cast<MsWksGraph::FrameCallback>(&MsWks4Zone::sendFrameText),
-                              reinterpret_cast<MsWksGraph::OLECallback>(&MsWks4Zone::sendOLE));
+  m_graphParser->setCallbacks(static_cast<MsWksGraph::FrameCallback>(&MsWks4Zone::sendFrameText),
+                              static_cast<MsWksGraph::OLECallback>(&MsWks4Zone::sendOLE));
 }
 
 void  MsWks4Zone::setAscii(std::string const &oleName)

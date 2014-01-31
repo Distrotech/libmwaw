@@ -128,6 +128,20 @@ protected:
   //! send a double with a corresponding cell format
   void send(double val, bool isNotaNumber, ClarisWksStyleManager::CellFormat const &format);
 
+  //
+  // low level
+  //
+
+  /** reads a cell */
+  bool readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
+  /** try to read a string */
+  bool readString(long endPos, std::string &res);
+  /** try to read a number */
+  bool readNumber(long endPos, double &res, bool &isNan);
+  //! read to read a formula
+  bool readFormula(Vec2i const &cPos, long endPos,
+                   std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
+
   //! the file version
   int m_version;
   //! a bool to know if this is a spreadsheet or a database

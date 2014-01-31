@@ -285,7 +285,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  MacWrtProParser *parser = reinterpret_cast<MacWrtProParser *>(m_parser);
+  MacWrtProParser *parser = static_cast<MacWrtProParser *>(m_parser);
   if (parser->m_structures.get())
     parser->m_structures->send(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

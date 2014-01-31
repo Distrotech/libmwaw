@@ -235,7 +235,7 @@ struct Paragraph : public MWAWParagraph {
 //! operator<<
 std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
 {
-  o << reinterpret_cast<MWAWParagraph const &>(ind);
+  o << static_cast<MWAWParagraph const &>(ind);
   if (ind.m_pageBreak) o << "pgBrk, ";
   return o;
 }
