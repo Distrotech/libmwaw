@@ -538,70 +538,16 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
     ok = false;
   }
   MWAWCellContent &content=record.m_content;
-  if (ok) {
+  if (ok && type==4) {
+    f << "formula,";
     long actPos=input->tell();
-    switch (type) {
-    case 0:
-    case 1:
-      if (type==0)
-        f << "int,";
-      else
-        f << "long,";
-      if (!input->checkPosition(actPos+2+2*type)) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a int\n"));
-        f << "###";
-        ok = false;
-        break;
-      }
-      content.m_contentType=MWAWCellContent::C_NUMBER;
-      content.setValue(double(2+2*type));
-      f << "val=" << content.m_value << ",";
-      break;
-    case 2: {
-      f << "float,";
-      if (!input->checkPosition(actPos+10)) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a float\n"));
-        f << "###";
-        ok=false;
-        break;
-      }
-      content.m_contentType=MWAWCellContent::C_NUMBER;
-      double value;
-      if (input->readDouble10(value, record.m_hasNaNValue)) {
-        content.setValue(value);
-        f << value << ",";
-      }
-      else {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a float\n"));
-        f << "###,";
-      }
-      break;
+    int formSz=(int) input->readULong(1);
+    if (!input->checkPosition(actPos+2+formSz)) {
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the formula seems bad\n"));
+      f << "###";
+      ok = false;
     }
-    case 3: {
-      f << "string,";
-      int fSz = (int) input->readULong(1);
-      if (!input->checkPosition(actPos+1+fSz)) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the string(II) seems bad\n"));
-        f << "###";
-        ok=false;
-        break;
-      }
-      content.m_contentType=MWAWCellContent::C_TEXT;
-      content.m_textEntry.setBegin(input->tell());
-      content.m_textEntry.setLength((long) fSz);
-      std::string data("");
-      for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
-      f << data << ",";
-      break;
-    }
-    case 4: {
-      f << "formula,";
-      int formSz=(int) input->readULong(1);
-      if (!input->checkPosition(actPos+2+formSz)) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the formula seems bad\n"));
-        f << "###";
-        break;
-      }
+    else {
       ascFile.addDelimiter(input->tell(),'|');
       std::vector<MWAWCellContent::FormulaInstruction> formula;
       std::string error;
@@ -621,95 +567,76 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       input->seek(actPos+1+formSz, librevenge::RVNG_SEEK_SET);
       ascFile.addDelimiter(input->tell(),'|');
       val=(int) input->readULong(1);
-      int rType=(val>>4);
-      if (val&0xF) f << "unkn1=" << (val&0xF) << ",";
+      type=(val>>4);
+      if (val&0xF) f << "unkn0=" << (val&0xF) << ",";
       val=(int) input->readULong(1);
       if (val) f << "unkn1=" << (val) << ",";
-      long resPos=input->tell();
-      switch (rType) {
-      case 0:
-      case 1:
-        if (input->checkPosition(resPos+2+2*rType)) {
-          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
-            content.m_contentType=MWAWCellContent::C_NUMBER;
-          content.setValue(double(input->readLong(2+2*rType)));
-          f << "=" << content.m_value << ",";
-          break;
-        }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a long[formula]\n"));
-        f << "###int" << rType << "[res],";
-        break;
-      case 2: {
-        double value;
-        if (input->checkPosition(resPos+10) && input->readDouble10(value, record.m_hasNaNValue)) {
-          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
-            content.m_contentType=MWAWCellContent::C_NUMBER;
-          content.setValue(value);
-          f << "=" << value << ",";
-          break;
-        }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a double[formula]\n"));
-        f << "###float[res],";
-        break;
-      }
-      case 3: {
-        int fSz = (int) input->readULong(1);
-        if (!input->checkPosition(resPos+fSz+1)) {
-          MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the res string(II) seems bad\n"));
-          f << "###string[res]";
-          break;
-        }
-        if (content.m_contentType!=MWAWCellContent::C_FORMULA)
-          content.m_contentType=MWAWCellContent::C_TEXT;
-        content.m_textEntry.setBegin(input->tell());
-        content.m_textEntry.setLength((long) fSz);
-        std::string data("");
-        for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
-        f << "=" << data << ",";
-        break;
-      }
-      case 5: // bool
-        if (input->checkPosition(resPos+1)) {
-          if (!fileFormat)
-            format.m_format=MWAWCell::F_BOOLEAN;
-          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
-            content.m_contentType=MWAWCellContent::C_NUMBER;
-          content.setValue(double(input->readLong(1)));
-          f << "=" << content.m_value << ",";
-          break;
-        }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a bool[formula]\n"));
-        f << "###bool[res],";
-        break;
-      case 6: // nan
-        if (input->checkPosition(resPos+1)) {
-          if (content.m_contentType!=MWAWCellContent::C_FORMULA)
-            content.m_contentType=MWAWCellContent::C_NUMBER;
-          content.setValue(std::numeric_limits<double>::quiet_NaN());
-          record.m_hasNaNValue = true;
-          f << "=nan" << input->readLong(1) << ",";
-          break;
-        }
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a nanc[formula]\n"));
-        f << "###nan[res],";
-        break;
-      case 7: // empty
-        break;
-      // type 8: find with 206b*: maybe to indicate an empty cell recovered by neighbour...
-      default:
-        f << "##type=" << rType << "[res],";
+    }
+  }
+  if (ok) {
+    long actPos=input->tell();
+    switch (type) {
+    case 0:
+    case 1:
+      if (type==0)
+        f << "int,";
+      else
+        f << "long,";
+      if (!input->checkPosition(actPos+2+2*type)) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a int\n"));
+        f << "###";
         ok = false;
         break;
       }
+      record.m_valueType=MWAWCellContent::C_NUMBER;
+      content.setValue(double(2+2*type));
+      f << "val=" << content.m_value << ",";
+      break;
+    case 2: {
+      f << "float,";
+      if (!input->checkPosition(actPos+10)) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected size for a float\n"));
+        f << "###";
+        ok=false;
+        break;
+      }
+      record.m_valueType=MWAWCellContent::C_NUMBER;
+      double value;
+      if (input->readDouble10(value, record.m_hasNaNValue)) {
+        content.setValue(value);
+        f << "val=" << value << ",";
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a float\n"));
+        f << "###,";
+      }
       break;
     }
+    case 3: {
+      f << "string,";
+      int fSz = (int) input->readULong(1);
+      if (!input->checkPosition(actPos+1+fSz)) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: the string(II) seems bad\n"));
+        f << "###";
+        ok=false;
+        break;
+      }
+      record.m_valueType=MWAWCellContent::C_TEXT;
+      content.m_textEntry.setBegin(input->tell());
+      content.m_textEntry.setLength((long) fSz);
+      std::string data("");
+      for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
+      f << "val=" << data << ",";
+      break;
+    }
+    // case 4: the formula is already read
     case 5: // bool
       if (input->checkPosition(actPos+1)) {
         if (!fileFormat)
           format.m_format=MWAWCell::F_BOOLEAN;
-        content.m_contentType=MWAWCellContent::C_NUMBER;
+        record.m_valueType=MWAWCellContent::C_NUMBER;
         content.setValue(double(input->readLong(1)));
-        f << "=" << content.m_value << ",";
+        f << "val=" << content.m_value << ",";
         break;
       }
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a bool\n"));
@@ -717,10 +644,10 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       break;
     case 6:
       if (input->checkPosition(actPos+1)) {
-        content.m_contentType=MWAWCellContent::C_NUMBER;
+        record.m_valueType=MWAWCellContent::C_NUMBER;
         content.setValue(std::numeric_limits<double>::quiet_NaN());
         record.m_hasNaNValue = true;
-        f << "=nan" << input->readLong(1) << ",";
+        f << "val=nan" << input->readLong(1) << ",";
         break;
       }
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a nanc[formula]\n"));
@@ -728,6 +655,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       break;
     case 7: // empty
       break;
+    // type 8: find with 206b*: maybe to indicate an empty cell recovered by neighbour...
     default:
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected type\n"));
       f << "###type=" << type << ",";
@@ -735,6 +663,8 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       break;
     }
   }
+  if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+    content.m_contentType=record.m_valueType;
   if (format.m_format==MWAWCell::F_UNKNOWN && content.isValueSet()) {
     format.m_format=MWAWCell::F_NUMBER;
     format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
@@ -780,152 +710,113 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
       m_document.getStyleManager()->get(style.m_cellFormatId, format))
     f << format << ",";
   MWAWCellContent &content=record.m_content;
-  switch (type) {
-  case 0:
-  case 1:
-    if (type==0)
-      f << "int,";
-    else
-      f << "long,";
-    if (sz!=6+2*type) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a int\n"));
-      f << "###";
-      break;
-    }
-    content.m_contentType=MWAWCellContent::C_NUMBER;
-    content.setValue(double(input->readLong(2+2*type)));
-    f << "val=" << content.m_value << ",";
-    break;
-  case 2: {
-    f << "float,";
-    if (sz!=0xe) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a float\n"));
-      f << "###";
-      break;
-    }
-    content.m_contentType=MWAWCellContent::C_NUMBER;
-    double value;
-    if (input->readDouble10(value, record.m_hasNaNValue)) {
-      content.setValue(value);
-      f << value << ",";
-    }
-    else {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a float\n"));
-      f << "###,";
-    }
-    break;
-  }
-  case 3: {
-    f << "string,";
-    if (sz<5) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string seems bad\n"));
-      f << "###";
-      break;
-    }
-    int fSz = (int) input->readULong(1);
-    if (fSz+5!=sz && fSz+6!=sz) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string(II) seems bad\n"));
-      f << "###";
-      break;
-    }
-    content.m_contentType=MWAWCellContent::C_TEXT;
-    content.m_textEntry.setBegin(input->tell());
-    content.m_textEntry.setLength((long) fSz);
-    std::string data("");
-    for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
-    f << data << ",";
-    break;
-  }
-  case 4: {
+  bool ok=true;
+  if (type==4) {
     f << "formula,";
     if (sz<7) {
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
-      f << "###";
-      break;
+      f << "##sz,";
+      ok = false;
     }
-    int rType=(int) input->readULong(1);
-    int formSz=(int) input->readULong(2);
-    if (8+formSz > sz) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
-      f << "###";
-      break;
+    else {
+      type=(int) input->readULong(1);
+      int formSz=(int) input->readULong(2);
+      if (8+formSz > sz) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
+        f << "###";
+        ok=false;
+      }
+      else {
+        ascFile.addDelimiter(input->tell(),'|');
+        /** checkme: there does not seem to be alignment, but another
+            variable before the result */
+        input->seek(formSz+1, librevenge::RVNG_SEEK_CUR);
+        ascFile.addDelimiter(input->tell(),'|');
+        sz=4+int(endPos-input->tell());
+      }
     }
-    ascFile.addDelimiter(input->tell(),'|');
-    /** checkme: there does not seem to be alignment, but another
-        variable before the result */
-    input->seek(formSz+1, librevenge::RVNG_SEEK_CUR);
-    ascFile.addDelimiter(input->tell(),'|');
-    int remainSz=int(endPos-input->tell());
-    switch (rType) {
+  }
+  if (ok) {
+    switch (type) {
     case 0:
     case 1:
-      if (remainSz>=2+2*rType) {
-        content.m_contentType=MWAWCellContent::C_NUMBER;
-        content.setValue(double(input->readLong(2+2*rType)));
-        f << "=" << content.m_value << ",";
+      if (type==0)
+        f << "int,";
+      else
+        f << "long,";
+      if (sz<6+2*type) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a int\n"));
+        f << "###";
         break;
       }
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
-      f << "###int" << rType << "[res],";
+      record.m_valueType=MWAWCellContent::C_NUMBER;
+      content.setValue(double(input->readLong(2+2*type)));
+      f << "val=" << content.m_value << ",";
       break;
     case 2: {
-      double value;
-      if (remainSz>=10 && input->readDouble10(value, record.m_hasNaNValue)) {
-        content.m_contentType=MWAWCellContent::C_NUMBER;
-        content.setValue(value);
-        f << "=" << value << ",";
+      f << "float,";
+      if (sz<0xe) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: unexpected size for a float\n"));
+        f << "###";
         break;
       }
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not formula res\n"));
-      f << "###float[res],";
+      record.m_valueType=MWAWCellContent::C_NUMBER;
+      double value;
+      if (input->readDouble10(value, record.m_hasNaNValue)) {
+        content.setValue(value);
+        f << value << ",";
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a float\n"));
+        f << "###,";
+      }
       break;
     }
     case 3: {
-      if (remainSz<1) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the res string seems bad\n"));
-        f << "###string[res]";
+      f << "string,";
+      if (sz<5) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string seems bad\n"));
+        f << "###";
         break;
       }
       int fSz = (int) input->readULong(1);
-      if (fSz+1>remainSz) {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the res string(II) seems bad\n"));
-        f << "###string[res]";
+      if (fSz+5>sz) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the string(II) seems bad\n"));
+        f << "###";
         break;
       }
-      content.m_contentType=MWAWCellContent::C_TEXT;
+      record.m_valueType=MWAWCellContent::C_TEXT;
       content.m_textEntry.setBegin(input->tell());
       content.m_textEntry.setLength((long) fSz);
       std::string data("");
       for (int c=0; c < fSz; ++c) data+=(char) input->readULong(1);
-      f << "=" << data << ",";
+      f << data << ",";
       break;
     }
+    // 4: formula
+    case 7: // link/anchor/goto
+      if (sz<4) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the mark size seems bad\n"));
+        f << "###mark";
+        break;
+      }
+      f << "mark,";
+      break;
+    case 8:
+    case 9:
+      f << "type" << type << ",";
+      if (sz<4) {
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the type%d seems bad\n", type));
+        f << "###";
+        break;
+      }
+      break;
     default:
-      f << "##type=" << rType << "[res],";
-      break;
+      f << "#type=" << type << ",";
     }
-    break;
   }
-  case 7: // link/anchor/goto
-    if (sz!=4) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the mark size seems bad\n"));
-      f << "###mark";
-      break;
-    }
-    f << "mark,";
-    break;
-  case 8:
-  case 9:
-    f << "type" << type << ",";
-    if (sz!=4) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the type%d seems bad\n", type));
-      f << "###";
-      break;
-    }
-    break;
-  default:
-    f << "#type=" << type << ",";
-  }
+  if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+    content.m_contentType=record.m_valueType;
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.addPos(endPos);
@@ -1124,15 +1015,17 @@ bool ClarisWksDbaseContent::send(Vec2i const &pos)
   if (!get(pos, record)) return true;
   MWAWCellContent const &content=record.m_content;
   listener->setFont(record.m_font);
+  MWAWCellContent::Type contentType=
+    content.m_contentType==MWAWCellContent::C_FORMULA ? record.m_valueType : content.m_contentType;
   MWAWParagraph para;
   para.m_justify =
     record.m_hAlign==MWAWCell::HALIGN_LEFT ? MWAWParagraph::JustificationLeft :
     record.m_hAlign==MWAWCell::HALIGN_CENTER ? MWAWParagraph::JustificationCenter :
     record.m_hAlign==MWAWCell::HALIGN_RIGHT ? MWAWParagraph::JustificationRight :
-    content.m_contentType==MWAWCellContent::C_TEXT ? MWAWParagraph::JustificationLeft :
+    contentType==MWAWCellContent::C_TEXT ? MWAWParagraph::JustificationLeft :
     MWAWParagraph::JustificationRight;
   listener->setParagraph(para);
-  switch (content.m_contentType) {
+  switch (contentType) {
   case MWAWCellContent::C_NUMBER:
     if (record.m_fileFormat)
       send(content.m_value, record.m_hasNaNValue, record.m_format);
