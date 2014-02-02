@@ -1,6 +1,12 @@
 CHANGES:
 
-1/23/2014
+2/2/2014:
+- AppleWorks/ClarisWorks: add a spreadsheet parser for spreadsheet
+  (only export main spreadsheet's content but not the frame), and
+  for database(export the main database content row by row as a
+  spreadsheet)
+
+1/23/2014:
 - add some enums of pure spreadsheet applications...
 
 1/22/2014:

@@ -330,7 +330,7 @@ int MWAWCell::Format::compare(MWAWCell::Format const &cell) const
 ////////////////////////////////////////////////////////////
 // MWAWCell
 ////////////////////////////////////////////////////////////
-void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
+void MWAWCell::addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const
 {
   propList.insert("librevenge:column", position()[0]);
   propList.insert("librevenge:row", position()[1]);
@@ -338,6 +338,8 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList) const
   propList.insert("table:number-columns-spanned", numSpannedCells()[0]);
   propList.insert("table:number-rows-spanned", numSpannedCells()[1]);
 
+  if (m_fontSet)
+    m_font.addTo(propList, fontConverter);
   for (size_t c = 0; c < m_bordersList.size(); c++) {
     switch (c) {
     case libmwaw::Left:
@@ -459,6 +461,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
   if (cell.m_bdSize[0]>0 || cell.m_bdSize[1]>0)
     o << "bdSize=" << cell.m_bdSize << ",";
   o << cell.m_format;
+  if (cell.m_fontSet) o << "hasFont,";
   switch (cell.m_hAlign) {
   case MWAWCell::HALIGN_LEFT:
     o << "left,";

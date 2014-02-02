@@ -44,6 +44,7 @@
 #include "libmwaw_internal.hxx"
 
 #include "MWAWEntry.hxx"
+#include "MWAWFont.hxx"
 
 class MWAWTable;
 
@@ -127,7 +128,7 @@ public:
 
   //! constructor
   MWAWCell() : m_position(0,0), m_numberCellSpanned(1,1), m_bdBox(),  m_bdSize(),
-    m_format(), m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT),
+    m_format(), m_font(3,12), m_fontSet(false), m_hAlign(HALIGN_DEFAULT), m_vAlign(VALIGN_DEFAULT),
     m_backgroundColor(MWAWColor::white()), m_protected(false),
     m_bordersList(), m_extraLine(E_None), m_extraLineType() { }
 
@@ -135,7 +136,7 @@ public:
   virtual ~MWAWCell() {}
 
   /** adds to the propList*/
-  void addTo(librevenge::RVNGPropertyList &propList) const;
+  void addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFontConverter> fontConverter) const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, MWAWCell const &cell);
@@ -217,6 +218,24 @@ public:
   {
     m_format=format;
   }
+
+  //! returns true if the font has been set
+  bool isFontSet() const
+  {
+    return m_fontSet;
+  }
+  //! returns the font
+  MWAWFont getFont() const
+  {
+    return m_font;
+  }
+  //! sets the fonts
+  void setFont(MWAWFont const &font, bool isDefault=false)
+  {
+    m_font=font;
+    m_fontSet=!isDefault;
+  }
+
   //! returns true if the cell is protected
   bool isProtected() const
   {
@@ -312,6 +331,10 @@ protected:
 
   //! the cell format
   Format m_format;
+  //! the cell font
+  MWAWFont m_font;
+  //! a flag to know if the font has been set
+  bool m_fontSet;
   //! the cell alignement : by default nothing
   HorizontalAlignment m_hAlign;
   //! the vertical cell alignement : by default nothing

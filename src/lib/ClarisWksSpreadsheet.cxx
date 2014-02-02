@@ -431,6 +431,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
       cell.setPosition(Vec2i(fC,fR));
       cell.setFormat(rec.m_format);
       cell.setHAlignement(rec.m_hAlign);
+      cell.setFont(rec.m_font);
       if (rec.m_borders) {
         int wh=0;
         for (int i=0, bit=1; i < 4; ++i, bit*=2) {

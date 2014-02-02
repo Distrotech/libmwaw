@@ -1719,7 +1719,7 @@ void MWAWTextListener::openTableCell(MWAWCell const &cell)
   }
 
   librevenge::RVNGPropertyList propList;
-  cell.addTo(propList);
+  cell.addTo(propList, m_parserState.m_fontConverter);
   m_ps->m_isTableCellOpened = true;
   m_documentInterface->openTableCell(propList);
 }

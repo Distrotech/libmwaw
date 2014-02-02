@@ -1206,7 +1206,7 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
   long pos=input->tell();
   if (input->isEnd() || pos >= endPos)
     return false;
-  int arity=0, val, type=(int) input->readULong(1);
+  int arity=0, type=(int) input->readULong(1);
   bool isFunction=false, isOperator=false;
   MWAWCellContent::FormulaInstruction instr;
   switch (type) {
@@ -1263,7 +1263,7 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
       break;
     }
     isFunction=true;
-    val=(int) input->readULong(1);
+    int val=(int) input->readULong(1);
     arity=(int) input->readULong(1);
     std::string name("");
     if (val<0x70) {
@@ -1349,7 +1349,6 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
     if (i+1==arity) break;
     formula.push_back(instr);
   }
-  pos=input->tell();
   if (isFunction || instr.m_content=="(") {
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
     instr.m_content=")";
