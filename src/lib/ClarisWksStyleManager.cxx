@@ -2428,8 +2428,7 @@ bool ClarisWksStyleManager::readCellStyles(int N, int fSz)
       break;
     }
 
-    val=(int) input->readULong(1); // 0-f
-    if (val) f << "h0=" << val << ",";
+    format.m_borders=(int) input->readULong(1); // 0-f
     val = (int) input->readULong(1);
     if (val==1) format.m_thousandHasSeparator=true;
     else if (val) f << "#separateThousand=" << val << ",";
@@ -2637,6 +2636,7 @@ std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::CellFormat cons
   }
   else if (form.m_fileFormat > 0)
     o << "#format=" << form.m_fileFormat << ",";
+  if (form.m_borders) o << "borders=" << form.m_borders << ",";
   if (form.m_wrap) o << "wrap[content],";
   o << form.m_extra;
   return o;

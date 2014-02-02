@@ -440,7 +440,8 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
         }
         cell.setBorders(wh, MWAWBorder());
       }
-
+      if (!rec.m_backgroundColor.isWhite())
+        cell.setBackgroundColor(rec.m_backgroundColor);
       listener->openSheetCell(cell, rec.m_content);
       if (rec.m_content.m_textEntry.valid()) {
         long fPos = input->tell();

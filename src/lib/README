@@ -123,9 +123,12 @@ BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfe
 -   BeagleWksText : class which reads the text in a word document
 -   BeagleWksStructManager : class to read structure partaged between different type of document
 
-ClarisWksParser : parser of ClarisWorks/AppleWorks document
+ClarisWksParser : word parser of ClarisWorks/AppleWorks document (or draw/paint)
+ClarisWksSSParser: spreadsheet parser of ClarisWorks/AppleWorks text document
+-   ClarisWksDocument: main class which keeps trace of the input and defines shared general functions
 -   ClarisWksGraph : class which reads the graphics and zone dispositions ...
--   ClarisWksDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure ( uncomplete)
+-   ClarisWksDbaseContent: class which reads the main structure of a database/spreadsheet
+-   ClarisWksDatabase/CWSpreadSheet : class which reads the database/spreadsheet structure
 -   ClarisWksPresentation : class which reads the slide structures
 -   ClarisWksTable : class which reads the table structures
 -   ClarisWksText : class which reads the text and its structures

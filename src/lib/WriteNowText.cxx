@@ -100,7 +100,7 @@ struct Paragraph : public MWAWParagraph {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Paragraph const &ind)
   {
-    o << reinterpret_cast<MWAWParagraph const &>(ind);
+    o << static_cast<MWAWParagraph const &>(ind);
     for (int i = 0; i < 8; i++) {
       if (!ind.m_values[i]) continue;
       o << "fR" << i << "=" << ind.m_values[i] << ",";
@@ -498,7 +498,7 @@ struct Table : public MWAWTable {
       MWAW_DEBUG_MSG(("WriteNowTextInternal::Table::get: cell %d does not exists\n",id));
       return 0;
     }
-    return reinterpret_cast<Cell *>(MWAWTable::get(id).get());
+    return static_cast<Cell *>(MWAWTable::get(id).get());
   }
 };
 

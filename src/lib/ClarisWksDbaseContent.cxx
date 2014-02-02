@@ -705,11 +705,70 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   if (val) f << "format=" << std::hex << val << std::dec << ",";
   record.m_style=(int) input->readLong(2);
   if (record.m_style) f << "style" << record.m_style << ",";
+
+  int fileFormat=0;
   ClarisWksStyleManager::Style style;
   ClarisWksStyleManager::CellFormat format;
-  if (m_document.getStyleManager()->get(record.m_style, style) &&
-      m_document.getStyleManager()->get(style.m_cellFormatId, format))
-    f << format << ",";
+  if (m_document.getStyleManager()->get(record.m_style, style)) {
+    if (m_document.getStyleManager()->get(style.m_cellFormatId, format)) {
+      f << format << ",";
+      fileFormat=format.m_fileFormat;
+    }
+    if (style.m_fontId>=0)
+      m_document.getStyleManager()->get(style.m_fontId, record.m_font);
+    MWAWGraphicStyle graphStyle;
+    if (style.m_graphicId>=0 && m_document.getStyleManager()->get(style.m_graphicId, graphStyle)) {
+      if (graphStyle.hasSurfaceColor())
+        record.m_backgroundColor=graphStyle.m_surfaceColor;
+    }
+  }
+  switch (fileFormat) {
+  case 0: // general
+    break;
+  case 1:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+    break;
+  case 2:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+    break;
+  case 3:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+    break;
+  case 4:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+    break;
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: {
+    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
+    format.m_format=MWAWCell::F_DATE;
+    format.m_DTFormat=wh[fileFormat-5];
+    break;
+  }
+  case 10:  // unknown
+  case 11:
+    break;
+  case 12:
+  case 13:
+  case 14:
+  case 15: {
+    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p" };
+    format.m_format=MWAWCell::F_TIME;
+    format.m_DTFormat=wh[fileFormat-12];
+    break;
+  }
+  default: // unknown
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: find unknown format\n"));
+    f << "format=##" << fileFormat << ",";
+    break;
+  }
+
   MWAWCellContent &content=record.m_content;
   bool ok=true;
   if (type==4) {
@@ -721,17 +780,36 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
     }
     else {
       type=(int) input->readULong(1);
-      int formSz=(int) input->readULong(2);
+      val=(int) input->readLong(1);
+      if (val) f << "unkn=" << val << ",";
+      int formSz=(int) input->readULong(1);
+      long actPos=input->tell();
+      ascFile.addDelimiter(actPos,'|');
+
       if (8+formSz > sz) {
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the formula seems bad\n"));
         f << "###";
         ok=false;
       }
       else {
-        ascFile.addDelimiter(input->tell(),'|');
+        std::vector<MWAWCellContent::FormulaInstruction> formula;
+        std::string error;
+        if (readFormula(id, actPos+1+formSz, formula, error)) {
+          content.m_contentType=MWAWCellContent::C_FORMULA;
+          content.m_formula=formula;
+        }
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a formule\n"));
+          f << "###";
+        }
+        f << "form=";
+        for (size_t i=0; i < formula.size(); ++i)
+          f << formula[i];
+        f << error << ",";
+
         /** checkme: there does not seem to be alignment, but another
             variable before the result */
-        input->seek(formSz+1, librevenge::RVNG_SEEK_CUR);
+        input->seek(actPos+formSz+1, librevenge::RVNG_SEEK_SET);
         ascFile.addDelimiter(input->tell(),'|');
         sz=4+int(endPos-input->tell());
       }
@@ -795,6 +873,27 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
       break;
     }
     // 4: formula
+    case 5: // bool
+      if (sz>=4+1) {
+        if (format.m_format==MWAWCell::F_UNKNOWN)
+          format.m_format=MWAWCell::F_BOOLEAN;
+        record.m_valueType=MWAWCellContent::C_NUMBER;
+        content.setValue(double(input->readLong(1)));
+        f << "val=" << content.m_value << ",";
+        break;
+      }
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: can not read a bool\n"));
+      f << "###bool,";
+      break;
+    case 6:
+      if (sz>=4+1) {
+        record.m_valueType=MWAWCellContent::C_NUMBER;
+        content.setValue(std::numeric_limits<double>::quiet_NaN());
+        record.m_hasNaNValue = true;
+        f << "val=nan" << input->readLong(1) << ",";
+        break;
+      }
+      break;
     case 7: // link/anchor/goto
       if (sz<4) {
         MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSS: the mark size seems bad\n"));
@@ -818,6 +917,9 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   }
   if (content.m_contentType!=MWAWCellContent::C_FORMULA)
     content.m_contentType=record.m_valueType;
+  record.m_format=format;
+  record.m_hAlign=format.m_hAlign;
+  record.m_borders=format.m_borders;
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.addPos(endPos);
@@ -919,88 +1021,19 @@ bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record 
   Column const &col=it->second;
   std::map<int, Record>::const_iterator rIt=col.m_idRecordMap.find(pos[1]);
   if (rIt==col.m_idRecordMap.end()) return false;
-
   record=rIt->second;
-  if (!m_isSpreadsheet) {
-    static bool first=true;
-    if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size())) {
-      ClarisWksStyleManager::CellFormat const &format=m_dbFormatList[size_t(pos[0])];
-      record.m_format=format;
-      record.m_fileFormat=format.m_fileFormat;
-      record.m_hAlign=format.m_hAlign;
-    }
-    else if (first) {
-      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::get: can not find format for field %d\n", pos[0]));
-      first=false;
-    }
+  if (m_isSpreadsheet) return true;
+
+  static bool first=true;
+  if (pos[0]>=0&&pos[0]<int(m_dbFormatList.size())) {
+    ClarisWksStyleManager::CellFormat const &format=m_dbFormatList[size_t(pos[0])];
+    record.m_format=format;
+    record.m_fileFormat=format.m_fileFormat;
+    record.m_hAlign=format.m_hAlign;
   }
-  else if (m_version<=3)
-    return true;
-  else {
-    MWAWFont font;
-    ClarisWksStyleManager::Style style;
-    if (record.m_style>=0)
-      m_document.getStyleManager()->get(record.m_style, style);
-    if (style.m_fontId>=0)
-      m_document.getStyleManager()->get(style.m_fontId, record.m_font);
-    ClarisWksStyleManager::CellFormat format;
-    if (style.m_cellFormatId>=0 && m_document.getStyleManager()->get(style.m_cellFormatId, format)) {
-      record.m_format=format;
-      record.m_fileFormat=format.m_fileFormat;
-      record.m_hAlign=format.m_hAlign;
-    }
-  }
-  // time to update the cell format
-  MWAWCell::Format &format=record.m_format;
-  switch (record.m_fileFormat) {
-  case -1: // unset
-    break;
-  case 0: // general
-    if (!record.m_content.isValueSet())
-      break;
-    format.m_format=MWAWCell::F_NUMBER;
-    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
-    break;
-  case 1:
-    format.m_format=MWAWCell::F_NUMBER;
-    format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
-    break;
-  case 2:
-    format.m_format=MWAWCell::F_NUMBER;
-    format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
-    break;
-  case 3:
-    format.m_format=MWAWCell::F_NUMBER;
-    format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
-    break;
-  case 4:
-    format.m_format=MWAWCell::F_NUMBER;
-    format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
-    break;
-  case 5:
-  case 6:
-  case 7:
-  case 8:
-  case 9: {
-    static char const *(wh[])= {"%m/%d/%y", "%B %d, %y", "%B %d, %Y", "%a, %b %d %y", "%A, %B %d %Y" };
-    format.m_format=MWAWCell::F_DATE;
-    format.m_DTFormat=wh[record.m_fileFormat-5];
-    break;
-  }
-  case 10: // unknown
-  case 11: // unknown
-    break;
-  case 12:
-  case 13:
-  case 14:
-  case 15: {
-    static char const *(wh[])= {"%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"};
-    format.m_format=MWAWCell::F_TIME;
-    format.m_DTFormat=wh[record.m_fileFormat-12];
-    break;
-  }
-  default: // unknown
-    break;
+  else if (first) {
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::get: can not find format for field %d\n", pos[0]));
+    first=false;
   }
   return true;
 }
@@ -1103,6 +1136,15 @@ bool ClarisWksDbaseContent::readCellInFormula(Vec2i const &pos, MWAWCellContent:
     }
     else
       cPos[1-i]=val;
+  }
+  if (m_version==6) {
+    // checkme: what is this number
+    int val=(int) input->readLong(2);
+    static bool first = true;
+    if (val!=-1 && first) {
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readCellInFormula: ARGHHH value after cell is %d\n", val));
+      first=false;
+    }
   }
 
   if (cPos[0] < 0 || cPos[1] < 0) {
@@ -1224,29 +1266,31 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
     val=(int) input->readULong(1);
     arity=(int) input->readULong(1);
     std::string name("");
-    static char const *(wh[]) = {
-      "Abs", "Acos", "Alert", "And", "Code", "Asin", "Atan", "Atan2",
-      "Average", "Choose", "Char", "Concat", "Cos", "Count", "Date", "DateToText",
+    if (val<0x70) {
+      static char const *(wh[]) = {
+        "Abs", "Acos", "Alert", "And", "Code", "Asin", "Atan", "Atan2",
+        "Average", "Choose", "Char", "Concatenate", "Cos", "Count", "Date", "DateToText",
 
-      "TextToDate", "Day", "DayName", "DayOfYear", "Degrees", "Error", "Exact", "Exp",
-      "Frac", "FV", "HLookup", "Hour", "If", "Index", "Int", "IRR",
+        "DateValue", "Day", "DayName", "DayOfYear", "Degrees", "NA"/* error*/, "Exact", "Exp",
+        "Frac", "FV", "HLookup", "Hour", "If", "Index", "Int", "IRR",
 
-      "IsBlank", "IsError", "IsNA", "IsNumber", "IsText", "Left", "Ln", "Log",
-      "Log10", "LookUp", "Lower", "Match", "Max", "Mid", "Min", "Minute",
+        "IsBlank", "IsError", "IsNA", "IsNumber", "IsText", "Left", "Ln", "Log",
+        "Log10", "LookUp", "Lower", "Match", "Max", "Mid", "Min", "Minute",
 
-      "MIRR", "Mod", "MonthName", "Now", "Not", "Now", "NPER", "NPV",
-      "NumToText", "Or", "Pi", "PMT", "Product", "Proper", "PV", "Radians",
+        "MIRR", "Mod", "MonthName", "NA", "Not", "Now", "NPER", "NPV",
+        "N" /*NumToText*/, "Or", "Pi", "PMT", "Product", "Proper", "PV", "Radians",
 
-      "Rand", "Rate", "Replace", "Right", "Round", "Second", "Sign", "Sqrt",
-      "StDev", "Sum", "Tan", "Rept", "TextToNum", "Time", "TimeToText", "TextToTime",
+        "Rand", "Rate", "Replace", "Right", "Round", "Second", "Sign", "Sqrt",
+        "StDev", "Sum", "Tan", "Rept", "Value"/*TextToNum*/, "Time", "TimeToText", "TimeValue",
 
-      "", "Trim", "Type", "Upper", "Var", "VLookUp", "WeekDay", "WeekOfYear",
-      "Year", "Find", "Column", "Row", "Fact", "Len", "Sin", "Month",
+        "", "Trim", "Type", "Upper", "Var", "VLookUp", "WeekDay", "WeekOfYear",
+        "Year", "Find", "Column", "Row", "Fact", "Len", "Sin", "Month",
 
-      "Trunc", "Count2", "Macro", "Beep", "", "", "", "",
-      "", "", "", "", "", "", "", "",
-    };
-    if (val<0x70) name=wh[val];
+        "Trunc", "Count2", "Macro", "Beep", "", "", "", "",
+        "", "", "", "", "", "", "", "",
+      };
+      name=wh[val];
+    }
     if (name.empty()) {
       f << "###";
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readFormula: find unknown function\n"));

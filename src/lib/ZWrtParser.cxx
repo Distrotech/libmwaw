@@ -115,7 +115,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   }
   assert(m_parser);
 
-  reinterpret_cast<ZWrtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  static_cast<ZWrtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
 }
 }
 

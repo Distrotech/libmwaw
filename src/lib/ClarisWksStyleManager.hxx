@@ -147,7 +147,7 @@ public:
   struct CellFormat : public MWAWCell::Format {
     //! constructor from cell
     CellFormat(MWAWCell::Format const &format=MWAWCell::Format()) :
-      MWAWCell::Format(format), m_hAlign(MWAWCell::HALIGN_DEFAULT), m_fileFormat(-1), m_wrap(false), m_extra("")
+      MWAWCell::Format(format), m_hAlign(MWAWCell::HALIGN_DEFAULT), m_fileFormat(-1), m_borders(0), m_wrap(false), m_extra("")
     {
     }
     //! operator<<
@@ -156,6 +156,8 @@ public:
     MWAWCell::HorizontalAlignment m_hAlign;
     //! the field format: number, string, currency, ..
     int m_fileFormat;
+    //! the borders
+    int m_borders;
     //! true if the cell content is wrapped
     bool m_wrap;
     //! extra data

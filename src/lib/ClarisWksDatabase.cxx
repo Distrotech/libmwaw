@@ -695,16 +695,43 @@ bool ClarisWksDatabase::sendDatabase(int zId)
   std::vector<ClarisWksStyleManager::CellFormat> formats;
   formats.resize(size_t(numFields), ClarisWksStyleManager::CellFormat());
   for (size_t f=0; f < dbase.m_fields.size(); ++f) {
-    ClarisWksDatabaseInternal::Field const &field=dbase.m_fields[f];
-    // changme
-    if (field.m_type==ClarisWksDatabaseInternal::Field::F_Date)
-      formats[f].m_fileFormat=5;
-    else if (field.m_type==ClarisWksDatabaseInternal::Field::F_Time)
-      formats[f].m_fileFormat=12;
-    else if (field.m_resType==2)
-      formats[f].m_fileFormat=5;
-    else if (field.m_resType==3)
-      formats[f].m_fileFormat=12;
+    switch (dbase.m_fields[f].m_type) {
+    case ClarisWksDatabaseInternal::Field::F_Number:
+      formats[f].m_format=MWAWCell::F_NUMBER;
+      formats[f].m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+      break;
+    case ClarisWksDatabaseInternal::Field::F_Date:
+      formats[f].m_format=MWAWCell::F_DATE;
+      break;
+    case ClarisWksDatabaseInternal::Field::F_Time:
+      formats[f].m_format=MWAWCell::F_TIME;
+      break;
+    case ClarisWksDatabaseInternal::Field::F_Unknown:
+    case ClarisWksDatabaseInternal::Field::F_Text:
+    case ClarisWksDatabaseInternal::Field::F_Formula:
+    case ClarisWksDatabaseInternal::Field::F_FormulaSum:
+    case ClarisWksDatabaseInternal::Field::F_Checkbox:
+    case ClarisWksDatabaseInternal::Field::F_PopupMenu:
+    case ClarisWksDatabaseInternal::Field::F_RadioButton:
+    case ClarisWksDatabaseInternal::Field::F_ValueList:
+    case ClarisWksDatabaseInternal::Field::F_Multimedia:
+    default:
+      switch (dbase.m_fields[f].m_resType) {
+      case 1:
+        formats[f].m_format=MWAWCell::F_NUMBER;
+        formats[f].m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+        break;
+      case 2:
+        formats[f].m_format=MWAWCell::F_DATE;
+        break;
+      case 3:
+        formats[f].m_format=MWAWCell::F_TIME;
+        break;
+      default:
+        break;
+      }
+      break;
+    }
   }
   dbase.m_content->setDatabaseFormats(formats);
 
@@ -714,11 +741,11 @@ bool ClarisWksDatabase::sendDatabase(int zId)
   for (size_t r=0; r < recordsPos.size(); ++r) {
     listener->openSheetRow((float)14, librevenge::RVNG_POINT);
     for (int c=0; c < numFields; ++c) {
-      Vec2i pos(c,int(r));
+      ;
       ClarisWksDbaseContent::Record rec;
-      if (!dbase.m_content->get(pos,rec)) continue;
+      if (!dbase.m_content->get(Vec2i(c,recordsPos[r]),rec)) continue;
       MWAWCell cell;
-      cell.setPosition(pos);
+      cell.setPosition(Vec2i(c,int(r)));
       cell.setFormat(rec.m_format);
       cell.setHAlignement(rec.m_hAlign);
       listener->openSheetCell(cell, rec.m_content);

@@ -80,7 +80,7 @@ public:
   struct Record {
     //! contructor
     Record() : m_style(-1), m_format(), m_hAlign(MWAWCell::HALIGN_DEFAULT), m_fileFormat(0),
-      m_content(), m_valueType(MWAWCellContent::C_UNKNOWN), m_hasNaNValue(false), m_font(3,9), m_borders(0)
+      m_content(), m_valueType(MWAWCellContent::C_UNKNOWN), m_hasNaNValue(false), m_backgroundColor(MWAWColor::white()), m_font(3,9), m_borders(0)
     {
     }
 
@@ -98,6 +98,8 @@ public:
     MWAWCellContent::Type m_valueType;
     //! a flag to know if a double result is nan or not
     bool m_hasNaNValue;
+    //! the background color
+    MWAWColor m_backgroundColor;
     //! the font ( in v1-3 spreadsheet)
     MWAWFont m_font;
     //! the border in v1-3 spreadsheet
