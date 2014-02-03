@@ -19,6 +19,7 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz dist-bzip2])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_LANG([C++])
+AC_STRUCT_TIMEZONE()
 
 # ===========================
 # Find required base packages

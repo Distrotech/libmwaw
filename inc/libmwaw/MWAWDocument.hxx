@@ -97,7 +97,7 @@ public:
     MWAW_T_ACTA /**Acta (v2 and Classic v1)*/,
     MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2): export spreadsheet and text files.*/,
     MWAW_T_CLARISRESOLVE /**Claris Resolve: TODO*/,
-    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, open text files + draw/paint files (exported as text) + spreadsheet/database files (exported as text in a big table, experimental)*/,
+    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export text, draw/paint(as text), spreadsheet/database (as spreadsheet) document*/,
     MWAW_T_DOCMAKER /** DocMaker (v4)*/,
     MWAW_T_EDOC /** eDOC (v2)*/,
     MWAW_T_FRAMEMAKER /** FrameMaker: TODO*/,

@@ -612,7 +612,9 @@ bool MWAWCellContent::double2String(double val, MWAWCell::Format const &format, 
     time.tm_mon=M;
     time.tm_year=Y;
     time.tm_wday=time.tm_yday=time.tm_isdst=-1;
+#if HAVE_STRUCT_TM_TM_ZONE
     time.tm_zone=0;
+#endif
     char buf[256];
     if (mktime(&time)==-1 ||
         !strftime(buf, 256, format.m_DTFormat.empty() ? "%m/%d/%y" : format.m_DTFormat.c_str(), &time))
@@ -632,7 +634,9 @@ bool MWAWCellContent::double2String(double val, MWAWCell::Format const &format, 
     time.tm_mday=time.tm_mon=1;
     time.tm_year=100;
     time.tm_wday=time.tm_yday=time.tm_isdst=-1;
+#if HAVE_STRUCT_TM_TM_ZONE
     time.tm_zone=0;
+#endif
     char buf[256];
     if (mktime(&time)==-1 ||
         !strftime(buf, 256, format.m_DTFormat.empty() ? "%H:%M:%S" : format.m_DTFormat.c_str(), &time))
