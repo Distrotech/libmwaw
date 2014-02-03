@@ -76,7 +76,7 @@ class Cell : public MWAWCell
 {
 public:
   /// constructor
-  Cell() : m_font(3,12), m_content(), m_noteId(0) { }
+  Cell() : m_content(), m_noteId(0) { }
   //! returns true if the cell do contain any content
   bool isEmpty() const
   {
@@ -86,8 +86,6 @@ public:
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
 
-  /** the font */
-  MWAWFont m_font;
   //! the cell content
   MWAWCellContent m_content;
 
@@ -1008,10 +1006,10 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   format.m_digits=(fl[3] & 0xf);
   fl[3] = 0;
 
-  cell.m_font=m_state->m_spreadsheet.m_font;
+  MWAWFont font=m_state->m_spreadsheet.m_font;
   MWAWColor col;
   if (vers>=3&&m_zone->getColor(fl[0],col,3)) {
-    cell.m_font.setColor(col);
+    font.setColor(col);
     fl[0]=0;
   }
   uint32_t fflags = 0;
@@ -1019,10 +1017,11 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
     if (style & 1) fflags |= MWAWFont::shadowBit;
     if (style & 2) fflags |= MWAWFont::embossBit;
     if (style & 4) fflags |= MWAWFont::italicBit;
-    if (style & 8) cell.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (style & 8) font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (style & 16) fflags |= MWAWFont::boldBit;
   }
-  cell.m_font.setFlags(fflags);
+  font.setFlags(fflags);
+  cell.setFont(font);
 
   content.m_contentType=MWAWCellContent::C_NONE;
   if (type & 2) {
@@ -1259,9 +1258,9 @@ bool MsWksSSParser::sendSpreadsheet()
         listener->openSheetRow(16, librevenge::RVNG_POINT);
       }
     }
-    listener->setFont(cell.m_font);
     listener->openSheetCell(cell, cell.m_content);
     if (cell.m_content.m_textEntry.valid()) {
+      listener->setFont(cell.isFontSet() ? cell.getFont() : sheet.m_font);
       input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
       while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end()) {
         unsigned char c=(unsigned char) input->readULong(1);

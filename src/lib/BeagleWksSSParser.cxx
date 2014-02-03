@@ -62,12 +62,10 @@ namespace BeagleWksSSParserInternal
 //! Internal: the cell of a BeagleWksSSParser
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_font(), m_content(), m_formula(-1), m_isEmpty(false)
+  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1), m_isEmpty(false)
   {
     setPosition(pos);
   };
-  //! the cell font
-  MWAWFont m_font;
   //! the cell content
   MWAWCellContent m_content;
   //! the formula id
@@ -1122,24 +1120,26 @@ bool BeagleWksSSParser::readCellSheet(BeagleWksSSParserInternal::Cell &cell)
     if (wh) {
       f << "style=[";
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
+      MWAWFont font(3);
       val=(int) input->readLong(2);
       if (val>0)
-        cell.m_font.setSize((float) val);
+        font.setSize((float) val);
       val=(int) input->readLong(2);
       if (val>=0)
-        cell.m_font.setId(val);
+        font.setId(val);
       int flag = (int) input->readULong(1);
       uint32_t flags=0;
       MWAWColor col;
       if (flag&7 && m_state->getColor(flag&7, col))
-        cell.m_font.setColor(col);
+        font.setColor(col);
       if (flag&0x8) flags |= MWAWFont::boldBit;
       if (flag&0x10) flags |= MWAWFont::italicBit;
-      if (flag&0x20) cell.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
+      if (flag&0x20) font.setUnderlineStyle(MWAWFont::Line::Simple);
       if (flag&0x40) flags |= MWAWFont::embossBit;
       if (flag&0x80) flags |= MWAWFont::shadowBit;
-      cell.m_font.setFlags(flags);
-      f << cell.m_font.getDebugString(getParserState()->m_fontConverter);
+      font.setFlags(flags);
+      cell.setFont(font);
+      f << font.getDebugString(getParserState()->m_fontConverter);
       int form=(int) input->readULong(1);
       if (form) {
         if (form & 0x10)
@@ -1625,9 +1625,9 @@ bool BeagleWksSSParser::sendSpreadsheet()
           listener->openSheetRow(16, librevenge::RVNG_POINT);
       }
     }
-    listener->setFont(cell.m_font);
     listener->openSheetCell(cell, cell.m_content);
     if (cell.m_content.m_textEntry.valid()) {
+      listener->setFont(cell.isFontSet() ? cell.getFont() : MWAWFont());
       input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
       while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end()) {
         unsigned char c=(unsigned char) input->readULong(1);

@@ -78,15 +78,13 @@ class Cell : public MWAWCell
 {
 public:
   /// constructor
-  Cell() : m_font(3,12), m_content(), m_style(-1) { }
+  Cell() : m_content(), m_style(-1) { }
   //! returns true if the cell do contain any content
   bool isEmpty() const
   {
     return m_content.empty() && !hasBorders();
   }
 
-  /** the font */
-  MWAWFont m_font;
   //! the cell content
   MWAWCellContent m_content;
   /** the cell style */
@@ -1110,12 +1108,12 @@ bool GreatWksSSParser::sendSpreadsheet()
     }
 
     GreatWksSSParserInternal::Style style=m_state->getStyle(cell.m_style);
-    cell.m_font = style.m_font;
+    cell.setFont(style.m_font);
     if (!style.m_backgroundColor.isWhite())
       cell.setBackgroundColor(style.m_backgroundColor);
-    listener->setFont(cell.m_font);
     listener->openSheetCell(cell, cell.m_content);
     if (cell.m_content.m_textEntry.valid()) {
+      listener->setFont(style.m_font);
       input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
       while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end()) {
         unsigned char c=(unsigned char) input->readULong(1);
