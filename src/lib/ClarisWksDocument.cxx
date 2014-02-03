@@ -1050,19 +1050,44 @@ bool ClarisWksDocument::readDocHeader()
       return false;
     }
     pos=input->tell();
+    f.str("");
+    f << "Entries(DocUnkn0):";
+    long sz=(long) input->readULong(4);
+    if (!sz) {
+      ascFile.addPos(pos);
+      ascFile.addNote("_");
+    }
+    else if (input->checkPosition(pos+sz+4)) {
+      // find one time with size 0x400 but does not look like a classic struct
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    else {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: oops find bad size for DocUnkn0, we may have a problem\n"));
+      f << sz << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      return false;
+    }
+    if (!readStructZone("DocUnkn1", false)) { // related to link/filename?
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    pos=input->tell();
     ascFile.addPos(pos);
-    ascFile.addNote("Entries(DocUnkn0)");
-    input->seek(12, librevenge::RVNG_SEEK_CUR);
+    ascFile.addNote("Entries(DocUnkn2)"); // another struct ?
+    input->seek(4, librevenge::RVNG_SEEK_CUR);
     if (!readStructZone("DocH0", false)) {
-      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       return false;
     }
     pos=input->tell();
     f.str("");
-    f << "Entries(DocUnkn1):";
-    long sz=input->readLong(4);
+    f << "Entries(DocUnkn3):";
+    sz=input->readLong(4);
     if (sz) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: oops find a size for DocUnkn2, we may have a problem\n"));
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: oops find a size for DocUnkn3, we may have a problem\n"));
       f << sz << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -2036,7 +2061,7 @@ bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, 
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
   if (long(input->tell()) != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: unexpected size for %s\n", zoneName));
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: unexpected size for %s\n", zoneName ? zoneName : "unamed"));
     return false;
   }
   libmwaw::DebugStream f;
