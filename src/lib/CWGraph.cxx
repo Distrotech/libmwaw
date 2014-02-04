@@ -2722,8 +2722,14 @@ bool CWGraph::sendBitmap(CWGraphInternal::Bitmap &bitmap, bool asGraphic, MWAWPo
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
-    MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap size\n"));
-    pos.setSize(Vec2f(0,0));
+    if (m_mainParser->getHeader() &&
+        m_mainParser->getHeader()->getKind()==MWAWDocument::MWAW_K_PAINT) // fixme
+      pos.setSize(Vec2f(0.9f*float(m_mainParser->getPageWidth()),
+                        0.9f*float(m_mainParser->getPageLength())));
+    else {
+      MWAW_DEBUG_MSG(("CWGraph::sendBitmap: can not find bitmap size\n"));
+      pos.setSize(Vec2f(0,0));
+    }
   }
   if (asGraphic) {
     MWAWGraphicStyle style;
