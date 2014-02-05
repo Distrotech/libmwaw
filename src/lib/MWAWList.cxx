@@ -34,7 +34,7 @@
 #include <cstring>
 #include <iostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -43,15 +43,15 @@
 ////////////////////////////////////////////////////////////
 // list level functions
 ////////////////////////////////////////////////////////////
-void MWAWListLevel::addTo(WPXPropertyList &propList) const
+void MWAWListLevel::addTo(librevenge::RVNGPropertyList &propList) const
 {
-  propList.insert("text:min-label-width", m_labelWidth);
-  propList.insert("text:space-before", m_labelBeforeSpace);
+  propList.insert("text:min-label-width", m_labelWidth, librevenge::RVNG_INCH);
+  propList.insert("text:space-before", m_labelBeforeSpace, librevenge::RVNG_INCH);
   if (m_labelAfterSpace > 0)
-    propList.insert("text:min-label-distance", m_labelAfterSpace);
+    propList.insert("text:min-label-distance", m_labelAfterSpace, librevenge::RVNG_INCH);
   if (m_numBeforeLabels)
     propList.insert("text:display-levels", m_numBeforeLabels+1);
-  switch(m_alignment) {
+  switch (m_alignment) {
   case LEFT:
     break;
   case CENTER:
@@ -64,7 +64,7 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
     break;
   }
 
-  switch(m_type) {
+  switch (m_type) {
   case NONE:
     propList.insert("text:bullet-char", " ");
     break;
@@ -77,7 +77,8 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
     }
     break;
   case LABEL:
-    if (m_label.len()) propList.insert("style:num-suffix", m_label);
+    if (m_label.len())
+      propList.insert("style:num-suffix", librevenge::RVNGPropertyFactory::newStringProp(m_label));
     propList.insert("style:num-format", "");
     break;
   case DECIMAL:
@@ -85,8 +86,10 @@ void MWAWListLevel::addTo(WPXPropertyList &propList) const
   case UPPER_ALPHA:
   case LOWER_ROMAN:
   case UPPER_ROMAN:
-    if (m_prefix.len()) propList.insert("style:num-prefix",m_prefix);
-    if (m_suffix.len()) propList.insert("style:num-suffix", m_suffix);
+    if (m_prefix.len())
+      propList.insert("style:num-prefix",librevenge::RVNGPropertyFactory::newStringProp(m_prefix));
+    if (m_suffix.len())
+      propList.insert("style:num-suffix", librevenge::RVNGPropertyFactory::newStringProp(m_suffix));
     if (m_type==DECIMAL) propList.insert("style:num-format", "1");
     else if (m_type==LOWER_ALPHA) propList.insert("style:num-format", "a");
     else if (m_type==UPPER_ALPHA) propList.insert("style:num-format", "A");
@@ -131,7 +134,7 @@ int MWAWListLevel::cmp(MWAWListLevel const &levl) const
 std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
 {
   o << "ListLevel[";
-  switch(level.m_type) {
+  switch (level.m_type) {
   case MWAWListLevel::BULLET:
     o << "bullet='" << level.m_bullet.cstr() <<"'";
     break;
@@ -159,7 +162,7 @@ std::ostream &operator<<(std::ostream &o, MWAWListLevel const &level)
   default:
     o << "####type";
   }
-  switch(level.m_alignment) {
+  switch (level.m_alignment) {
   case MWAWListLevel::LEFT:
     break;
   case MWAWListLevel::CENTER:
@@ -244,7 +247,7 @@ void MWAWList::setId(int newId) const
   m_id[1] = newId+1;
 }
 
-bool MWAWList::addTo(int level, WPXPropertyList &pList) const
+bool MWAWList::addTo(int level, librevenge::RVNGPropertyList &pList) const
 {
   if (level <= 0 || level > int(m_levels.size()) ||
       m_levels[size_t(level-1)].isDefault()) {
@@ -257,8 +260,8 @@ bool MWAWList::addTo(int level, WPXPropertyList &pList) const
     static int falseId = 1000;
     setId(falseId+=2);
   }
-  pList.insert("libwpd:id", getId());
-  pList.insert("libwpd:level", level);
+  pList.insert("librevenge:list-id", getId());
+  pList.insert("librevenge:level", level);
   m_levels[size_t(level-1)].addTo(pList);
   return true;
 }

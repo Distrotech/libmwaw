@@ -33,11 +33,11 @@
 
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWContentListener.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWPosition.hxx"
 
@@ -69,7 +69,7 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   default:
     break;
   }
-  switch(line.m_type) {
+  switch (line.m_type) {
   case MWAWFont::Line::Double:
     o << ":double";
     break;
@@ -88,7 +88,7 @@ std::ostream &operator<<(std::ostream &o, MWAWFont::Line const &line)
   return o;
 }
 
-void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const &type) const
+void MWAWFont::Line::addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const
 {
   if (!isSet()) return;
 
@@ -104,7 +104,7 @@ void MWAWFont::Line::addTo(WPXPropertyList &propList, std::string const &type) c
 
   s.str("");
   s << "style:text-" << type << "-style";
-  switch(m_style) {
+  switch (m_style) {
   case Dot:
   case LargeDot:
     propList.insert(s.str().c_str(), "dotted");
@@ -143,15 +143,15 @@ std::string MWAWFont::Script::str(float fSize) const
   if (!isSet() || ((m_delta<=0&&m_delta>=0) && m_scale==100))
     return "";
   std::stringstream o;
-  if (m_deltaUnit == WPX_GENERIC) {
+  if (m_deltaUnit == librevenge::RVNG_GENERIC) {
     MWAW_DEBUG_MSG(("MWAWFont::Script::str: can not be called with generic position\n"));
     return "";
   }
   float delta = m_delta;
-  if (m_deltaUnit != WPX_PERCENT) {
+  if (m_deltaUnit != librevenge::RVNG_PERCENT) {
     // first transform in point
-    if (m_deltaUnit != WPX_POINT)
-      delta=MWAWPosition::getScaleFactor(m_deltaUnit, WPX_POINT)*delta;
+    if (m_deltaUnit != librevenge::RVNG_POINT)
+      delta=MWAWPosition::getScaleFactor(m_deltaUnit, librevenge::RVNG_POINT)*delta;
     // now transform in percent
     if (fSize<=0) {
       static bool first=true;
@@ -227,18 +227,19 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   return o.str();
 }
 
-void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
+void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontConverter> convert) const
 {
   int dSize = 0;
   std::string fName("");
   if (!convert) {
     MWAW_DEBUG_MSG(("MWAWFont::addTo: called without any font converter\n"));
-  } else
+  }
+  else
     convert->getOdtInfo(id(), fName, dSize);
   if (fName.length())
     pList.insert("style:font-name", fName.c_str());
   float fSize = size()+float(dSize);
-  pList.insert("fo:font-size", fSize, WPX_POINT);
+  pList.insert("fo:font-size", fSize, librevenge::RVNG_POINT);
 
   uint32_t attributeBits = m_flags.get();
   if (attributeBits & italicBit)
@@ -285,14 +286,15 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
       simple.addTo(pList, "underline");
   }
   if (m_deltaSpacing.isSet() && (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0))
-    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), WPX_POINT);
+    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), librevenge::RVNG_POINT);
   if (m_texteWidthScaling.isSet() && m_texteWidthScaling.get() > 0.0 &&
       (m_texteWidthScaling.get()>1.0||m_texteWidthScaling.get()<1.0))
-    pList.insert("style:text-scale", m_texteWidthScaling.get(), WPX_PERCENT);
+    pList.insert("style:text-scale", m_texteWidthScaling.get(), librevenge::RVNG_PERCENT);
   if (attributeBits & reverseVideoBit) {
     pList.insert("fo:color", m_backgroundColor->str().c_str());
     pList.insert("fo:background-color", m_color->str().c_str());
-  } else {
+  }
+  else {
     pList.insert("fo:color", m_color->str().c_str());
     if (m_backgroundColor.isSet() && !m_backgroundColor->isWhite())
       pList.insert("fo:background-color", m_backgroundColor->str().c_str());
@@ -304,7 +306,8 @@ void MWAWFont::addTo(WPXPropertyList &pList, shared_ptr<MWAWFontConverter> conve
     if (len > 3 && lang[2]=='_') {
       country=lang.substr(3);
       lang=m_language->substr(0,2);
-    } else if (len==0)
+    }
+    else if (len==0)
       lang="none";
     pList.insert("fo:language", lang.c_str());
     pList.insert("fo:country", country.c_str());

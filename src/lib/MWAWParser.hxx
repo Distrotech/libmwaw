@@ -45,17 +45,22 @@
 #include "MWAWHeader.hxx"
 #include "MWAWPageSpan.hxx"
 
-class WPXDocumentInterface;
-
 /** a class to define the parser state */
 class MWAWParserState
 {
 public:
-  // Constructor
-  MWAWParserState(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! the parser state type
+  enum Type { Spreadsheet, Text };
+  //! Constructor
+  MWAWParserState(Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
   ~MWAWParserState();
-
+  //! returns the main listener
+  MWAWListenerPtr getMainListener();
+  //! the state type
+  Type m_type;
+  //! the document kind
+  MWAWDocument::Kind m_kind;
   //! the actual version
   int m_version;
   //! the input
@@ -64,6 +69,8 @@ public:
   MWAWHeader *m_header;
   //! the resource parser
   MWAWRSRCParserPtr m_rsrcParser;
+  //! the actual document size
+  MWAWPageSpan m_pageSpan;
 
   //! the font converter
   MWAWFontConverterPtr m_fontConverter;
@@ -71,8 +78,10 @@ public:
   MWAWGraphicListenerPtr m_graphicListener;
   //! the list manager
   MWAWListManagerPtr m_listManager;
-  //! the listener
-  MWAWContentListenerPtr m_listener;
+  //! the spreadsheet listener
+  MWAWSpreadsheetListenerPtr m_spreadsheetListener;
+  //! the text listener
+  MWAWTextListenerPtr m_textListener;
 
   //! the debug file
   libmwaw::DebugFile m_asciiFile;
@@ -82,103 +91,126 @@ private:
   MWAWParserState &operator=(MWAWParserState const &orig);
 };
 
-/** virtual class which defines the ancestor of all main zone parser
- *
- * \note this class is generally associated with a IMWAWTextParser
- */
+/** virtual class which defines the ancestor of all main zone parser */
 class MWAWParser
 {
 public:
   //! virtual destructor
   virtual ~MWAWParser();
-  //! virtual function used to parse the input
-  virtual void parse(WPXDocumentInterface *documentInterface) = 0;
   //! virtual function used to check if the document header is correct (or not)
   virtual bool checkHeader(MWAWHeader *header, bool strict=false) = 0;
 
   //! returns the works version
-  int version() const {
+  int version() const
+  {
     return m_parserState->m_version;
   }
-  //! sets the works version
-  void setVersion(int vers) {
-    m_parserState->m_version = vers;
-  }
-
-protected:
-  //! constructor (protected)
-  MWAWParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
-  //! constructor using a state
-  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_pageSpan(), m_asciiName("") { }
-
   //! returns the parser state
-  MWAWParserStatePtr getParserState() {
+  MWAWParserStatePtr getParserState()
+  {
     return m_parserState;
   }
   //! returns the header
-  MWAWHeader *getHeader() {
+  MWAWHeader *getHeader()
+  {
     return m_parserState->m_header;
   }
   //! returns the actual input
-  MWAWInputStreamPtr &getInput() {
+  MWAWInputStreamPtr &getInput()
+  {
     return m_parserState->m_input;
   }
+  //! returns the main listener
+  MWAWListenerPtr getMainListener();
   //! returns the graphic listener
-  MWAWGraphicListenerPtr &getGraphicListener() {
+  MWAWGraphicListenerPtr &getGraphicListener()
+  {
     return m_parserState->m_graphicListener;
   }
-  //! returns the listener
-  MWAWContentListenerPtr &getListener() {
-    return m_parserState->m_listener;
+  //! returns the spreadsheet listener
+  MWAWSpreadsheetListenerPtr &getSpreadsheetListener()
+  {
+    return m_parserState->m_spreadsheetListener;
   }
-  //! returns the actual page dimension
-  MWAWPageSpan const &getPageSpan() const {
-    return m_pageSpan;
+  //! returns the text listener
+  MWAWTextListenerPtr &getTextListener()
+  {
+    return m_parserState->m_textListener;
   }
-  //! returns the actual page dimension
-  MWAWPageSpan &getPageSpan() {
-    return m_pageSpan;
-  }
-  //! returns the form length
-  double getFormLength() const {
-    return m_pageSpan.getFormLength();
-  }
-  //! returns the form width
-  double getFormWidth() const {
-    return m_pageSpan.getFormWidth();
-  }
-  //! returns the page length (form length without margin )
-  double getPageLength() const {
-    return m_pageSpan.getPageLength();
-  }
-  //! returns the page width (form width without margin )
-  double getPageWidth() const {
-    return m_pageSpan.getPageWidth();
-  }
-  //! returns the rsrc parser
-  MWAWRSRCParserPtr &getRSRCParser() {
-    return m_parserState->m_rsrcParser;
-  }
-  //! sets the listener
-  void setListener(MWAWContentListenerPtr &listener);
-  //! resets the listener
-  void resetListener();
   //! returns the font converter
-  MWAWFontConverterPtr &getFontConverter() {
+  MWAWFontConverterPtr &getFontConverter()
+  {
     return m_parserState->m_fontConverter;
   }
-  //! sets the font convertor
-  void setFontConverter(MWAWFontConverterPtr fontConverter);
+  //! returns the actual page dimension
+  MWAWPageSpan const &getPageSpan() const
+  {
+    return m_parserState->m_pageSpan;
+  }
+  //! returns the actual page dimension
+  MWAWPageSpan &getPageSpan()
+  {
+    return m_parserState->m_pageSpan;
+  }
+  //! returns the form length
+  double getFormLength() const
+  {
+    return m_parserState->m_pageSpan.getFormLength();
+  }
+  //! returns the form width
+  double getFormWidth() const
+  {
+    return m_parserState->m_pageSpan.getFormWidth();
+  }
+  //! returns the page length (form length without margin )
+  double getPageLength() const
+  {
+    return m_parserState->m_pageSpan.getPageLength();
+  }
+  //! returns the page width (form width without margin )
+  double getPageWidth() const
+  {
+    return m_parserState->m_pageSpan.getPageWidth();
+  }
+  //! returns the rsrc parser
+  MWAWRSRCParserPtr &getRSRCParser()
+  {
+    return m_parserState->m_rsrcParser;
+  }
   //! a DebugFile used to write what we recognize when we parse the document
-  libmwaw::DebugFile &ascii() {
+  libmwaw::DebugFile &ascii()
+  {
     return m_parserState->m_asciiFile;
   }
+protected:
+  //! constructor (protected)
+  MWAWParser(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  //! constructor using a state
+  MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
+
+  //! sets the works version
+  void setVersion(int vers)
+  {
+    m_parserState->m_version = vers;
+  }
+  //! sets the spreadsheet listener
+  void setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener);
+  //! resets the listener
+  void resetSpreadsheetListener();
+  //! sets the text listener
+  void setTextListener(MWAWTextListenerPtr &listener);
+  //! resets the listener
+  void resetTextListener();
+  //! sets the font convertor
+  void setFontConverter(MWAWFontConverterPtr fontConverter);
   //! Debugging: change the default ascii file
-  void setAsciiName(char const *name) {
+  void setAsciiName(char const *name)
+  {
     m_asciiName = name;
   }
   //! return the ascii file name
-  std::string const &asciiName() const {
+  std::string const &asciiName() const
+  {
     return m_asciiName;
   }
 
@@ -190,10 +222,35 @@ private:
 
   //! the parser state
   MWAWParserStatePtr m_parserState;
-  //! the actual document size
-  MWAWPageSpan m_pageSpan;
   //! the debug file name
   std::string m_asciiName;
+};
+
+
+/** virtual class which defines the ancestor of all text zone parser */
+class MWAWTextParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Text, input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
+};
+
+/** virtual class which defines the ancestor of all spreadsheet zone parser */
+class MWAWSpreadsheetParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGSpreadsheetInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWSpreadsheetParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Spreadsheet, input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWSpreadsheetParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 #endif /* MWAWPARSER_H */

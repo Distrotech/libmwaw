@@ -1524,12 +1524,12 @@ int MWAWFontSJISConverter::unicode(unsigned char c, MWAWInputStreamPtr &input)
   uint32_t sjisChar = uint32_t(c);
   long pos = input->tell();
   if ((c >= 0x81 && c <= 0x9F) || (c >= 0xE0 && c <= 0xFC)) {
-    if (input->atEOS()) return -1;
+    if (input->isEnd()) return -1;
     sjisChar = (sjisChar<<8)+uint32_t(input->readULong(1));
   }
   if (m_sjisUnicodeMap.find(int(sjisChar))!=m_sjisUnicodeMap.end())
     return m_sjisUnicodeMap.find(int(sjisChar))->second;
-  input->seek(pos, WPX_SEEK_SET);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   return -1;
 }
 

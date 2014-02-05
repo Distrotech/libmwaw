@@ -38,13 +38,10 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWList.hxx"
-
-class WPXPropertyList;
-class WPXPropertyListVector;
 
 /** class to store a tab use by MWAWParagraph */
 struct MWAWTabStop {
@@ -52,16 +49,19 @@ struct MWAWTabStop {
   enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
   //! constructor
   MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint16_t decimalCharacter = '.')  :
-    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter) {
+    m_position(position), m_alignment(alignment), m_leaderCharacter(leaderCharacter), m_decimalCharacter(decimalCharacter)
+  {
   }
   //! add a tab to the propList
-  void addTo(WPXPropertyListVector &propList, double decalX=0.0) const;
+  void addTo(librevenge::RVNGPropertyListVector &propList, double decalX=0.0) const;
   //! operator==
-  bool operator==(MWAWTabStop const &tabs) const {
+  bool operator==(MWAWTabStop const &tabs) const
+  {
     return cmp(tabs)==0;
   }
   //! operator!=
-  bool operator!=(MWAWTabStop const &tabs) const {
+  bool operator!=(MWAWTabStop const &tabs) const
+  {
     return cmp(tabs)!=0;
   }
   //! operator <<
@@ -96,11 +96,13 @@ public:
   //! destructor
   virtual ~MWAWParagraph();
   //! operator==
-  bool operator==(MWAWParagraph const &p) const {
+  bool operator==(MWAWParagraph const &p) const
+  {
     return cmp(p)==0;
   }
   //! operator!=
-  bool operator!=(MWAWParagraph const &p) const {
+  bool operator!=(MWAWParagraph const &p) const
+  {
     return cmp(p)!=0;
   }
   //! a comparison function
@@ -112,21 +114,21 @@ public:
   //! check if the paragraph has different borders
   bool hasDifferentBorders() const;
   //! a function used to resize the borders list ( adding empty borders if needed )
-  void resizeBorders(size_t newSize) {
+  void resizeBorders(size_t newSize)
+  {
     MWAWBorder empty;
     empty.m_style=MWAWBorder::None;
     m_borders.resize(newSize, empty);
   }
   //! set the interline
-  void setInterline(double value, WPXUnit unit, LineSpacingType type=Fixed) {
+  void setInterline(double value, librevenge::RVNGUnit unit, LineSpacingType type=Fixed)
+  {
     m_spacings[0]=value;
     m_spacingsInterlineUnit=unit;
     m_spacingsInterlineType=type;
   }
   //! add to the propList
-  void addTo(WPXPropertyList &propList, bool inTable) const;
-  //! add tabs to the propList
-  void addTabsTo(WPXPropertyListVector &propList, double decalX=0.0) const;
+  void addTo(librevenge::RVNGPropertyList &propList, bool inTable) const;
 
   //! insert the set values of para in the actual paragraph
   void insert(MWAWParagraph const &para);
@@ -140,7 +142,7 @@ public:
    * - 2: right margin*/
   Variable<double> m_margins[3]; // 0: first line left, 1: left, 2: right
   /** the margins INCH, ... */
-  Variable<WPXUnit> m_marginsUnit;
+  Variable<librevenge::RVNGUnit> m_marginsUnit;
   /** the line spacing
    *
    * - 0: interline
@@ -148,7 +150,7 @@ public:
    * - 2: after */
   Variable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
   /** the interline unit PERCENT or INCH, ... */
-  Variable<WPXUnit> m_spacingsInterlineUnit;
+  Variable<librevenge::RVNGUnit> m_spacingsInterlineUnit;
   /** the interline type: fixed, atLeast, ... */
   Variable<LineSpacingType> m_spacingsInterlineType;
   //! the tabulations
@@ -176,6 +178,8 @@ public:
   //! list of border ( order MWAWBorder::Pos)
   std::vector<Variable<MWAWBorder> > m_borders;
 
+  //! the style name
+  std::string m_styleName;
   //! a string to store some errors
   std::string m_extra;
 };

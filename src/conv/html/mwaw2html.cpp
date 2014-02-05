@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
 /* libmwaw
 * Version: MPL 2.0 / LGPLv2+
 *
@@ -35,90 +35,81 @@
 
 #include <cstring>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+
 #include <libmwaw/libmwaw.hxx>
-#include "HtmlDocumentGenerator.h"
 
 int printUsage()
 {
-	printf("Usage: mwaw2html [-h][-o file.html] <Text Mac Document>\n");
-	printf("\t-h:                Shows this help message\n");
-	printf("\t-o file.html:      Define the output[default stdout]\n");
-	return -1;
+  printf("Usage: mwaw2html [-h] <Text Mac Document>\n");
+  printf("\t-h:                Shows this help message\n");
+  return -1;
 }
 
 int main(int argc, char *argv[])
 {
-	char const *file = 0;
-	char const *output=0;
-	bool printHelp=false;
-	int ch;
+  char const *file = 0;
+  bool printHelp=false;
+  int ch;
 
-	while ((ch = getopt(argc, argv, "ho:")) != -1)
-	{
-		switch (ch)
-		{
-		case 'o':
-			output=optarg;
-			break;
-		default:
-		case 'h':
-			printHelp = true;
-			break;
-		}
-	}
-	if (argc != 1+optind || printHelp)
-	{
-		printUsage();
-		return -1;
-	}
-	file=argv[optind];
+  while ((ch = getopt(argc, argv, "h")) != -1) {
+    switch (ch) {
+    default:
+    case 'h':
+      printHelp = true;
+      break;
+    }
+  }
+  if (argc != 1+optind || printHelp) {
+    printUsage();
+    return -1;
+  }
+  file=argv[optind];
 
-	WPXFileStream input(file);
+  librevenge::RVNGFileStream input(file);
 
-	MWAWDocument::Type type;
-	MWAWDocument::Kind kind;
-	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
-	{
-		printf("ERROR: Unsupported file format!\n");
-		return 1;
-	}
-	if (type == MWAWDocument::MWAW_T_UNKNOWN)
-	{
-		printf("ERROR: can not determine the file type!\n");
-		return 1;
-	}
-	if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION)
-	{
-		printf("ERROR: find a not text document!\n");
-		return 1;
-	}
-	MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
-	try
-	{
-		HtmlDocumentGenerator documentGenerator(output);
-		error = MWAWDocument::parse(&input, &documentGenerator);
-	}
-	catch(MWAWDocument::Result &err)
-	{
-		error=err;
-	}
-	catch(...)
-	{
-		error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
-	}
-	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAWDocument::MWAW_R_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
-	if (error != MWAWDocument::MWAW_R_OK)
-		return 1;
+  MWAWDocument::Type type;
+  MWAWDocument::Kind kind;
+  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
+    printf("ERROR: Unsupported file format!\n");
+    return 1;
+  }
+  if (type == MWAWDocument::MWAW_T_UNKNOWN) {
+    printf("ERROR: can not determine the file type!\n");
+    return 1;
+  }
+  if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION) {
+    printf("ERROR: find a not text document!\n");
+    return 1;
+  }
+  MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
+  librevenge::RVNGString document;
+  try {
+    librevenge::RVNGHTMLTextGenerator documentGenerator(document);
+    error = MWAWDocument::parse(&input, &documentGenerator);
+  }
+  catch (MWAWDocument::Result &err) {
+    error=err;
+  }
+  catch (...) {
+    error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+  }
+  if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
+    fprintf(stderr, "ERROR: File Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
+    fprintf(stderr, "ERROR: Parse Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
+    fprintf(stderr, "ERROR: File is an OLE document!\n");
+  else if (error != MWAWDocument::MWAW_R_OK)
+    fprintf(stderr, "ERROR: Unknown Error!\n");
+  if (error != MWAWDocument::MWAW_R_OK)
+    return 1;
 
-	return 0;
+  printf("%s", document.cstr());
+
+  return 0;
 }
-/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

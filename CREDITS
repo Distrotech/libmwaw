@@ -4,12 +4,13 @@ Contributors to libmwaw
 -----------------------------------------------
 Laurent Alonso <alonso@loria.fr>                        Main Author
 Fridrich Strba <fridrich.strba@bluewin.ch>              Main Author
-David Tardon                                            Main Author
+David Tardon  <dtardon@redhat.com>                      Main Author
 
 Other contributors to libmwaw
 -----------------------------------------------
 The following people have contributed fixes or enhancements:
 David Hislop                                            Metadata for mwaw2html
+fruhulda                                                Audit libmwaw with many ClarisWorks files
 
 Contributors to libwps
 -----------------------------------------------

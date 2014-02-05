@@ -1,6 +1,7 @@
+if BUILD_CONVERTISSORS
 bin_PROGRAMS = mwaw2raw
 
-AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/inc/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/inc/ $(REVENGE_CFLAGS) $(REVENGE_GENERATORS_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwaw2raw_DEPENDENCIES = @MWAW2RAW_WIN32_RESOURCE@
 
@@ -8,20 +9,18 @@ if STATIC_TOOLS
 
 mwaw2raw_LDADD = \
 	../../lib/@MWAW_OBJDIR@/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.a \
-	$(WPD_LIBS) @MWAW2RAW_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) @MWAW2RAW_WIN32_RESOURCE@
 mwaw2raw_LDFLAGS = -all-static
 
 else	
 
 mwaw2raw_LDADD = \
 	../../lib/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.la \
-	$(WPD_LIBS) @MWAW2RAW_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) @MWAW2RAW_WIN32_RESOURCE@
 
 endif
 
 mwaw2raw_SOURCES = \
-	RawDocumentGenerator.cpp	 \
-	RawDocumentGenerator.h		 \
 	mwaw2raw.cpp
 
 if OS_WIN32
@@ -38,4 +37,5 @@ EXTRA_DIST = \
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
 	mwaw2raw.rc	 
- 
+
+endif

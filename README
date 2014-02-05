@@ -3,10 +3,10 @@ INSTALLATION
 General
 =======
 
-Since libmwaw was based on libwpd code (for convenience), you need to install
-libwpd in order to build libmwaw. You can get libwpd from:
+Since libmwaw was based on librevenge code (for convenience), you need to install
+librevenge in order to build libmwaw. You can get librevenge from:
 
-- libwpd <http://libwpd.sourceforge.net/download.html>
+- librevenge <http://libwpd.sourceforge.net/download.html>
 
 Unix/Linux/Darwin
 ==========
@@ -39,21 +39,21 @@ a dll, please use the MingW build system (see below for details).
 Windows - MinGW
 ===============
 
-First of all, in order to use libwpd in your application, you do not need
+First of all, in order to use libmwaw in your application, you do not need
 to build it yourself. If you have access to a binary distribution, you
 are encouraged to use it. If for whatever reason you still want to build
-libwpd using MinGW, read following instructions.
+libmwaw using MinGW, read following instructions.
 
 
 * Build environment and dependencies
 
-In order to build libwpd, you have to have installed MinGW distribution from
+In order to build libmwaw, you have to have installed MinGW distribution from
 http://www.mingw.org. Because the build system of libmwaw uses autotools, you
 must install also the MSys packages. It is advisable to install all recent
 packages into a path that does not contain spaces. Besides the MinGW
 distribution, you have to install the _runtime_ and _development_ packages of
-libmwaw dependency libwpd from libwpd.sourceforge.net/download.html. The packages
-you need are libwpd-{version}-MinGW.zip and libwpd-devel-{version}-MinGW.zip
+libmwaw dependency librevenge from librevenge.sourceforge.net/download.html. The packages
+you need are librevenge-{version}-MinGW.zip and librevenge-devel-{version}-MinGW.zip
 
 
 * Build procedure
@@ -97,9 +97,9 @@ creation), the libtool import libraries are not created. Make will try to instal
 them and will stop with error. The "-i" option makes it to report the error, but
 not to stop. Like that the installation will succeed.
 
-Mwaw2odt
+Mwaw2odf
 ===============
-If we want to compile mwaw2odt ( which is a part of writerperfect), you
+If we want to compile mwaw2odf ( which is a part of writerperfect), you
 must first download the last version of libwpg in http://sourceforge.net/projects/libwpg/
 and then download the lastest git version of odfgen and writerperfect:
   git clone git://git.code.sf.net/p/libwpd/libodfgen libwpd-libodfgen

@@ -43,12 +43,12 @@
 #include <set>
 #include <sstream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWContentListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWPosition.hxx"
 
 #include "MWAWTable.hxx"
@@ -62,13 +62,15 @@ struct Compare {
   //! small structure to define a cell point
   struct Point {
     Point(int wh, MWAWCell const *cell, int cellId) : m_which(wh), m_cell(cell), m_cellId(cellId) {}
-    float getPos(int coord) const {
+    float getPos(int coord) const
+    {
       if (m_which)
         return m_cell->bdBox().max()[coord];
       return m_cell->bdBox().min()[coord];
     }
     /** returns the cells size */
-    float getSize(int coord) const {
+    float getSize(int coord) const
+    {
       return m_cell->bdBox().size()[coord];
     }
     /** the position of the point in the cell (0: LT, 1: RB) */
@@ -80,7 +82,8 @@ struct Compare {
   };
 
   //! comparaison function
-  bool operator()(Point const &c1, Point const &c2) const {
+  bool operator()(Point const &c1, Point const &c2) const
+  {
     float diffF = c1.getPos(m_coord)-c2.getPos(m_coord);
     if (diffF < 0) return true;
     if (diffF > 0) return false;
@@ -116,21 +119,21 @@ shared_ptr<MWAWCell> MWAWTable::get(int id)
   return m_cellsList[size_t(id)];
 }
 
-void MWAWTable::addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListVector &columns) const
+void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList) const
 {
-  switch(m_alignment) {
+  switch (m_alignment) {
   case Paragraph:
     break;
   case Left:
     propList.insert("table:align", "left");
-    propList.insert("fo:margin-left", m_leftMargin, WPX_POINT);
+    propList.insert("fo:margin-left", m_leftMargin, librevenge::RVNG_POINT);
     break;
   case Center:
     propList.insert("table:align", "center");
     break;
   case Right:
     propList.insert("table:align", "right");
-    propList.insert("fo:margin-right", m_rightMargin, WPX_POINT);
+    propList.insert("fo:margin-right", m_rightMargin, librevenge::RVNG_POINT);
     break;
   default:
     break;
@@ -140,18 +143,20 @@ void MWAWTable::addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListV
 
   size_t nCols = m_colsSize.size();
   float tableWidth = 0;
+  librevenge::RVNGPropertyListVector columns;
   for (size_t c = 0; c < nCols; ++c) {
-    WPXPropertyList column;
-    column.insert("style:column-width", m_colsSize[c], WPX_POINT);
+    librevenge::RVNGPropertyList column;
+    column.insert("style:column-width", m_colsSize[c], librevenge::RVNG_POINT);
     columns.append(column);
     tableWidth += m_colsSize[c];
   }
-  propList.insert("style:width", tableWidth, WPX_POINT);
+  propList.insert("style:width", tableWidth, librevenge::RVNG_POINT);
+  propList.insert("librevenge:table-columns", columns);
 }
 
 ////////////////////////////////////////////////////////////
 // send extra line
-void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
+void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("MWAWTable::sendExtraLines: called without listener\n"));
@@ -179,7 +184,7 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     Vec2i const &pos=m_cellsList[c]->position();
     Vec2i const &span=m_cellsList[c]->numSpannedCells();
     if (span[0] <= 0 || span[1] <= 0 || pos[0]+span[0] > (int)nColumns ||
-        pos[1]+span[1] >  (int) nRows)
+        pos[1]+span[1] > (int) nRows)
       continue;
     Box2f box;
     box.setMin(Vec2f(columnsPos[size_t(pos[0])], rowsPos[size_t(pos[1])]));
@@ -191,8 +196,9 @@ void MWAWTable::sendExtraLines(MWAWContentListenerPtr listener) const
     pStyle.m_lineWidth=(float)border.m_width;
     pStyle.m_lineColor=border.m_color;
 
-    MWAWPosition lPos(box[0], box.size(), WPX_POINT);
+    MWAWPosition lPos(box[0], box.size(), librevenge::RVNG_POINT);
     lPos.setRelativePosition(MWAWPosition::Frame);
+    lPos.m_wrapping=MWAWPosition::WForeground;
     lPos.setOrder(-1);
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
       listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,0), box.size()), pStyle);
@@ -228,7 +234,7 @@ bool MWAWTable::buildStructures()
         MWAWTableInternal::Compare>::iterator it = set.begin();
     float maxPosiblePos=0;
     int actCell = -1;
-    for ( ; it != set.end(); ++it) {
+    for (; it != set.end(); ++it) {
       float pos = it->getPos(dim);
       if (actCell < 0 || pos > maxPosiblePos) {
         actCell++;
@@ -379,10 +385,12 @@ bool MWAWTable::buildDims()
       if (m_setData&BoxBit) {
         colLimit[size_t(pos[0])] = cell->bdBox()[0][0];
         colLimit[size_t(lastPos[0])] = cell->bdBox()[1][0];
-      } else if (cell->bdSize()[0]>=0) {
+      }
+      else if (cell->bdSize()[0]>=0) {
         colLimit[size_t(lastPos[0])] = colLimit[size_t(pos[0])]+cell->bdSize()[0];
         isFixed[size_t(lastPos[0])]=true;
-      } else if (!isFixed[size_t(lastPos[0])])
+      }
+      else if (!isFixed[size_t(lastPos[0])])
         colLimit[size_t(lastPos[0])] = colLimit[size_t(pos[0])]-cell->bdSize()[0];
     }
     if (colLimit[size_t(c)+1]<=colLimit[size_t(c)]) {
@@ -412,10 +420,12 @@ bool MWAWTable::buildDims()
       if (m_setData&BoxBit) {
         rowLimit[size_t(pos[1])] = cell->bdBox()[0][1];
         rowLimit[size_t(lastPos[1])] = cell->bdBox()[1][1];
-      } else if (cell->bdSize()[1]>=0) {
+      }
+      else if (cell->bdSize()[1]>=0) {
         rowLimit[size_t(lastPos[1])] = rowLimit[size_t(pos[1])]+cell->bdSize()[1];
         isFixed[size_t(lastPos[1])]=true;
-      } else if (!isFixed[size_t(lastPos[1])])
+      }
+      else if (!isFixed[size_t(lastPos[1])])
         rowLimit[size_t(lastPos[1])] = rowLimit[size_t(pos[1])]-cell->bdSize()[1];
     }
     if (rowLimit[size_t(r)+1]<=rowLimit[size_t(r)]) {
@@ -449,17 +459,15 @@ bool MWAWTable::updateTable()
   return true;
 }
 
-bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
+bool MWAWTable::sendTable(MWAWListenerPtr listener, bool inFrame)
 {
   if (!updateTable())
     return false;
   if (!listener)
     return true;
-  if (inFrame && m_hasExtraLines)
-    sendExtraLines(listener);
   listener->openTable(*this);
   for (size_t r = 0; r < m_numRows; ++r) {
-    listener->openTableRow(m_rowsSize[r], WPX_POINT);
+    listener->openTableRow(m_rowsSize[r], librevenge::RVNG_POINT);
     for (size_t c = 0; c < m_numCols; ++c) {
       int tablePos = getCellIdPos(int(c), int(r));
       if (tablePos<0)
@@ -472,8 +480,9 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
     }
     listener->closeTableRow();
   }
-
   listener->closeTable();
+  if (inFrame && m_hasExtraLines)
+    sendExtraLines(listener);
 
   return true;
 }
@@ -481,7 +490,7 @@ bool MWAWTable::sendTable(MWAWContentListenerPtr listener, bool inFrame)
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTable::sendAsText(MWAWContentListenerPtr listener)
+bool MWAWTable::sendAsText(MWAWListenerPtr listener)
 {
   if (!listener) return true;
 

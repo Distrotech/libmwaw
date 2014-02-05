@@ -36,10 +36,9 @@
 #  include <string>
 #  include <vector>
 
-#  include "libwpd/libwpd.h"
+#  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
-class WPXPropertyList;
 class MWAWGraphicStyle;
 
 /** a structure used to define a picture shape */
@@ -48,18 +47,23 @@ class MWAWGraphicShape
 public:
   //! an enum used to define the shape type
   enum Type { Arc, Circle, Line, Rectangle, Path, Pie, Polygon, ShapeUnknown };
+  //! an enum used to define the interface command
+  enum Command { C_Ellipse, C_Polyline, C_Rectangle, C_Path, C_Polygon, C_Bad };
   //! a simple path component
   struct PathData {
     //! constructor
     PathData(char type, Vec2f const &x=Vec2f(), Vec2f const &x1=Vec2f(), Vec2f const &x2=Vec2f()):
-      m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false) {
+      m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false)
+    {
     }
     //! translate all the coordinate by delta
     void translate(Vec2f const &delta);
+    //! scale all the coordinate by a factor
+    void scale(Vec2f const &factor);
     //! rotate all the coordinate by angle (origin rotation) then translate coordinate
     void rotate(float angle, Vec2f const &delta);
     //! update the property list to correspond to a command
-    bool get(WPXPropertyList &pList, Vec2f const &orig) const;
+    bool get(librevenge::RVNGPropertyList &pList, Vec2f const &orig) const;
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, PathData const &path);
     //! comparison function
@@ -84,14 +88,16 @@ public:
 
   //! constructor
   MWAWGraphicShape() : m_type(ShapeUnknown), m_bdBox(), m_formBox(), m_cornerWidth(0,0), m_arcAngles(0,0),
-    m_vertices(), m_path(), m_extra("") {
+    m_vertices(), m_path(), m_extra("")
+  {
   }
   //! virtual destructor
   virtual ~MWAWGraphicShape() { }
   //! static constructor to create a line
   static MWAWGraphicShape line(Vec2f const &orign, Vec2f const &dest);
   //! static constructor to create a rectangle
-  static MWAWGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0)) {
+  static MWAWGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0))
+  {
     MWAWGraphicShape res;
     res.m_type=Rectangle;
     res.m_bdBox=res.m_formBox=box;
@@ -99,14 +105,16 @@ public:
     return res;
   }
   //! static constructor to create a circle
-  static MWAWGraphicShape circle(Box2f const &box) {
+  static MWAWGraphicShape circle(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Circle;
     res.m_bdBox=res.m_formBox=box;
     return res;
   }
   //! static constructor to create a arc
-  static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
+  static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  {
     MWAWGraphicShape res;
     res.m_type=Arc;
     res.m_bdBox=box;
@@ -115,7 +123,8 @@ public:
     return res;
   }
   //! static constructor to create a pie
-  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles) {
+  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  {
     MWAWGraphicShape res;
     res.m_type=Pie;
     res.m_bdBox=box;
@@ -124,14 +133,16 @@ public:
     return res;
   }
   //! static constructor to create a polygon
-  static MWAWGraphicShape polygon(Box2f const &box) {
+  static MWAWGraphicShape polygon(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Polygon;
     res.m_bdBox=box;
     return res;
   }
   //! static constructor to create a path
-  static MWAWGraphicShape path(Box2f const &box) {
+  static MWAWGraphicShape path(Box2f const &box)
+  {
     MWAWGraphicShape res;
     res.m_type=Path;
     res.m_bdBox=box;
@@ -140,14 +151,26 @@ public:
 
   //! translate all the coordinate by delta
   void translate(Vec2f const &delta);
+  //! rescale all the coordinate
+  void scale(Vec2f const &factor);
   /** return a new shape corresponding to a rotation from center.
 
    \note the final bdbox is not tight */
   MWAWGraphicShape rotate(float angle, Vec2f const &center) const;
+  //! returns the type corresponding to a shape
+  Type getType() const
+  {
+    return m_type;
+  }
+  //! returns the basic bdbox
+  Box2f getBdBox() const
+  {
+    return m_bdBox;
+  }
   //! returns the bdbox corresponding to a style
   Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
-  //! add shape to a graphic listener
-  bool send(MWAWGraphicInterface &interface, MWAWGraphicStyle const &style, Vec2f const &orig) const;
+  //! updates the propList to send to an interface
+  Command addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const;
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh);
   /** compare two shapes */

@@ -37,7 +37,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -45,7 +45,7 @@
 
 //! Internal: helper function to create a PBM
 template <class T>
-bool getPBMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, T white)
+bool getPBMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, T white)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -75,7 +75,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, T w
 
 //! Internal: helper function to create a PPM
 template <class T>
-bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std::vector<MWAWColor> const &indexedColor)
+bool getPPMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, std::vector<MWAWColor> const &indexedColor)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -98,14 +98,14 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, WPXBinaryData &data, std
       }
       uint32_t col = indexedColor[size_t(ind)].value();
       for (int c = 0, depl=16; c < 3; c++, depl-=8)
-        data.append((unsigned char) ((col>>depl)&0xFF));
+        data.append((unsigned char)((col>>depl)&0xFF));
     }
   }
   return true;
 }
 
 //! Internal: helper function to create a PPM for a color bitmap
-bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, WPXBinaryData &data)
+bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -121,7 +121,7 @@ bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, WPXBinaryData &d
     for (int i = 0; i < sz[0]; i++) {
       uint32_t col = row[i].value();
       for (int c = 0, depl=16; c < 3; c++, depl-=8)
-        data.append((unsigned char) ((col>>depl)&0xFF));
+        data.append((unsigned char)((col>>depl)&0xFF));
     }
   }
   return true;
@@ -131,7 +131,7 @@ bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, WPXBinaryData &d
 // BW bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapBW::createFileData(WPXBinaryData &result) const
+bool MWAWPictBitmapBW::createFileData(librevenge::RVNGBinaryData &result) const
 {
   return getPBMData<bool>(m_data,result,false);
 }
@@ -140,7 +140,7 @@ bool MWAWPictBitmapBW::createFileData(WPXBinaryData &result) const
 // Color bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapColor::createFileData(WPXBinaryData &result) const
+bool MWAWPictBitmapColor::createFileData(librevenge::RVNGBinaryData &result) const
 {
   return getPPMData(m_data,result);
 }
@@ -149,7 +149,7 @@ bool MWAWPictBitmapColor::createFileData(WPXBinaryData &result) const
 // Indexed bitmap
 ////////////////////////////////////////////////////////////
 
-bool MWAWPictBitmapIndexed::createFileData(WPXBinaryData &result) const
+bool MWAWPictBitmapIndexed::createFileData(librevenge::RVNGBinaryData &result) const
 {
   if (m_colors.size() && getPPMData<int>(m_data,result,m_colors)) return true;
   return getPBMData<int>(m_data,result,0);

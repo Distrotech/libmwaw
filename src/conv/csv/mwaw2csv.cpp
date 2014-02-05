@@ -1,4 +1,5 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
+
 /* libmwaw
 * Version: MPL 2.0 / LGPLv2+
 *
@@ -35,94 +36,125 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <fstream>
+#include <iostream>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+
 #include <libmwaw/libmwaw.hxx>
-
-#include "CSVGenerator.h"
 
 int printUsage()
 {
-	printf("Usage: mwaw2csv [OPTION][-o file.csv] <AppleWorks/ClarisWorks Database/Spreadsheet>\n");
-	printf("\n");
-	printf("Options:\n");
-	printf("\t-o file.html:      Define the output[default stdout]\n");
-	printf("\t-h                Shows this help message\n");
-	return -1;
+  printf("Usage: mwaw2csv [-h] [-dc][-fc][-tc] [-Dformat][-F][-Tformat] [-o file.csv] <Mac Spreadsheet Document>\n");
+  printf("\t-h:          Shows this help message\n");
+  printf("\t-dc:         Sets the decimal commas to character c: default .\n");
+  printf("\t-fc:         Sets the field separator to character c: default ,\n");
+  printf("\t-tc:         Sets the text separator to character c: default \"\n");
+  printf("\t-F:          Sets to output the formula which exists in the file\n");
+  printf("\t-Dformat:    Sets the date format: default \"%%m/%%d/%%y\"\n");
+  printf("\t-Tformat:    Sets the time format: default \"%%H:%%M:%%S\"\n");
+  printf("\t-o file.csv: Defines the ouput file\n");
+  printf("\n\n");
+  printf("\tExample:\n");
+  printf("\t\tmwaw2cvs -d, -D\"%%d/%%m/%%y\" file : Converts a file using french locale\n");
+  printf("\n\n");
+  printf("\tNote:\n");
+  printf("\t\t If -F is present, the formula are generated which english names\n");
+  printf("\t\t Format's options are ignored when converting an AppleWorks/ClarisWorks files\n");
+  return -1;
 }
 
 int main(int argc, char *argv[])
 {
-	char const *file = 0;
-	char const *output=0;
-	bool printHelp=false;
-	int ch;
+  bool printHelp=false;
+  bool generateFormula=false;
+  char const *output = 0;
+  int ch;
+  char decSeparator='.', fieldSeparator=',', textSeparator='"';
+  std::string dateFormat("%m/%d/%y"), timeFormat("%H:%M:%S");
 
-	while ((ch = getopt(argc, argv, "ho:")) != -1)
-	{
-		switch (ch)
-		{
-		case 'o':
-			output=optarg;
-			break;
-		default:
-		case 'h':
-			printHelp = true;
-			break;
-		}
-	}
-	if (argc != 1+optind || printHelp)
-	{
-		printUsage();
-		return -1;
-	}
-	file=argv[optind];
-	WPXFileStream input(file);
+  while ((ch = getopt(argc, argv, "ho:d:f:t:D:FT:")) != -1) {
+    switch (ch) {
+    case 'D':
+      dateFormat=optarg;
+      break;
+    case 'F':
+      generateFormula=true;
+      break;
+    case 'T':
+      timeFormat=optarg;
+      break;
+    case 'd':
+      decSeparator=optarg[0];
+      break;
+    case 'f':
+      fieldSeparator=optarg[0];
+      break;
+    case 't':
+      textSeparator=optarg[0];
+      break;
+    case 'o':
+      output=optarg;
+      break;
+    default:
+    case 'h':
+      printHelp = true;
+      break;
+    }
+  }
+  if (argc != 1+optind || printHelp) {
+    printUsage();
+    return -1;
+  }
+  char const *file=argv[optind];
+  librevenge::RVNGFileStream input(file);
 
-	MWAWDocument::Type type;
-	MWAWDocument::Kind kind;
-	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
-	{
-		fprintf(stderr,"ERROR: Unsupported file format!\n");
-		return 1;
-	}
-	if (type != MWAWDocument::MWAW_T_CLARISWORKS)
-	{
-		fprintf(stderr,"ERROR: not a AppleWorks/ClarisWorks document!\n");
-		return 1;
-	}
-	if (kind != MWAWDocument::MWAW_K_SPREADSHEET && kind != MWAWDocument::MWAW_K_DATABASE)
-	{
-		fprintf(stderr,"ERROR: not a database/spreadsheet!\n");
-		return 1;
-	}
-	MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
-	try
-	{
-		CSVGenerator documentGenerator(output);
-		error = MWAWDocument::parse(&input, &documentGenerator);
-	}
-	catch(MWAWDocument::Result const &err)
-	{
-		error=err;
-	}
-	catch(...)
-	{
-		error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
-	}
-	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAWDocument::MWAW_R_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
+  MWAWDocument::Type type;
+  MWAWDocument::Kind kind;
+  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
+    fprintf(stderr,"ERROR: Unsupported file format!\n");
+    return 1;
+  }
+  if (kind != MWAWDocument::MWAW_K_SPREADSHEET) {
+    fprintf(stderr,"ERROR: not a spreadsheet!\n");
+    return 1;
+  }
+  MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
+  librevenge::RVNGStringVector vec;
 
-	if (error != MWAWDocument::MWAW_R_OK)
-		return 1;
+  try {
+    librevenge::RVNGCSVSpreadsheetGenerator listenerImpl(vec, generateFormula);
+    listenerImpl.setSeparators(fieldSeparator, textSeparator, decSeparator);
+    listenerImpl.setDTFormats(dateFormat.c_str(),timeFormat.c_str());
+    error= MWAWDocument::parse(&input, &listenerImpl);
+  }
+  catch (MWAWDocument::Result const &err) {
+    error=err;
+  }
+  catch (...) {
+    error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+  }
+  if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
+    fprintf(stderr, "ERROR: File Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
+    fprintf(stderr, "ERROR: Parse Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
+    fprintf(stderr, "ERROR: File is an OLE document!\n");
+  else if (error != MWAWDocument::MWAW_R_OK)
+    fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	return 0;
+  if (error != MWAWDocument::MWAW_R_OK)
+    return 1;
+
+  if (!output)
+    std::cout << vec[0].cstr() << std::endl;
+  else {
+    std::ofstream out(output);
+    out << vec[0].cstr() << std::endl;
+  }
+  return 0;
 }
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

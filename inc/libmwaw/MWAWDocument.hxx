@@ -49,14 +49,15 @@
 #  define MWAWLIB
 #endif
 
-namespace libwpg
+namespace librevenge
 {
-class WPGPaintInterface;
+class RVNGBinaryData;
+class RVNGDrawingInterface;
+class RVNGPresentationInterface;
+class RVNGSpreadsheetInterface;
+class RVNGTextInterface;
+class RVNGInputStream;
 }
-
-class WPXBinaryData;
-class WPXDocumentInterface;
-class WPXInputStream;
 
 /**
 This class provides all the functions needed by applications to parse many pre-MacOSX documents.
@@ -94,24 +95,28 @@ public:
   enum Type {
     MWAW_T_UNKNOWN=0 /**< Unrecognised file type*/,
     MWAW_T_ACTA /**Acta (v2 and Classic v1)*/,
-    MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2)*/,
-    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, open text files + some draw/paint files*/,
+    MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2): export spreadsheet and text files.*/,
+    MWAW_T_CLARISRESOLVE /**Claris Resolve: TODO*/,
+    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export text, draw/paint(as text), spreadsheet/database (as spreadsheet) document*/,
     MWAW_T_DOCMAKER /** DocMaker (v4)*/,
     MWAW_T_EDOC /** eDOC (v2)*/,
     MWAW_T_FRAMEMAKER /** FrameMaker: TODO*/,
     MWAW_T_FULLWRITE /** FullWrite Professional: basic*/,
-    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): text and drawing document*/,
+    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): export text, drawing(as text) and spreadsheet document.*/,
     MWAW_T_HANMACWORDJ /** HanMac Word-J (v2.0.4) */,
     MWAW_T_HANMACWORDK /** HanMac Word-K (v2.0.5-2.0.6) */,
+    MWAW_T_KALEIDAGRAPH /** Kaleida Graph: TODO*/,
     MWAW_T_LIGHTWAYTEXT /** LightWayText (only v4 Mac format) */,
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
+    MWAW_T_MACDRAFT /** MacDraft: TODO*/,
     MWAW_T_MACDRAW /** MacDraw: TODO*/,
     MWAW_T_MACPAINT /** MacPaint: TODO*/,
     MWAW_T_MARINERWRITE /** Mariner Write (only v1.6-v3.5 Mac Classic) */,
     MWAW_T_MINDWRITE /** MindWrite */,
     MWAW_T_MORE /** More (v2-3): retrieve the organization part but not the slide/tree parts*/,
+    MWAW_T_MICROSOFTMULTIPLAN /** Microsoft Multiplan: TODO*/,
     MWAW_T_MICROSOFTWORD /** Microsoft Word  (v1-v5)*/,
-    MWAW_T_MICROSOFTWORKS /** Microsoft Works Mac*/,
+    MWAW_T_MICROSOFTWORKS /** Microsoft Works Mac: export spreadsheet and text files.*/,
     MWAW_T_MACWRITE /** MacWrite */,
     MWAW_T_MACWRITEPRO /** MacWrite II/Pro*/,
     MWAW_T_NISUSWRITER /** Nisus Writer (v3.4-v6.5)*/,
@@ -120,6 +125,8 @@ public:
     MWAW_T_READYSETGO /** Ready,Set,Go!: TODO*/,
     MWAW_T_TEACHTEXT /** TeachText/SimpleText*/,
     MWAW_T_TEXEDIT /** Tex-Edit (v2)*/,
+    MWAW_T_TRAPEZE /** Trapeze spreadsheet: TODO*/,
+    MWAW_T_WINGZ /** Wingz: TODO*/,
     MWAW_T_WRITENOW /** WriteNow*/,
     MWAW_T_WRITERPLUS /** WriterPlus*/,
     MWAW_T_XPRESS /** XPress: TODO*/,
@@ -143,29 +150,91 @@ public:
       \return A confidence value which represents the likelyhood that the content from
       the input stream can be parsed
 
-      \note encryption enum appears in MWAW_TEXT_VERSION==2 */
-  static MWAWLIB Confidence isFileFormatSupported(WPXInputStream *input, Type &type, Kind &kind);
+      \note encryption enum appears with MWAW_TEXT_VERSION==2 */
+  static MWAWLIB Confidence isFileFormatSupported(librevenge::RVNGInputStream *input, Type &type, Kind &kind);
+
+  // ------------------------------------------------------------
+  // the different main parsers
+  // ------------------------------------------------------------
+
   /** Parses the input stream content. It will make callbacks to the functions provided by a
-     WPXDocumentInterface class implementation when needed. This is often commonly called the
+     librevenge::RVNGTextInterface class implementation when needed. This is often commonly called the
      'main parsing routine'.
      \param input The input stream
-     \param documentInterface A MWAWListener implementation
+     \param documentInterface A RVNGTextInterface implementation
      \param password The file password
 
-   \note password appears in MWAW_TEXT_VERSION==2 */
-  static MWAWLIB Result parse(WPXInputStream *input, WPXDocumentInterface *documentInterface, char const *password=0);
+   \note password appears with MWAW_TEXT_VERSION==2 */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const *password=0);
 
-  /** Parses the graphic contained in the binary data and called paintInterface to reconstruct
-    a graphic. The input is normally send to a WPXDocumentInterface with mimeType="image/mwaw-odg",
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGDrawingInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGDrawingInterface implementation
+     \param password The file password
+
+   \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGDrawingInterface *documentInterface, char const *password=0);
+
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGPresentationInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGPresentationInterface implementation
+     \param password The file password
+
+     \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR.
+  */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGPresentationInterface *documentInterface, char const *password=0);
+
+  /** Parses the input stream content. It will make callbacks to the functions provided by a
+     librevenge::RVNGSpreadsheetInterface class implementation when needed. This is often commonly called the
+     'main parsing routine'.
+     \param input The input stream
+     \param documentInterface A RVNGSpreadsheetInterface implementation
+     \param password The file password
+
+     \note this function appears with MWAW_SPREADSHEET_VERSION==1 in libmwaw-0.3
+  */
+  static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface, char const *password=0);
+
+  // ------------------------------------------------------------
+  // decoders of the embedded zones created by libmwaw
+  // ------------------------------------------------------------
+
+  /** Parses the graphic contained in the binary data and called documentInterface to reconstruct
+    a graphic. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-odg",
     ie. it must correspond to a picture created by the MWAWGraphicInterface class via
     a MWAWPropertyEncoder.
 
-   \param binary a list of WPGPaintInterface stored in a paintInterface,
-   \param paintInterface the paint interface which will convert the graphic is some specific format
-   (ODG, SVG, ...)
+   \param binary a list of librevenge::RVNGDrawingInterface stored in a documentInterface,
+   \param documentInterface the RVNGDrawingInterface which will convert the graphic is some specific format.
 
-   \note this function appears in MWAW_GRAPHIC_VERSION==1 */
-  static MWAWLIB bool decodeGraphic(WPXBinaryData const &binary, libwpg::WPGPaintInterface *paintInterface);
+   \note this function appears with MWAW_GRAPHIC_VERSION==1 in libmwaw-0.2 */
+  static MWAWLIB bool decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *documentInterface);
+
+  /** Parses the spreadsheet contained in the binary data and called documentInterface to reconstruct
+    a spreadsheet. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-ods",
+    ie. it must correspond to a spreadsheet created by the MWAWSpreadsheetInterface class via
+    a MWAWPropertyEncoder.
+
+   \param binary a list of librevenge::RVNGSpreadsheetInterface stored in a documentInterface,
+   \param documentInterface the RVNGSpreadsheetInterface which will convert the spreadsheet is some specific format.
+
+   \note Reserved for future use. Actually, it only returns false. */
+  static MWAWLIB bool decodeSpreadsheet(librevenge::RVNGBinaryData const &binary, librevenge::RVNGSpreadsheetInterface *documentInterface);
+
+  /** Parses the text contained in the binary data and called documentInterface to reconstruct
+    a text. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-odt",
+    ie. it must correspond to a text created by the MWAWTextInterface class via
+    a MWAWPropertyEncoder.
+
+   \param binary a list of librevenge::RVNGTextInterface stored in a documentInterface,
+   \param documentInterface the RVNGTextInterface which will convert the text is some specific format.
+
+   \note Reserved for future use. Actually, it only returns false. */
+  static MWAWLIB bool decodeText(librevenge::RVNGBinaryData const &binary, librevenge::RVNGTextInterface *documentInterface);
 };
 
 #endif /* MWAWDOCUMENT_HXX */

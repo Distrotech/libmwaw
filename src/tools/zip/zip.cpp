@@ -57,8 +57,8 @@ static void writeU32(char *ptr, uint32_t data)
 
 static void writeTimeDate(char *ptr)
 {
-  time_t now = time ( 0L );
-  struct tm timeinfo = *(localtime ( &now));
+  time_t now = time(0L);
+  struct tm timeinfo = *(localtime(&now));
   uint16_t time=uint16_t((timeinfo.tm_hour<<11)|(timeinfo.tm_min<<5));
   uint16_t date=uint16_t((timeinfo.tm_mon<<5)|timeinfo.tm_mday);
   int year = 1900+timeinfo.tm_year;

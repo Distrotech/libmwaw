@@ -31,7 +31,7 @@
 * instead of those above.
 */
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWInputStream.hxx"
 #include "MWAWEntry.hxx"
@@ -63,7 +63,8 @@ MWAWRSRCParser::~MWAWRSRCParser()
       ascii().addPos(tEntry.end());
       ascii().addNote("_");
     }
-  } catch (...) {
+  }
+  catch (...) {
   }
 #endif
 
@@ -99,7 +100,7 @@ bool MWAWRSRCParser::parse()
   }
   try {
     libmwaw::DebugStream f;
-    m_input->seek(0, WPX_SEEK_SET);
+    m_input->seek(0, librevenge::RVNG_SEEK_SET);
     long pos = m_input->tell();
     MWAWEntry data, map;
     data.setBegin(m_input->readLong(4));
@@ -112,7 +113,7 @@ bool MWAWRSRCParser::parse()
       return false;
     }
     long endPos = data.end() > map.end() ? data.end() : map.end();
-    m_input->seek(endPos, WPX_SEEK_SET);
+    m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (m_input->tell() != endPos) {
       MWAW_DEBUG_MSG(("MWAWRSRCParser::parse: stream seems too small\n"));
       return false;
@@ -132,7 +133,7 @@ bool MWAWRSRCParser::parse()
         MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: can not read entry %s[%d]\n", tEntry.type().c_str(), tEntry.id()));
         continue;
       }
-      m_input->seek(tEntry.begin(), WPX_SEEK_SET);
+      m_input->seek(tEntry.begin(), librevenge::RVNG_SEEK_SET);
       tEntry.setBegin(tEntry.begin()+4);
       tEntry.setLength((long)m_input->readULong(4));
     }
@@ -161,7 +162,8 @@ bool MWAWRSRCParser::parse()
       MWAWEntry &tEntry = (it++)->second;
       parseSTRList(tEntry, list);
     }
-  } catch(...) {
+  }
+  catch (...) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parse: can not parse the input\n"));
     return false;
   }
@@ -178,7 +180,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
   }
 
   libmwaw::DebugStream f, f2;
-  m_input->seek(entry.begin()+24, WPX_SEEK_SET);
+  m_input->seek(entry.begin()+24, librevenge::RVNG_SEEK_SET);
   f << "Entries(RSRCMap):";
   long offsetTypes=(long)m_input->readULong(2);
   long offsetNameLists=(long)m_input->readULong(2);
@@ -199,7 +201,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
   }
 
   long pos = entry.begin()+offsetTypes+2;
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (pos+8*(numTypes+1) > entry.end()) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: the type zones seems too short\n"));
     return false;
@@ -220,7 +222,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
     f << tEntry << ":" << std::hex << tEntry.begin() << std::dec << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    m_input->seek(pos+8, WPX_SEEK_SET);
+    m_input->seek(pos+8, librevenge::RVNG_SEEK_SET);
   }
   ascii().addPos(m_input->tell());
   ascii().addNote("_");
@@ -230,7 +232,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
       MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: can not read entry %s[%d]\n", tEntry.type().c_str(), tEntry.id()));
       continue;
     }
-    m_input->seek(tEntry.begin(), WPX_SEEK_SET);
+    m_input->seek(tEntry.begin(), librevenge::RVNG_SEEK_SET);
     for (int n = 0; n < tEntry.id(); n++) {
       pos = m_input->tell();
       f.str("");
@@ -242,7 +244,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
         std::string name("");
         if (offset+offsetNameLists+1 <= entry.length()) {
           long actPos = m_input->tell();
-          m_input->seek(entry.begin()+offset+offsetNameLists, WPX_SEEK_SET);
+          m_input->seek(entry.begin()+offset+offsetNameLists, librevenge::RVNG_SEEK_SET);
           int nSz = (int) m_input->readULong(1);
           if (offset+offsetNameLists+1+nSz <= entry.length()) {
             for (int j = 0; j < nSz; j++)
@@ -252,12 +254,13 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
             ascii().addPos(entry.begin()+offset+offsetNameLists);
             ascii().addNote(f2.str().c_str());
           }
-          m_input->seek(actPos, WPX_SEEK_SET);
+          m_input->seek(actPos, librevenge::RVNG_SEEK_SET);
         }
         if (!name.length()) {
           MWAW_DEBUG_MSG(("MWAWRSRCParser::parseMap: can not read name of entry %s[%d]\n", tEntry.type().c_str(), tEntry.id()));
           f << "#listNamesOffset=" << std::hex << offset << std::dec << ",";
-        } else {
+        }
+        else {
           rsrc.setName(name);
           f << "name=" << name << ",";
         }
@@ -274,7 +277,7 @@ bool MWAWRSRCParser::parseMap(MWAWEntry const &entry, long dataBegin)
 
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
-      m_input->seek(pos+12, WPX_SEEK_SET);
+      m_input->seek(pos+12, librevenge::RVNG_SEEK_SET);
     }
   }
   if (offsetNameLists != entry.length()) {
@@ -298,14 +301,14 @@ bool MWAWRSRCParser::parseSTR(MWAWEntry const &entry, std::string &str)
   }
   entry.setParsed(true);
   libmwaw::DebugStream f;
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
+  m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   long sz = (long) m_input->readULong(1);
   if (sz+1 > entry.length()) {
     MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTR: string length is too small\n"));
     return false;
   }
   for (long i = 0; i < sz; i++) {
-    if (m_input->atEOS()) {
+    if (m_input->isEnd()) {
       MWAW_DEBUG_MSG(("MWAWRSRCParser::parseSTR: file is too short\n"));
       return false;
     }
@@ -333,7 +336,7 @@ bool MWAWRSRCParser::parseSTRList(MWAWEntry const &entry, std::vector<std::strin
   entry.setParsed(true);
   long pos = entry.begin();
   long endPos = entry.end();
-  m_input->seek(pos, WPX_SEEK_SET);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(RSRCListStr)[" << entry.type() << ":" << entry.id() << "]:";
@@ -386,7 +389,7 @@ bool MWAWRSRCParser::parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &l
   entry.setParsed(true);
   long pos = entry.begin();
   // skip seed
-  m_input->seek(pos+4, WPX_SEEK_SET);
+  m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
   libmwaw::DebugStream f;
   f << "Entries(RSRCClut)[" << entry.type() << ":" << entry.id() << "]:";
@@ -422,7 +425,7 @@ bool MWAWRSRCParser::parseClut(MWAWEntry const &entry, std::vector<MWAWColor> &l
     }
     unsigned char col[3];
     for (int j = 0; j < 3; j++)
-      col[j] = (unsigned char) (m_input->readULong(2)>>8);
+      col[j] = (unsigned char)(m_input->readULong(2)>>8);
     MWAWColor color(col[0],col[1],col[2]);
     list.push_back(color);
     f << color << ",";
@@ -463,7 +466,7 @@ bool MWAWRSRCParser::parseVers(MWAWEntry const &entry, Version &vers)
   }
   entry.setParsed(true);
   libmwaw::DebugStream f;
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
+  m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   vers.m_majorVersion = (int) m_input->readULong(1);
   vers.m_minorVersion = (int) m_input->readULong(1);
   long val = (long) m_input->readULong(1);
@@ -496,7 +499,7 @@ bool MWAWRSRCParser::parseVers(MWAWEntry const &entry, Version &vers)
 ////////////////////////////////////////////////////////////
 // read a pict resource
 ////////////////////////////////////////////////////////////
-bool MWAWRSRCParser::parsePICT(MWAWEntry const &entry, WPXBinaryData &pict)
+bool MWAWRSRCParser::parsePICT(MWAWEntry const &entry, librevenge::RVNGBinaryData &pict)
 {
   pict.clear();
   if (!m_input || !entry.valid() || entry.length()<0xd) {
@@ -506,7 +509,7 @@ bool MWAWRSRCParser::parsePICT(MWAWEntry const &entry, WPXBinaryData &pict)
 
   libmwaw::DebugStream f;
   f << "Entries(RSRC" << entry.type() << ")[" << entry.id() << "]:";
-  m_input->seek(entry.begin(), WPX_SEEK_SET);
+  m_input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   m_input->readDataBlock(entry.length(), pict);
 
 #ifdef DEBUG_WITH_FILES

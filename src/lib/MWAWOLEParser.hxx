@@ -66,14 +66,12 @@
 #include <string>
 #include <vector>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWDebug.hxx"
-
-class WPXBinaryData;
 
 namespace MWAWOLEParserInternal
 {
@@ -98,34 +96,39 @@ public:
   bool parse(MWAWInputStreamPtr fileInput);
 
   //! returns the list of unknown ole
-  std::vector<std::string> const &getNotParse() const {
+  std::vector<std::string> const &getNotParse() const
+  {
     return m_unknownOLEs;
   }
 
   //! returns the list of id for which we have find a representation
-  std::vector<int> const &getObjectsId() const {
+  std::vector<int> const &getObjectsId() const
+  {
     return m_objectsId;
   }
   //! returns the list of data positions which have been read
-  std::vector<MWAWPosition> const &getObjectsPosition() const {
+  std::vector<MWAWPosition> const &getObjectsPosition() const
+  {
     return m_objectsPosition;
   }
   //! returns the list of data which have been read
-  std::vector<WPXBinaryData> const &getObjects() const {
+  std::vector<librevenge::RVNGBinaryData> const &getObjects() const
+  {
     return m_objects;
   }
   //! returns the list of data type
-  std::vector<std::string> const &getObjectsType() const {
+  std::vector<std::string> const &getObjectsType() const
+  {
     return m_objectsType;
   }
 
   //! returns the picture corresponding to an id
-  bool getObject(int id, WPXBinaryData &obj, MWAWPosition &pos, std::string &type) const;
+  bool getObject(int id, librevenge::RVNGBinaryData &obj, MWAWPosition &pos, std::string &type) const;
 
   /*! \brief sets an object
    * just in case, the external parsing find another representation
    */
-  void setObject(int id, WPXBinaryData const &obj, MWAWPosition const &pos,
+  void setObject(int id, librevenge::RVNGBinaryData const &obj, MWAWPosition const &pos,
                  std::string const &type);
 
 protected:
@@ -146,20 +149,20 @@ protected:
   /** the OlePres001 seems to contain standart picture file and size */
   static  bool isOlePres(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture of OlePres001 if it is possible */
-  static bool readOlePres(MWAWInputStreamPtr ip, WPXBinaryData &data, MWAWPosition &pos,
+  static bool readOlePres(MWAWInputStreamPtr ip, librevenge::RVNGBinaryData &data, MWAWPosition &pos,
                           libmwaw::DebugFile &ascii);
 
   //! theOle10Native : basic Windows© picture, with no size
   static bool isOle10Native(MWAWInputStreamPtr ip, std::string const &oleName);
   /** extracts the picture if it is possible */
-  static bool readOle10Native(MWAWInputStreamPtr ip, WPXBinaryData &data,
+  static bool readOle10Native(MWAWInputStreamPtr ip, librevenge::RVNGBinaryData &data,
                               libmwaw::DebugFile &ascii);
 
   /** \brief the Contents : in general a picture : a PNG, an JPEG, a basic metafile,
    * I find also a Word art picture, which are not sucefull read
    */
   bool readContents(MWAWInputStreamPtr input, std::string const &oleName,
-                    WPXBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
+                    librevenge::RVNGBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
 
   /** the CONTENTS : seems to store a header size, the header
    * and then a object in EMF (with the same header)...
@@ -167,7 +170,7 @@ protected:
    *  and many such Ole rejected
    */
   bool readCONTENTS(MWAWInputStreamPtr input, std::string const &oleName,
-                    WPXBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
+                    librevenge::RVNGBinaryData &pict, MWAWPosition &pos, libmwaw::DebugFile &ascii);
 
 
   //! if filled, does not parse content with this name
@@ -176,7 +179,7 @@ protected:
   std::vector<std::string> m_unknownOLEs;
 
   //! list of pictures read
-  std::vector<WPXBinaryData> m_objects;
+  std::vector<librevenge::RVNGBinaryData> m_objects;
   //! list of picture size ( if known)
   std::vector<MWAWPosition> m_objectsPosition;
   //! list of pictures id

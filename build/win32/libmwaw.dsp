@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.2.lib"
+# ADD LIB32 /nologo /out:"Release\lib\libmwaw-0.3.lib"
 
 !ELSEIF  "$(CFG)" == "libmwaw - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.2.lib"
+# ADD LIB32 /nologo /out:"Debug\lib\libmwaw-0.3.lib"
 
 !ENDIF 
 
@@ -87,123 +87,143 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACParser.cxx
+SOURCE=..\..\src\lib\ActaParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACText.cxx
+SOURCE=..\..\src\lib\ActaText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWParser.cxx
+SOURCE=..\..\src\lib\BeagleWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWText.cxx
+SOURCE=..\..\src\lib\BeagleWksSSParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDatabase.cxx
+SOURCE=..\..\src\lib\BeagleWksStructManager.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDbaseContent.cxx
+SOURCE=..\..\src\lib\BeagleWksText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWGraph.cxx
+SOURCE=..\..\src\lib\ClarisWksDatabase.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWParser.cxx
+SOURCE=..\..\src\lib\ClarisWksDbaseContent.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWPresentation.cxx
+SOURCE=..\..\src\lib\ClarisWksDocument.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWSpreadsheet.cxx
+SOURCE=..\..\src\lib\ClarisWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStruct.cxx
+SOURCE=..\..\src\lib\ClarisWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStyleManager.cxx
+SOURCE=..\..\src\lib\ClarisWksPresentation.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWTable.cxx
+SOURCE=..\..\src\lib\ClarisWksSpreadsheet.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWText.cxx
+SOURCE=..\..\src\lib\ClarisWksSSParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMParser.cxx
+SOURCE=..\..\src\lib\ClarisWksStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMText.cxx
+SOURCE=..\..\src\lib\ClarisWksStyleManager.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\EDParser.cxx
+SOURCE=..\..\src\lib\ClarisWksTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWGraph.cxx
+SOURCE=..\..\src\lib\ClarisWksText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWParser.cxx
+SOURCE=..\..\src\lib\DocMkrParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWStruct.cxx
+SOURCE=..\..\src\lib\DocMkrText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWText.cxx
+SOURCE=..\..\src\lib\EDocParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWGraph.cxx
+SOURCE=..\..\src\lib\FullWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWParser.cxx
+SOURCE=..\..\src\lib\FullWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWText.cxx
+SOURCE=..\..\src\lib\FullWrtStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJGraph.cxx
+SOURCE=..\..\src\lib\FullWrtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJParser.cxx
+SOURCE=..\..\src\lib\GreatWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJText.cxx
+SOURCE=..\..\src\lib\GreatWksParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKGraph.cxx
+SOURCE=..\..\src\lib\GreatWksSSParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKParser.cxx
+SOURCE=..\..\src\lib\GreatWksText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKText.cxx
+SOURCE=..\..\src\lib\HanMacWrdJGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdJParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdJText.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKText.cxx
 # End Source File
 # Begin Source File
 
@@ -211,95 +231,99 @@ SOURCE=..\..\src\lib\libmwaw_internal.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWGraph.cxx
+SOURCE=..\..\src\lib\LightWayTxtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWParser.cxx
+SOURCE=..\..\src\lib\LightWayTxtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWText.cxx
+SOURCE=..\..\src\lib\LightWayTxtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MCDParser.cxx
+SOURCE=..\..\src\lib\MacDocParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MDWParser.cxx
+SOURCE=..\..\src\lib\MindWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORParser.cxx
+SOURCE=..\..\src\lib\MoreParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORText.cxx
+SOURCE=..\..\src\lib\MoreText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWGraph.cxx
+SOURCE=..\..\src\lib\MarinerWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWParser.cxx
+SOURCE=..\..\src\lib\MarinerWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWText.cxx
+SOURCE=..\..\src\lib\MarinerWrtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Parser.cxx
+SOURCE=..\..\src\lib\MsWks3Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Text.cxx
+SOURCE=..\..\src\lib\MsWks3Text.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Parser.cxx
+SOURCE=..\..\src\lib\MsWks4Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Text.cxx
+SOURCE=..\..\src\lib\MsWks4Text.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Zone.cxx
+SOURCE=..\..\src\lib\MsWks4Zone.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKGraph.cxx
+SOURCE=..\..\src\lib\MsWksGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKParser.cxx
+SOURCE=..\..\src\lib\MsWksSSParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKTable.cxx
+SOURCE=..\..\src\lib\MsWksTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSW1Parser.cxx
+SOURCE=..\..\src\lib\MsWksZone.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWParser.cxx
+SOURCE=..\..\src\lib\MsWrd1Parser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWStruct.cxx
+SOURCE=..\..\src\lib\MsWrdParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWText.cxx
+SOURCE=..\..\src\lib\MsWrdStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWTextStyles.cxx
+SOURCE=..\..\src\lib\MsWrdText.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MsWrdTextStyles.cxx
 # End Source File
 # Begin Source File
 
@@ -307,7 +331,7 @@ SOURCE=..\..\src\lib\MWAWCell.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWContentListener.cxx
+SOURCE=..\..\src\lib\MWAWChart.cxx
 # End Source File
 # Begin Source File
 
@@ -363,10 +387,6 @@ SOURCE=..\..\src\lib\MWAWOLEParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWOLEStream.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWPageSpan.cxx
 # End Source File
 # Begin Source File
@@ -407,6 +427,10 @@ SOURCE=..\..\src\lib\MWAWSection.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWSpreadsheetListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSubDocument.cxx
 # End Source File
 # Begin Source File
@@ -415,59 +439,59 @@ SOURCE=..\..\src\lib\MWAWTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWZipStream.cxx
+SOURCE=..\..\src\lib\MWAWTextListener.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWParser.cxx
+SOURCE=..\..\src\lib\MacWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProParser.cxx
+SOURCE=..\..\src\lib\MacWrtProParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProStructures.cxx
+SOURCE=..\..\src\lib\MacWrtProStructures.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSGraph.cxx
+SOURCE=..\..\src\lib\NisusWrtGraph.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSParser.cxx
+SOURCE=..\..\src\lib\NisusWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSStruct.cxx
+SOURCE=..\..\src\lib\NisusWrtStruct.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSText.cxx
+SOURCE=..\..\src\lib\NisusWrtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TTParser.cxx
+SOURCE=..\..\src\lib\TeachTxtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNParser.cxx
+SOURCE=..\..\src\lib\WriteNowParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNText.cxx
+SOURCE=..\..\src\lib\WriteNowText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPParser.cxx
+SOURCE=..\..\src\lib\WriterPlsParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWParser.cxx
+SOURCE=..\..\src\lib\ZWrtParser.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWText.cxx
+SOURCE=..\..\src\lib\ZWrtText.cxx
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -475,123 +499,143 @@ SOURCE=..\..\src\lib\ZWText.cxx
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACParser.hxx
+SOURCE=..\..\src\lib\ActaParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ACText.hxx
+SOURCE=..\..\src\lib\ActaText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWParser.hxx
+SOURCE=..\..\src\lib\BeagleWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\BWText.hxx
+SOURCE=..\..\src\lib\BeagleWksSSParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDatabase.hxx
+SOURCE=..\..\src\lib\BeagleWksStructManager.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWDbaseContent.hxx
+SOURCE=..\..\src\lib\BeagleWksText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWGraph.hxx
+SOURCE=..\..\src\lib\ClarisWksDatabase.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWParser.hxx
+SOURCE=..\..\src\lib\ClarisWksDbaseContent.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWPresentation.hxx
+SOURCE=..\..\src\lib\ClarisWksDocument.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWSpreadsheet.hxx
+SOURCE=..\..\src\lib\ClarisWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStruct.hxx
+SOURCE=..\..\src\lib\ClarisWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWStyleManager.hxx
+SOURCE=..\..\src\lib\ClarisWksPresentation.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWTable.hxx
+SOURCE=..\..\src\lib\ClarisWksSpreadsheet.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\CWText.hxx
+SOURCE=..\..\src\lib\ClarisWksSSParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMParser.hxx
+SOURCE=..\..\src\lib\ClarisWksStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\DMText.hxx
+SOURCE=..\..\src\lib\ClarisWksStyleManager.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\EDParser.hxx
+SOURCE=..\..\src\lib\ClarisWksTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWGraph.hxx
+SOURCE=..\..\src\lib\ClarisWksText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWParser.hxx
+SOURCE=..\..\src\lib\DocMkrParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWStruct.hxx
+SOURCE=..\..\src\lib\DocMkrText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\FWText.hxx
+SOURCE=..\..\src\lib\EDocParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWGraph.hxx
+SOURCE=..\..\src\lib\FullWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWParser.hxx
+SOURCE=..\..\src\lib\FullWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\GWText.hxx
+SOURCE=..\..\src\lib\FullWrtStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJGraph.hxx
+SOURCE=..\..\src\lib\FullWrtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJParser.hxx
+SOURCE=..\..\src\lib\GreatWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWJText.hxx
+SOURCE=..\..\src\lib\GreatWksParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKGraph.hxx
+SOURCE=..\..\src\lib\GreatWksSSParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKParser.hxx
+SOURCE=..\..\src\lib\GreatWksText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\HMWKText.hxx
+SOURCE=..\..\src\lib\HanMacWrdJGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdJParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdJText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\HanMacWrdKText.hxx
 # End Source File
 # Begin Source File
 
@@ -603,95 +647,99 @@ SOURCE=..\..\src\lib\libmwaw_internal.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWGraph.hxx
+SOURCE=..\..\src\lib\LightWayTxtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWParser.hxx
+SOURCE=..\..\src\lib\LightWayTxtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\LWText.hxx
+SOURCE=..\..\src\lib\LightWayTxtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MCDParser.hxx
+SOURCE=..\..\src\lib\MacDocParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MDWParser.hxx
+SOURCE=..\..\src\lib\MindWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORParser.hxx
+SOURCE=..\..\src\lib\MoreParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MORText.hxx
+SOURCE=..\..\src\lib\MoreText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWGraph.hxx
+SOURCE=..\..\src\lib\MarinerWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWParser.hxx
+SOURCE=..\..\src\lib\MarinerWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MRWText.hxx
+SOURCE=..\..\src\lib\MarinerWrtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Parser.hxx
+SOURCE=..\..\src\lib\MsWks3Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK3Text.hxx
+SOURCE=..\..\src\lib\MsWks3Text.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Parser.hxx
+SOURCE=..\..\src\lib\MsWks4Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Text.hxx
+SOURCE=..\..\src\lib\MsWks4Text.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSK4Zone.hxx
+SOURCE=..\..\src\lib\MsWks4Zone.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKGraph.hxx
+SOURCE=..\..\src\lib\MsWksGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKParser.hxx
+SOURCE=..\..\src\lib\MsWksSSParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSKTable.hxx
+SOURCE=..\..\src\lib\MsWksTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSW1Parser.hxx
+SOURCE=..\..\src\lib\MsWksZone.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWParser.hxx
+SOURCE=..\..\src\lib\MsWrd1Parser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWStruct.hxx
+SOURCE=..\..\src\lib\MsWrdParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWText.hxx
+SOURCE=..\..\src\lib\MsWrdStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MSWTextStyles.hxx
+SOURCE=..\..\src\lib\MsWrdText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MsWrdTextStyles.hxx
 # End Source File
 # Begin Source File
 
@@ -699,7 +747,7 @@ SOURCE=..\..\src\lib\MWAWCell.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWContentListener.hxx
+SOURCE=..\..\src\lib\MWAWChart.hxx
 # End Source File
 # Begin Source File
 
@@ -763,10 +811,6 @@ SOURCE=..\..\src\lib\MWAWOLEParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWOLEStream.hxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MWAWPageSpan.hxx
 # End Source File
 # Begin Source File
@@ -815,6 +859,10 @@ SOURCE=..\..\src\lib\MWAWSection.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWSpreadsheetListener.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSubDocument.hxx
 # End Source File
 # Begin Source File
@@ -823,63 +871,63 @@ SOURCE=..\..\src\lib\MWAWTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWAWZipStream.hxx
+SOURCE=..\..\src\lib\MWAWTextListener.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWParser.hxx
+SOURCE=..\..\src\lib\MacWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProParser.hxx
+SOURCE=..\..\src\lib\MacWrtProParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MWProStructures.hxx
+SOURCE=..\..\src\lib\MacWrtProStructures.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSGraph.hxx
+SOURCE=..\..\src\lib\NisusWrtGraph.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSParser.hxx
+SOURCE=..\..\src\lib\NisusWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSStruct.hxx
+SOURCE=..\..\src\lib\NisusWrtStruct.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\NSText.hxx
+SOURCE=..\..\src\lib\NisusWrtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\TTParser.hxx
+SOURCE=..\..\src\lib\TeachTxtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNEntry.hxx
+SOURCE=..\..\src\lib\WriteNowEntry.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNParser.hxx
+SOURCE=..\..\src\lib\WriteNowParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WNText.hxx
+SOURCE=..\..\src\lib\WriteNowText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\WPParser.hxx
+SOURCE=..\..\src\lib\WriterPlsParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWParser.hxx
+SOURCE=..\..\src\lib\ZWrtParser.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\ZWText.hxx
+SOURCE=..\..\src\lib\ZWrtText.hxx
 # End Source File
 # End Group
 # End Target

@@ -10,124 +10,142 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_include_HEADERS = \
 	$(top_srcdir)/inc/libmwaw/libmwaw.hxx \
 	$(top_srcdir)/inc/libmwaw/MWAWDocument.hxx
 
-AM_CXXFLAGS = -I$(top_srcdir)/inc $(WPD_CFLAGS) $(WPG_CFLAGS) $(DEBUG_CXXFLAGS) $(ZLIB_CFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc $(REVENGE_CFLAGS) $(DEBUG_CXXFLAGS)
 
-libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(ZLIB_LIBS) $(WPD_LIBS) @LIBMWAW_WIN32_RESOURCE@
+libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LIBADD  = $(REVENGE_LIBS) @LIBMWAW_WIN32_RESOURCE@
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_DEPENDENCIES = @LIBMWAW_WIN32_RESOURCE@  
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_LDFLAGS = $(version_info) -export-dynamic  -no-undefined
 libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	libmwaw_internal.cxx		\
 	libmwaw_internal.hxx		\
-	ACParser.cxx			\
-	ACParser.hxx			\
-	ACText.cxx			\
-	ACText.hxx			\
-	BWParser.cxx			\
-	BWParser.hxx			\
-	BWText.cxx			\
-	BWText.hxx			\
-	CWDatabase.cxx			\
-	CWDatabase.hxx			\
-	CWDbaseContent.cxx		\
-	CWDbaseContent.hxx		\
-	CWGraph.cxx			\
-	CWGraph.hxx			\
-	CWParser.cxx			\
-	CWParser.hxx			\
-	CWPresentation.cxx		\
-	CWPresentation.hxx		\
-	CWSpreadsheet.cxx		\
-	CWSpreadsheet.hxx		\
-	CWStruct.cxx			\
-	CWStruct.hxx			\
-	CWStyleManager.cxx		\
-	CWStyleManager.hxx		\
-	CWTable.cxx			\
-	CWTable.hxx			\
-	CWText.cxx			\
-	CWText.hxx			\
-	DMParser.cxx			\
-	DMParser.hxx			\
-	DMText.cxx			\
-	DMText.hxx			\
-	EDParser.cxx			\
-	EDParser.hxx			\
-	FWGraph.cxx			\
-	FWGraph.hxx			\
-	FWParser.cxx			\
-	FWParser.hxx			\
-	FWStruct.cxx			\
-	FWStruct.hxx			\
-	FWText.cxx			\
-	FWText.hxx			\
-	GWGraph.cxx			\
-	GWGraph.hxx			\
-	GWParser.cxx			\
-	GWParser.hxx			\
-	GWText.cxx			\
-	GWText.hxx			\
-	HMWJGraph.cxx			\
-	HMWJGraph.hxx			\
-	HMWJParser.cxx			\
-	HMWJParser.hxx			\
-	HMWJText.cxx			\
-	HMWJText.hxx			\
-	HMWKGraph.cxx			\
-	HMWKGraph.hxx			\
-	HMWKParser.cxx			\
-	HMWKParser.hxx			\
-	HMWKText.cxx			\
-	HMWKText.hxx			\
-	LWGraph.cxx			\
-	LWGraph.hxx			\
-	LWParser.cxx			\
-	LWParser.hxx			\
-	LWText.cxx			\
-	LWText.hxx			\
-	MCDParser.cxx			\
-	MCDParser.hxx			\
-	MDWParser.cxx			\
-	MDWParser.hxx			\
-	MORParser.cxx			\
-	MORParser.hxx			\
-	MORText.cxx			\
-	MORText.hxx			\
-	MRWGraph.cxx			\
-	MRWGraph.hxx			\
-	MRWParser.cxx			\
-	MRWParser.hxx			\
-	MRWText.cxx			\
-	MRWText.hxx			\
-	MSKGraph.cxx			\
-	MSKGraph.hxx			\
-	MSKParser.cxx			\
-	MSKParser.hxx			\
-	MSKTable.cxx			\
-	MSKTable.hxx			\
-	MSK3Parser.cxx			\
-	MSK3Parser.hxx			\
-	MSK3Text.cxx			\
-	MSK3Text.hxx			\
-	MSK4Parser.cxx			\
-	MSK4Parser.hxx			\
-	MSK4Text.cxx			\
-	MSK4Text.hxx			\
-	MSK4Zone.cxx			\
-	MSK4Zone.hxx			\
-	MSW1Parser.cxx			\
-	MSW1Parser.hxx			\
-	MSWParser.cxx			\
-	MSWParser.hxx			\
-	MSWStruct.cxx			\
-	MSWStruct.hxx			\
-	MSWText.cxx			\
-	MSWText.hxx			\
-	MSWTextStyles.cxx		\
-	MSWTextStyles.hxx		\
+	ActaParser.cxx			\
+	ActaParser.hxx			\
+	ActaText.cxx			\
+	ActaText.hxx			\
+	BeagleWksParser.cxx		\
+	BeagleWksParser.hxx		\
+	BeagleWksSSParser.cxx		\
+	BeagleWksSSParser.hxx		\
+	BeagleWksStructManager.cxx	\
+	BeagleWksStructManager.hxx	\
+	BeagleWksText.cxx		\
+	BeagleWksText.hxx		\
+	ClarisWksDatabase.cxx		\
+	ClarisWksDatabase.hxx		\
+	ClarisWksDbaseContent.cxx	\
+	ClarisWksDbaseContent.hxx	\
+	ClarisWksDocument.cxx		\
+	ClarisWksDocument.hxx		\
+	ClarisWksGraph.cxx		\
+	ClarisWksGraph.hxx		\
+	ClarisWksParser.cxx		\
+	ClarisWksParser.hxx		\
+	ClarisWksPresentation.cxx	\
+	ClarisWksPresentation.hxx	\
+	ClarisWksSpreadsheet.cxx	\
+	ClarisWksSpreadsheet.hxx	\
+	ClarisWksSSParser.cxx		\
+	ClarisWksSSParser.hxx		\
+	ClarisWksStruct.cxx		\
+	ClarisWksStruct.hxx		\
+	ClarisWksStyleManager.cxx	\
+	ClarisWksStyleManager.hxx	\
+	ClarisWksTable.cxx		\
+	ClarisWksTable.hxx		\
+	ClarisWksText.cxx		\
+	ClarisWksText.hxx		\
+	DocMkrParser.cxx		\
+	DocMkrParser.hxx		\
+	DocMkrText.cxx			\
+	DocMkrText.hxx			\
+	EDocParser.cxx			\
+	EDocParser.hxx			\
+	FullWrtGraph.cxx		\
+	FullWrtGraph.hxx		\
+	FullWrtParser.cxx		\
+	FullWrtParser.hxx		\
+	FullWrtStruct.cxx		\
+	FullWrtStruct.hxx		\
+	FullWrtText.cxx			\
+	FullWrtText.hxx			\
+	GreatWksGraph.cxx		\
+	GreatWksGraph.hxx		\
+	GreatWksParser.cxx		\
+	GreatWksParser.hxx		\
+	GreatWksSSParser.cxx		\
+	GreatWksSSParser.hxx		\
+	GreatWksText.cxx		\
+	GreatWksText.hxx		\
+	HanMacWrdJGraph.cxx		\
+	HanMacWrdJGraph.hxx		\
+	HanMacWrdJParser.cxx		\
+	HanMacWrdJParser.hxx		\
+	HanMacWrdJText.cxx		\
+	HanMacWrdJText.hxx		\
+	HanMacWrdKGraph.cxx		\
+	HanMacWrdKGraph.hxx		\
+	HanMacWrdKParser.cxx		\
+	HanMacWrdKParser.hxx		\
+	HanMacWrdKText.cxx		\
+	HanMacWrdKText.hxx		\
+	LightWayTxtGraph.cxx		\
+	LightWayTxtGraph.hxx		\
+	LightWayTxtParser.cxx		\
+	LightWayTxtParser.hxx		\
+	LightWayTxtText.cxx		\
+	LightWayTxtText.hxx		\
+	MacDocParser.cxx		\
+	MacDocParser.hxx		\
+	MacWrtParser.cxx		\
+	MacWrtParser.hxx		\
+	MacWrtProParser.cxx		\
+	MacWrtProParser.hxx		\
+	MacWrtProStructures.cxx		\
+	MacWrtProStructures.hxx		\
+	MarinerWrtGraph.cxx		\
+	MarinerWrtGraph.hxx		\
+	MarinerWrtParser.cxx		\
+	MarinerWrtParser.hxx		\
+	MarinerWrtText.cxx		\
+	MarinerWrtText.hxx		\
+	MindWrtParser.cxx		\
+	MindWrtParser.hxx		\
+	MoreParser.cxx			\
+	MoreParser.hxx			\
+	MoreText.cxx			\
+	MoreText.hxx			\
+	MsWksGraph.cxx			\
+	MsWksGraph.hxx			\
+	MsWksSSParser.cxx		\
+	MsWksSSParser.hxx		\
+	MsWksTable.cxx			\
+	MsWksTable.hxx			\
+	MsWksZone.cxx			\
+	MsWksZone.hxx			\
+	MsWks3Parser.cxx		\
+	MsWks3Parser.hxx		\
+	MsWks3Text.cxx			\
+	MsWks3Text.hxx			\
+	MsWks4Parser.cxx		\
+	MsWks4Parser.hxx		\
+	MsWks4Text.cxx			\
+	MsWks4Text.hxx			\
+	MsWks4Zone.cxx			\
+	MsWks4Zone.hxx			\
+	MsWrd1Parser.cxx		\
+	MsWrd1Parser.hxx		\
+	MsWrdParser.cxx			\
+	MsWrdParser.hxx			\
+	MsWrdStruct.cxx			\
+	MsWrdStruct.hxx			\
+	MsWrdText.cxx			\
+	MsWrdText.hxx			\
+	MsWrdTextStyles.cxx		\
+	MsWrdTextStyles.hxx		\
 	MWAWCell.cxx			\
 	MWAWCell.hxx			\
-	MWAWContentListener.cxx		\
-	MWAWContentListener.hxx		\
+	MWAWChart.cxx			\
+	MWAWChart.hxx			\
 	MWAWDebug.cxx			\
 	MWAWDebug.hxx			\
 	MWAWDocument.cxx		\
@@ -155,8 +173,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWListener.hxx		\
 	MWAWOLEParser.cxx		\
 	MWAWOLEParser.hxx		\
-	MWAWOLEStream.cxx		\
-	MWAWOLEStream.hxx		\
 	MWAWPageSpan.cxx		\
 	MWAWPageSpan.hxx		\
 	MWAWParagraph.cxx		\
@@ -179,39 +195,35 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWRSRCParser.hxx		\
 	MWAWSection.cxx			\
 	MWAWSection.hxx			\
+	MWAWSpreadsheetListener.cxx	\
+	MWAWSpreadsheetListener.hxx	\
 	MWAWSubDocument.cxx		\
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\
 	MWAWTable.hxx			\
-	MWAWZipStream.cxx		\
-	MWAWZipStream.hxx		\
-	MWParser.cxx			\
-	MWParser.hxx			\
-	MWProParser.cxx			\
-	MWProParser.hxx			\
-	MWProStructures.cxx		\
-	MWProStructures.hxx		\
-	NSGraph.cxx			\
-	NSGraph.hxx			\
-	NSParser.cxx			\
-	NSParser.hxx			\
-	NSStruct.cxx			\
-	NSStruct.hxx			\
-	NSText.cxx			\
-	NSText.hxx			\
-	TTParser.cxx			\
-	TTParser.hxx			\
-	WNEntry.hxx			\
-	WNParser.cxx			\
-	WNParser.hxx			\
-	WNText.cxx			\
-	WNText.hxx			\
-	WPParser.cxx			\
-	WPParser.hxx			\
-	ZWParser.cxx			\
-	ZWParser.hxx			\
-	ZWText.cxx			\
-	ZWText.hxx
+	MWAWTextListener.cxx		\
+	MWAWTextListener.hxx		\
+	NisusWrtGraph.cxx		\
+	NisusWrtGraph.hxx		\
+	NisusWrtParser.cxx		\
+	NisusWrtParser.hxx		\
+	NisusWrtStruct.cxx		\
+	NisusWrtStruct.hxx		\
+	NisusWrtText.cxx		\
+	NisusWrtText.hxx		\
+	TeachTxtParser.cxx		\
+	TeachTxtParser.hxx		\
+	WriteNowEntry.hxx		\
+	WriteNowParser.cxx		\
+	WriteNowParser.hxx		\
+	WriteNowText.cxx		\
+	WriteNowText.hxx		\
+	WriterPlsParser.cxx		\
+	WriterPlsParser.hxx		\
+	ZWrtParser.cxx			\
+	ZWrtParser.hxx			\
+	ZWrtText.cxx			\
+	ZWrtText.hxx
 
 if OS_WIN32
 

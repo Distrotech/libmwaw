@@ -424,19 +424,22 @@ public:
     m_mathConv(m_mathMap), m_scientificConv(m_scientificMap), m_wingdingsConv(m_wingdingsMap),
     m_SJISConv(m_SJISMap, MWAWFontConverter::E_SJIS),
     m_unknown107Conv(m_unknown107Map), m_unknown128Conv(m_unknown128Map),
-    m_unknown200Conv(m_unknown200Map) {
+    m_unknown200Conv(m_unknown200Map)
+  {
     initMaps();
   }
   //! returns the conversion map which corresponds to a name, or the default map
   Data::ConversionData const &getConversionMaps(std::string fName);
 
   //! set a family correspondance
-  void setFamily (std::string const &fName, std::string const &family) {
+  void setFamily(std::string const &fName, std::string const &family)
+  {
     if (fName.length() && family.length())
       m_familyMap[fName]=family;
   }
   //! return the default converter
-  ConversionData const &getDefault() const {
+  ConversionData const &getDefault() const
+  {
     return m_defaultConv;
   }
 protected:
@@ -444,7 +447,8 @@ protected:
   void initMaps();
 
   //! Internal and Low level: initializes a map with a vector of \a numElt elements (char, unicode)
-  static void initAMap(int const *arr, size_t numElt, std::map<unsigned char, unsigned long> &map) {
+  static void initAMap(int const *arr, size_t numElt, std::map<unsigned char, unsigned long> &map)
+  {
     for (size_t i = 0; i < numElt; i++) {
       unsigned char c = (unsigned char)arr[2*i];
       unsigned long unicode = (unsigned long)arr[2*i+1];
@@ -624,12 +628,14 @@ class State
 public:
   //! the constructor
   State() : m_knownConversion(), m_idNameMap(), m_nameIdMap(),
-    m_nameIdCounter(0), m_uniqueId(768), m_sjisConverter(), m_unicodeCache() {
+    m_nameIdCounter(0), m_uniqueId(768), m_sjisConverter(), m_unicodeCache()
+  {
     initMaps();
   }
 
   /** returns an unused id */
-  int getUnusedId() {
+  int getUnusedId()
+  {
     while (m_idNameMap.find(m_uniqueId)!=m_idNameMap.end())
       m_uniqueId++;
     return m_uniqueId;
@@ -637,7 +643,8 @@ public:
 
   /** returns the identificator for a name,
   if not set creates one */
-  int getId(std::string const &name, std::string family="") {
+  int getId(std::string const &name, std::string family="")
+  {
     if (name.empty()) return -1;
     std::map<std::string,int>::iterator it=m_nameIdMap.find(name);
     if (it != m_nameIdMap.end()) return it->second;
@@ -647,7 +654,8 @@ public:
   }
 
   //! returns the name corresponding to an id or return std::string("")
-  std::string getName(int macId) {
+  std::string getName(int macId)
+  {
     std::map<int, std::string>::iterator it=m_idNameMap.find(macId);
     if (it==m_idNameMap.end()) return "";
     return it->second;
@@ -668,7 +676,8 @@ public:
   void getOdtInfo(int macId, std::string &nm, int &deltaSize);
 
   //! fixes the name corresponding to an id
-  void setCorrespondance(int macId, std::string const &name, std::string family="") {
+  void setCorrespondance(int macId, std::string const &name, std::string family="")
+  {
     m_idNameMap[macId] = name;
     m_nameIdMap[name] = macId;
     m_nameIdCounter++;
@@ -815,7 +824,7 @@ void State::initMaps()
   m_idNameMap[64643] = "Hiragino MaruGo W6";
 
   std::map<int, std::string>::iterator it;
-  for(it = m_idNameMap.begin(); it != m_idNameMap.end(); ++it)
+  for (it = m_idNameMap.begin(); it != m_idNameMap.end(); ++it)
     m_nameIdMap[it->second] = it->first;
 }
 

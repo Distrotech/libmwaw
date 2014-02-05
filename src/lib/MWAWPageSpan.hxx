@@ -40,43 +40,43 @@
 
 #include "MWAWFont.hxx"
 
-class WPXPropertyList;
-
 /** a class which stores the header/footer data */
 class MWAWHeaderFooter
 {
 public:
   /** the header/footer type */
   enum Type { HEADER, FOOTER, UNDEF };
-  /** the header/footer occurence in the file */
-  enum Occurence { ODD, EVEN, ALL, NEVER };
+  /** the header/footer occurrence in the file */
+  enum Occurrence { ODD, EVEN, ALL, NEVER };
   /** a fixed page number position */
   enum PageNumberPosition { None = 0, TopLeft, TopCenter, TopRight, BottomLeft, BottomCenter, BottomRight };
 
   //! constructor
-  MWAWHeaderFooter(Type const type=UNDEF, Occurence const occurence=NEVER);
+  MWAWHeaderFooter(Type const type=UNDEF, Occurrence const occurrence=NEVER);
   //! destructor
   ~MWAWHeaderFooter();
   //! returns true if the header footer is defined
-  bool isDefined() const {
+  bool isDefined() const
+  {
     return m_type != UNDEF;
   }
   /** send to header to the listener */
-  void send(MWAWContentListener *listener) const;
+  void send(MWAWListener *listener) const;
   //! operator==
   bool operator==(MWAWHeaderFooter const &headerFooter) const;
   //! operator!=
-  bool operator!=(MWAWHeaderFooter const &headerFooter) const {
+  bool operator!=(MWAWHeaderFooter const &headerFooter) const
+  {
     return !operator==(headerFooter);
   }
   //! insert a page number
-  void insertPageNumberParagraph(MWAWContentListener *listener) const;
+  void insertPageNumberParagraph(MWAWListener *listener) const;
 
 public:
   //! the type header/footer
   Type m_type;
-  //! the actual occurence
-  Occurence m_occurence;
+  //! the actual occurrence
+  Occurrence m_occurrence;
   //! the height ( if known )
   double m_height;
   //! the page number position ( or none)
@@ -94,7 +94,6 @@ typedef shared_ptr<MWAWHeaderFooter> MWAWHeaderFooterPtr;
 /** A class which defines the page properties */
 class MWAWPageSpan
 {
-  friend class MWAWContentListener;
 public:
   /** the page orientation */
   enum FormOrientation { PORTRAIT, LANDSCAPE };
@@ -109,84 +108,104 @@ public:
   virtual ~MWAWPageSpan();
 
   //! returns the page length
-  double getFormLength() const {
+  double getFormLength() const
+  {
     return m_formLength;
   }
   //! returns the page width
-  double getFormWidth() const {
+  double getFormWidth() const
+  {
     return m_formWidth;
   }
   //! returns the page orientation
-  FormOrientation getFormOrientation() const {
+  FormOrientation getFormOrientation() const
+  {
     return m_formOrientation;
   }
   //! returns the left margin
-  double getMarginLeft() const {
+  double getMarginLeft() const
+  {
     return m_margins[libmwaw::Left];
   }
   //! returns the right margin
-  double getMarginRight() const {
+  double getMarginRight() const
+  {
     return m_margins[libmwaw::Right];
   }
   //! returns the top margin
-  double getMarginTop() const {
+  double getMarginTop() const
+  {
     return m_margins[libmwaw::Top];
   }
   //! returns the bottom margin
-  double getMarginBottom() const {
+  double getMarginBottom() const
+  {
     return m_margins[libmwaw::Bottom];
   }
   //! returns the page length (form width without margin )
-  double getPageLength() const {
+  double getPageLength() const
+  {
     return m_formLength-m_margins[libmwaw::Top]-m_margins[libmwaw::Bottom];
   }
   //! returns the page width (form width without margin )
-  double getPageWidth() const {
+  double getPageWidth() const
+  {
     return m_formWidth-m_margins[libmwaw::Left]-m_margins[libmwaw::Right];
   }
   //! returns the background color
-  MWAWColor backgroundColor() const {
+  MWAWColor backgroundColor() const
+  {
     return m_backgroundColor;
   }
-  int getPageNumber() const {
+  int getPageNumber() const
+  {
     return m_pageNumber;
   }
-  int getPageSpan() const {
+  int getPageSpan() const
+  {
     return m_pageSpan;
   }
 
   //! add a header/footer on some page
   void setHeaderFooter(MWAWHeaderFooter const &headerFooter);
   //! set the total page length
-  void setFormLength(const double formLength) {
+  void setFormLength(const double formLength)
+  {
     m_formLength = formLength;
   }
   //! set the total page width
-  void setFormWidth(const double formWidth) {
+  void setFormWidth(const double formWidth)
+  {
     m_formWidth = formWidth;
   }
   //! set the form orientation
-  void setFormOrientation(const FormOrientation formOrientation) {
+  void setFormOrientation(const FormOrientation formOrientation)
+  {
     m_formOrientation = formOrientation;
   }
   //! set the page left margin
-  void setMarginLeft(const double marginLeft) {
+  void setMarginLeft(const double marginLeft)
+  {
     m_margins[libmwaw::Left] = (marginLeft > 0) ? marginLeft : 0.01;
   }
   //! set the page right margin
-  void setMarginRight(const double marginRight) {
+  void setMarginRight(const double marginRight)
+  {
     m_margins[libmwaw::Right] = (marginRight > 0) ? marginRight : 0.01;
   }
   //! set the page top margin
-  void setMarginTop(const double marginTop) {
+  void setMarginTop(const double marginTop)
+  {
     m_margins[libmwaw::Top] =(marginTop > 0) ? marginTop : 0.01;
   }
   //! set the page bottom margin
-  void setMarginBottom(const double marginBottom) {
+  void setMarginBottom(const double marginBottom)
+  {
     m_margins[libmwaw::Bottom] = (marginBottom > 0) ? marginBottom : 0.01;
   }
   //! set all the margins
-  void setMargins(double margin, int wh=libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit) {
+  void setMargins(double margin, int wh=libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit)
+  {
     if (margin <= 0.0) margin = 0.01;
     if (wh&libmwaw::LeftBit)
       m_margins[libmwaw::Left]=margin;
@@ -200,37 +219,41 @@ public:
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
   //! set the background color
-  void setBackgroundColor(MWAWColor color=MWAWColor::white()) {
+  void setBackgroundColor(MWAWColor color=MWAWColor::white())
+  {
     m_backgroundColor=color;
   }
   //! set the page number
-  void setPageNumber(const int pageNumber) {
+  void setPageNumber(const int pageNumber)
+  {
     m_pageNumber = pageNumber;
   }
   //! set the page span ( default 1)
-  void setPageSpan(const int pageSpan) {
+  void setPageSpan(const int pageSpan)
+  {
     m_pageSpan = pageSpan;
   }
   //! operator==
   bool operator==(shared_ptr<MWAWPageSpan> const &pageSpan) const;
   //! operator!=
-  bool operator!=(shared_ptr<MWAWPageSpan> const &pageSpan) const {
+  bool operator!=(shared_ptr<MWAWPageSpan> const &pageSpan) const
+  {
     return !operator==(pageSpan);
   }
-protected:
-  // interface with MWAWContentListener
+
+  // interface with MWAWListener
   //! add the page properties in pList
-  void getPageProperty(WPXPropertyList &pList) const;
+  void getPageProperty(librevenge::RVNGPropertyList &pList) const;
   //! send the page's headers/footers if some exists
-  void sendHeaderFooters(MWAWContentListener *listener) const;
+  void sendHeaderFooters(MWAWListener *listener) const;
 
 protected:
   //! return the header footer positions in m_headerFooterList
-  int getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  int getHeaderFooterPosition(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
   //! remove a header footer
-  void removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  void removeHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
   //! return true if we have a header footer in this position
-  bool containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurence occurence);
+  bool containsHeaderFooter(MWAWHeaderFooter::Type type, MWAWHeaderFooter::Occurrence occurrence);
 private:
   double m_formLength/** the form length*/, m_formWidth /** the form width */;
   /** the form orientation */

@@ -41,8 +41,8 @@
 
 #include "libmwaw_internal.hxx"
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "MWAWPropertyHandler.hxx"
@@ -57,65 +57,32 @@ MWAWPropertyHandlerEncoder::MWAWPropertyHandlerEncoder()
 {
 }
 
-void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList)
+void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
+{
+  m_f << 'E';
+  writeString(psName);
+}
+
+void MWAWPropertyHandlerEncoder::insertElement
+(const char *psName, const librevenge::RVNGPropertyList &xPropList)
 {
   m_f << 'S';
   writeString(psName);
   writePropertyList(xPropList);
 }
 
-void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList, const WPXPropertyListVector &vect)
-{
-  m_f << 'V';
-  writeString(psName);
-  writePropertyList(xPropList);
-  writeInteger((int)vect.count());
-  for (unsigned long i=0; i < vect.count(); i++)
-    writePropertyList(vect[i]);
-}
-
-void MWAWPropertyHandlerEncoder::startElement
-(const char *psName, const WPXPropertyList &xPropList, const WPXBinaryData &data)
-{
-  m_f << 'B';
-  writeString(psName);
-  writePropertyList(xPropList);
-  long size=(long) data.size();
-  if (size<0) {
-    MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::startElement: oops, probably the binary data is too big!!!\n"));
-    size=0;
-  }
-  writeLong(size);
-  if (size>0)
-    m_f.write((const char *)data.getDataBuffer(), size);
-}
-
-void MWAWPropertyHandlerEncoder::insertElement(const char *psName)
-{
-  m_f << 'I';
-  writeString(psName);
-}
-
-void MWAWPropertyHandlerEncoder::endElement(const char *psName)
-{
-  m_f << 'E';
-  writeString(psName);
-}
-
-void MWAWPropertyHandlerEncoder::characters(WPXString const &sCharacters)
+void MWAWPropertyHandlerEncoder::characters(librevenge::RVNGString const &sCharacters)
 {
   if (sCharacters.len()==0) return;
   m_f << 'T';
-  writeString(sCharacters.cstr());
+  writeString(sCharacters);
 }
 
-void MWAWPropertyHandlerEncoder::writeString(const char *name)
+void MWAWPropertyHandlerEncoder::writeString(const librevenge::RVNGString &string)
 {
-  int sz = (name == 0L) ? 0 : int(strlen(name));
-  writeInteger(sz);
-  if (sz) m_f.write(name, sz);
+  unsigned long sz = string.size()+1;
+  writeInteger((int) sz);
+  m_f.write(string.cstr(), (int) sz);
 }
 
 void MWAWPropertyHandlerEncoder::writeLong(long val)
@@ -125,27 +92,43 @@ void MWAWPropertyHandlerEncoder::writeLong(long val)
   m_f.write((const char *)allValue, 4);
 }
 
-void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const WPXProperty &prop)
+void MWAWPropertyHandlerEncoder::writeProperty(const char *key, const librevenge::RVNGProperty &prop)
 {
   if (!key) {
     MWAW_DEBUG_MSG(("MWAWPropertyHandlerEncoder::writeProperty: key is NULL\n"));
     return;
   }
   writeString(key);
-  writeString(prop.getStr().cstr());
+  writeString(prop.getStr());
 }
 
-void MWAWPropertyHandlerEncoder::writePropertyList(const WPXPropertyList &xPropList)
+void MWAWPropertyHandlerEncoder::writePropertyList(const librevenge::RVNGPropertyList &xPropList)
 {
-  WPXPropertyList::Iter i(xPropList);
+  librevenge::RVNGPropertyList::Iter i(xPropList);
   int numElt = 0;
-  for (i.rewind(); i.next(); ) numElt++;
+  for (i.rewind(); i.next();) numElt++;
   writeInteger(numElt);
-  for (i.rewind(); i.next(); )
-    writeProperty(i.key(),*i());
+  for (i.rewind(); i.next();) {
+    librevenge::RVNGPropertyListVector const *child=xPropList.child(i.key());
+    if (!child) {
+      m_f << 'p';
+      writeProperty(i.key(),*i());
+      continue;
+    }
+    m_f << 'v';
+    writeString(i.key());
+    writePropertyListVector(*child);
+  }
 }
 
-bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
+void MWAWPropertyHandlerEncoder::writePropertyListVector(const librevenge::RVNGPropertyListVector &vect)
+{
+  writeInteger((int)vect.count());
+  for (unsigned long i=0; i < vect.count(); i++)
+    writePropertyList(vect[i]);
+}
+
+bool MWAWPropertyHandlerEncoder::getData(librevenge::RVNGBinaryData &data)
 {
   data.clear();
   std::string d=m_f.str();
@@ -154,40 +137,24 @@ bool MWAWPropertyHandlerEncoder::getData(WPXBinaryData &data)
   return true;
 }
 
-/*! \brief Internal: the property decoder
+/* \brief Internal: the property decoder
  *
- * In order to be read by writerperfect, we must code document consisting in
- * tag and propertyList in an intermediar format:
- *  - [string:s]: an int length(s) follow by the length(s) characters of string s
- *  - [property:p]: a string value p.getStr()
- *  - [propertyList:pList]: a int: \#pList followed by pList[0].key(),pList[0], pList[1].key(),pList[1], ...
- *  - [propertyListVector:v]: a int: \#v followed by v[0], v[1], ...
- *  - [binaryData:d]: a int32 d.size() followed by the data content
- *
- *  - [startElement:name proplist:prop]: char 'S', [string] name, prop
- *  - [startElement2:name proplist:prop proplistvector:vector]:
- *          char 'V', [string] name, prop, vector
- *  - [startElement3:name proplist:prop binarydata:data]:
- *          char 'B', [string] name, prop, data
- *  - [insertElement:name]: char 'I', [string] name
- *  - [endElement:name ]: char 'E', [string] name
- *  - [characters:s ]: char 'T', [string] s
- *            - if len(s)==0, we write nothing
- *            - the string is written as is (ie. we do not escaped any characters).
+ * \note see MWAWPropertyHandlerEncoder for the format
 */
 class MWAWPropertyHandlerDecoder
 {
 public:
   //! constructor given a MWAWPropertyHandler
-  MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl), m_openTag() {}
+  MWAWPropertyHandlerDecoder(MWAWPropertyHandler *hdl=0L):m_handler(hdl) {}
 
   //! tries to read the data
-  bool readData(WPXBinaryData const &encoded) {
+  bool readData(librevenge::RVNGBinaryData const &encoded)
+  {
     try {
-      WPXInputStream *inp = const_cast<WPXInputStream *>(encoded.getDataStream());
+      librevenge::RVNGInputStream *inp = const_cast<librevenge::RVNGInputStream *>(encoded.getDataStream());
       if (!inp) return false;
 
-      while (!inp->atEOS()) {
+      while (!inp->isEnd()) {
         unsigned const char *c;
         unsigned long numRead;
 
@@ -196,21 +163,12 @@ public:
           MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder: can not read data type \n"));
           return false;
         }
-        switch(*c) {
-        case 'B':
-          if (!readStartElementWithBinary(*inp)) return false;
-          break;
-        case 'V':
-          if (!readStartElementWithVector(*inp)) return false;
-          break;
-        case 'S':
-          if (!readStartElement(*inp)) return false;
-          break;
-        case 'I':
+        switch (*c) {
+        case 'E':
           if (!readInsertElement(*inp)) return false;
           break;
-        case 'E':
-          if (!readEndElement(*inp)) return false;
+        case 'S':
+          if (!readInsertElementWithList(*inp)) return false;
           break;
         case 'T':
           if (!readCharacters(*inp)) return false;
@@ -220,143 +178,56 @@ public:
           return false;
         }
       }
-    } catch(...) {
+    }
+    catch (...) {
       return false;
     }
     return true;
   }
 
 protected:
-  //! reads an startElement
-  bool readStartElement(WPXInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read tag name\n"));
-      return false;
-    }
-    WPXPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElement: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    m_openTag.push(s);
-
-    if (m_handler) m_handler->startElement(s.c_str(), lists);
-    return true;
-  }
-
-  //! reads an startElement
-  bool readStartElementWithVector(WPXInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read tag name\n"));
-      return false;
-    }
-
-    WPXPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-    WPXPropertyListVector vect;
-    if (!readPropertyListVector(input, vect)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithVector: can not read propertyVector for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    m_openTag.push(s);
-
-    if (m_handler) m_handler->startElement(s.c_str(), lists, vect);
-    return true;
-  }
-  //! reads an startElement
-  bool readStartElementWithBinary(WPXInputStream &input) {
-    std::string s;
-    if (!readString(input, s)) return false;
-    if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read tag name\n"));
-      return false;
-    }
-
-    WPXPropertyList lists;
-    if (!readPropertyList(input, lists)) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartElementWithBinary: can not read propertyList for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-    long sz;
-    if (!readLong(input,sz) || sz<0) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray size for tag %s\n",
-                      s.c_str()));
-      return false;
-    }
-
-    WPXBinaryData data;
-    if (sz) {
-      unsigned long read;
-      unsigned char const *dt=input.read((unsigned long) sz, read);
-      if (!dt || sz!=(long) read) {
-        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readStartWithBinary: can not read binray data for tag %s\n",
-                        s.c_str()));
-        return false;
-      }
-      data.append(dt, (unsigned long)read);
-    }
-    m_openTag.push(s);
-    if (m_handler) m_handler->startElement(s.c_str(), lists, data);
-    return true;
-  }
-
   //! reads an simple element
-  bool readInsertElement(WPXInputStream &input) {
-    std::string s;
+  bool readInsertElement(librevenge::RVNGInputStream &input)
+  {
+    librevenge::RVNGString s;
     if (!readString(input, s)) return false;
 
     if (s.empty()) {
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElement find empty tag\n"));
       return false;
     }
-    if (m_handler) m_handler->insertElement(s.c_str());
+    if (m_handler) m_handler->insertElement(s.cstr());
     return true;
   }
 
-  //! reads an endElement
-  bool readEndElement(WPXInputStream &input) {
-    std::string s;
+  //! reads an element with a property list
+  bool readInsertElementWithList(librevenge::RVNGInputStream &input)
+  {
+    librevenge::RVNGString s;
     if (!readString(input, s)) return false;
 
     if (s.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement find empty tag\n"));
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: find empty tag\n"));
       return false;
     }
-    // check stack
-    if (m_openTag.empty()) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s with no openElement\n",
-                      s.c_str()));
+    librevenge::RVNGPropertyList lists;
+    if (!readPropertyList(input, lists)) {
+      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readInsertElementWithProperty: can not read propertyList for tag %s\n",
+                      s.cstr()));
       return false;
     }
-    if (m_openTag.top() != s) {
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readEndElement %s but last open %s\n",
-                      m_openTag.top().c_str(), s.c_str()));
-      return false;
-    }
-    m_openTag.pop();
-    if (m_handler) m_handler->endElement(s.c_str());
+
+    if (m_handler) m_handler->insertElement(s.cstr(), lists);
     return true;
   }
 
   //! reads a set of characters
-  bool readCharacters(WPXInputStream &input) {
-    std::string s;
+  bool readCharacters(librevenge::RVNGInputStream &input)
+  {
+    librevenge::RVNGString s;
     if (!readString(input, s)) return false;
-    if (!s.length()) return true;
-    if (m_handler) m_handler->characters(WPXString(s.c_str()));
+    if (!s.size()) return true;
+    if (m_handler) m_handler->characters(s);
     return true;
   }
 
@@ -365,7 +236,8 @@ protected:
   //
 
   //! low level: reads a property vector: number of properties list followed by list of properties list
-  bool readPropertyListVector(WPXInputStream &input, WPXPropertyListVector &vect) {
+  bool readPropertyListVector(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyListVector &vect)
+  {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -375,7 +247,7 @@ protected:
       return false;
     }
     for (int i = 0; i < numElt; i++) {
-      WPXPropertyList lists;
+      librevenge::RVNGPropertyList lists;
       if (readPropertyList(input, lists)) {
         vect.append(lists);
         continue;
@@ -387,7 +259,8 @@ protected:
   }
 
   //! low level: reads a property list: number of properties followed by list of properties
-  bool readPropertyList(WPXInputStream &input, WPXPropertyList &lists) {
+  bool readPropertyList(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &lists)
+  {
     int numElt;
     if (!readInteger(input, numElt)) return false;
 
@@ -397,62 +270,61 @@ protected:
       return false;
     }
     for (int i = 0; i < numElt; i++) {
-      if (readProperty(input, lists)) continue;
-      MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read property %d\n", i));
-      return false;
+      unsigned const char *c;
+      unsigned long numRead;
+      c = input.read(1,numRead);
+      if (!c || numRead != 1) {
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder:readPropertyList can not read data type for child %d\n", i));
+        return false;
+      }
+      switch (*c) {
+      case 'p':
+        if (readProperty(input, lists)) break;
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read property %d\n", i));
+        return false;
+      case 'v': {
+        librevenge::RVNGString key;
+        librevenge::RVNGPropertyListVector vect;
+        if (!readString(input, key) || key.empty() || !readPropertyListVector(input, vect)) {
+          MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readPropertyList: can not read propertyVector for child %i\n", i));
+          return false;
+        }
+        lists.insert(key.cstr(),vect);
+        break;
+      }
+      default:
+        MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder:readPropertyList find unknown type %c for child %d\n", (char) *c, i));
+        return false;
+      }
     }
     return true;
   }
 
   //! low level: reads a property and its value, adds it to \a list
-  bool readProperty(WPXInputStream &input, WPXPropertyList &list) {
-    std::string key, val;
+  bool readProperty(librevenge::RVNGInputStream &input, librevenge::RVNGPropertyList &list)
+  {
+    librevenge::RVNGString key, val;
     if (!readString(input, key)) return false;
     if (!readString(input, val)) return false;
 
-    std::string number(""), remain("");
-    // check if the val can be a double, first isolate the potential numbering part ...
-    for (size_t s=0; s<val.size(); ++s) {
-      char c=(char) val[s];
-      if (c=='-' || c=='.' || c=='e' || c=='E' || (c>='0' && c<='9')) {
-        number+=c;
-        continue;
-      }
-      remain=val.substr(s);
-      break;
-    }
-    if (number.empty()) {
-      list.insert(key.c_str(), val.c_str());
-      return true;
-    }
-    std::istringstream iss(number);
-    double res = 0.0;
-    iss >> res;
-    if (iss.fail() || iss.peek()!=std::char_traits<char>::eof()) {
-      list.insert(key.c_str(), val.c_str());
-      return true;
-    }
-    if (remain.empty())
-      list.insert(key.c_str(), res);
-    else if (remain=="pt")
-      list.insert(key.c_str(), res/72., WPX_INCH);
-    else if (remain=="in")
-      list.insert(key.c_str(), res, WPX_INCH);
-    else if (remain=="%")
-      list.insert(key.c_str(), res/100., WPX_PERCENT);
-    else if (remain=="*")
-      list.insert(key.c_str(), res/1440., WPX_INCH);
-    else
-      list.insert(key.c_str(), val.c_str());
+    list.insert(key.cstr(), val);
+    librevenge::RVNGProperty const *prop=list[key.cstr()];
+    if (!prop) return true;
+    librevenge::RVNGUnit unit=prop->getUnit();
+    if (unit==librevenge::RVNG_POINT)
+      list.insert(key.cstr(), prop->getDouble()/72., librevenge::RVNG_INCH);
+    else if (unit==librevenge::RVNG_TWIP)
+      list.insert(key.cstr(), prop->getDouble()/1440., librevenge::RVNG_INCH);
     return true;
   }
 
   //! low level: reads a string : size and string
-  bool readString(WPXInputStream &input, std::string &s) {
+  bool readString(librevenge::RVNGInputStream &input, librevenge::RVNGString &s)
+  {
     int numC = 0;
     if (!readInteger(input, numC)) return false;
     if (numC==0) {
-      s = std::string("");
+      s = librevenge::RVNGString("");
       return true;
     }
     unsigned long numRead;
@@ -461,12 +333,13 @@ protected:
       MWAW_DEBUG_MSG(("MWAWPropertyHandlerDecoder::readString: can not read a string\n"));
       return false;
     }
-    s = std::string((const char *)dt, size_t(numC));
+    s = librevenge::RVNGString((const char *)dt);
     return true;
   }
 
   //! low level: reads an integer value
-  static bool readInteger(WPXInputStream &input, int &val) {
+  static bool readInteger(librevenge::RVNGInputStream &input, int &val)
+  {
     long res;
     if (!readLong(input, res))
       return false;
@@ -474,7 +347,8 @@ protected:
     return true;
   }
   //! low level: reads an long value
-  static bool readLong(WPXInputStream &input, long &val) {
+  static bool readLong(librevenge::RVNGInputStream &input, long &val)
+  {
     unsigned long numRead = 0;
     const unsigned char *dt = input.read(4, numRead);
     if (dt == 0L || numRead != 4) {
@@ -491,9 +365,6 @@ private:
 protected:
   //! the streamfile
   MWAWPropertyHandler *m_handler;
-
-  //! the list of open tags
-  std::stack<std::string> m_openTag;
 };
 
 ////////////////////////////////////////////////////
@@ -501,33 +372,16 @@ protected:
 // MWAWPropertyHandler
 //
 ////////////////////////////////////////////////////
-bool MWAWPropertyHandler::checkData(WPXBinaryData const &encoded)
+bool MWAWPropertyHandler::checkData(librevenge::RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod;
   return decod.readData(encoded);
 }
 
-bool MWAWPropertyHandler::readData(WPXBinaryData const &encoded)
+bool MWAWPropertyHandler::readData(librevenge::RVNGBinaryData const &encoded)
 {
   MWAWPropertyHandlerDecoder decod(this);
   return decod.readData(encoded);
-}
-
-void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
-                                       const WPXPropertyListVector &)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a propertyListVector must be reimplement in subclass\n"));
-}
-
-void MWAWPropertyHandler::startElement(const char *, const WPXPropertyList &,
-                                       const WPXBinaryData &)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::startElement: with a WPXBinaryData must be reimplement in subclass\n"));
-}
-
-void MWAWPropertyHandler::insertElement(const char *)
-{
-  MWAW_DEBUG_MSG(("MWAWPropertyHandler::insertElement: must be reimplement in subclass\n"));
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

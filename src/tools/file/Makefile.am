@@ -1,6 +1,6 @@
 bin_PROGRAMS = mwawFile
 
-AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/lib/ $(WPD_CFLAGS) $(XATTR_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/lib/ $(REVENGE_CFLAGS) $(XATTR_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwawFile_DEPENDENCIES = @MWAWFILE_WIN32_RESOURCE@
 mwawFile_LDADD = @MWAWFILE_WIN32_RESOURCE@

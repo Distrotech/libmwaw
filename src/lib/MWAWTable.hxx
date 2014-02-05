@@ -47,8 +47,6 @@
 
 #include "MWAWCell.hxx"
 
-class MWAWTable;
-
 /** a class used to recreate the table structure using cell informations, .... */
 class MWAWTable
 {
@@ -73,7 +71,8 @@ public:
   virtual ~MWAWTable();
 
   //! add a new cells
-  void add(shared_ptr<MWAWCell> cell) {
+  void add(shared_ptr<MWAWCell> cell)
+  {
     if (!cell) {
       MWAW_DEBUG_MSG(("MWAWTable::add: must be called with a cell\n"));
       return;
@@ -81,38 +80,46 @@ public:
     m_cellsList.push_back(cell);
   }
   //! returns true if we need to merge borders
-  bool mergeBorders() const {
+  bool mergeBorders() const
+  {
     return m_mergeBorders;
   }
   //! sets the merge borders' value
-  bool setMergeBorders(bool val) {
+  bool setMergeBorders(bool val)
+  {
     return m_mergeBorders=val;
   }
   /** defines the current alignment
       \note: leftMargin,rightMargin are given in Points */
-  void setAlignment(Alignment align, float leftMargin=0, float rightMargin=0) {
+  void setAlignment(Alignment align, float leftMargin=0, float rightMargin=0)
+  {
     m_alignment = align;
     m_leftMargin = leftMargin;
     m_rightMargin = rightMargin;
   }
   //! returns the number of cell
-  int numCells() const {
+  int numCells() const
+  {
     return int(m_cellsList.size());
   }
   /** returns the row size if defined (in point) */
-  std::vector<float> const &getRowsSize() const {
+  std::vector<float> const &getRowsSize() const
+  {
     return m_rowsSize;
   }
   /** define the row size (in point) */
-  void setRowsSize(std::vector<float> const &rSize) {
+  void setRowsSize(std::vector<float> const &rSize)
+  {
     m_rowsSize=rSize;
   }
   /** returns the columns size if defined (in point) */
-  std::vector<float> const &getColsSize() const {
+  std::vector<float> const &getColsSize() const
+  {
     return m_colsSize;
   }
   /** define the columns size (in point) */
-  void setColsSize(std::vector<float> const &cSize) {
+  void setColsSize(std::vector<float> const &cSize)
+  {
     m_colsSize=cSize;
   }
 
@@ -122,7 +129,8 @@ public:
   /** try to build the table structures */
   bool updateTable();
   /** returns true if the table has extralines */
-  bool hasExtraLines() {
+  bool hasExtraLines()
+  {
     if (!updateTable()) return false;
     return m_hasExtraLines;
   }
@@ -131,19 +139,20 @@ public:
 
   Note: either send the table ( and returns true ) or do nothing.
    */
-  bool sendTable(MWAWContentListenerPtr listener, bool inFrame=true);
+  bool sendTable(MWAWListenerPtr listener, bool inFrame=true);
 
   /** try to send the table as basic text */
-  bool sendAsText(MWAWContentListenerPtr listener);
+  bool sendAsText(MWAWListenerPtr listener);
 
   // interface with the content listener
 
   //! adds the table properties to propList
-  void addTablePropertiesTo(WPXPropertyList &propList, WPXPropertyListVector &columns) const;
+  void addTablePropertiesTo(librevenge::RVNGPropertyList &propList) const;
 
 protected:
   //! convert a cell position in a posToCellId's position
-  int getCellIdPos(int col, int row) const {
+  int getCellIdPos(int col, int row) const
+  {
     if (col<0||col>=int(m_numCols))
       return -1;
     if (row<0||row>=int(m_numRows))
@@ -157,7 +166,7 @@ protected:
   /** a function which fills to posToCellId vector using the cell position */
   bool buildPosToCellId();
   //! send extra line
-  void sendExtraLines(MWAWContentListenerPtr listener) const;
+  void sendExtraLines(MWAWListenerPtr listener) const;
 
 protected:
   /** a int to indicate what data are given in entries*/
@@ -190,3 +199,4 @@ protected:
 };
 
 #endif
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

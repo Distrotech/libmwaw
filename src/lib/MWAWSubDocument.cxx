@@ -49,7 +49,7 @@ MWAWSubDocument::~MWAWSubDocument()
 {
 }
 
-void MWAWSubDocument::parseGraphic(MWAWGraphicListenerPtr &, libmwaw::SubDocumentType )
+void MWAWSubDocument::parseGraphic(MWAWGraphicListenerPtr &, libmwaw::SubDocumentType)
 {
   MWAW_DEBUG_MSG(("MWAWSubDocument::parseGraphic: must not be called\n"));
 }

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
 /* libmwaw
 * Version: MPL 2.0 / LGPLv2+
 *
@@ -32,91 +32,133 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-generators/librevenge-generators.h>
+#include <librevenge-stream/librevenge-stream.h>
+
 #include <libmwaw/libmwaw.hxx>
-
-#include "TextDocumentGenerator.h"
 
 int printUsage()
 {
-	printf("Usage: mwaw2text [OPTION] <Mac Text Document>\n");
-	printf("\n");
-	printf("Options:\n");
-	printf("--info                Display document metadata instead of the text\n");
-	printf("--help                Shows this help message\n");
-	return -1;
+  printf("Usage: mwaw2text [OPTION] <Mac Text Document>\n");
+  printf("\n");
+  printf("Options:\n");
+  printf("-i                Display document metadata instead of the text\n");
+  printf("-h                Shows this help message\n");
+  printf("-o file.txt       Define the output[default stdout]\n");
+  return -1;
 }
 
 int main(int argc, char *argv[])
 {
-	if (argc < 2)
-		return printUsage();
+  if (argc < 2)
+    return printUsage();
 
-	char *szInputFile = 0;
-	bool isInfo = false;
+  char const *output = 0;
+  bool isInfo = false;
+  bool printHelp=false;
+  int ch;
 
-	for (int i = 1; i < argc; i++)
-	{
-		if (!strcmp(argv[i], "--info"))
-			isInfo = true;
-		else if (!szInputFile && strncmp(argv[i], "--", 2))
-			szInputFile = argv[i];
-		else
-			return printUsage();
-	}
+  while ((ch = getopt(argc, argv, "hio:")) != -1) {
+    switch (ch) {
+    case 'i':
+      isInfo=true;
+      break;
+    case 'o':
+      output=optarg;
+      break;
+    default:
+    case 'h':
+      printHelp = true;
+      break;
+    }
+  }
 
-	if (!szInputFile)
-		return printUsage();
+  if (argc != 1+optind || printHelp) {
+    printUsage();
+    return -1;
+  }
+  librevenge::RVNGFileStream input(argv[optind]);
 
-	WPXFileStream input(argv[1]);
+  MWAWDocument::Type type;
+  MWAWDocument::Kind kind;
+  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
+    printf("ERROR: Unsupported file format!\n");
+    return 1;
+  }
+  if (type == MWAWDocument::MWAW_T_UNKNOWN) {
+    printf("ERROR: can not determine the type of file!\n");
+    return 1;
+  }
+  if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION && kind != MWAWDocument::MWAW_K_SPREADSHEET) {
+    printf("ERROR: find a not text document!\n");
+    return 1;
+  }
 
-	MWAWDocument::Type type;
-	MWAWDocument::Kind kind;
-	MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
-	if (confidence != MWAWDocument::MWAW_C_EXCELLENT)
-	{
-		printf("ERROR: Unsupported file format!\n");
-		return 1;
-	}
-	if (type == MWAWDocument::MWAW_T_UNKNOWN)
-	{
-		printf("ERROR: can not determine the type of file!\n");
-		return 1;
-	}
-	if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION)
-	{
-		printf("ERROR: find a not text document!\n");
-		return 1;
-	}
+  librevenge::RVNGString document;
+  librevenge::RVNGStringVector pages;
+  bool useStringVector=false;
+  MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
+  try {
+    if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
+      librevenge::RVNGTextSpreadsheetGenerator documentGenerator(pages, isInfo);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
+        printf("ERROR: find no sheets!\n");
+        return 1;
+      }
+      useStringVector=true;
+    }
+    else {
+      librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
+  }
+  catch (MWAWDocument::Result const &err) {
+    error=err;
+  }
+  catch (...) {
+    error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+  }
 
-	TextDocumentGenerator documentGenerator(isInfo);
-	MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
-	try
-	{
-		MWAWDocument::parse(&input, &documentGenerator);
-	}
-	catch (MWAWDocument::Result const &err)
-	{
-		error=err;
-	}
-	catch (...)
-	{
-		error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
-	}
+  if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
+    fprintf(stderr, "ERROR: File Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
+    fprintf(stderr, "ERROR: Parse Exception!\n");
+  else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
+    fprintf(stderr, "ERROR: File is an OLE document!\n");
+  else if (error != MWAWDocument::MWAW_R_OK)
+    fprintf(stderr, "ERROR: Unknown Error!\n");
 
-	if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
-		fprintf(stderr, "ERROR: File Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
-		fprintf(stderr, "ERROR: Parse Exception!\n");
-	else if (error == MWAWDocument::MWAW_R_OLE_ERROR)
-		fprintf(stderr, "ERROR: File is an OLE document!\n");
-	else if (error != MWAWDocument::MWAW_R_OK)
-		fprintf(stderr, "ERROR: Unknown Error!\n");
+  if (error != MWAWDocument::MWAW_R_OK)
+    return 1;
 
-	if (error != MWAWDocument::MWAW_R_OK)
-		return 1;
+  if (!output) {
+    if (!useStringVector)
+      printf("%s", document.cstr());
+    else {
+      for (unsigned i=0; i < pages.size(); ++i)
+        printf("%s\n", pages[i].cstr());
+    }
+  }
+  else {
+    FILE *out=fopen(output, "wb");
+    if (!out) {
+      fprintf(stderr, "ERROR: can not open file %s!\n", output);
+      return 1;
+    }
+    if (!useStringVector)
+      fprintf(out, "%s", document.cstr());
+    else {
+      for (unsigned i=0; i < pages.size(); ++i)
+        fprintf(out, "%s\n", pages[i].cstr());
+    }
+    fclose(out);
+  }
 
-	return 0;
+  return 0;
 }
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

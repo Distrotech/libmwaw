@@ -15,7 +15,7 @@ tools :-)
 
 - mwawZip:
    a small tool which tries to zip a file and it attributes to obtain
-   a file which can be used as input of mwaw2odt, mwaw2html, ... : an
+   a file which can be used as input of mwaw2odf, mwaw2html, ... : an
    equivalent of the Finder compress function.
 
    More precisely, when zipping a file <<filename>>, it includes the

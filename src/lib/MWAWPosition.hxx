@@ -36,7 +36,7 @@
 
 #include <ostream>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -49,8 +49,8 @@ class MWAWPosition
 public:
   //! a list of enum used to defined the anchor
   enum AnchorTo { Char, CharBaseLine, Frame, Paragraph, Page, Unknown };
-  //! an enum used to define the wrapping
-  enum Wrapping { WNone, WBackground, WDynamic, WRunThrough };
+  //! an enum used to define the wrapping: none, ...
+  enum Wrapping { WNone, WBackground, WDynamic, WForeground, WRunThrough };
   //! an enum used to define the relative X position
   enum XPos { XRight, XLeft, XCenter, XFull };
   //! an enum used to define the relative Y position
@@ -58,27 +58,29 @@ public:
 
 public:
   //! constructor
-  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), WPXUnit theUnit=WPX_INCH):
+  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), librevenge::RVNGUnit theUnit=librevenge::RVNG_INCH):
     m_anchorTo(Unknown), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
     m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_LTClip(), m_RBClip(), m_unit(theUnit), m_order(0) {}
 
   virtual ~MWAWPosition() {}
   //! operator<<
-  friend  std::ostream &operator<<(std::ostream &o, MWAWPosition const &pos) {
+  friend  std::ostream &operator<<(std::ostream &o, MWAWPosition const &pos)
+  {
     Vec2f dest(pos.m_orig+pos.m_size);
     o << "Pos=(" << pos.m_orig << ")x(" << dest << ")";
-    switch(pos.m_unit) {
-    case WPX_INCH:
+    switch (pos.m_unit) {
+    case librevenge::RVNG_INCH:
       o << "(inch)";
       break;
-    case WPX_POINT:
+    case librevenge::RVNG_POINT:
       o << "(pt)";
       break;
-    case WPX_TWIP:
+    case librevenge::RVNG_TWIP:
       o << "(tw)";
       break;
-    case WPX_PERCENT:
-    case WPX_GENERIC:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       break;
     }
@@ -86,128 +88,152 @@ public:
     return o;
   }
   //! basic operator==
-  bool operator==(MWAWPosition const &f) const {
+  bool operator==(MWAWPosition const &f) const
+  {
     return cmp(f) == 0;
   }
   //! basic operator!=
-  bool operator!=(MWAWPosition const &f) const {
+  bool operator!=(MWAWPosition const &f) const
+  {
     return cmp(f) != 0;
   }
   //! basic operator<
-  bool operator<(MWAWPosition const &f) const {
+  bool operator<(MWAWPosition const &f) const
+  {
     return cmp(f) < 0;
   }
 
   //! returns the frame page
-  int page() const {
+  int page() const
+  {
     return m_page;
   }
   //! return the frame origin
-  Vec2f const &origin() const {
+  Vec2f const &origin() const
+  {
     return m_orig;
   }
   //! returns the frame size
-  Vec2f const &size() const {
+  Vec2f const &size() const
+  {
     return m_size;
   }
   //! returns the natural size (if known)
-  Vec2f const &naturalSize() const {
+  Vec2f const &naturalSize() const
+  {
     return m_naturalSize;
   }
   //! returns the left top clipping
-  Vec2f const &leftTopClipping() const {
+  Vec2f const &leftTopClipping() const
+  {
     return m_LTClip;
   }
   //! returns the right bottom clipping
-  Vec2f const &rightBottomClipping() const {
+  Vec2f const &rightBottomClipping() const
+  {
     return m_RBClip;
   }
   //! returns the unit
-  WPXUnit unit() const {
+  librevenge::RVNGUnit unit() const
+  {
     return m_unit;
   }
-  static float getScaleFactor(WPXUnit orig, WPXUnit dest) {
+  static float getScaleFactor(librevenge::RVNGUnit orig, librevenge::RVNGUnit dest)
+  {
     float actSc = 1.0, newSc = 1.0;
-    switch(orig) {
-    case WPX_TWIP:
+    switch (orig) {
+    case librevenge::RVNG_TWIP:
       break;
-    case WPX_POINT:
+    case librevenge::RVNG_POINT:
       actSc=20;
       break;
-    case WPX_INCH:
+    case librevenge::RVNG_INCH:
       actSc = 1440;
       break;
-    case WPX_PERCENT:
-    case WPX_GENERIC:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(orig)));
     }
-    switch(dest) {
-    case WPX_TWIP:
+    switch (dest) {
+    case librevenge::RVNG_TWIP:
       break;
-    case WPX_POINT:
+    case librevenge::RVNG_POINT:
       newSc=20;
       break;
-    case WPX_INCH:
+    case librevenge::RVNG_INCH:
       newSc = 1440;
       break;
-    case WPX_PERCENT:
-    case WPX_GENERIC:
+    case librevenge::RVNG_PERCENT:
+    case librevenge::RVNG_GENERIC:
+    case librevenge::RVNG_UNIT_ERROR:
     default:
       MWAW_DEBUG_MSG(("MWAWPosition::getScaleFactor %d unit must not appear\n", int(dest)));
     }
     return actSc/newSc;
   }
   //! returns a float which can be used to scale some data in object unit
-  float getInvUnitScale(WPXUnit fromUnit) const {
+  float getInvUnitScale(librevenge::RVNGUnit fromUnit) const
+  {
     return getScaleFactor(fromUnit, m_unit);
   }
 
   //! sets the page
-  void setPage(int pg) const {
+  void setPage(int pg) const
+  {
     const_cast<MWAWPosition *>(this)->m_page = pg;
   }
   //! sets the frame origin
-  void setOrigin(Vec2f const &orig) {
+  void setOrigin(Vec2f const &orig)
+  {
     m_orig = orig;
   }
   //! sets the frame size
-  void setSize(Vec2f const &sz) {
+  void setSize(Vec2f const &sz)
+  {
     m_size = sz;
   }
   //! sets the natural size (if known)
-  void setNaturalSize(Vec2f const &naturalSz) {
+  void setNaturalSize(Vec2f const &naturalSz)
+  {
     m_naturalSize = naturalSz;
   }
   //! sets the dimension unit
-  void setUnit(WPXUnit newUnit) {
+  void setUnit(librevenge::RVNGUnit newUnit)
+  {
     m_unit = newUnit;
   }
   //! sets/resets the page and the origin
-  void setPagePos(int pg, Vec2f const &newOrig) const {
+  void setPagePos(int pg, Vec2f const &newOrig) const
+  {
     const_cast<MWAWPosition *>(this)->m_page = pg;
     const_cast<MWAWPosition *>(this)->m_orig = newOrig;
   }
 
   //! sets the relative position
-  void setRelativePosition(AnchorTo anchor, XPos X = XLeft, YPos Y=YTop) {
+  void setRelativePosition(AnchorTo anchor, XPos X = XLeft, YPos Y=YTop)
+  {
     m_anchorTo = anchor;
     m_xPos = X;
     m_yPos = Y;
   }
 
   //! sets the clipping position
-  void setClippingPosition(Vec2f lTop, Vec2f rBottom) {
+  void setClippingPosition(Vec2f lTop, Vec2f rBottom)
+  {
     m_LTClip = lTop;
     m_RBClip = rBottom;
   }
 
   //! returns background/foward order
-  int order() const {
+  int order() const
+  {
     return m_order;
   }
   //! set background/foward order
-  void setOrder(int ord) const {
+  void setOrder(int ord) const
+  {
     m_order = ord;
   }
 
@@ -222,7 +248,8 @@ public:
 
 protected:
   //! basic function to compare two positions
-  int cmp(MWAWPosition const &f) const {
+  int cmp(MWAWPosition const &f) const
+  {
     int diff = int(m_anchorTo) - int(f.m_anchorTo);
     if (diff) return diff < 0 ? -1 : 1;
     diff = int(m_xPos) - int(f.m_xPos);
@@ -252,7 +279,7 @@ protected:
   Vec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
   Vec2f m_LTClip /** the left top clip position */, m_RBClip /* the right bottom clip position */;
   //! the unit used in \a orig, in \a m_size and in \a m_LTClip , .... Default: in inches
-  WPXUnit m_unit;
+  librevenge::RVNGUnit m_unit;
   //! background/foward order
   mutable int m_order;
 };

@@ -1,6 +1,7 @@
+if BUILD_CONVERTISSORS
 bin_PROGRAMS = mwaw2text
 
-AM_CXXFLAGS = -I$(top_srcdir)/inc/ $(WPD_CFLAGS) $(DEBUG_CXXFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/inc/ $(REVENGE_CFLAGS) $(REVENGE_GENERATORS_CFLAGS) $(DEBUG_CXXFLAGS)
 
 mwaw2text_DEPENDENCIES = @MWAW2TEXT_WIN32_RESOURCE@
 
@@ -8,20 +9,18 @@ if STATIC_TOOLS
 
 mwaw2text_LDADD = \
 	../../lib/@MWAW_OBJDIR@/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.a \
-	$(WPD_LIBS) @MWAW2TEXT_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) @MWAW2TEXT_WIN32_RESOURCE@
 mwaw2text_LDFLAGS = -all-static
 
 else	
 
 mwaw2text_LDADD = \
 	../../lib/libmwaw-@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.la \
-	$(WPD_LIBS) @MWAW2TEXT_WIN32_RESOURCE@
+	$(REVENGE_LIBS) $(REVENGE_GENERATORS_LIBS) @MWAW2TEXT_WIN32_RESOURCE@
 
 endif
 
 mwaw2text_SOURCES = \
-	TextDocumentGenerator.cpp	 \
-	TextDocumentGenerator.h		 \
 	mwaw2text.cpp
 
 if OS_WIN32
@@ -38,4 +37,5 @@ EXTRA_DIST = \
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
 	mwaw2text.rc	 
- 
+
+endif

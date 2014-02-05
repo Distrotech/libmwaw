@@ -14,8 +14,8 @@
 * License.
 *
 * Major Contributor(s):
- * Copyright (C) 2006 Ariya Hidayat (ariya@kde.org)
- * Copyright (C) 2004 Marc Oude Kotte (marc@solcon.nl)
+* Copyright (C) 2006 Ariya Hidayat (ariya@kde.org)
+* Copyright (C) 2004 Marc Oude Kotte (marc@solcon.nl)
 * Copyright (C) 2002 William Lachance (wrlach@gmail.com)
 * Copyright (C) 2002,2004 Marc Maurer (uwog@uwog.net)
 * Copyright (C) 2004-2006 Fridrich Strba (fridrich.strba@bluewin.ch)
@@ -39,7 +39,7 @@
 #include <sstream>
 #include <string>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 #include <libmwaw/libmwaw.hxx>
 
 #include "libmwaw_internal.hxx"
@@ -54,50 +54,12 @@ namespace MWAWGraphicInterfaceInternal
 //! the state of a MWAWGraphicInterface
 struct State {
   //! constructor
-  State() : m_encoder(), m_listIdToPropertyMap() {
+  State() : m_encoder()
+  {
   }
-  //! try to retrieve a list element property
-  bool retrieveListElement(int id, int level, WPXPropertyList &list) const;
-  //! add a list definition in the list property map
-  void addListElement(WPXPropertyList const &list);
   //! the encoder
   MWAWPropertyHandlerEncoder m_encoder;
-  //! a multimap list id to property list item map
-  std::multimap<int, WPXPropertyList> m_listIdToPropertyMap;
 };
-
-void State::addListElement(WPXPropertyList const &list)
-{
-  if (!list["libwpd:id"] || !list["libwpd:level"]) {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::addListElement: can not find the id or the level\n"));
-    return;
-  }
-  int id=list["libwpd:id"]->getInt();
-  int level=list["libwpd:level"]->getInt();
-  std::multimap<int, WPXPropertyList>::iterator it=m_listIdToPropertyMap.lower_bound(id);
-  while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["libwpd:level"]->getInt()==level) {
-      m_listIdToPropertyMap.erase(it);
-      break;
-    }
-    ++it;
-  }
-  m_listIdToPropertyMap.insert(std::multimap<int, WPXPropertyList>::value_type(id,list));
-}
-
-bool State::retrieveListElement(int id, int level, WPXPropertyList &list) const
-{
-  std::multimap<int, WPXPropertyList>::const_iterator it=m_listIdToPropertyMap.lower_bound(id);
-  while (it!=m_listIdToPropertyMap.end() && it->first == id) {
-    if (it->second["libwpd:level"]->getInt()==level) {
-      list = it->second;
-      return true;
-    }
-    ++it;
-  }
-  MWAW_DEBUG_MSG(("MWAWGraphicInterfaceInternal::retrieveListElement: can not find the id=%d or the level=%d\n", id, level));
-  return false;
-}
 
 }
 
@@ -109,7 +71,7 @@ MWAWGraphicInterface::~MWAWGraphicInterface()
 {
 }
 
-bool MWAWGraphicInterface::getBinaryResult(WPXBinaryData &result, std::string &mimeType)
+bool MWAWGraphicInterface::getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType)
 {
   if (!m_state->m_encoder.getData(result))
     return false;
@@ -117,171 +79,225 @@ bool MWAWGraphicInterface::getBinaryResult(WPXBinaryData &result, std::string &m
   return true;
 }
 
-void MWAWGraphicInterface::startDocument(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startDocument(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Graphics", list);
+  m_state->m_encoder.insertElement("StartDocument", list);
 }
 
 void MWAWGraphicInterface::endDocument()
 {
-  m_state->m_encoder.endElement("Graphics");
+  m_state->m_encoder.insertElement("EndDocument");
 }
 
-void MWAWGraphicInterface::setDocumentMetaData(const WPXPropertyList &)
+void MWAWGraphicInterface::setDocumentMetaData(const librevenge::RVNGPropertyList &list)
 {
+  m_state->m_encoder.insertElement("SetDocumentMetaData", list);
 }
 
-void MWAWGraphicInterface::startPage(const ::WPXPropertyList &)
+void MWAWGraphicInterface::startPage(const ::librevenge::RVNGPropertyList &list)
 {
+  m_state->m_encoder.insertElement("StartPage", list);
 }
 
 void MWAWGraphicInterface::endPage()
 {
+  m_state->m_encoder.insertElement("EndPage");
 }
 
-void MWAWGraphicInterface::setStyle(const ::WPXPropertyList &list, const ::WPXPropertyListVector &gradient)
+void MWAWGraphicInterface::setStyle(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("SetStyle", list, gradient);
-  m_state->m_encoder.endElement("SetStyle");
+  m_state->m_encoder.insertElement("SetStyle", list);
 }
 
-void MWAWGraphicInterface::startLayer(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startLayer(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Layer", list);
+  m_state->m_encoder.insertElement("StartLayer", list);
 }
 
 void MWAWGraphicInterface::endLayer()
 {
-  m_state->m_encoder.endElement("Layer");
+  m_state->m_encoder.insertElement("EndLayer");
 }
 
-void MWAWGraphicInterface::startEmbeddedGraphics(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("EmbeddedGraphics", list);
+  m_state->m_encoder.insertElement("StartEmbeddedGraphics", list);
 }
 
 void MWAWGraphicInterface::endEmbeddedGraphics()
 {
-  m_state->m_encoder.endElement("EmbeddedGraphics");
+  m_state->m_encoder.insertElement("StartEmbeddedGraphics");
 }
 
-void MWAWGraphicInterface::drawRectangle(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::drawRectangle(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Rectangle", list);
-  m_state->m_encoder.endElement("Rectangle");
+  m_state->m_encoder.insertElement("DrawRectangle", list);
 }
 
-void MWAWGraphicInterface::drawEllipse(const ::WPXPropertyList &list)
+void MWAWGraphicInterface::drawEllipse(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("Ellipse", list);
-  m_state->m_encoder.endElement("Ellipse");
+  m_state->m_encoder.insertElement("DrawEllipse", list);
 }
 
-void MWAWGraphicInterface::drawPolygon(const ::WPXPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolygon(const ::librevenge::RVNGPropertyList &vertices)
 {
-  m_state->m_encoder.startElement("Polygon", WPXPropertyList(), vertices);
-  m_state->m_encoder.endElement("Polygon");
+  m_state->m_encoder.insertElement("DrawPolygon", vertices);
 }
 
-void MWAWGraphicInterface::drawPolyline(const ::WPXPropertyListVector &vertices)
+void MWAWGraphicInterface::drawPolyline(const ::librevenge::RVNGPropertyList &vertices)
 {
-  m_state->m_encoder.startElement("Polyline", WPXPropertyList(), vertices);
-  m_state->m_encoder.endElement("Polyline");
+  m_state->m_encoder.insertElement("DrawPolyline", vertices);
 }
 
-void MWAWGraphicInterface::drawPath(const ::WPXPropertyListVector &path)
+void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyList &path)
 {
-  m_state->m_encoder.startElement("Path", WPXPropertyList(), path);
-  m_state->m_encoder.endElement("Path");
+  m_state->m_encoder.insertElement("DrawPath", path);
 }
 
-void MWAWGraphicInterface::drawGraphicObject(const ::WPXPropertyList &list, const ::WPXBinaryData &binaryData)
+void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("GraphicObject", list, binaryData);
-  m_state->m_encoder.endElement("GraphicObject");
+  m_state->m_encoder.insertElement("DrawGraphicObject", list);
 }
 
-void MWAWGraphicInterface::startTextObject(const ::WPXPropertyList &list, const ::WPXPropertyListVector &path)
+void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("TextObject", list, path);
+  m_state->m_encoder.insertElement("StartTextObject", list);
 }
 
 void MWAWGraphicInterface::endTextObject()
 {
-  m_state->m_encoder.endElement("TextObject");
+  m_state->m_encoder.insertElement("EndTextObject");
+}
+
+void MWAWGraphicInterface::startTableObject(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("StartTableObject", list);
+}
+
+void MWAWGraphicInterface::endTableObject()
+{
+  m_state->m_encoder.insertElement("EndTableObject");
+}
+
+void MWAWGraphicInterface::openTableRow(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenTableRow", list);
+}
+
+void MWAWGraphicInterface::closeTableRow()
+{
+  m_state->m_encoder.insertElement("CloseTableRow");
+}
+
+void MWAWGraphicInterface::openTableCell(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenTableCell", list);
+}
+
+void MWAWGraphicInterface::closeTableCell()
+{
+  m_state->m_encoder.insertElement("CloseTableCell");
+}
+
+void MWAWGraphicInterface::insertCoveredTableCell(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("InsertCoveredTableCell", list);
 }
 
 void MWAWGraphicInterface::insertTab()
 {
-  insertText("\t");
+  m_state->m_encoder.insertElement("InsertTab");
 }
 
 void MWAWGraphicInterface::insertSpace()
 {
-  insertText(" ");
+  m_state->m_encoder.insertElement("InsertSpace");
 }
 
-void MWAWGraphicInterface::insertText(const WPXString &text)
+void MWAWGraphicInterface::insertText(const librevenge::RVNGString &text)
 {
   m_state->m_encoder.characters(text.cstr());
 }
 
 void MWAWGraphicInterface::insertLineBreak()
 {
+  m_state->m_encoder.insertElement("InsertLineBreak");
   insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const WPXString &type, const WPXPropertyList &/*list*/)
+void MWAWGraphicInterface::insertField(const librevenge::RVNGPropertyList &list)
 {
-  if (type=="text:title")
-    insertText("#TITLE#");
-  else if (type=="text:page-number")
-    insertText("#P#");
-  else if (type=="text-page-count")
-    insertText("#C#");
-  else {
-    MWAW_DEBUG_MSG(("MWAWGraphicInterface::insertField: find unknown type\n"));
-  }
+  m_state->m_encoder.insertElement("InsertField", list);
 }
 
-void MWAWGraphicInterface::defineOrderedListLevel(const WPXPropertyList &list)
+void MWAWGraphicInterface::openLink(const librevenge::RVNGPropertyList &list)
 {
-  m_state->addListElement(list);
+  m_state->m_encoder.insertElement("OpenLink", list);
 }
 
-void MWAWGraphicInterface::defineUnorderedListLevel(const WPXPropertyList &list)
+void MWAWGraphicInterface::closeLink()
 {
-  m_state->addListElement(list);
+  m_state->m_encoder.insertElement("CloseLink");
 }
 
-void MWAWGraphicInterface::openListElement(const WPXPropertyList &list, const WPXPropertyListVector &tabStops)
+void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
-  openParagraph(list, tabStops);
+  m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
+}
+
+void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
+}
+
+void MWAWGraphicInterface::closeOrderedListLevel()
+{
+  m_state->m_encoder.insertElement("CloseOrderedListLevel");
+}
+
+void MWAWGraphicInterface::closeUnorderedListLevel()
+{
+  m_state->m_encoder.insertElement("CloseOrderedListLevel");
+}
+
+void MWAWGraphicInterface::openListElement(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenListElement", list);
 }
 
 void MWAWGraphicInterface::closeListElement()
 {
-  closeParagraph();
+  m_state->m_encoder.insertElement("CloseListElement");
 }
 
-void MWAWGraphicInterface::openParagraph(const WPXPropertyList &list, const WPXPropertyListVector &)
+void MWAWGraphicInterface::defineParagraphStyle(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("TextLine", list);
+  m_state->m_encoder.insertElement("DefineParagraphStyle", list);
+}
+
+void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenParagraph", list);
 }
 
 void MWAWGraphicInterface::closeParagraph()
 {
-  m_state->m_encoder.endElement("TextLine");
+  m_state->m_encoder.insertElement("CloseParagraph");
 }
 
-void MWAWGraphicInterface::openSpan(const WPXPropertyList &list)
+void MWAWGraphicInterface::defineCharacterStyle(const librevenge::RVNGPropertyList &list)
 {
-  m_state->m_encoder.startElement("TextSpan", list);
+  m_state->m_encoder.insertElement("DefineCharacterStyle", list);
+}
+
+void MWAWGraphicInterface::openSpan(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenSpan", list);
 }
 
 void MWAWGraphicInterface::closeSpan()
 {
-  m_state->m_encoder.endElement("TextSpan");
+  m_state->m_encoder.insertElement("CloseSpan");
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

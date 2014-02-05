@@ -37,29 +37,27 @@
 #include <cmath>
 #include <cstring>
 
-#include <libwpd-stream/libwpd-stream.h>
-#include <libwpd/libwpd.h>
+#include <librevenge-stream/librevenge-stream.h>
+#include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
-#include "MWAWOLEStream.hxx"
-#include "MWAWZipStream.hxx"
 
 #include "MWAWInputStream.hxx"
 
-MWAWInputStream::MWAWInputStream(shared_ptr<WPXInputStream> inp, bool inverted)
+MWAWInputStream::MWAWInputStream(shared_ptr<librevenge::RVNGInputStream> inp, bool inverted)
   : m_stream(inp), m_streamSize(0), m_inverseRead(inverted), m_readLimit(-1), m_prevLimits(),
-    m_fInfoType(""), m_fInfoCreator(""), m_resourceFork(), m_storageOLE()
+    m_fInfoType(""), m_fInfoCreator(""), m_resourceFork()
 {
   updateStreamSize();
 }
 
-MWAWInputStream::MWAWInputStream(WPXInputStream *inp, bool inverted, bool checkCompression)
+MWAWInputStream::MWAWInputStream(librevenge::RVNGInputStream *inp, bool inverted, bool checkCompression)
   : m_stream(), m_streamSize(0), m_inverseRead(inverted), m_readLimit(-1), m_prevLimits(),
-    m_fInfoType(""), m_fInfoCreator(""), m_resourceFork(), m_storageOLE()
+    m_fInfoType(""), m_fInfoCreator(""), m_resourceFork()
 {
   if (!inp) return;
 
-  m_stream = shared_ptr<WPXInputStream>(inp, MWAW_shared_ptr_noop_deleter<WPXInputStream>());
+  m_stream = shared_ptr<librevenge::RVNGInputStream>(inp, MWAW_shared_ptr_noop_deleter<librevenge::RVNGInputStream>());
   updateStreamSize();
   if (!checkCompression)
     return;
@@ -76,28 +74,28 @@ MWAWInputStream::MWAWInputStream(WPXInputStream *inp, bool inverted, bool checkC
   if (unMacMIME())
     updateStreamSize();
   if (m_stream)
-    seek(0, WPX_SEEK_SET);
+    seek(0, librevenge::RVNG_SEEK_SET);
   if (m_resourceFork)
-    m_resourceFork->seek(0, WPX_SEEK_SET);
+    m_resourceFork->seek(0, librevenge::RVNG_SEEK_SET);
 }
 
 MWAWInputStream::~MWAWInputStream()
 {
 }
 
-shared_ptr<MWAWInputStream> MWAWInputStream::get(WPXBinaryData const &data, bool inverted)
+shared_ptr<MWAWInputStream> MWAWInputStream::get(librevenge::RVNGBinaryData const &data, bool inverted)
 {
   shared_ptr<MWAWInputStream> res;
   if (!data.size())
     return res;
-  WPXInputStream *dataStream = const_cast<WPXInputStream *>(data.getDataStream());
+  librevenge::RVNGInputStream *dataStream = const_cast<librevenge::RVNGInputStream *>(data.getDataStream());
   if (!dataStream) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::get: can not retrieve a WPXInputStream\n"));
+    MWAW_DEBUG_MSG(("MWAWInputStream::get: can not retrieve a librevenge::RVNGInputStream\n"));
     return res;
   }
   res.reset(new MWAWInputStream(dataStream, inverted));
   if (res && res->size()>=(long) data.size()) {
-    res->seek(0, WPX_SEEK_SET);
+    res->seek(0, librevenge::RVNG_SEEK_SET);
     return res;
   }
   MWAW_DEBUG_MSG(("MWAWInputStream::get: the final stream seems bad\n"));
@@ -111,9 +109,9 @@ void MWAWInputStream::updateStreamSize()
     m_streamSize=0;
   else {
     long actPos = tell();
-    m_stream->seek(0, WPX_SEEK_END);
+    m_stream->seek(0, librevenge::RVNG_SEEK_END);
     m_streamSize=tell();
-    m_stream->seek(actPos, WPX_SEEK_SET);
+    m_stream->seek(actPos, librevenge::RVNG_SEEK_SET);
   }
 }
 
@@ -131,7 +129,7 @@ long MWAWInputStream::tell()
   return m_stream->tell();
 }
 
-int MWAWInputStream::seek(long offset, WPX_SEEK_TYPE seekType)
+int MWAWInputStream::seek(long offset, librevenge::RVNG_SEEK_TYPE seekType)
 {
   if (!hasDataFork()) {
     if (offset == 0)
@@ -139,9 +137,9 @@ int MWAWInputStream::seek(long offset, WPX_SEEK_TYPE seekType)
     throw libmwaw::FileException();
   }
 
-  if (seekType == WPX_SEEK_CUR)
+  if (seekType == librevenge::RVNG_SEEK_CUR)
     offset += tell();
-  else if (seekType==WPX_SEEK_END)
+  else if (seekType==librevenge::RVNG_SEEK_END)
     offset += m_streamSize;
 
   if (offset < 0)
@@ -151,10 +149,10 @@ int MWAWInputStream::seek(long offset, WPX_SEEK_TYPE seekType)
   if (offset > size())
     offset = size();
 
-  return m_stream->seek(offset, WPX_SEEK_SET);
+  return m_stream->seek(offset, librevenge::RVNG_SEEK_SET);
 }
 
-bool MWAWInputStream::atEOS()
+bool MWAWInputStream::isEnd()
 {
   if (!hasDataFork())
     return true;
@@ -162,17 +160,17 @@ bool MWAWInputStream::atEOS()
   if (m_readLimit > 0 && pos >= m_readLimit) return true;
   if (pos >= size()) return true;
 
-  return m_stream->atEOS();
+  return m_stream->isEnd();
 }
 
-unsigned long MWAWInputStream::readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead)
+unsigned long MWAWInputStream::readULong(librevenge::RVNGInputStream *stream, int num, unsigned long a, bool inverseRead)
 {
-  if (!stream || num == 0 || stream->atEOS()) return a;
+  if (!stream || num == 0 || stream->isEnd()) return a;
   if (inverseRead) {
     unsigned long val = readU8(stream);
     return val + (readULong(stream, num-1,0, inverseRead) << 8);
   }
-  switch(num) {
+  switch (num) {
   case 4:
   case 2:
   case 1: {
@@ -180,7 +178,7 @@ unsigned long MWAWInputStream::readULong(WPXInputStream *stream, int num, unsign
     uint8_t const *p = stream->read((unsigned long) num, numBytesRead);
     if (!p || int(numBytesRead) != num)
       return 0;
-    switch(num) {
+    switch (num) {
     case 4:
       return (unsigned long)p[3]|((unsigned long)p[2]<<8)|
              ((unsigned long)p[1]<<16)|((unsigned long)p[0]<<24)|((a<<16)<<16);
@@ -216,7 +214,7 @@ long MWAWInputStream::readLong(int num)
   return v | long(0xFFFFFFFF << 8*num);
 }
 
-uint8_t MWAWInputStream::readU8(WPXInputStream *stream)
+uint8_t MWAWInputStream::readU8(librevenge::RVNGInputStream *stream)
 {
   if (!stream)
     return 0;
@@ -229,7 +227,49 @@ uint8_t MWAWInputStream::readU8(WPXInputStream *stream)
   return *(uint8_t const *)(p);
 }
 
-bool MWAWInputStream::readDouble(double &res, bool &isNotANumber)
+bool MWAWInputStream::readDouble8(double &res, bool &isNotANumber)
+{
+  if (!m_stream) return false;
+  long pos=tell();
+  if (m_readLimit > 0 && pos+8 > m_readLimit) return false;
+  if (pos+8 > m_streamSize) return false;
+
+  isNotANumber=false;
+  res=0;
+  int mantExp=int(readULong(1));
+  int val=(int) readULong(1);
+  int exp=(mantExp<<4)+(val>>4);
+  double mantisse=double(val&0xF)/16.;
+  double factor=1./256.;
+  for (int j = 0; j < 6; ++j, factor/=256)
+    mantisse+=(double)readULong(1)*factor;
+  int sign = 1;
+  if (exp & 0x800) {
+    exp &= 0x7ff;
+    sign = -1;
+  }
+  if (exp == 0) {
+    if (mantisse <= 1.e-5 || mantisse >= 1-1.e-5)
+      return true;
+    // a Nan representation ?
+    return false;
+  }
+  if (exp == 0x7FF) {
+    if (mantisse >= 1.-1e-5) {
+      isNotANumber=true;
+      res=std::numeric_limits<double>::quiet_NaN();
+      return true; // ok 0x7FF and 0xFFF are nan
+    }
+    return false;
+  }
+  exp -= 0x3ff;
+  res = std::ldexp(1.+mantisse, exp);
+  if (sign == -1)
+    res *= -1.;
+  return true;
+}
+
+bool MWAWInputStream::readDouble10(double &res, bool &isNotANumber)
 {
   if (!m_stream) return false;
   long pos=tell();
@@ -246,22 +286,26 @@ bool MWAWInputStream::readDouble(double &res, bool &isNotANumber)
 
   isNotANumber=false;
   unsigned long mantisse = (unsigned long) readULong(4);
-  if ((mantisse & 0x80000000) == 0) {
+  if ((mantisse & 0x80000001) == 0) {
     if (readULong(4) != 0) return false;
 
-    if (exp == -0x3fff && mantisse == 0) return true; // ok zero
+    if (exp == -0x3fff && mantisse == 0) {
+      res=0;
+      return true; // ok zero
+    }
     if (exp == 0x4000 && (mantisse & 0xFFFFFFL)==0) { // ok Nan
-      res=std::numeric_limits<double>::quiet_NaN();
       isNotANumber = true;
+      res=std::numeric_limits<double>::quiet_NaN();
       return true;
     }
     return false;
   }
-  res = std::ldexp(double(mantisse)/double(0x80000000), exp);
+  double value=double(mantisse);
+  value+=double(readULong(4))/65536./65536.;
+  res = std::ldexp(value/double(0x80000000), exp);
   if (sign == -1) {
     res *= -1.;
   }
-  seek(4, WPX_SEEK_CUR);
   return true;
 }
 
@@ -275,23 +319,23 @@ bool MWAWInputStream::unBinHex()
   if (!hasDataFork() || size() < 45)
     return false;
   // check header
-  seek(0, WPX_SEEK_SET);
+  seek(0, librevenge::RVNG_SEEK_SET);
   unsigned long nRead;
   char const *str=(char const *) read(45,nRead);
   if (str==0 || nRead!=45
       || strncmp(str, "(This file must be converted with BinHex 4.0)",45))
     return false;
   int numEOL = 0;
-  while (!atEOS()) {
+  while (!isEnd()) {
     char c = (char) readLong(1);
     if (c == '\n') {
       numEOL++;
       continue;
     }
-    seek(-1, WPX_SEEK_CUR);
+    seek(-1, librevenge::RVNG_SEEK_CUR);
     break;
   }
-  if (atEOS() || !numEOL || ((char)readLong(1))!= ':')
+  if (isEnd() || !numEOL || ((char)readLong(1))!= ':')
     return false;
 
   // first phase reconstruct the file
@@ -300,10 +344,10 @@ bool MWAWInputStream::unBinHex()
   for (int i = 0; i < 64; i++) binMap[(unsigned char)binChar[i]]=i;
   bool endData = false;
   int numActByte = 0, actVal = 0;
-  WPXBinaryData content;
+  librevenge::RVNGBinaryData content;
   bool findRepetitif = false;
   while (1) {
-    if (atEOS()) {
+    if (isEnd()) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: do not find ending ':' character\n"));
       return false;
     }
@@ -315,7 +359,8 @@ bool MWAWInputStream::unBinHex()
     else if (binMap.find(c) == binMap.end()) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: find unexpected char when decoding file\n"));
       return false;
-    } else
+    }
+    else
       readVal = binMap.find(c)->second;
     int wVal = -1;
     if (numActByte==0)
@@ -323,10 +368,12 @@ bool MWAWInputStream::unBinHex()
     else if (numActByte==2) {
       wVal = (actVal | readVal);
       actVal = 0;
-    } else if (numActByte==4) {
+    }
+    else if (numActByte==4) {
       wVal = actVal | ((readVal>>2)&0xF);
       actVal = (readVal&0x3)<<6;
-    } else if (numActByte==6) {
+    }
+    else if (numActByte==6) {
       wVal = actVal | ((readVal>>4)&0x3);
       actVal = (readVal&0xf)<<4;
     }
@@ -374,13 +421,13 @@ bool MWAWInputStream::unBinHex()
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the content file is too small\n"));
     return false;
   }
-  WPXInputStream *contentInput=const_cast<WPXInputStream *>(content.getDataStream());
+  librevenge::RVNGInputStream *contentInput=const_cast<librevenge::RVNGInputStream *>(content.getDataStream());
   int fileLength = (int)  readU8(contentInput);
   if (fileLength < 1 || fileLength > 64 || long(fileLength+21) > contentSize) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the file name size seems odd\n"));
     return false;
   }
-  contentInput->seek(fileLength+1, WPX_SEEK_CUR); // filename + version
+  contentInput->seek(fileLength+1, librevenge::RVNG_SEEK_CUR); // filename + version
   // creator, type
   std::string type(""), creator("");
   for (int p = 0; p < 4; p++) {
@@ -396,10 +443,11 @@ bool MWAWInputStream::unBinHex()
   if (creator.length()==4 && type.length()==4) {
     m_fInfoType = type;
     m_fInfoCreator = creator;
-  } else if (creator.length() || type.length()) {
+  }
+  else if (creator.length() || type.length()) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: the file name size seems odd\n"));
   }
-  contentInput->seek(2, WPX_SEEK_CUR); // skip flags
+  contentInput->seek(2, librevenge::RVNG_SEEK_CUR); // skip flags
   long dataLength = (long) readULong(contentInput,4,0,false);
   long rsrcLength = (long) readULong(contentInput,4,0,false);
   long pos = contentInput->tell()+2; // skip CRC
@@ -411,22 +459,24 @@ bool MWAWInputStream::unBinHex()
   // now read the rsrc and the data fork
   if (rsrcLength && getResourceForkStream()) {
     MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: I already have a resource fork!!!!\n"));
-  } else if (rsrcLength) {
-    contentInput->seek(pos+dataLength+2, WPX_SEEK_SET);
+  }
+  else if (rsrcLength) {
+    contentInput->seek(pos+dataLength+2, librevenge::RVNG_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *data =
       contentInput->read((unsigned long)rsrcLength, numBytesRead);
     if (numBytesRead != (unsigned long)rsrcLength || !data) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the resource fork\n"));
-    } else {
-      shared_ptr<WPXInputStream> rsrc(new MWAWStringStream(data, numBytesRead));
+    }
+    else {
+      shared_ptr<librevenge::RVNGInputStream> rsrc(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
       m_resourceFork.reset(new MWAWInputStream(rsrc,false));
     }
   }
   if (!dataLength)
     m_stream.reset();
   else {
-    contentInput->seek(pos, WPX_SEEK_SET);
+    contentInput->seek(pos, librevenge::RVNG_SEEK_SET);
     unsigned long numBytesRead = 0;
     const unsigned char *data =
       contentInput->read((unsigned long)dataLength, numBytesRead);
@@ -434,7 +484,7 @@ bool MWAWInputStream::unBinHex()
       MWAW_DEBUG_MSG(("MWAWInputStream::unBinHex: can not read the data fork\n"));
       return false;
     }
-    m_stream.reset(new MWAWStringStream(data, numBytesRead));
+    m_stream.reset(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
   }
 
   return true;
@@ -447,25 +497,24 @@ bool MWAWInputStream::unBinHex()
 ////////////////////////////////////////////////////////////
 bool MWAWInputStream::unzipStream()
 {
-#if !defined(USE_ZIP)
-  return false;
-#else
-  if (!hasDataFork()) return false;
-  seek(0, WPX_SEEK_SET);
-  MWAWZipStream zStream(m_stream.get());
-  bool zipFile = zStream.isZipStream();
-  if (!zipFile) return false;
-
-  seek(0, WPX_SEEK_SET);
-  std::vector<std::string> names = zStream.getZipNames();
+  if (!isStructured()) return false;
+  seek(0, librevenge::RVNG_SEEK_SET);
+  unsigned numStream=m_stream->subStreamCount();
+  std::vector<std::string> names;
+  for (unsigned n=0; n < numStream; ++n) {
+    char const *nm=m_stream->subStreamName(n);
+    if (!nm) continue;
+    std::string name(nm);
+    if (name.empty() || name[name.length()-1]=='/') continue;
+    names.push_back(nm);
+  }
   if (names.size() == 1) {
-    m_stream.reset(zStream.getDocumentZipStream(names[0]));
+    // ok as the OLE file must have at least MN and MN0 OLE
+    m_stream.reset(m_stream->getSubStreamByName(names[0].c_str()));
     return true;
   }
-  if (names.size() != 2) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::unzipStream:find a zip file with bad number of entries\n"));
+  if (names.size() != 2)
     return false;
-  }
   // test if XXX and ._XXX or __MACOSX/._XXX
   if (names[1].length() < names[0].length()) {
     std::string tmp = names[1];
@@ -479,15 +528,11 @@ bool MWAWInputStream::unzipStream()
   else if (names[1].length()==length+11)
     prefix = "__MACOSX/._";
   prefix += names[0];
-  if (prefix != names[1]) {
-    MWAW_DEBUG_MSG(("MWAWInputStream::unzipStream: find a zip file with unknown two entries %s %s\n", names[0].c_str(), names[1].c_str()));
-    return false;
-  }
-  shared_ptr<WPXInputStream> rsrcPtr(zStream.getDocumentZipStream(names[1]));
+  if (prefix != names[1]) return false;
+  shared_ptr<librevenge::RVNGInputStream> rsrcPtr(m_stream->getSubStreamByName(names[1].c_str()));
   m_resourceFork.reset(new MWAWInputStream(rsrcPtr,false));
-  m_stream.reset(zStream.getDocumentZipStream(names[0]));
+  m_stream.reset(m_stream->getSubStreamByName(names[0].c_str()));
   return true;
-#endif
 }
 
 ////////////////////////////////////////////////////////////
@@ -498,7 +543,7 @@ bool MWAWInputStream::unzipStream()
 bool MWAWInputStream::unMacMIME()
 {
   if (m_resourceFork) {
-    shared_ptr<WPXInputStream> newDataInput, newRsrcInput;
+    shared_ptr<librevenge::RVNGInputStream> newDataInput, newRsrcInput;
     bool ok = unMacMIME(m_resourceFork.get(), newDataInput, newRsrcInput);
     if (ok && newDataInput) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: Argh!!! find data stream in the resource block\n"));
@@ -511,7 +556,7 @@ bool MWAWInputStream::unMacMIME()
   }
 
   if (m_stream) {
-    shared_ptr<WPXInputStream> newDataInput, newRsrcInput;
+    shared_ptr<librevenge::RVNGInputStream> newDataInput, newRsrcInput;
     bool ok = unMacMIME(this, newDataInput, newRsrcInput);
     if (ok && !newDataInput) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: Argh!!! data block contains only resources\n"));
@@ -522,7 +567,8 @@ bool MWAWInputStream::unMacMIME()
       if (newRsrcInput) {
         if (m_resourceFork) {
           MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: Oops!!! find a second resource block, ignored\n"));
-        } else
+        }
+        else
           m_resourceFork.reset(new MWAWInputStream(newRsrcInput,false));
       }
     }
@@ -533,15 +579,15 @@ bool MWAWInputStream::unMacMIME()
 /* freely inspired from http://tools.ietf.org/html/rfc1740#appendix-A
  */
 bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
-                                shared_ptr<WPXInputStream> &dataInput,
-                                shared_ptr<WPXInputStream> &rsrcInput) const
+                                shared_ptr<librevenge::RVNGInputStream> &dataInput,
+                                shared_ptr<librevenge::RVNGInputStream> &rsrcInput) const
 {
   dataInput.reset();
   rsrcInput.reset();
   if (!inp || !inp->hasDataFork() || inp->size()<26) return false;
 
   try {
-    inp->seek(0, WPX_SEEK_SET);
+    inp->seek(0, librevenge::RVNG_SEEK_SET);
     long magicNumber = (long) inp->readULong(4);
     if (magicNumber != 0x00051600 && magicNumber != 0x00051607)
       return false;
@@ -550,9 +596,9 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: unknown version: %lx\n", version));
       return false;
     }
-    inp->seek(16, WPX_SEEK_CUR); // filename
+    inp->seek(16, librevenge::RVNG_SEEK_CUR); // filename
     long numEntries = (long) inp->readULong(2);
-    if (inp->atEOS() || numEntries <= 0) {
+    if (inp->isEnd() || numEntries <= 0) {
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read number of entries\n"));
       return false;
     }
@@ -566,13 +612,13 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
     for (int i = 0; i < numEntries; i++) {
       long pos = inp->tell();
       int wh = (int) inp->readULong(4);
-      if (wh <= 0 || wh >= 16 || inp->atEOS()) {
+      if (wh <= 0 || wh >= 16 || inp->isEnd()) {
         MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: find unknown id: %d\n", wh));
         return false;
       }
       MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: find %s entry\n", what[wh]));
       if (wh > 2 && wh != 9) {
-        inp->seek(8, WPX_SEEK_CUR);
+        inp->seek(8, librevenge::RVNG_SEEK_CUR);
         continue;
       }
       long entryPos = (long) inp->readULong(4);
@@ -586,7 +632,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
         return false;
       }
       /* try to read the data */
-      inp->seek(entryPos, WPX_SEEK_SET);
+      inp->seek(entryPos, librevenge::RVNG_SEEK_SET);
       if (inp->tell() != entryPos) {
         MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not seek entry pos %lx\n", entryPos));
         return false;
@@ -598,13 +644,14 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
         return false;
       }
       if (wh==1)
-        dataInput.reset(new MWAWStringStream(data, numBytesRead));
+        dataInput.reset(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
       else if (wh==2)
-        rsrcInput.reset(new MWAWStringStream(data, numBytesRead));
+        rsrcInput.reset(new librevenge::RVNGStringStream(data, (unsigned int)numBytesRead));
       else { // the finder info
         if (entrySize < 8) {
           MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: finder info size is odd\n"));
-        } else {
+        }
+        else {
           bool ok = true;
           std::string type(""), creator("");
           for (int p = 0; p < 4; p++) {
@@ -624,15 +671,17 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
           if (ok) {
             m_fInfoType = type;
             m_fInfoCreator = creator;
-          } else if (type.length()) {
+          }
+          else if (type.length()) {
             MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read find info\n"));
           }
         }
       }
 
-      inp->seek(pos+12, WPX_SEEK_SET);
+      inp->seek(pos+12, librevenge::RVNG_SEEK_SET);
     }
-  } catch (...) {
+  }
+  catch (...) {
     return false;
   }
   return true;
@@ -644,27 +693,50 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
 //
 ////////////////////////////////////////////////////////////
 
-bool MWAWInputStream::isOLEStream()
+bool MWAWInputStream::isStructured()
 {
-  if (!createStorageOLE()) return false;
-  return m_storageOLE->isStructuredDocument();
+  if (!m_stream) return false;
+  long pos=m_stream->tell();
+  bool ok=m_stream->isStructured();
+  m_stream->seek(pos, librevenge::RVNG_SEEK_SET);
+  return ok;
 }
 
-std::vector<std::string> MWAWInputStream::getOLENames()
+unsigned MWAWInputStream::subStreamCount()
 {
-  if (!createStorageOLE()) return std::vector<std::string>();
-  return m_storageOLE->getSubStreamList();
+  if (!m_stream || !m_stream->isStructured()) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::subStreamCount: called on unstructured file\n"));
+    return 0;
+  }
+  return m_stream->subStreamCount();
 }
 
-shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string name)
+std::string MWAWInputStream::subStreamName(unsigned id)
+{
+  if (!m_stream || !m_stream->isStructured()) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::subStreamName: called on unstructured file\n"));
+    return std::string("");
+  }
+  char const *nm=m_stream->subStreamName(id);
+  if (!nm) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::subStreamName: can not find stream %d\n", int(id)));
+    return std::string("");
+  }
+  return std::string(nm);
+}
+
+shared_ptr<MWAWInputStream> MWAWInputStream::getSubStreamByName(std::string const &name)
 {
   static shared_ptr<MWAWInputStream> empty;
-  if (!createStorageOLE()) return empty;
+  if (!m_stream || !m_stream->isStructured() || name.empty()) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::getSubStreamByName: called on unstructured file\n"));
+    return empty;
+  }
 
   long actPos = tell();
-  seek(0, WPX_SEEK_SET);
-  shared_ptr<WPXInputStream> res(m_storageOLE->getSubStream(name));
-  seek(actPos, WPX_SEEK_SET);
+  seek(0, librevenge::RVNG_SEEK_SET);
+  shared_ptr<librevenge::RVNGInputStream> res(m_stream->getSubStreamByName(name.c_str()));
+  seek(actPos, librevenge::RVNG_SEEK_SET);
 
   if (!res)
     return empty;
@@ -672,17 +744,23 @@ shared_ptr<MWAWInputStream> MWAWInputStream::getDocumentOLEStream(std::string na
   return inp;
 }
 
-bool MWAWInputStream::createStorageOLE()
+shared_ptr<MWAWInputStream> MWAWInputStream::getSubStreamById(unsigned id)
 {
-  if (m_storageOLE) return true;
-  if (!hasDataFork()) return false;
+  static shared_ptr<MWAWInputStream> empty;
+  if (!m_stream || !m_stream->isStructured()) {
+    MWAW_DEBUG_MSG(("MWAWInputStream::getSubStreamById: called on unstructured file\n"));
+    return empty;
+  }
 
   long actPos = tell();
-  seek(0, WPX_SEEK_SET);
-  m_storageOLE.reset(new libmwawOLE::Storage(m_stream));
-  seek(actPos, WPX_SEEK_SET);
+  seek(0, librevenge::RVNG_SEEK_SET);
+  shared_ptr<librevenge::RVNGInputStream> res(m_stream->getSubStreamById(id));
+  seek(actPos, librevenge::RVNG_SEEK_SET);
 
-  return bool(m_storageOLE);
+  if (!res)
+    return empty;
+  shared_ptr<MWAWInputStream> inp(new MWAWInputStream(res,m_inverseRead));
+  return inp;
 }
 
 ////////////////////////////////////////////////////////////
@@ -691,7 +769,7 @@ bool MWAWInputStream::createStorageOLE()
 //
 ////////////////////////////////////////////////////////////
 
-bool MWAWInputStream::readDataBlock(long sz, WPXBinaryData &data)
+bool MWAWInputStream::readDataBlock(long sz, librevenge::RVNGBinaryData &data)
 {
   if (!hasDataFork()) return false;
 
@@ -710,7 +788,7 @@ bool MWAWInputStream::readDataBlock(long sz, WPXBinaryData &data)
   return true;
 }
 
-bool MWAWInputStream::readEndDataBlock(WPXBinaryData &data)
+bool MWAWInputStream::readEndDataBlock(librevenge::RVNGBinaryData &data)
 {
   data.clear();
   if (!hasDataFork()) return false;
@@ -719,56 +797,4 @@ bool MWAWInputStream::readEndDataBlock(WPXBinaryData &data)
   return readDataBlock(endPos-tell(), data);
 }
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-MWAWStringStream::MWAWStringStream(const unsigned char *data, const unsigned long dataSize) :
-  m_buffer(dataSize), m_offset(0)
-{
-  memcpy(&m_buffer[0], data, dataSize);
-}
-
-int MWAWStringStream::seek(long _offset, WPX_SEEK_TYPE seekType)
-{
-  if (seekType == WPX_SEEK_CUR)
-    m_offset += _offset;
-  else if (seekType == WPX_SEEK_SET)
-    m_offset = _offset;
-  else if (seekType == WPX_SEEK_END)
-    m_offset = (long)m_buffer.size()+_offset;
-
-  if (m_offset < 0) {
-    m_offset = 0;
-    return 1;
-  }
-  if (m_offset > (long)m_buffer.size()) {
-    m_offset = (long) m_buffer.size();
-    return 1;
-  }
-  return 0;
-}
-
-const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned long &numBytesRead)
-{
-  numBytesRead = 0;
-
-  if (numBytes == 0)
-    return 0;
-
-  unsigned long numBytesToRead;
-
-  if (((unsigned long)m_offset+numBytes) < m_buffer.size())
-    numBytesToRead = numBytes;
-  else
-    numBytesToRead = (unsigned long) ((long)m_buffer.size() - m_offset);
-
-  numBytesRead = numBytesToRead; // about as paranoid as we can be..
-
-  if (numBytesToRead == 0)
-    return 0;
-
-  long oldOffset = m_offset;
-  m_offset += numBytesToRead;
-
-  return &m_buffer[size_t(oldOffset)];
-}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

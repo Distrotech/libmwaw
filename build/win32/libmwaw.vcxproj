@@ -44,7 +44,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(LIBWPG_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\inc;$(LIBREVENGE_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -63,7 +63,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <OutputFile>Release\lib\libmwaw-0.2.lib</OutputFile>
+      <OutputFile>Release\lib\libmwaw-0.3.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -74,7 +74,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\inc;$(LIBWPD_INCLUDE_DIR);$(LIBWPG_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\inc;$(LIBREVENGE_INCLUDE_DIR);$(BOOST_INCLUDE_DIR);$(ZLIB_INCLUDE_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -93,7 +93,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Lib>
-      <OutputFile>Debug\lib\libmwaw-0.2.lib</OutputFile>
+      <OutputFile>Debug\lib\libmwaw-0.3.lib</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
     <Bscmake>
@@ -102,215 +102,239 @@
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\lib\ACParser.cxx">
+    <ClCompile Include="..\..\src\lib\ActaParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\ACText.cxx">
+    <ClCompile Include="..\..\src\lib\ActaText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWParser.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\BWText.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWDatabase.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksStructManager.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWDbaseContent.cxx">
+    <ClCompile Include="..\..\src\lib\BeagleWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksDatabase.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWParser.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksDbaseContent.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWPresentation.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksDocument.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWSpreadsheet.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWStruct.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWStyleManager.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksPresentation.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWTable.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksSpreadsheet.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\CWText.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\DMParser.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\DMText.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksStyleManager.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\EDParser.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksTable.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\FWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\ClarisWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\FWParser.cxx">
+    <ClCompile Include="..\..\src\lib\DocMkrParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\FWStruct.cxx">
+    <ClCompile Include="..\..\src\lib\DocMkrText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\FWText.cxx">
+    <ClCompile Include="..\..\src\lib\EDocParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\GWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\FullWrtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\GWParser.cxx">
+    <ClCompile Include="..\..\src\lib\FullWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\GWText.cxx">
+    <ClCompile Include="..\..\src\lib\FullWrtStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJGraph.cxx">
+    <ClCompile Include="..\..\src\lib\FullWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJParser.cxx">
+    <ClCompile Include="..\..\src\lib\GreatWksGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWJText.cxx">
+    <ClCompile Include="..\..\src\lib\GreatWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKGraph.cxx">
+    <ClCompile Include="..\..\src\lib\GreatWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKParser.cxx">
+    <ClCompile Include="..\..\src\lib\GreatWksText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\HMWKText.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWParser.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdJText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\LWText.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MCDParser.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MDWParser.cxx">
+    <ClCompile Include="..\..\src\lib\HanMacWrdKText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MORParser.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MORText.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWGraph.cxx">
+    <ClCompile Include="..\..\src\lib\LightWayTxtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacDocParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MRWText.cxx">
+    <ClCompile Include="..\..\src\lib\MindWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK3Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MoreParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK3Text.cxx">
+    <ClCompile Include="..\..\src\lib\MoreText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Text.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSK4Zone.cxx">
+    <ClCompile Include="..\..\src\lib\MarinerWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKGraph.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks3Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKParser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks3Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSKTable.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Parser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSW1Parser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MsWks4Zone.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWStruct.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWText.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MSWTextStyles.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksTable.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWksZone.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWrd1Parser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWrdParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWrdStruct.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWrdText.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lib\MsWrdTextStyles.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -318,7 +342,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWContentListener.cxx">
+    <ClCompile Include="..\..\src\lib\MWAWChart.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -374,10 +398,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWOLEStream.cxx">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWPageSpan.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -418,6 +438,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MWAWSpreadsheetListener.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWSubDocument.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -426,59 +450,59 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWZipStream.cxx">
+    <ClCompile Include="..\..\src\lib\MWAWTextListener.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWProParser.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtProParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWProStructures.cxx">
+    <ClCompile Include="..\..\src\lib\MacWrtProStructures.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSGraph.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtGraph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSParser.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSStruct.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtStruct.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\NSText.cxx">
+    <ClCompile Include="..\..\src\lib\NisusWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\TTParser.cxx">
+    <ClCompile Include="..\..\src\lib\TeachTxtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WNParser.cxx">
+    <ClCompile Include="..\..\src\lib\WriteNowParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WNText.cxx">
+    <ClCompile Include="..\..\src\lib\WriteNowText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\WPParser.cxx">
+    <ClCompile Include="..\..\src\lib\WriterPlsParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\ZWParser.cxx">
+    <ClCompile Include="..\..\src\lib\ZWrtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\ZWText.cxx">
+    <ClCompile Include="..\..\src\lib\ZWrtText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -490,61 +514,67 @@
   <ItemGroup>
     <ClInclude Include="..\..\inc\libmwaw\libmwaw.hxx" />
     <ClInclude Include="..\..\inc\libmwaw\MWAWDocument.hxx" />
-    <ClInclude Include="..\..\src\lib\ACParser.hxx" />
-    <ClInclude Include="..\..\src\lib\ACText.hxx" />
-    <ClInclude Include="..\..\src\lib\BWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\BWText.hxx" />
-    <ClInclude Include="..\..\src\lib\CWDatabase.hxx" />
-    <ClInclude Include="..\..\src\lib\CWDbaseContent.hxx" />
-    <ClInclude Include="..\..\src\lib\CWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\CWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\CWPresentation.hxx" />
-    <ClInclude Include="..\..\src\lib\CWSpreadsheet.hxx" />
-    <ClInclude Include="..\..\src\lib\CWStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\CWStyleManager.hxx" />
-    <ClInclude Include="..\..\src\lib\CWTable.hxx" />
-    <ClInclude Include="..\..\src\lib\CWText.hxx" />
-    <ClInclude Include="..\..\src\lib\DMParser.hxx" />
-    <ClInclude Include="..\..\src\lib\DMText.hxx" />
-    <ClInclude Include="..\..\src\lib\EDParser.hxx" />
-    <ClInclude Include="..\..\src\lib\FWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\FWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\FWStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\FWText.hxx" />
-    <ClInclude Include="..\..\src\lib\GWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\GWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\GWText.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJParser.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWJText.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKParser.hxx" />
-    <ClInclude Include="..\..\src\lib\HMWKText.hxx" />
-    <ClInclude Include="..\..\src\lib\LWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\LWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\LWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MCDParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MDWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MORParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MORText.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MRWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK3Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK3Text.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Text.hxx" />
-    <ClInclude Include="..\..\src\lib\MSK4Zone.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSKTable.hxx" />
-    <ClInclude Include="..\..\src\lib\MSW1Parser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWText.hxx" />
-    <ClInclude Include="..\..\src\lib\MSWTextStyles.hxx" />
+    <ClInclude Include="..\..\src\lib\ActaParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ActaText.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksSSParser.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksStructManager.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksText.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksDatabase.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksDbaseContent.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksDocument.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksPresentation.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksSpreadsheet.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksSSParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksStyleManager.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksTable.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksText.hxx" />
+    <ClInclude Include="..\..\src\lib\DocMkrParser.hxx" />
+    <ClInclude Include="..\..\src\lib\DocMkrText.hxx" />
+    <ClInclude Include="..\..\src\lib\EDocParser.hxx" />
+    <ClInclude Include="..\..\src\lib\FullWrtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\FullWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\FullWrtStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\FullWrtText.hxx" />
+    <ClInclude Include="..\..\src\lib\GreatWksGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\GreatWksParser.hxx" />
+    <ClInclude Include="..\..\src\lib\GreatWksSSParser.hxx" />
+    <ClInclude Include="..\..\src\lib\GreatWksText.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJParser.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdJText.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKParser.hxx" />
+    <ClInclude Include="..\..\src\lib\HanMacWrdKText.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\LightWayTxtText.hxx" />
+    <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MindWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MoreParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MoreText.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MarinerWrtText.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks3Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks3Text.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Text.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWks4Zone.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksSSParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksTable.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksZone.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrd1Parser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdText.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWrdTextStyles.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWCell.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWContentListener.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWChart.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWDebug.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWEntry.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWFont.hxx" />
@@ -559,7 +589,6 @@
     <ClInclude Include="..\..\src\lib\MWAWList.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWOLEParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWOLEStream.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWPageSpan.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWParagraph.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWParser.hxx" />
@@ -572,23 +601,24 @@
     <ClInclude Include="..\..\src\lib\MWAWPropertyHandler.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWRSRCParser.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSection.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWSpreadsheetListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSubDocument.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTable.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWZipStream.hxx" />
-    <ClInclude Include="..\..\src\lib\MWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MWProParser.hxx" />
-    <ClInclude Include="..\..\src\lib\MWProStructures.hxx" />
-    <ClInclude Include="..\..\src\lib\NSGraph.hxx" />
-    <ClInclude Include="..\..\src\lib\NSParser.hxx" />
-    <ClInclude Include="..\..\src\lib\NSStruct.hxx" />
-    <ClInclude Include="..\..\src\lib\NSText.hxx" />
-    <ClInclude Include="..\..\src\lib\TTParser.hxx" />
-    <ClInclude Include="..\..\src\lib\WNEntry.hxx" />
-    <ClInclude Include="..\..\src\lib\WNParser.hxx" />
-    <ClInclude Include="..\..\src\lib\WNText.hxx" />
-    <ClInclude Include="..\..\src\lib\WPParser.hxx" />
-    <ClInclude Include="..\..\src\lib\ZWParser.hxx" />
-    <ClInclude Include="..\..\src\lib\ZWText.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWTextListener.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtProParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacWrtProStructures.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtGraph.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtStruct.hxx" />
+    <ClInclude Include="..\..\src\lib\NisusWrtText.hxx" />
+    <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowEntry.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowParser.hxx" />
+    <ClInclude Include="..\..\src\lib\WriteNowText.hxx" />
+    <ClInclude Include="..\..\src\lib\WriterPlsParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ZWrtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\ZWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\libmwaw_internal.hxx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

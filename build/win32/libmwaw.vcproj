@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(LIBWPG_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Release\lib\libmwaw-0.2.lib"
+				OutputFile="Release\lib\libmwaw-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -116,7 +116,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\inc,$(LIBWPD_INCLUDE_DIR),$(LIBWPG_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
+				AdditionalIncludeDirectories="..\..\inc,$(LIBREVENGE_INCLUDE_DIR),$(BOOST_INCLUDE_DIR),$(ZLIB_INCLUDE_DIR)"
 				PreprocessorDefinitions="_DEBUG;DEBUG;WIN32;_LIB;_CRT_SECURE_NO_WARNINGS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -143,7 +143,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="Debug\lib\libmwaw-0.2.lib"
+				OutputFile="Debug\lib\libmwaw-0.3.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -173,122 +173,142 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\..\src\lib\ACParser.cxx"
+				RelativePath="..\..\src\lib\ActaParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ACText.cxx"
+				RelativePath="..\..\src\lib\ActaText.cxx"
 				>
 			<File
-				RelativePath="..\..\src\lib\BWParser.cxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\BWText.cxx"
+				RelativePath="..\..\src\lib\BeagleWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDatabase.cxx"
+				RelativePath="..\..\src\lib\BeagleWksSSParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDbaseContent.cxx"
+				RelativePath="..\..\src\lib\BeagleWksStructManager.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWGraph.cxx"
+				RelativePath="..\..\src\lib\BeagleWksText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWParser.cxx"
+				RelativePath="..\..\src\lib\ClarisWksDatabase.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWPresentation.cxx"
+				RelativePath="..\..\src\lib\ClarisWksDbaseContent.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWSpreadsheet.cxx"
+				RelativePath="..\..\src\lib\ClarisWksDocument.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStruct.cxx"
+				RelativePath="..\..\src\lib\ClarisWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStyleManager.cxx"
+				RelativePath="..\..\src\lib\ClarisWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWTable.cxx"
+				RelativePath="..\..\src\lib\ClarisWksPresentation.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWText.cxx"
+				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMParser.cxx"
+				RelativePath="..\..\src\lib\ClarisWksSSParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMText.cxx"
+				RelativePath="..\..\src\lib\ClarisWksStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\EDParser.cxx"
+				RelativePath="..\..\src\lib\ClarisWksStyleManager.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWGraph.cxx"
+				RelativePath="..\..\src\lib\ClarisWksTable.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWParser.cxx"
+				RelativePath="..\..\src\lib\ClarisWksText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWStruct.cxx"
+				RelativePath="..\..\src\lib\DocMkrParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWText.cxx"
+				RelativePath="..\..\src\lib\DocMkrText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWGraph.cxx"
+				RelativePath="..\..\src\lib\EDocParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWParser.cxx"
+				RelativePath="..\..\src\lib\FullWrtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWText.cxx"
+				RelativePath="..\..\src\lib\FullWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJGraph.cxx"
+				RelativePath="..\..\src\lib\FullWrtStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJParser.cxx"
+				RelativePath="..\..\src\lib\FullWrtText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJText.cxx"
+				RelativePath="..\..\src\lib\GreatWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKGraph.cxx"
+				RelativePath="..\..\src\lib\GreatWksParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKParser.cxx"
+				RelativePath="..\..\src\lib\GreatWksSSParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKText.cxx"
+				RelativePath="..\..\src\lib\GreatWksText.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdJGraph.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdJParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdJText.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKGraph.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKText.cxx"
 				>
 			</File>
 			<File
@@ -296,95 +316,99 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWGraph.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWParser.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWText.cxx"
+				RelativePath="..\..\src\lib\LightWayTxtText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MCDParser.cxx"
+				RelativePath="..\..\src\lib\MacDocParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MDWParser.cxx"
+				RelativePath="..\..\src\lib\MindWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORParser.cxx"
+				RelativePath="..\..\src\lib\MoreParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORText.cxx"
+				RelativePath="..\..\src\lib\MoreText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWGraph.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWParser.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWText.cxx"
+				RelativePath="..\..\src\lib\MarinerWrtText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Parser.cxx"
+				RelativePath="..\..\src\lib\MsWks3Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Text.cxx"
+				RelativePath="..\..\src\lib\MsWks3Text.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Parser.cxx"
+				RelativePath="..\..\src\lib\MsWks4Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Text.cxx"
+				RelativePath="..\..\src\lib\MsWks4Text.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Zone.cxx"
+				RelativePath="..\..\src\lib\MsWks4Zone.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKGraph.cxx"
+				RelativePath="..\..\src\lib\MsWksGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKParser.cxx"
+				RelativePath="..\..\src\lib\MsWksSSParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKTable.cxx"
+				RelativePath="..\..\src\lib\MsWksTable.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSW1Parser.cxx"
+				RelativePath="..\..\src\lib\MsWksZone.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWParser.cxx"
+				RelativePath="..\..\src\lib\MsWrd1Parser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWStruct.cxx"
+				RelativePath="..\..\src\lib\MsWrdParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWText.cxx"
+				RelativePath="..\..\src\lib\MsWrdStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWTextStyles.cxx"
+				RelativePath="..\..\src\lib\MsWrdText.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MsWrdTextStyles.cxx"
 				>
 			</File>
 			<File
@@ -392,7 +416,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWContentListener.cxx"
+				RelativePath="..\..\src\lib\MWAWChart.cxx"
 				>
 			</File>
 			<File
@@ -448,10 +472,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWOLEStream.cxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWAWPageSpan.cxx"
 				>
 			</File>
@@ -492,6 +512,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWSubDocument.cxx"
 				>
 			</File>
@@ -500,59 +524,59 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWZipStream.cxx"
+				RelativePath="..\..\src\lib\MWAWTextListener.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWParser.cxx"
+				RelativePath="..\..\src\lib\MacWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProParser.cxx"
+				RelativePath="..\..\src\lib\MacWrtProParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProStructures.cxx"
+				RelativePath="..\..\src\lib\MacWrtProStructures.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSGraph.cxx"
+				RelativePath="..\..\src\lib\NisusWrtGraph.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSParser.cxx"
+				RelativePath="..\..\src\lib\NisusWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSStruct.cxx"
+				RelativePath="..\..\src\lib\NisusWrtStruct.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSText.cxx"
+				RelativePath="..\..\src\lib\NisusWrtText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\TTParser.cxx"
+				RelativePath="..\..\src\lib\TeachTxtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WNParser.cxx"
+				RelativePath="..\..\src\lib\WriteNowParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WNText.cxx"
+				RelativePath="..\..\src\lib\WriteNowText.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPParser.cxx"
+				RelativePath="..\..\src\lib\WriterPlsParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWParser.cxx"
+				RelativePath="..\..\src\lib\ZWrtParser.cxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWText.cxx"
+				RelativePath="..\..\src\lib\ZWrtText.cxx"
 				>
 			</File>
 		</Filter>
@@ -561,123 +585,143 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\src\lib\ACParser.hxx"
+				RelativePath="..\..\src\lib\ActaParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ACText.hxx"
+				RelativePath="..\..\src\lib\ActaText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWParser.hxx"
+				RelativePath="..\..\src\lib\BeagleWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\BWText.hxx"
+				RelativePath="..\..\src\lib\BeagleWksSSParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDatabase.hxx"
+				RelativePath="..\..\src\lib\BeagleWksStructManager.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWDbaseContent.hxx"
+				RelativePath="..\..\src\lib\BeagleWksText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWGraph.hxx"
+				RelativePath="..\..\src\lib\ClarisWksDatabase.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWParser.hxx"
+				RelativePath="..\..\src\lib\ClarisWksDbaseContent.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWPresentation.hxx"
+				RelativePath="..\..\src\lib\ClarisWksDocument.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWSpreadsheet.hxx"
+				RelativePath="..\..\src\lib\ClarisWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStruct.hxx"
+				RelativePath="..\..\src\lib\ClarisWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWStyleManager.hxx"
+				RelativePath="..\..\src\lib\ClarisWksPresentation.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWTable.hxx"
+				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\CWText.hxx"
+				RelativePath="..\..\src\lib\ClarisWksSSParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMParser.hxx"
+				RelativePath="..\..\src\lib\ClarisWksStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\DMText.hxx"
+				RelativePath="..\..\src\lib\ClarisWksStyleManager.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\EDParser.hxx"
+				RelativePath="..\..\src\lib\ClarisWksTable.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWGraph.hxx"
+				RelativePath="..\..\src\lib\ClarisWksText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWParser.hxx"
+				RelativePath="..\..\src\lib\DocMkrParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWStruct.hxx"
+				RelativePath="..\..\src\lib\DocMkrText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\FWText.hxx"
+				RelativePath="..\..\src\lib\EDocParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWGraph.hxx"
+				RelativePath="..\..\src\lib\FullWrtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWParser.hxx"
+				RelativePath="..\..\src\lib\FullWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\GWText.hxx"
+				RelativePath="..\..\src\lib\FullWrtStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJGraph.hxx"
+				RelativePath="..\..\src\lib\FullWrtText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJParser.hxx"
+				RelativePath="..\..\src\lib\GreatWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWJText.hxx"
+				RelativePath="..\..\src\lib\GreatWksParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKGraph.hxx"
+				RelativePath="..\..\src\lib\GreatWksSSParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKParser.hxx"
+				RelativePath="..\..\src\lib\GreatWksText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\HMWKText.hxx"
+				RelativePath="..\..\src\lib\HanMacWrdJGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdJParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdJText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\HanMacWrdKText.hxx"
 				>
 			</File>
 			<File
@@ -689,95 +733,99 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWGraph.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWParser.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\LWText.hxx"
+				RelativePath="..\..\src\lib\LightWayTxtText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MCDParser.hxx"
+				RelativePath="..\..\src\lib\MacDocParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MDWParser.hxx"
+				RelativePath="..\..\src\lib\MindWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORParser.hxx"
+				RelativePath="..\..\src\lib\MoreParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MORText.hxx"
+				RelativePath="..\..\src\lib\MoreText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWGraph.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWParser.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MRWText.hxx"
+				RelativePath="..\..\src\lib\MarinerWrtText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Parser.hxx"
+				RelativePath="..\..\src\lib\MsWks3Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK3Text.hxx"
+				RelativePath="..\..\src\lib\MsWks3Text.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Parser.hxx"
+				RelativePath="..\..\src\lib\MsWks4Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Text.hxx"
+				RelativePath="..\..\src\lib\MsWks4Text.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSK4Zone.hxx"
+				RelativePath="..\..\src\lib\MsWks4Zone.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKGraph.hxx"
+				RelativePath="..\..\src\lib\MsWksGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKParser.hxx"
+				RelativePath="..\..\src\lib\MsWksSSParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSKTable.hxx"
+				RelativePath="..\..\src\lib\MsWksTable.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSW1Parser.hxx"
+				RelativePath="..\..\src\lib\MsWksZone.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWParser.hxx"
+				RelativePath="..\..\src\lib\MsWrd1Parser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWStruct.hxx"
+				RelativePath="..\..\src\lib\MsWrdParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWText.hxx"
+				RelativePath="..\..\src\lib\MsWrdStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MSWTextStyles.hxx"
+				RelativePath="..\..\src\lib\MsWrdText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MsWrdTextStyles.hxx"
 				>
 			</File>
 			<File
@@ -785,7 +833,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWContentListener.hxx"
+				RelativePath="..\..\src\lib\MWAWChart.hxx"
 				>
 			</File>
 			<File
@@ -849,10 +897,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWOLEStream.hxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MWAWPageSpan.hxx"
 				>
 			</File>
@@ -901,6 +945,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWSubDocument.hxx"
 				>
 			</File>
@@ -909,63 +957,63 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWZipStream.hxx"
+				RelativePath="..\..\src\lib\MWAWTextListener.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWParser.hxx"
+				RelativePath="..\..\src\lib\MacWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProParser.hxx"
+				RelativePath="..\..\src\lib\MacWrtProParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWProStructures.hxx"
+				RelativePath="..\..\src\lib\MacWrtProStructures.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSGraph.hxx"
+				RelativePath="..\..\src\lib\NisusWrtGraph.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSParser.hxx"
+				RelativePath="..\..\src\lib\NisusWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSStruct.hxx"
+				RelativePath="..\..\src\lib\NisusWrtStruct.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\NSText.hxx"
+				RelativePath="..\..\src\lib\NisusWrtText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\TTParser.hxx"
+				RelativePath="..\..\src\lib\TeachTxtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WNEntry.hxx"
+				RelativePath="..\..\src\lib\WriteNowEntry.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WNParser.hxx"
+				RelativePath="..\..\src\lib\WriteNowParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WNText.hxx"
+				RelativePath="..\..\src\lib\WriteNowText.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\WPParser.hxx"
+				RelativePath="..\..\src\lib\WriterPlsParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWParser.hxx"
+				RelativePath="..\..\src\lib\ZWrtParser.hxx"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\ZWText.hxx"
+				RelativePath="..\..\src\lib\ZWrtText.hxx"
 				>
 			</File>
 		</Filter>

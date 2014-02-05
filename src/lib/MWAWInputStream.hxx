@@ -37,25 +37,18 @@
 #include <string>
 #include <vector>
 
-#include <libwpd/libwpd.h>
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge/librevenge.h>
+#include <librevenge-stream/librevenge-stream.h>
 #include "libmwaw_internal.hxx"
-
-namespace libmwawOLE
-{
-class Storage;
-}
-
-class WPXBinaryData;
 
 /*! \class MWAWInputStream
  * \brief Internal class used to read the file stream
  *  Internal class used to read the file stream,
- *    this class adds some usefull functions to the basic WPXInputStream:
+ *    this class adds some usefull functions to the basic librevenge::RVNGInputStream:
  *  - read number (int8, int16, int32) in low or end endian
  *  - selection of a section of a stream
  *  - read block of data
- *  - interface with modified WPXOLEStream
+ *  - interface with modified librevenge::RVNGOLEStream
  */
 class MWAWInputStream
 {
@@ -64,29 +57,32 @@ public:
    * \param inverted must be set to true for pc doc and ole part
    * \param inverted must be set to false for mac doc
    */
-  MWAWInputStream(shared_ptr<WPXInputStream> inp, bool inverted);
+  MWAWInputStream(shared_ptr<librevenge::RVNGInputStream> inp, bool inverted);
 
   /*!\brief creates a stream with given endian from an existing input
    *
    * Note: this functions does not delete input
    */
-  MWAWInputStream(WPXInputStream *input, bool inverted, bool checkCompression=false);
+  MWAWInputStream(librevenge::RVNGInputStream *input, bool inverted, bool checkCompression=false);
   //! destructor
   ~MWAWInputStream();
 
-  //! returns the basic WPXInputStream
-  shared_ptr<WPXInputStream> input() {
+  //! returns the basic librevenge::RVNGInputStream
+  shared_ptr<librevenge::RVNGInputStream> input()
+  {
     return m_stream;
   }
-  //! returns a new input stream corresponding to a WPXBinaryData
-  static shared_ptr<MWAWInputStream> get(WPXBinaryData const &data, bool inverted);
+  //! returns a new input stream corresponding to a librevenge::RVNGBinaryData
+  static shared_ptr<MWAWInputStream> get(librevenge::RVNGBinaryData const &data, bool inverted);
 
   //! returns the endian mode (see constructor)
-  bool readInverted() const {
+  bool readInverted() const
+  {
     return m_inverseRead;
   }
   //! sets the endian mode
-  void setReadInverted(bool newVal) {
+  void setReadInverted(bool newVal)
+  {
     m_inverseRead = newVal;
   }
   //
@@ -97,35 +93,40 @@ public:
    * \return 0 if ok
    * \sa pushLimit popLimit
    */
-  int seek(long offset, WPX_SEEK_TYPE seekType);
+  int seek(long offset, librevenge::RVNG_SEEK_TYPE seekType);
   //! returns actual offset position
   long tell();
   //! returns the stream size
-  long size() const {
+  long size() const
+  {
     return m_streamSize;
   }
   //! checks if a position is or not a valid file position
-  bool checkPosition(long pos) const {
+  bool checkPosition(long pos) const
+  {
     if (pos < 0) return false;
     if (m_readLimit > 0 && pos > m_readLimit) return false;
     return pos<=m_streamSize;
   }
   //! returns true if we are at the end of the section/file
-  bool atEOS();
+  bool isEnd();
 
   /*! \brief defines a new section in the file (from actualPos to newLimit)
    * next call of seek, tell, atEos, ... will be restrained to this section
    */
-  void pushLimit(long newLimit) {
+  void pushLimit(long newLimit)
+  {
     m_prevLimits.push_back(m_readLimit);
     m_readLimit = newLimit > m_streamSize ? m_streamSize : newLimit;
   }
   //! pops a section defined by pushLimit
-  void popLimit() {
+  void popLimit()
+  {
     if (m_prevLimits.size()) {
       m_readLimit = m_prevLimits.back();
       m_prevLimits.pop_back();
-    } else m_readLimit = -1;
+    }
+    else m_readLimit = -1;
   }
 
   //
@@ -133,13 +134,16 @@ public:
   //
 
   //! returns a uint8, uint16, uint32 readed from actualPos
-  unsigned long readULong(int num) {
+  unsigned long readULong(int num)
+  {
     return readULong(m_stream.get(), num, 0, m_inverseRead);
   }
   //! return a int8, int16, int32 readed from actualPos
   long readLong(int num);
-  //! try to read a double (ppc)
-  bool readDouble(double &res, bool &isNotANumber);
+  //! try to read a double of size 8: 1.5 bytes exponent, 6.5 bytes mantisse
+  bool readDouble8(double &res, bool &isNotANumber);
+  //! try to read a double of size 10: 2 bytes exponent, 8 bytes mantisse
+  bool readDouble10(double &res, bool &isNotANumber);
 
   /**! reads numbytes data, WITHOUT using any endian or section consideration
    * \return a pointer to the read elements
@@ -148,29 +152,35 @@ public:
   /*! \brief internal function used to read num byte,
    *  - where a is the previous read data
    */
-  static unsigned long readULong(WPXInputStream *stream, int num, unsigned long a, bool inverseRead);
+  static unsigned long readULong(librevenge::RVNGInputStream *stream, int num, unsigned long a, bool inverseRead);
 
-  //! reads a WPXBinaryData with a given size in the actual section/file
-  bool readDataBlock(long size, WPXBinaryData &data);
-  //! reads a WPXBinaryData from actPos to the end of the section/file
-  bool readEndDataBlock(WPXBinaryData &data);
+  //! reads a librevenge::RVNGBinaryData with a given size in the actual section/file
+  bool readDataBlock(long size, librevenge::RVNGBinaryData &data);
+  //! reads a librevenge::RVNGBinaryData from actPos to the end of the section/file
+  bool readEndDataBlock(librevenge::RVNGBinaryData &data);
 
   //
-  // OLE access
+  // OLE/Zip access
   //
 
   //! return true if the stream is ole
-  bool isOLEStream();
-  //! return the list of all ole zone
-  std::vector<std::string> getOLENames();
+  bool isStructured();
+  //! returns the number of substream
+  unsigned subStreamCount();
+  //! returns the name of the i^th substream
+  std::string subStreamName(unsigned id);
+
   //! return a new stream for a ole zone
-  shared_ptr<MWAWInputStream> getDocumentOLEStream(std::string name);
+  shared_ptr<MWAWInputStream> getSubStreamByName(std::string const &name);
+  //! return a new stream for a ole zone
+  shared_ptr<MWAWInputStream> getSubStreamById(unsigned id);
 
   //
   // Finder Info access
   //
   /** returns the finder info type and creator (if known) */
-  bool getFinderInfo(std::string &type, std::string &creator) const {
+  bool getFinderInfo(std::string &type, std::string &creator) const
+  {
     if (!m_fInfoType.length() || !m_fInfoCreator.length()) {
       type = creator = "";
       return false;
@@ -185,15 +195,18 @@ public:
   //
 
   /** returns true if the data fork block exists */
-  bool hasDataFork() const {
+  bool hasDataFork() const
+  {
     return bool(m_stream);
   }
   /** returns true if the resource fork block exists */
-  bool hasResourceFork() const {
+  bool hasResourceFork() const
+  {
     return bool(m_resourceFork);
   }
   /** returns the resource fork if find */
-  shared_ptr<MWAWInputStream> getResourceForkStream() {
+  shared_ptr<MWAWInputStream> getResourceForkStream()
+  {
     return m_resourceFork;
   }
 
@@ -202,10 +215,7 @@ protected:
   //! update the stream size ( must be called in the constructor )
   void updateStreamSize();
   //! internal function used to read a byte
-  static uint8_t readU8(WPXInputStream *stream);
-
-  //! creates a storage ole
-  bool createStorageOLE();
+  static uint8_t readU8(librevenge::RVNGInputStream *stream);
 
   //! unbinhex the data in the file is a BinHex 4.0 file of a mac file
   bool unBinHex();
@@ -215,8 +225,8 @@ protected:
   bool unMacMIME();
   //! de MacMIME an input stream
   bool unMacMIME(MWAWInputStream *input,
-                 shared_ptr<WPXInputStream> &dataInput,
-                 shared_ptr<WPXInputStream> &rsrcInput) const;
+                 shared_ptr<librevenge::RVNGInputStream> &dataInput,
+                 shared_ptr<librevenge::RVNGInputStream> &rsrcInput) const;
 
 private:
   MWAWInputStream(MWAWInputStream const &orig);
@@ -224,7 +234,7 @@ private:
 
 protected:
   //! the initial input
-  shared_ptr<WPXInputStream> m_stream;
+  shared_ptr<librevenge::RVNGInputStream> m_stream;
   //! the stream size
   long m_streamSize;
 
@@ -242,75 +252,6 @@ protected:
   mutable std::string m_fInfoCreator;
   //! the resource fork
   shared_ptr<MWAWInputStream> m_resourceFork;
-  //! the ole storage
-  shared_ptr<libmwawOLE::Storage> m_storageOLE;
-};
-
-/** an internal class used to return the OLE/Zip InputStream */
-class MWAWStringStream: public WPXInputStream
-{
-public:
-  //! constructor
-  MWAWStringStream(const unsigned char *data, const unsigned long dataSize);
-  //! destructor
-  ~MWAWStringStream() { }
-
-  /**! reads numbytes data, WITHOUT using any endian or section consideration
-   * \return a pointer to the read elements
-   */
-  const unsigned char *read(unsigned long numBytes, unsigned long &numBytesRead);
-  //! returns actual offset position
-  long tell() {
-    return m_offset;
-  }
-  /*! \brief seeks to a offset position, from actual or beginning position
-   * \return 0 if ok
-   * \sa pushLimit popLimit
-   */
-  int seek(long offset, WPX_SEEK_TYPE seekType);
-  //! returns true if we are at the end of the section/file
-  bool atEOS() {
-    return ((long)m_offset >= (long)m_buffer.size());
-  }
-
-  /**
-     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
-     \return return false
-  */
-  bool isStructuredDocument() {
-    return false;
-  }
-  /**
-     Tries to extract a stream from a structured document.
-     \note not implemented
-  */
-  WPXInputStream *getSubStream(const char *) {
-    return 0;
-  }
-
-  /**
-     Analyses the content of the input stream to see whether it is an Zip/OLE2 storage.
-     \return return false
-  */
-  bool isOLEStream() {
-    return isStructuredDocument();
-  }
-  /**
-     Tries to extract a stream from a structured document.
-     \note not implemented
-  */
-  WPXInputStream *getDocumentOLEStream(const char *name) {
-    return getSubStream(name);
-  }
-
-private:
-  /** a buffer which contains the data */
-  std::vector<unsigned char> m_buffer;
-  /** the actual offset in the buffer */
-  volatile long m_offset;
-
-  MWAWStringStream(const MWAWStringStream &);
-  MWAWStringStream &operator=(const MWAWStringStream &);
 };
 
 #endif

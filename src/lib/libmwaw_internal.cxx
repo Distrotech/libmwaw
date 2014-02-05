@@ -39,14 +39,14 @@
 #include <ctype.h>
 #include <locale.h>
 
-#include <libwpd-stream/libwpd-stream.h>
+#include <librevenge-stream/librevenge-stream.h>
 
 #include "libmwaw_internal.hxx"
 
 /** namespace used to regroup all libwpd functions, enumerations which we have redefined for internal usage */
 namespace libmwaw
 {
-uint8_t readU8(WPXInputStream *input)
+uint8_t readU8(librevenge::RVNGInputStream *input)
 {
   unsigned long numBytesRead;
   uint8_t const *p = input->read(sizeof(uint8_t), numBytesRead);
@@ -57,26 +57,31 @@ uint8_t readU8(WPXInputStream *input)
   return *p;
 }
 
-void appendUnicode(uint32_t val, WPXString &buffer)
+void appendUnicode(uint32_t val, librevenge::RVNGString &buffer)
 {
   uint8_t first;
   int len;
   if (val < 0x80) {
     first = 0;
     len = 1;
-  } else if (val < 0x800) {
+  }
+  else if (val < 0x800) {
     first = 0xc0;
     len = 2;
-  } else if (val < 0x10000) {
+  }
+  else if (val < 0x10000) {
     first = 0xe0;
     len = 3;
-  } else if (val < 0x200000) {
+  }
+  else if (val < 0x200000) {
     first = 0xf0;
     len = 4;
-  } else if (val < 0x4000000) {
+  }
+  else if (val < 0x4000000) {
     first = 0xf8;
     len = 5;
-  } else {
+  }
+  else {
     first = 0xfc;
     len = 6;
   }
@@ -120,7 +125,7 @@ std::string numberingValueToString(NumberingType type, int value)
 {
   std::stringstream ss;
   std::string s("");
-  switch(type) {
+  switch (type) {
   case ARABIC:
     ss << value;
     return ss.str();
@@ -143,9 +148,9 @@ std::string numberingValueToString(NumberingType type, int value)
     static char const *(romans[]) = {"m", "cm", "d", "cd", "c", "xc", "l",
                                      "xl", "x", "ix", "v", "iv", "i"
                                     };
-    static int const (romanV[]) = {1000, 900, 500, 400,  100, 90, 50,
-                                   40, 10, 9, 5, 4, 1
-                                  };
+    static int const(romanV[]) = {1000, 900, 500, 400,  100, 90, 50,
+                                  40, 10, 9, 5, 4, 1
+                                 };
     if (value <= 0 || value >= 4000) {
       MWAW_DEBUG_MSG(("libmwaw::numberingValueToString: out of range value for type %d\n", int(type)));
       return (type == LOWERCASE_ROMAN) ? "i" : "I";
@@ -204,6 +209,15 @@ std::string MWAWColor::str() const
   return stream.str();
 }
 
+// link function
+bool MWAWLink::addTo(librevenge::RVNGPropertyList &propList) const
+{
+  propList.insert("xlink:type","simple");
+  if (!m_HRef.empty())
+    propList.insert("xlink:href",m_HRef.c_str());
+  return true;
+}
+
 // border function
 int MWAWBorder::compare(MWAWBorder const &orig) const
 {
@@ -217,7 +231,7 @@ int MWAWBorder::compare(MWAWBorder const &orig) const
   if (m_color > orig.m_color) return 1;
   return 0;
 }
-bool MWAWBorder::addTo(WPXPropertyList &propList, std::string const which) const
+bool MWAWBorder::addTo(librevenge::RVNGPropertyList &propList, std::string const which) const
 {
   std::stringstream stream, field;
   stream << m_width << "pt ";
@@ -228,7 +242,8 @@ bool MWAWBorder::addTo(WPXPropertyList &propList, std::string const which) const
       first = false;
     }
     stream << "double";
-  } else {
+  }
+  else {
     switch (m_style) {
     case Dot:
     case LargeDot:
@@ -312,7 +327,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder::Style const &style)
 std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
 {
   o << border.m_style << ":";
-  switch(border.m_type) {
+  switch (border.m_type) {
   case MWAWBorder::Single:
     break;
   case MWAWBorder::Double:

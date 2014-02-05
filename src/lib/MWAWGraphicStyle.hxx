@@ -36,7 +36,7 @@
 #  include <string>
 #  include <vector>
 
-#  include "libwpd/libwpd.h"
+#  include "librevenge/librevenge.h"
 #  include "libmwaw_internal.hxx"
 
 /** a structure used to define a picture style
@@ -58,10 +58,12 @@ public:
   struct GradientStop {
     //! constructor
     GradientStop(float offset=0.0, MWAWColor const &col=MWAWColor::black(), float opacity=1.0) :
-      m_offset(offset), m_color(col), m_opacity(opacity) {
+      m_offset(offset), m_color(col), m_opacity(opacity)
+    {
     }
     /** compare two gradient */
-    int cmp(GradientStop const &a) const {
+    int cmp(GradientStop const &a) const
+    {
       if (m_offset < a.m_offset) return -1;
       if (m_offset > a.m_offset) return 1;
       if (m_color < a.m_color) return -1;
@@ -71,7 +73,8 @@ public:
       return 0;
     }
     //! a print operator
-    friend std::ostream &operator<<(std::ostream &o, GradientStop const &st) {
+    friend std::ostream &operator<<(std::ostream &o, GradientStop const &st)
+    {
       o << "offset=" << st.m_offset << ",";
       o << "color=" << st.m_color << ",";
       if (st.m_opacity<1.0)
@@ -91,20 +94,23 @@ public:
    */
   struct Pattern {
     //! constructor
-    Pattern() : m_dim(0,0), m_data(), m_picture(), m_pictureMime(""), m_pictureAverageColor(MWAWColor::white()) {
+    Pattern() : m_dim(0,0), m_data(), m_picture(), m_pictureMime(""), m_pictureAverageColor(MWAWColor::white())
+    {
       m_colors[0]=MWAWColor::black();
       m_colors[1]=MWAWColor::white();
     }
     //!  constructor from a binary data
-    Pattern(Vec2i dim, WPXBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
-      m_dim(dim), m_data(), m_picture(picture), m_pictureMime(mime), m_pictureAverageColor(avColor) {
+    Pattern(Vec2i dim, librevenge::RVNGBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
+      m_dim(dim), m_data(), m_picture(picture), m_pictureMime(mime), m_pictureAverageColor(avColor)
+    {
       m_colors[0]=MWAWColor::black();
       m_colors[1]=MWAWColor::white();
     }
     //! virtual destructor
     virtual ~Pattern() {}
     //! return true if we does not have a pattern
-    bool empty() const {
+    bool empty() const
+    {
       if (m_dim[0]==0 || m_dim[1]==0) return true;
       if (m_picture.size()) return false;
       if (m_dim[0]!=8 && m_dim[0]!=16 && m_dim[0]!=32) return true;
@@ -115,10 +121,11 @@ public:
     //! check if the pattern has only one color; if so returns true...
     bool getUniqueColor(MWAWColor &col) const;
     /** tries to convert the picture in a binary data ( ppm) */
-    bool getBinary(WPXBinaryData &data, std::string &type) const;
+    bool getBinary(librevenge::RVNGBinaryData &data, std::string &type) const;
 
     /** compare two patterns */
-    int cmp(Pattern const &a) const {
+    int cmp(Pattern const &a) const
+    {
       int diff = m_dim.cmp(a.m_dim);
       if (diff) return diff;
       if (m_data.size() < a.m_data.size()) return -1;
@@ -146,12 +153,14 @@ public:
       return 0;
     }
     //! a print operator
-    friend std::ostream &operator<<(std::ostream &o, Pattern const &pat) {
+    friend std::ostream &operator<<(std::ostream &o, Pattern const &pat)
+    {
       o << "dim=" << pat.m_dim << ",";
       if (pat.m_picture.size()) {
         o << "type=" << pat.m_pictureMime << ",";
         o << "col[average]=" << pat.m_pictureAverageColor << ",";
-      } else {
+      }
+      else {
         if (!pat.m_colors[0].isBlack()) o << "col0=" << pat.m_colors[0] << ",";
         if (!pat.m_colors[1].isWhite()) o << "col1=" << pat.m_colors[1] << ",";
         o << "[";
@@ -170,7 +179,7 @@ public:
     std::vector<unsigned char> m_data;
   protected:
     //! a picture
-    WPXBinaryData m_picture;
+    librevenge::RVNGBinaryData m_picture;
     //! the picture type
     std::string m_pictureMime;
     //! the picture average color
@@ -182,7 +191,8 @@ public:
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
     m_pattern(),
     m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
-    m_rotate(0), m_extra("") {
+    m_rotate(0), m_extra("")
+  {
     m_arrows[0]=m_arrows[1]=false;
     m_flip[0]=m_flip[1]=false;
     m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
@@ -191,47 +201,56 @@ public:
   //! virtual destructor
   virtual ~MWAWGraphicStyle() { }
   //! returns true if the border is defined
-  bool hasLine() const {
+  bool hasLine() const
+  {
     return m_lineWidth>0 && m_lineOpacity>0;
   }
   //! set the surface color
-  void setSurfaceColor(MWAWColor const &col, float opacity = 1) {
+  void setSurfaceColor(MWAWColor const &col, float opacity = 1)
+  {
     m_surfaceColor = col;
     m_surfaceOpacity = opacity;
   }
   //! returns true if the surface is defined
-  bool hasSurfaceColor() const {
+  bool hasSurfaceColor() const
+  {
     return m_surfaceOpacity > 0;
   }
   //! set the pattern
-  void setPattern(Pattern const &pat) {
+  void setPattern(Pattern const &pat)
+  {
     m_pattern=pat;
   }
   //! returns true if the pattern is defined
-  bool hasPattern() const {
+  bool hasPattern() const
+  {
     return !m_pattern.empty();
   }
   //! returns true if the gradient is defined
-  bool hasGradient(bool complex=false) const {
+  bool hasGradient(bool complex=false) const
+  {
     return m_gradientType != G_None && m_gradientStopList.size() >= (complex ? 3 : 2);
   }
   //! returns true if the interior surface is defined
-  bool hasSurface() const {
+  bool hasSurface() const
+  {
     return hasSurfaceColor() || hasPattern() || hasGradient();
   }
   //! set the shadow color
-  void setShadowColor(MWAWColor const &col, float opacity = 1) {
+  void setShadowColor(MWAWColor const &col, float opacity = 1)
+  {
     m_shadowColor = col;
     m_shadowOpacity = opacity;
   }
   //! returns true if the shadow is defined
-  bool hasShadow() const {
+  bool hasShadow() const
+  {
     return m_shadowOpacity > 0;
   }
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st);
   //! add to propList
-  void addTo(WPXPropertyList &pList, WPXPropertyListVector &gradient, bool only1d=false) const;
+  void addTo(librevenge::RVNGPropertyList &pList, bool only1d=false) const;
 
   /** compare two styles */
   int cmp(MWAWGraphicStyle const &a) const;

@@ -36,7 +36,7 @@
 
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -55,9 +55,9 @@ struct State;
 /** This class contains the minimal code needed to write a Graphic sub document.
 
     \note it will be probably be enhanced in some near/far futur...
-    All units are specicified in WPX_POINT
+    All units are specicified in librevenge::RVNG_POINT
  */
-class MWAWGraphicListener : public MWAWListener
+class MWAWGraphicListener : public MWAWBasicListener
 {
 public:
   /** constructor */
@@ -67,8 +67,8 @@ public:
 
   /** starts a new graphic */
   void startGraphic(Box2f const &bdbox);
-  /** ends the actual graphic and fill the final WPXBinaryData, ... */
-  bool endGraphic(WPXBinaryData &data, std::string &mimeType);
+  /** ends the actual graphic and fill the final librevenge::RVNGBinaryData, ... */
+  bool endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType);
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 
@@ -99,7 +99,7 @@ public:
    *  By convention if \a character=0xfffd(undef), no character is added */
   void insertUnicode(uint32_t character);
   //! adds a unicode string
-  void insertUnicodeString(WPXString const &str);
+  void insertUnicodeString(librevenge::RVNGString const &str);
 
   //! adds a tab
   void insertTab();
@@ -124,10 +124,16 @@ public:
   //! adds a field type
   void insertField(MWAWField const &field);
 
+  // ------- link ----------------
+  //! open a link
+  void openLink(MWAWLink const &link);
+  //! close a link
+  void closeLink();
+
   // ------- subdocument -----------------
   /** adds a picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicStyle const &style,
-                     const WPXBinaryData &binaryData, std::string type="image/pict");
+                     const librevenge::RVNGBinaryData &binaryData, std::string type="image/pict");
   /** adds a shape picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
@@ -137,11 +143,13 @@ public:
   void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
-  bool canOpenSectionAddBreak() const {
+  bool canOpenSectionAddBreak() const
+  {
     return false;
   }
   //! returns true if a section is opened
-  bool isSectionOpened() const {
+  bool isSectionOpened() const
+  {
     return false;
   }
   //! returns the actual section
@@ -149,7 +157,8 @@ public:
   //! open a section if possible
   bool openSection(MWAWSection const &section);
   //! close a section
-  bool closeSection() {
+  bool closeSection()
+  {
     return false;
   }
   //! inserts a break type: ColumBreak, PageBreak, ..
@@ -159,7 +168,7 @@ protected:
   void _startSubDocument();
   void _endSubDocument();
 
-  void _handleFrameParameters(WPXPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
+  void _handleFrameParameters(librevenge::RVNGPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
   bool openFrame();
   void closeFrame();
 

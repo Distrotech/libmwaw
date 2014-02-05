@@ -6,8 +6,8 @@ AC_PREREQ([2.60])
 # Version informations
 # ====================
 m4_define([libmwaw_version_major],[0])
-m4_define([libmwaw_version_minor],[2])
-m4_define([libmwaw_version_micro],[1])
+m4_define([libmwaw_version_minor],[3])
+m4_define([libmwaw_version_micro],[0])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -19,6 +19,7 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz dist-bzip2])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_LANG([C++])
+AC_STRUCT_TIMEZONE()
 
 # ===========================
 # Find required base packages
@@ -34,21 +35,6 @@ LT_INIT([win32-dll disable-static pic-only])
 AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG([0.20])
-
-# ====================
-# Find additional apps
-# ====================
-PKG_CHECK_MODULES([WPD],[
-    libwpd-0.9 >= 0.9.5
-    libwpd-stream-0.9 >= 0.9.5
-])
-AC_SUBST(WPD_CFLAGS)
-AC_SUBST(WPD_LIBS)
-PKG_CHECK_MODULES([WPG],[
-    libwpg-0.2 >= 0.2.2
-])
-AC_SUBST(WPG_CFLAGS)
-AC_SUBST(WPG_LIBS)
 
 # =================================
 # Libtool/Version Makefile settings
@@ -336,7 +322,7 @@ AC_SUBST(XATTR_CFLAGS)
 # Find zlib
 # =========
 AC_ARG_ENABLE([zip],
-	[AS_HELP_STRING([--disable-zip], [Do not use the zip library and so do not accept a zipped document as input.])],
+	[AS_HELP_STRING([--disable-zip], [Do not use the zip library and so do not build mwawZip.])],
 	[with_zip="$enableval"],
 	[with_zip=yes]
 )
@@ -347,7 +333,7 @@ if test "x$with_zip" != "xno"; then
     		AC_CHECK_LIB(z, inflate, [ ZLIB_LIBS=-lz ],
         		[AC_MSG_ERROR(zlib not found or functional)], [])
 	])
-	AC_DEFINE([USE_ZIP],[1],[Use the zip library to read a zipped document.])
+	AC_DEFINE([USE_ZIP],[1],[Use the zip library to create mwawZip.])
 	ZLIB_CFLAGS="$ZLIB_CFLAGS -DUSE_ZIP"
 else
 	ZLIB_CFLAGS=
@@ -356,6 +342,29 @@ fi
 AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
 AM_CONDITIONAL([WITH_LIBMWAW_ZIP], [test "x$with_zip" != "xno"])
+# ====================
+# Find librevenge
+# ====================
+PKG_CHECK_MODULES([REVENGE],[ librevenge-0.0 librevenge-stream-0.0 ])
+AC_SUBST(REVENGE_CFLAGS)
+AC_SUBST(REVENGE_LIBS)
+
+# =====
+# Tools
+# =====
+AC_ARG_ENABLE([tools],
+	[AS_HELP_STRING([--disable-tools], [Build conversion tools])],
+	[enable_tools="$enableval"],
+	[enable_tools=yes]
+)
+AS_IF([test "x$enable_tools" = "xyes"], [
+	PKG_CHECK_MODULES([REVENGE_GENERATORS],[
+		librevenge-generators-0.0
+	])
+])
+AC_SUBST([REVENGE_GENERATORS_CFLAGS])
+AC_SUBST([REVENGE_GENERATORS_LIBS])
+AM_CONDITIONAL(BUILD_CONVERTISSORS, [test "x$enable_tools" = "xyes"])
 
 # =============
 # Documentation

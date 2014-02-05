@@ -1,1 +1,5 @@
-SUBDIRS = lib conv tools
+SUBDIRS = lib tools
+
+if BUILD_CONVERTISSORS
+SUBDIRS += conv
+endif

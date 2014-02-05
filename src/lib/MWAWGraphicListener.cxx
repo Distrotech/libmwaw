@@ -36,7 +36,7 @@
 #include <sstream>
 #include <time.h>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw/libmwaw.hxx"
 #include "libmwaw_internal.hxx"
@@ -62,10 +62,12 @@ namespace MWAWGraphicListenerInternal
 /** the global graphic state of MWAWGraphicListener */
 struct GraphicState {
   //! constructor
-  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments(), m_interface() {
+  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments(), m_interface()
+  {
   }
   //! destructor
-  ~GraphicState() {
+  ~GraphicState()
+  {
   }
   /** the graphic bdbox */
   Box2f m_box;
@@ -87,7 +89,7 @@ struct State {
   //! the origin position
   Vec2f m_origin;
   //! a buffer to stored the text
-  WPXString m_textBuffer;
+  librevenge::RVNGString m_textBuffer;
 
   //! the font
   MWAWFont m_font;
@@ -108,8 +110,8 @@ struct State {
 
   std::vector<bool> m_listOrderedLevels; //! a stack used to know what is open
 
+  bool m_inLink;
   bool m_inSubDocument;
-
   libmwaw::SubDocumentType m_subDocumentType;
 
 private:
@@ -122,12 +124,12 @@ State::State() : m_origin(0,0),
   m_isGraphicStarted(false), m_isTextZoneOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
-  m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
+  m_inLink(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWListener(),
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWBasicListener(),
   m_gs(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState)
 {
 }
@@ -159,13 +161,15 @@ void MWAWGraphicListener::insertCharacter(unsigned char c)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: called outside a text zone\n"));
     return;
   }
-  int unicode = m_parserState.m_fontConverter->unicode (m_ps->m_font.id(), c);
+  int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWGraphicListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 }
 
@@ -182,22 +186,24 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
   long debPos=input->tell();
   int fId = m_ps->m_font.id();
   int unicode = endPos==debPos ?
-                m_parserState.m_fontConverter->unicode (fId, c) :
-                m_parserState.m_fontConverter->unicode (fId, c, input);
+                m_parserState.m_fontConverter->unicode(fId, c) :
+                m_parserState.m_fontConverter->unicode(fId, c, input);
 
   long pos=input->tell();
   if (endPos > 0 && pos > endPos) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: problem reading a character\n"));
     pos = debPos;
-    input->seek(pos, WPX_SEEK_SET);
-    unicode = m_parserState.m_fontConverter->unicode (fId, c);
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    unicode = m_parserState.m_fontConverter->unicode(fId, c);
   }
   if (unicode == -1) {
     if (c < 0x20) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: Find odd char %x\n", int(c)));
-    } else
+    }
+    else
       MWAWGraphicListener::insertChar((uint8_t) c);
-  } else
+  }
+  else
     MWAWGraphicListener::insertUnicode((uint32_t) unicode);
 
   return int(pos-debPos);
@@ -216,7 +222,7 @@ void MWAWGraphicListener::insertUnicode(uint32_t val)
   libmwaw::appendUnicode(val, m_ps->m_textBuffer);
 }
 
-void MWAWGraphicListener::insertUnicodeString(WPXString const &str)
+void MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
   if (!m_ps->m_isTextZoneOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertUnicodeString: called outside a text zone\n"));
@@ -237,7 +243,8 @@ void MWAWGraphicListener::insertEOL(bool soft)
   if (soft) {
     _flushText();
     m_gs->m_interface->insertLineBreak();
-  } else if (m_ps->m_isParagraphOpened)
+  }
+  else if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
   // sub/superscript must not survive a new line
@@ -305,7 +312,7 @@ MWAWParagraph const &MWAWGraphicListener::getParagraph() const
 }
 
 ///////////////////
-// field :
+// field/link :
 ///////////////////
 void MWAWGraphicListener::insertField(MWAWField const &field)
 {
@@ -313,7 +320,7 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::setParagraph: called outside a text zone\n"));
     return;
   }
-  switch(field.m_type) {
+  switch (field.m_type) {
   case MWAWField::None:
     break;
   case MWAWField::PageCount:
@@ -321,16 +328,17 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
   case MWAWField::Title: {
     _flushText();
     _openSpan();
-    WPXPropertyList propList;
+    librevenge::RVNGPropertyList propList;
     if (field.m_type==MWAWField::Title)
-      m_gs->m_interface->insertField(WPXString("text:title"), propList);
+      propList.insert("librevenge:field-type", "text:title");
     else {
       propList.insert("style:num-format", libmwaw::numberingTypeToString(field.m_numberingType).c_str());
       if (field.m_type == MWAWField::PageNumber)
-        m_gs->m_interface->insertField(WPXString("text:page-number"), propList);
+        propList.insert("librevenge:field-type", "text:page-number");
       else
-        m_gs->m_interface->insertField(WPXString("text:page-count"), propList);
+        propList.insert("librevenge:field-type", "text:page-count");
     }
+    m_gs->m_interface->insertField(propList);
     break;
   }
   case MWAWField::Database:
@@ -348,25 +356,49 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
       else
         format="%I:%M:%S %p";
     }
-    time_t now = time ( 0L );
+    time_t now = time(0L);
     struct tm timeinfo;
-    if (localtime_r (&now, &timeinfo)) {
+    if (localtime_r(&now, &timeinfo)) {
       char buf[256];
       strftime(buf, 256, format.c_str(), &timeinfo);
-      MWAWGraphicListener::insertUnicodeString(WPXString(buf));
+      MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString(buf));
     }
     break;
   }
-  case MWAWField::Link:
-    if (field.m_data.length()) {
-      MWAWGraphicListener::insertUnicodeString(field.m_data.c_str());
-      break;
-    }
-    break;
   default:
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertField: must not be called with type=%d\n", int(field.m_type)));
     break;
   }
+}
+
+void MWAWGraphicListener::openLink(MWAWLink const &link)
+{
+  if (!m_ps->m_isTextZoneOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLink: called outside a textbox\n"));
+    return;
+  }
+  if (m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLink: called inside a link\n"));
+    return;
+  }
+  if (!m_ps->m_isSpanOpened) _openSpan();
+  librevenge::RVNGPropertyList propList;
+  link.addTo(propList);
+  m_gs->m_interface->openLink(propList);
+  _pushParsingState();
+  m_ps->m_inLink=true;
+// we do not want any close open paragraph in a link
+  m_ps->m_isParagraphOpened=true;
+}
+
+void MWAWGraphicListener::closeLink()
+{
+  if (!m_ps->m_inLink) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::closeLink: closed outside a link\n"));
+    return;
+  }
+  m_gs->m_interface->closeLink();
+  _popParsingState();
 }
 
 ///////////////////
@@ -384,16 +416,17 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   m_ps->m_isGraphicStarted = true;
   m_ps->m_origin=bdbox[0];
 
-  WPXPropertyList list;
-  list.insert("svg:x",bdbox[0].x(), WPX_POINT);
-  list.insert("svg:y",bdbox[0].y(), WPX_POINT);
-  list.insert("svg:width",bdbox.size().x(), WPX_POINT);
-  list.insert("svg:height",bdbox.size().y(), WPX_POINT);
-  list.insert("libwpg:enforce-frame",1);
-  m_gs->m_interface->startDocument(list);
+  m_gs->m_interface->startDocument(librevenge::RVNGPropertyList());
+  librevenge::RVNGPropertyList list;
+  list.insert("svg:x",bdbox[0].x(), librevenge::RVNG_POINT);
+  list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
+  list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
+  list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
+  list.insert("librevenge:enforce-frame",true);
+  m_gs->m_interface->startPage(list);
 }
 
-bool MWAWGraphicListener::endGraphic(WPXBinaryData &data, std::string &mimeType)
+bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType)
 {
   if (!m_ps->m_isGraphicStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: the graphic is not started\n"));
@@ -411,6 +444,7 @@ bool MWAWGraphicListener::endGraphic(WPXBinaryData &data, std::string &mimeType)
     m_ps->m_paragraph.m_listLevelIndex = 0;
     _changeList(); // flush the list exterior
   }
+  m_gs->m_interface->endPage();
   m_gs->m_interface->endDocument();
   bool ok=m_gs->m_interface->getBinaryResult(data, mimeType);
   m_gs->m_interface.reset();
@@ -451,11 +485,9 @@ void MWAWGraphicListener::_openParagraph()
     return;
   }
 
-  WPXPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList, false);
-  WPXPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
-  m_gs->m_interface->openParagraph(propList, tabStops);
+  m_gs->m_interface->openParagraph(propList);
 
   _resetParagraphState();
   m_ps->m_firstParagraphInPageSpan = false;
@@ -467,6 +499,7 @@ void MWAWGraphicListener::_closeParagraph()
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_closeParagraph: called outsize a text zone\n"));
     return;
   }
+  if (m_ps->m_inLink) return;
   if (m_ps->m_isListElementOpened) {
     _closeListElement();
     return;
@@ -500,10 +533,8 @@ void MWAWGraphicListener::_openListElement()
   if (m_ps->m_isParagraphOpened || m_ps->m_isListElementOpened)
     return;
 
-  WPXPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_paragraph.addTo(propList,false);
-  WPXPropertyListVector tabStops;
-  m_ps->m_paragraph.addTabsTo(tabStops);
 
   // check if we must change the start value
   int startValue=m_ps->m_paragraph.m_listStartValue.get();
@@ -513,7 +544,7 @@ void MWAWGraphicListener::_openListElement()
   }
 
   if (m_ps->m_list) m_ps->m_list->openElement();
-  m_gs->m_interface->openListElement(propList, tabStops);
+  m_gs->m_interface->openListElement(propList);
   _resetParagraphState(true);
 }
 
@@ -578,18 +609,7 @@ void MWAWGraphicListener::_changeList()
       m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
     }
-    if (m_parserState.m_listManager->needToSend(newListId, m_gs->m_sentListMarkers)) {
-      for (int l=1; l <= theList->numLevels(); l++) {
-        WPXPropertyList level;
-        if (!theList->addTo(l, level))
-          continue;
-        if (!theList->isNumeric(l))
-          m_gs->m_interface->defineUnorderedListLevel(level);
-        else
-          m_gs->m_interface->defineOrderedListLevel(level);
-      }
-    }
-
+    m_parserState.m_listManager->needToSend(newListId, m_gs->m_sentListMarkers);
     m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
   }
@@ -597,15 +617,18 @@ void MWAWGraphicListener::_changeList()
   m_ps->m_listOrderedLevels.resize(newLevel, false);
   if (actualLevel == newLevel) return;
 
-  WPXPropertyList propList;
-  propList.insert("libwpd:id", m_ps->m_list->getId());
+  librevenge::RVNGPropertyList propList;
+  propList.insert("librevenge:list-id", m_ps->m_list->getId());
   for (size_t i=actualLevel+1; i<= newLevel; i++) {
     bool ordered = m_ps->m_list->isNumeric(int(i));
     m_ps->m_listOrderedLevels[i-1] = ordered;
+
+    librevenge::RVNGPropertyList level;
+    m_ps->m_list->addTo(int(i), level);
     if (ordered)
-      m_gs->m_interface->openOrderedListLevel(propList);
+      m_gs->m_interface->openOrderedListLevel(level);
     else
-      m_gs->m_interface->openUnorderedListLevel(propList);
+      m_gs->m_interface->openUnorderedListLevel(level);
   }
 }
 
@@ -629,7 +652,7 @@ void MWAWGraphicListener::_openSpan()
       _openListElement();
   }
 
-  WPXPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   m_ps->m_font.addTo(propList, m_parserState.m_fontConverter);
 
   m_gs->m_interface->openSpan(propList);
@@ -659,9 +682,9 @@ void MWAWGraphicListener::_flushText()
   if (m_ps->m_textBuffer.len() == 0) return;
 
   // when some many ' ' follows each other, call insertSpace
-  WPXString tmpText;
+  librevenge::RVNGString tmpText("");
   int numConsecutiveSpaces = 0;
-  WPXString::Iter i(m_ps->m_textBuffer);
+  librevenge::RVNGString::Iter i(m_ps->m_textBuffer);
   for (i.rewind(); i.next();) {
     if (*(i()) == 0x20) // this test is compatible with unicode format
       numConsecutiveSpaces++;
@@ -674,7 +697,8 @@ void MWAWGraphicListener::_flushText()
         tmpText.clear();
       }
       m_gs->m_interface->insertSpace();
-    } else
+    }
+    else
       tmpText.append(i());
   }
   m_gs->m_interface->insertText(tmpText);
@@ -717,11 +741,36 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  shape.send(*m_gs->m_interface, style, bdbox[0]-m_ps->m_origin);
+
+  librevenge::RVNGPropertyList list, shapePList;
+  style.addTo(list, shape.getType()==MWAWGraphicShape::Line);
+  m_gs->m_interface->setStyle(list);
+  switch (shape.addTo(bdbox[0]-m_ps->m_origin, style.hasSurface(), shapePList)) {
+  case MWAWGraphicShape::C_Ellipse:
+    m_gs->m_interface->drawEllipse(shapePList);
+    break;
+  case MWAWGraphicShape::C_Path:
+    m_gs->m_interface->drawPath(shapePList);
+    break;
+  case MWAWGraphicShape::C_Polyline:
+    m_gs->m_interface->drawPolyline(shapePList);
+    break;
+  case MWAWGraphicShape::C_Polygon:
+    m_gs->m_interface->drawPolygon(shapePList);
+    break;
+  case MWAWGraphicShape::C_Rectangle:
+    m_gs->m_interface->drawRectangle(shapePList);
+    break;
+  case MWAWGraphicShape::C_Bad:
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: unexpected shape\n"));
+    break;
+  }
 }
 
 void MWAWGraphicListener::insertPicture
-(Box2f const &bdbox, MWAWGraphicStyle const &style, const WPXBinaryData &binaryData, std::string type)
+(Box2f const &bdbox, MWAWGraphicStyle const &style, const librevenge::RVNGBinaryData &binaryData, std::string type)
 {
   if (!m_ps->m_isGraphicStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the graphic is not started\n"));
@@ -731,20 +780,20 @@ void MWAWGraphicListener::insertPicture
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
-  WPXPropertyList list;
-  WPXPropertyListVector gradient;
-  style.addTo(list, gradient);
-  m_gs->m_interface->setStyle(list, gradient);
+  librevenge::RVNGPropertyList list;
+  style.addTo(list);
+  m_gs->m_interface->setStyle(list);
 
   list.clear();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
-  list.insert("svg:x",pt.x(), WPX_POINT);
-  list.insert("svg:y",pt.y(), WPX_POINT);
+  list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
+  list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
   pt=bdbox.size();
-  list.insert("svg:width",pt.x(), WPX_POINT);
-  list.insert("svg:height",pt.y(), WPX_POINT);
-  list.insert("libwpg:mime-type", type.c_str());
-  m_gs->m_interface->drawGraphicObject(list,binaryData);
+  list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
+  list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
+  list.insert("librevenge:mime-type", type.c_str());
+  list.insert("office:binary-data", binaryData);
+  m_gs->m_interface->drawGraphicObject(list);
 }
 
 void MWAWGraphicListener::insertTextBox
@@ -756,21 +805,21 @@ void MWAWGraphicListener::insertTextBox
   }
   if (!openFrame())
     return;
-  WPXPropertyList propList;
+  librevenge::RVNGPropertyList propList;
   _handleFrameParameters(propList, bdbox, style);
   float rotate = style.m_rotate;
   // flip does not works on text, so we ignore it...
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
   if (rotate<0||rotate>0) {
-    propList.insert("libwpg:rotate", rotate);
+    propList.insert("librevenge:rotate", rotate);
     Vec2f size=bdbox.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
     Vec2f center=bdbox[0]-m_ps->m_origin+0.5f*size;
-    propList.insert("libwpg:rotate-cx",center[0], WPX_POINT);
-    propList.insert("libwpg:rotate-cy",center[1], WPX_POINT);
+    propList.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
+    propList.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
-  m_gs->m_interface->startTextObject(propList, WPXPropertyListVector());
+  m_gs->m_interface->startTextObject(propList);
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
   m_gs->m_interface->endTextObject();
   closeFrame();
@@ -813,49 +862,49 @@ void MWAWGraphicListener::closeFrame()
   m_ps->m_isFrameOpened = false;
 }
 
-void MWAWGraphicListener::_handleFrameParameters(WPXPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
+void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
 {
   if (!m_ps->m_isGraphicStarted)
     return;
 
   Vec2f size=bdbox.size();
   Vec2f pt=bdbox[0]-m_ps->m_origin;
-  WPXPropertyListVector grad;
+  // checkme: do we still need to do that ?
   if (style.hasGradient(true)) {
     if (style.m_rotate<0 || style.m_rotate>0) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
     }
     // ok, first send a background rectangle
-    WPXPropertyList rectList;
-    style.addTo(rectList,grad);
-    m_gs->m_interface->setStyle(rectList,grad);
+    librevenge::RVNGPropertyList rectList;
+    m_gs->m_interface->setStyle(rectList);
     rectList.clear();
-    rectList.insert("svg:x",pt[0], WPX_POINT);
-    rectList.insert("svg:y",pt[1], WPX_POINT);
-    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), WPX_POINT);
-    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), WPX_POINT);
+    rectList.insert("svg:x",pt[0], librevenge::RVNG_POINT);
+    rectList.insert("svg:y",pt[1], librevenge::RVNG_POINT);
+    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), librevenge::RVNG_POINT);
+    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), librevenge::RVNG_POINT);
     m_gs->m_interface->drawRectangle(rectList);
 
     list.insert("draw:stroke", "none");
     list.insert("draw:fill", "none");
-  } else
-    style.addTo(list,grad);
+  }
+  else
+    style.addTo(list);
 
-  list.insert("svg:x",pt[0], WPX_POINT);
-  list.insert("svg:y",pt[1], WPX_POINT);
+  list.insert("svg:x",pt[0], librevenge::RVNG_POINT);
+  list.insert("svg:y",pt[1], librevenge::RVNG_POINT);
   if (size.x()>0)
-    list.insert("svg:width",size.x(), WPX_POINT);
+    list.insert("svg:width",size.x(), librevenge::RVNG_POINT);
   else if (size.x()<0)
-    list.insert("fo:min-width",-size.x(), WPX_POINT);
+    list.insert("fo:min-width",-size.x(), librevenge::RVNG_POINT);
   if (size.y()>0)
-    list.insert("svg:height",size.y(), WPX_POINT);
+    list.insert("svg:height",size.y(), librevenge::RVNG_POINT);
   else if (size.y()<0)
-    list.insert("fo:min-height",-size.y(), WPX_POINT);
+    list.insert("fo:min-height",-size.y(), librevenge::RVNG_POINT);
   float const padding = 0; // fillme
-  list.insert("fo:padding-top",padding, WPX_POINT);
-  list.insert("fo:padding-bottom",padding, WPX_POINT);
-  list.insert("fo:padding-left",padding, WPX_POINT);
-  list.insert("fo:padding-right",padding, WPX_POINT);
+  list.insert("fo:padding-top",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-bottom",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-left",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-right",padding, librevenge::RVNG_POINT);
 }
 
 ///////////////////
@@ -895,7 +944,8 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
       shared_ptr<MWAWGraphicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
       try {
         subDocument->parseGraphic(listen, subDocumentType);
-      } catch(...) {
+      }
+      catch (...) {
         MWAW_DEBUG_MSG(("Works: MWAWGraphicListener::handleSubDocument exception catched \n"));
       }
       m_gs->m_subDocuments.pop_back();

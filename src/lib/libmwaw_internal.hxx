@@ -48,8 +48,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#include <libwpd-stream/libwpd-stream.h>
-#include <libwpd/libwpd.h>
+#include <librevenge-stream/librevenge-stream.h>
+#include <librevenge/librevenge.h>
 
 #if defined(_MSC_VER) || defined(__DJGPP__)
 
@@ -106,7 +106,7 @@ using boost::shared_ptr;
 /** an noop deleter used to transform a libwpd pointer in a false shared_ptr */
 template <class T>
 struct MWAW_shared_ptr_noop_deleter {
-  void operator() (T *) {}
+  void operator()(T *) {}
 };
 
 /* ---------- debug  --------------- */
@@ -143,9 +143,9 @@ class WrongPasswordException
 /* ---------- input ----------------- */
 namespace libmwaw
 {
-uint8_t readU8(WPXInputStream *input);
+uint8_t readU8(librevenge::RVNGInputStream *input);
 //! adds an unicode character to a string
-void appendUnicode(uint32_t val, WPXString &buffer);
+void appendUnicode(uint32_t val, librevenge::RVNGString &buffer);
 }
 
 /* ---------- small enum/class ------------- */
@@ -159,29 +159,34 @@ enum { LeftBit = 0x01,  RightBit = 0x02, TopBit=0x4, BottomBit = 0x08, HMiddleBi
 enum NumberingType { NONE, BULLET, ARABIC, LOWERCASE, UPPERCASE, LOWERCASE_ROMAN, UPPERCASE_ROMAN };
 std::string numberingTypeToString(NumberingType type);
 std::string numberingValueToString(NumberingType type, int value);
-enum SubDocumentType { DOC_NONE, DOC_HEADER_FOOTER, DOC_NOTE, DOC_TABLE, DOC_TEXT_BOX, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP };
+enum SubDocumentType { DOC_NONE, DOC_CHART, DOC_CHART_ZONE, DOC_COMMENT_ANNOTATION, DOC_GRAPHIC_GROUP, DOC_HEADER_FOOTER, DOC_NOTE, DOC_SHEET, DOC_TABLE, DOC_TEXT_BOX };
 }
 
 //! the class to store a color
 struct MWAWColor {
   //! constructor
-  MWAWColor(uint32_t argb=0) : m_value(argb) {
+  MWAWColor(uint32_t argb=0) : m_value(argb)
+  {
   }
   //! constructor from color
   MWAWColor(unsigned char r, unsigned char g,  unsigned char b, unsigned char a=0) :
-    m_value(uint32_t((a<<24)+(r<<16)+(g<<8)+b)) {
+    m_value(uint32_t((a<<24)+(r<<16)+(g<<8)+b))
+  {
   }
   //! operator=
-  MWAWColor &operator=(uint32_t argb) {
+  MWAWColor &operator=(uint32_t argb)
+  {
     m_value = argb;
     return *this;
   }
   //! return the back color
-  static MWAWColor black() {
+  static MWAWColor black()
+  {
     return MWAWColor(0);
   }
   //! return the white color
-  static MWAWColor white() {
+  static MWAWColor white()
+  {
     return MWAWColor(0xFFFFFF);
   }
 
@@ -189,39 +194,48 @@ struct MWAWColor {
   static MWAWColor barycenter(float alpha, MWAWColor const &colA,
                               float beta, MWAWColor const &colB);
   //! return the rgba value
-  uint32_t value() const {
+  uint32_t value() const
+  {
     return m_value;
   }
   //! return true if the color is black
-  bool isBlack() const {
+  bool isBlack() const
+  {
     return (m_value&0xFFFFFF)==0;
   }
   //! return true if the color is white
-  bool isWhite() const {
+  bool isWhite() const
+  {
     return (m_value&0xFFFFFF)==0xFFFFFF;
   }
   //! operator==
-  bool operator==(MWAWColor const &c) const {
+  bool operator==(MWAWColor const &c) const
+  {
     return (c.m_value&0xFFFFFF)==(m_value&0xFFFFFF);
   }
   //! operator!=
-  bool operator!=(MWAWColor const &c) const {
+  bool operator!=(MWAWColor const &c) const
+  {
     return !operator==(c);
   }
   //! operator<
-  bool operator<(MWAWColor const &c) const {
+  bool operator<(MWAWColor const &c) const
+  {
     return (c.m_value&0xFFFFFF)<(m_value&0xFFFFFF);
   }
   //! operator<=
-  bool operator<=(MWAWColor const &c) const {
+  bool operator<=(MWAWColor const &c) const
+  {
     return (c.m_value&0xFFFFFF)<=(m_value&0xFFFFFF);
   }
   //! operator>
-  bool operator>(MWAWColor const &c) const {
+  bool operator>(MWAWColor const &c) const
+  {
     return !operator<=(c);
   }
   //! operator>=
-  bool operator>=(MWAWColor const &c) const {
+  bool operator>=(MWAWColor const &c) const
+  {
     return !operator<(c);
   }
   //! operator<< in the form \#rrggbb
@@ -245,17 +259,20 @@ struct MWAWBorder {
   /** add the border property to proplist (if needed )
 
   \note if set which must be equal to "left", "top", ... */
-  bool addTo(WPXPropertyList &propList, std::string which="") const;
+  bool addTo(librevenge::RVNGPropertyList &propList, std::string which="") const;
   //! returns true if the border is empty
-  bool isEmpty() const {
+  bool isEmpty() const
+  {
     return m_style==None || m_width <= 0;
   }
   //! operator==
-  bool operator==(MWAWBorder const &orig) const {
+  bool operator==(MWAWBorder const &orig) const
+  {
     return !operator!=(orig);
   }
   //! operator!=
-  bool operator!=(MWAWBorder const &orig) const {
+  bool operator!=(MWAWBorder const &orig) const
+  {
     return m_style != orig.m_style || m_type != orig.m_type ||
            m_width < orig.m_width || m_width > orig.m_width || m_color != orig.m_color;
   }
@@ -285,10 +302,11 @@ struct MWAWBorder {
 //! a field
 struct MWAWField {
   /** Defines some basic type for field */
-  enum Type { None, PageCount, PageNumber, Date, Time, Title, Link, Database };
+  enum Type { None, PageCount, PageNumber, Date, Time, Title, Database };
 
   /** basic constructor */
-  MWAWField(Type type) : m_type(type), m_DTFormat(""), m_numberingType(libmwaw::ARABIC), m_data("") {
+  MWAWField(Type type) : m_type(type), m_DTFormat(""), m_numberingType(libmwaw::ARABIC), m_data("")
+  {
   }
   //! the type
   Type m_type;
@@ -300,17 +318,32 @@ struct MWAWField {
   std::string m_data;
 };
 
+//! a link
+struct MWAWLink {
+  /** basic constructor */
+  MWAWLink() : m_HRef("")
+  {
+  }
+
+  /** add the link property to proplist (if needed ) */
+  bool addTo(librevenge::RVNGPropertyList &propList) const;
+
+  //! the href field
+  std::string m_HRef;
+};
+
 //! a note
 struct MWAWNote {
   //! enum to define note type
   enum Type { FootNote, EndNote };
   //! constructor
-  MWAWNote(Type type) : m_type(type), m_label(""), m_number(-1) {
+  MWAWNote(Type type) : m_type(type), m_label(""), m_number(-1)
+  {
   }
   //! the note type
   Type m_type;
   //! the note label
-  WPXString m_label;
+  librevenge::RVNGString m_label;
   //! the note number if defined
   int m_number;
 };
@@ -329,7 +362,7 @@ class MWAWParser;
 class MWAWPosition;
 class MWAWSection;
 
-class MWAWContentListener;
+class MWAWBasicListener;
 class MWAWFontConverter;
 class MWAWGraphicListener;
 class MWAWInputStream;
@@ -337,9 +370,11 @@ class MWAWListener;
 class MWAWListManager;
 class MWAWParserState;
 class MWAWRSRCParser;
+class MWAWSpreadsheetListener;
 class MWAWSubDocument;
-//! a smart pointer of MWAWContentListener
-typedef shared_ptr<MWAWContentListener> MWAWContentListenerPtr;
+class MWAWTextListener;
+//! a smart pointer of MWAWBasicListener
+typedef shared_ptr<MWAWBasicListener> MWAWBasicListenerPtr;
 //! a smart pointer of MWAWFontConverter
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 //! a smart pointer of MWAWGraphicListener
@@ -350,12 +385,16 @@ typedef shared_ptr<MWAWInputStream> MWAWInputStreamPtr;
 typedef shared_ptr<MWAWListener> MWAWListenerPtr;
 //! a smart pointer of MWAWListManager
 typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
-//! a smart pointer of MWAWRSRCParser
-typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 //! a smart pointer of MWAWParserState
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
+//! a smart pointer of MWAWRSRCParser
+typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
+//! a smart pointer of MWAWSpreadsheetListener
+typedef shared_ptr<MWAWSpreadsheetListener> MWAWSpreadsheetListenerPtr;
 //! a smart pointer of MWAWSubDocument
 typedef shared_ptr<MWAWSubDocument> MWAWSubDocumentPtr;
+//! a smart pointer of MWAWTextListener
+typedef shared_ptr<MWAWTextListener> MWAWTextListenerPtr;
 
 /** a generic variable template: value + flag to know if the variable is set
 
@@ -371,7 +410,8 @@ template <class T> struct Variable {
   //! copy constructor
   Variable(Variable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
   //! copy operator
-  Variable &operator=(Variable const &orig) {
+  Variable &operator=(Variable const &orig)
+  {
     if (this != &orig) {
       m_data = orig.m_data;
       m_set = orig.m_set;
@@ -379,46 +419,55 @@ template <class T> struct Variable {
     return *this;
   }
   //! set a value
-  Variable &operator=(T val) {
+  Variable &operator=(T val)
+  {
     m_data = val;
     m_set = true;
     return *this;
   }
   //! update the current value if orig is set
-  void insert(Variable const &orig) {
+  void insert(Variable const &orig)
+  {
     if (orig.m_set) {
       m_data = orig.m_data;
       m_set = orig.m_set;
     }
   }
   //! operator*
-  T const *operator->() const {
+  T const *operator->() const
+  {
     return &m_data;
   }
   /** operator* */
-  T *operator->() {
+  T *operator->()
+  {
     m_set = true;
     return &m_data;
   }
   //! operator*
-  T const &operator*() const {
+  T const &operator*() const
+  {
     return m_data;
   }
   //! operator*
-  T &operator*() {
+  T &operator*()
+  {
     m_set = true;
     return m_data;
   }
   //! return the current value
-  T const &get() const {
+  T const &get() const
+  {
     return m_data;
   }
   //! return true if the variable is set
-  bool isSet() const {
+  bool isSet() const
+  {
     return m_set;
   }
   //! define if the variable is set
-  void setSet(bool newVal) {
+  void setSet(bool newVal)
+  {
     m_set=newVal;
   }
 protected:
@@ -441,116 +490,132 @@ public:
   template <class U> Vec2(Vec2<U> const &p) : m_x(T(p.x())), m_y(T(p.y())) {}
 
   //! first element
-  T x() const {
+  T x() const
+  {
     return m_x;
   }
   //! second element
-  T y() const {
+  T y() const
+  {
     return m_y;
   }
   //! operator[]
-  T operator[](int c) const {
+  T operator[](int c) const
+  {
     assert(c >= 0 && c <= 1);
     return (c==0) ? m_x : m_y;
   }
   //! operator[]
-  T &operator[](int c) {
+  T &operator[](int c)
+  {
     assert(c >= 0 && c <= 1);
     return (c==0) ? m_x : m_y;
   }
 
   //! resets the two elements
-  void set(T xx, T yy) {
+  void set(T xx, T yy)
+  {
     m_x = xx;
     m_y = yy;
   }
   //! resets the first element
-  void setX(T xx) {
+  void setX(T xx)
+  {
     m_x = xx;
   }
   //! resets the second element
-  void setY(T yy) {
+  void setY(T yy)
+  {
     m_y = yy;
   }
 
   //! increases the actuals values by \a dx and \a dy
-  void add(T dx, T dy) {
+  void add(T dx, T dy)
+  {
     m_x += dx;
     m_y += dy;
   }
 
   //! operator+=
-  Vec2<T> &operator+=(Vec2<T> const &p) {
+  Vec2<T> &operator+=(Vec2<T> const &p)
+  {
     m_x += p.m_x;
     m_y += p.m_y;
     return *this;
   }
   //! operator-=
-  Vec2<T> &operator-=(Vec2<T> const &p) {
+  Vec2<T> &operator-=(Vec2<T> const &p)
+  {
     m_x -= p.m_x;
     m_y -= p.m_y;
     return *this;
   }
   //! generic operator*=
   template <class U>
-  Vec2<T> &operator*=(U scale) {
+  Vec2<T> &operator*=(U scale)
+  {
     m_x = T(m_x*scale);
     m_y = T(m_y*scale);
     return *this;
   }
 
   //! operator+
-  friend Vec2<T> operator+(Vec2<T> const &p1, Vec2<T> const &p2) {
+  friend Vec2<T> operator+(Vec2<T> const &p1, Vec2<T> const &p2)
+  {
     Vec2<T> p(p1);
     return p+=p2;
   }
   //! operator-
-  friend Vec2<T> operator-(Vec2<T> const &p1, Vec2<T> const &p2) {
+  friend Vec2<T> operator-(Vec2<T> const &p1, Vec2<T> const &p2)
+  {
     Vec2<T> p(p1);
     return p-=p2;
   }
   //! generic operator*
   template <class U>
-  friend Vec2<T> operator*(U scale, Vec2<T> const &p1) {
+  friend Vec2<T> operator*(U scale, Vec2<T> const &p1)
+  {
     Vec2<T> p(p1);
     return p *= scale;
   }
 
   //! comparison==
-  bool operator==(Vec2<T> const &p) const {
+  bool operator==(Vec2<T> const &p) const
+  {
     return cmpY(p) == 0;
   }
   //! comparison!=
-  bool operator!=(Vec2<T> const &p) const {
+  bool operator!=(Vec2<T> const &p) const
+  {
     return cmpY(p) != 0;
   }
   //! comparison<: sort by y
-  bool operator<(Vec2<T> const &p) const {
+  bool operator<(Vec2<T> const &p) const
+  {
     return cmpY(p) < 0;
   }
   //! a comparison function: which first compares x then y
-  int cmp(Vec2<T> const &p) const {
-    T diff  = m_x-p.m_x;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
-    diff = m_y-p.m_y;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
+  int cmp(Vec2<T> const &p) const
+  {
+    if (m_x < p.m_x) return -1;
+    if (m_x > p.m_x) return 1;
+    if (m_y < p.m_y) return -1;
+    if (m_y > p.m_y) return 1;
     return 0;
   }
   //! a comparison function: which first compares y then x
-  int cmpY(Vec2<T> const &p) const {
-    T diff  = m_y-p.m_y;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
-    diff = m_x-p.m_x;
-    if (diff < 0) return -1;
-    if (diff > 0) return 1;
+  int cmpY(Vec2<T> const &p) const
+  {
+    if (m_y < p.m_y) return -1;
+    if (m_y > p.m_y) return 1;
+    if (m_x < p.m_x) return -1;
+    if (m_x > p.m_x) return 1;
     return 0;
   }
 
   //! operator<<: prints data in form "XxY"
-  friend std::ostream &operator<< (std::ostream &o, Vec2<T> const &f) {
+  friend std::ostream &operator<< (std::ostream &o, Vec2<T> const &f)
+  {
     o << f.m_x << "x" << f.m_y;
     return o;
   }
@@ -560,7 +625,8 @@ public:
    */
   struct PosSizeLtX {
     //! comparaison function
-    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const {
+    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const
+    {
       return s1.cmp(s2) < 0;
     }
   };
@@ -574,7 +640,8 @@ public:
    */
   struct PosSizeLtY {
     //! comparaison function
-    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const {
+    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const
+    {
       return s1.cmpY(s2) < 0;
     }
   };
@@ -602,113 +669,135 @@ template <class T> class Vec3
 {
 public:
   //! constructor
-  Vec3(T xx=0,T yy=0,T zz=0) {
+  Vec3(T xx=0,T yy=0,T zz=0)
+  {
     m_val[0] = xx;
     m_val[1] = yy;
     m_val[2] = zz;
   }
   //! generic copy constructor
-  template <class U> Vec3(Vec3<U> const &p) {
+  template <class U> Vec3(Vec3<U> const &p)
+  {
     for (int c = 0; c < 3; c++) m_val[c] = T(p[c]);
   }
 
   //! first element
-  T x() const {
+  T x() const
+  {
     return m_val[0];
   }
   //! second element
-  T y() const {
+  T y() const
+  {
     return m_val[1];
   }
   //! third element
-  T z() const {
+  T z() const
+  {
     return m_val[2];
   }
   //! operator[]
-  T operator[](int c) const {
+  T operator[](int c) const
+  {
     assert(c >= 0 && c <= 2);
     return m_val[c];
   }
   //! operator[]
-  T &operator[](int c) {
+  T &operator[](int c)
+  {
     assert(c >= 0 && c <= 2);
     return m_val[c];
   }
 
   //! resets the three elements
-  void set(T xx, T yy, T zz) {
+  void set(T xx, T yy, T zz)
+  {
     m_val[0] = xx;
     m_val[1] = yy;
     m_val[2] = zz;
   }
   //! resets the first element
-  void setX(T xx) {
+  void setX(T xx)
+  {
     m_val[0] = xx;
   }
   //! resets the second element
-  void setY(T yy) {
+  void setY(T yy)
+  {
     m_val[1] = yy;
   }
   //! resets the third element
-  void setZ(T zz) {
+  void setZ(T zz)
+  {
     m_val[2] = zz;
   }
 
   //! increases the actuals values by \a dx, \a dy, \a dz
-  void add(T dx, T dy, T dz) {
+  void add(T dx, T dy, T dz)
+  {
     m_val[0] += dx;
     m_val[1] += dy;
     m_val[2] += dz;
   }
 
   //! operator+=
-  Vec3<T> &operator+=(Vec3<T> const &p) {
+  Vec3<T> &operator+=(Vec3<T> const &p)
+  {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]+p.m_val[c]);
     return *this;
   }
   //! operator-=
-  Vec3<T> &operator-=(Vec3<T> const &p) {
+  Vec3<T> &operator-=(Vec3<T> const &p)
+  {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]-p.m_val[c]);
     return *this;
   }
   //! generic operator*=
   template <class U>
-  Vec3<T> &operator*=(U scale) {
+  Vec3<T> &operator*=(U scale)
+  {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]*scale);
     return *this;
   }
 
   //! operator+
-  friend Vec3<T> operator+(Vec3<T> const &p1, Vec3<T> const &p2) {
+  friend Vec3<T> operator+(Vec3<T> const &p1, Vec3<T> const &p2)
+  {
     Vec3<T> p(p1);
     return p+=p2;
   }
   //! operator-
-  friend Vec3<T> operator-(Vec3<T> const &p1, Vec3<T> const &p2) {
+  friend Vec3<T> operator-(Vec3<T> const &p1, Vec3<T> const &p2)
+  {
     Vec3<T> p(p1);
     return p-=p2;
   }
   //! generic operator*
   template <class U>
-  friend Vec3<T> operator*(U scale, Vec3<T> const &p1) {
+  friend Vec3<T> operator*(U scale, Vec3<T> const &p1)
+  {
     Vec3<T> p(p1);
     return p *= scale;
   }
 
   //! comparison==
-  bool operator==(Vec3<T> const &p) const {
+  bool operator==(Vec3<T> const &p) const
+  {
     return cmp(p) == 0;
   }
   //! comparison!=
-  bool operator!=(Vec3<T> const &p) const {
+  bool operator!=(Vec3<T> const &p) const
+  {
     return cmp(p) != 0;
   }
   //! comparison<: which first compares x values, then y values then z values.
-  bool operator<(Vec3<T> const &p) const {
+  bool operator<(Vec3<T> const &p) const
+  {
     return cmp(p) < 0;
   }
   //! a comparison function: which first compares x values, then y values then z values.
-  int cmp(Vec3<T> const &p) const {
+  int cmp(Vec3<T> const &p) const
+  {
     for (int c = 0; c < 3; c++) {
       T diff  = m_val[c]-p.m_val[c];
       if (diff) return (diff < 0) ? -1 : 1;
@@ -717,7 +806,8 @@ public:
   }
 
   //! operator<<: prints data in form "XxYxZ"
-  friend std::ostream &operator<< (std::ostream &o, Vec3<T> const &f) {
+  friend std::ostream &operator<< (std::ostream &o, Vec3<T> const &f)
+  {
     o << f.m_val[0] << "x" << f.m_val[1] << "x" << f.m_val[2];
     return o;
   }
@@ -727,7 +817,8 @@ public:
    */
   struct PosSizeLt {
     //! comparaison function
-    bool operator()(Vec3<T> const &s1, Vec3<T> const &s2) const {
+    bool operator()(Vec3<T> const &s1, Vec3<T> const &s2) const
+    {
       return s1.cmp(s2) < 0;
     }
   };
@@ -755,91 +846,109 @@ template <class T> class Box2
 {
 public:
   //! constructor
-  Box2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>()) {
+  Box2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
+  {
     m_pt[0] = minPt;
     m_pt[1] = maxPt;
   }
   //! generic constructor
-  template <class U> Box2(Box2<U> const &p) {
+  template <class U> Box2(Box2<U> const &p)
+  {
     for (int c=0; c < 2; c++) m_pt[c] = p[c];
   }
 
   //! the minimum 2D point (in x and in y)
-  Vec2<T> const &min() const {
+  Vec2<T> const &min() const
+  {
     return m_pt[0];
   }
   //! the maximum 2D point (in x and in y)
-  Vec2<T> const &max() const {
+  Vec2<T> const &max() const
+  {
     return m_pt[1];
   }
   //! the minimum 2D point (in x and in y)
-  Vec2<T> &min() {
+  Vec2<T> &min()
+  {
     return m_pt[0];
   }
   //! the maximum 2D point (in x and in y)
-  Vec2<T> &max() {
+  Vec2<T> &max()
+  {
     return m_pt[1];
   }
   /*! \brief the two extremum points which defined the box
    * \param c value 0 means the minimum
    * \param c value 1 means the maximum
    */
-  Vec2<T> const &operator[](int c) const {
+  Vec2<T> const &operator[](int c) const
+  {
     assert(c >= 0 && c <= 1);
     return m_pt[c];
   }
   //! the box size
-  Vec2<T> size() const {
+  Vec2<T> size() const
+  {
     return m_pt[1]-m_pt[0];
   }
   //! the box center
-  Vec2<T> center() const {
+  Vec2<T> center() const
+  {
     return 0.5*(m_pt[0]+m_pt[1]);
   }
 
   //! resets the data to minimum \a x and maximum \a y
-  void set(Vec2<T> const &x, Vec2<T> const &y) {
+  void set(Vec2<T> const &x, Vec2<T> const &y)
+  {
     m_pt[0] = x;
     m_pt[1] = y;
   }
   //! resets the minimum point
-  void setMin(Vec2<T> const &x) {
+  void setMin(Vec2<T> const &x)
+  {
     m_pt[0] = x;
   }
   //! resets the maximum point
-  void setMax(Vec2<T> const &y) {
+  void setMax(Vec2<T> const &y)
+  {
     m_pt[1] = y;
   }
 
   //!  resize the box keeping the minimum
-  void resizeFromMin(Vec2<T> const &sz) {
+  void resizeFromMin(Vec2<T> const &sz)
+  {
     m_pt[1] = m_pt[0]+sz;
   }
   //!  resize the box keeping the maximum
-  void resizeFromMax(Vec2<T> const &sz) {
+  void resizeFromMax(Vec2<T> const &sz)
+  {
     m_pt[0] = m_pt[1]-sz;
   }
   //!  resize the box keeping the center
-  void resizeFromCenter(Vec2<T> const &sz) {
+  void resizeFromCenter(Vec2<T> const &sz)
+  {
     Vec2<T> centerPt = 0.5*(m_pt[0]+m_pt[1]);
     m_pt[0] = centerPt - 0.5*sz;
     m_pt[1] = centerPt + (sz - 0.5*sz);
   }
 
   //! scales all points of the box by \a factor
-  template <class U> void scale(U factor) {
+  template <class U> void scale(U factor)
+  {
     m_pt[0] *= factor;
     m_pt[1] *= factor;
   }
 
   //! extends the bdbox by (\a val, \a val) keeping the center
-  void extend(T val) {
+  void extend(T val)
+  {
     m_pt[0] -= Vec2<T>(val/2,val/2);
     m_pt[1] += Vec2<T>(val-(val/2),val-(val/2));
   }
 
   //! returns the union between this and box
-  Box2<T> getUnion(Box2<T> const &box) const {
+  Box2<T> getUnion(Box2<T> const &box) const
+  {
     Box2<T> res;
     res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
                         m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
@@ -848,7 +957,8 @@ public:
     return res;
   }
   //! returns the intersection between this and box
-  Box2<T> getIntersection(Box2<T> const &box) const {
+  Box2<T> getIntersection(Box2<T> const &box) const
+  {
     Box2<T> res;
     res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
                         m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
@@ -857,20 +967,24 @@ public:
     return res;
   }
   //! comparison operator==
-  bool operator==(Box2<T> const &p) const {
+  bool operator==(Box2<T> const &p) const
+  {
     return cmp(p) == 0;
   }
   //! comparison operator!=
-  bool operator!=(Box2<T> const &p) const {
+  bool operator!=(Box2<T> const &p) const
+  {
     return cmp(p) != 0;
   }
   //! comparison operator< : fist sorts min by Y,X values then max extremity
-  bool operator<(Box2<T> const &p) const {
+  bool operator<(Box2<T> const &p) const
+  {
     return cmp(p) < 0;
   }
 
   //! comparison function : fist sorts min by Y,X values then max extremity
-  int cmp(Box2<T> const &p) const {
+  int cmp(Box2<T> const &p) const
+  {
     int diff  = m_pt[0].cmpY(p.m_pt[0]);
     if (diff) return diff;
     diff  = m_pt[1].cmpY(p.m_pt[1]);
@@ -879,7 +993,8 @@ public:
   }
 
   //! print data in form X0xY0<->X1xY1
-  friend std::ostream &operator<< (std::ostream &o, Box2<T> const &f) {
+  friend std::ostream &operator<< (std::ostream &o, Box2<T> const &f)
+  {
     o << "(" << f.m_pt[0] << "<->" << f.m_pt[1] << ")";
     return o;
   }
@@ -889,7 +1004,8 @@ public:
    */
   struct PosSizeLt {
     //! comparaison function
-    bool operator()(Box2<T> const &s1, Box2<T> const &s2) const {
+    bool operator()(Box2<T> const &s1, Box2<T> const &s2) const
+    {
       return s1.cmp(s2) < 0;
     }
   };

@@ -61,7 +61,7 @@ bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
     m_pos[st].set(x,y);
   }
 
-  if (input->atEOS()) return false;
+  if (input->isEnd()) return false;
 
   if (m_pos[0].x() > m_pos[1].x() || m_pos[0].y() > m_pos[1].y())
     return false;
@@ -72,21 +72,25 @@ bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
 struct PrinterRectResolution {
   PrinterRectResolution() : m_rect(), m_resolution(), m_iDev(-1) {}
   //! page dimension
-  PrinterRect page() const {
+  PrinterRect page() const
+  {
     return m_rect;
   }
   //! resolution
-  Vec2i const &resolution() const {
+  Vec2i const &resolution() const
+  {
     return m_resolution;
   }
 
   //! operator <<
-  friend std::ostream &operator<< (std::ostream &o, PrinterRectResolution const &r) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterRectResolution const &r)
+  {
     o << r.m_rect << ":" << r.m_resolution;
     return o;
   }
   //! reads the data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_iDev = int(input->readLong(2));
     int y = int(input->readLong(2));
     int x = int(input->readLong(2));
@@ -109,18 +113,20 @@ struct PrinterStyle {
   /** operator<<
 
   \note print nothing*/
-  friend std::ostream &operator<< (std::ostream &o, PrinterStyle const & ) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterStyle const &)
+  {
     return o;
   }
   //! reads data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_wDev = (int) input->readLong(2);
     m_pageWidth = (int) input->readLong(2);
     m_pageHeight = (int) input->readLong(2);
     if (m_pageWidth < 0 || m_pageHeight < 0) return false;
     m_port = (int) input->readULong(1);
     m_feed = (int) input->readLong(1);
-    if (input->atEOS()) return false;
+    if (input->isEnd()) return false;
     return true;
   }
 
@@ -133,22 +139,24 @@ protected:
 //! Internal: structure used to keep a printer job
 struct PrinterJob {
   //! operator<<
-  friend std::ostream &operator<< (std::ostream &o, PrinterJob const &r ) {
+  friend std::ostream &operator<< (std::ostream &o, PrinterJob const &r)
+  {
     o << "fP=" << r.m_firstPage << ", lP=" << r.m_lastPage << ", copies=" << r.m_copies;
     if (r.m_fileVol || r.m_fileVers) o << ", fVol=" << r.m_fileVol << ", fVers=" << r.m_fileVers;
     return o;
   }
   //! read data from file
-  bool read(MWAWInputStreamPtr input) {
+  bool read(MWAWInputStreamPtr input)
+  {
     m_firstPage = (int) input->readLong(2);
     m_lastPage = (int) input->readLong(2);
     m_copies = (int) input->readLong(2);
     m_jobDocLoop = (int) input->readULong(1);
     m_fromUser = (int) input->readLong(1);
     // skip pIdleProc
-    if (input->seek(4, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
+    if (input->seek(4, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     // skip pFileName
-    if (input->seek(4, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
+    if (input->seek(4, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
     m_fileVol = (int) input->readLong(2);
     m_fileVers = (int) input->readLong(1);
     return true;
@@ -216,18 +224,18 @@ bool PrinterInfo::read(MWAWInputStreamPtr input)
   long pos = input->tell();
   if (!m_data->m_info2.read(input)) {
     // can be left unfilled, so as we do not use the result, ...
-    input->seek(pos+14, WPX_SEEK_SET);
+    input->seek(pos+14, librevenge::RVNG_SEEK_SET);
     if (input->tell() != pos+14) return false;
   }
   // skip unknown structure prXInfo
-  if (input->seek(16, WPX_SEEK_CUR) != 0 || input->atEOS()) return false;
+  if (input->seek(16, librevenge::RVNG_SEEK_CUR) != 0 || input->isEnd()) return false;
 
   if (!m_data->m_job.read(input)) return false;
   input->readLong(1);
 
   // skip printX 19 short + 2 align
   pos = input->tell();
-  if (input->seek(19*2,WPX_SEEK_CUR) != 0 || input->tell()!=pos+19*2) return false;
+  if (input->seek(19*2,librevenge::RVNG_SEEK_CUR) != 0 || input->tell()!=pos+19*2) return false;
   return true;
 }
 }

@@ -37,7 +37,7 @@
 #include <iostream>
 #include <vector>
 
-#include <libwpd/libwpd.h>
+#include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
 
@@ -47,33 +47,38 @@ class MWAWSection
 public:
   struct Column;
   //! constructor
-  MWAWSection() : m_columns(), m_width(0), m_columnSeparator(), m_balanceText(false), m_backgroundColor(MWAWColor::white()) {
+  MWAWSection() : m_columns(), m_width(0), m_columnSeparator(), m_balanceText(false), m_backgroundColor(MWAWColor::white())
+  {
     m_columnSeparator.m_style=MWAWBorder::None;
   }
   //! destructor
-  virtual ~MWAWSection() {
+  virtual ~MWAWSection()
+  {
   }
   /** a function which sets n uniform columns
 
   \note: this erases previous columns and border if there are some
    */
-  void setColumns(int num, double width, WPXUnit widthUnit, double colSep=0);
+  void setColumns(int num, double width, librevenge::RVNGUnit widthUnit, double colSep=0);
   //! returns the number of columns
-  int numColumns() const {
+  int numColumns() const
+  {
     return m_columns.size() <= 1 ? 1 : int(m_columns.size());
   }
   //! returns the true if the section has only one columns
-  bool hasSingleColumns() const {
+  bool hasSingleColumns() const
+  {
     return m_columns.size() <= 1;
   }
   //! add to the propList
-  void addTo(WPXPropertyList &propList) const;
+  void addTo(librevenge::RVNGPropertyList &propList) const;
   //! add tabs to the propList
-  void addColumnsTo(WPXPropertyListVector &propList) const;
+  void addColumnsTo(librevenge::RVNGPropertyListVector &propList) const;
   //! operator <<
   friend std::ostream &operator<<(std::ostream &o, MWAWSection const &sec);
   //! operator!=
-  bool operator!=(MWAWSection const &sec) const {
+  bool operator!=(MWAWSection const &sec) const
+  {
     if (m_columns.size()!=sec.m_columns.size())
       return true;
     for (size_t c=0; c < m_columns.size(); c++) {
@@ -87,7 +92,8 @@ public:
     return false;
   }
   //! operator==
-  bool operator==(MWAWSection const &sec) const {
+  bool operator==(MWAWSection const &sec) const
+  {
     return !operator!=(sec);
   }
 
@@ -106,16 +112,18 @@ public:
   /** struct to store the columns properties */
   struct Column {
     //! constructor
-    Column() : m_width(0), m_widthUnit(WPX_INCH) {
+    Column() : m_width(0), m_widthUnit(librevenge::RVNG_INCH)
+    {
       for (int i = 0; i < 4; i++)
         m_margins[i]=0;
     }
     //! add a column to the propList
-    bool addTo(WPXPropertyList &propList) const;
+    bool addTo(librevenge::RVNGPropertyList &propList) const;
     //! operator <<
     friend std::ostream &operator<<(std::ostream &o, Column const &column);
     //! operator!=
-    bool operator!=(Column const &col) const {
+    bool operator!=(Column const &col) const
+    {
       if (m_width<col.m_width || m_width>col.m_width || m_widthUnit!=col.m_widthUnit)
         return true;
       for (int i = 0; i < 4; i++) {
@@ -125,14 +133,15 @@ public:
       return false;
     }
     //! operator==
-    bool operator==(Column const &col) const {
+    bool operator==(Column const &col) const
+    {
       return !operator!=(col);
     }
 
     //! the columns width
     double m_width;
     /** the width unit (default inches) */
-    WPXUnit m_widthUnit;
+    librevenge::RVNGUnit m_widthUnit;
     //! the margins in inches using libmwaw::Position orders
     double m_margins[4];
   };

@@ -41,7 +41,8 @@ class XAttr
 {
 public:
   //! constructor
-  XAttr(char const *path) : m_fName("") {
+  XAttr(char const *path) : m_fName("")
+  {
     if (path) m_fName=path;
   }
 
