@@ -776,8 +776,7 @@ bool WriterPlsParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   int const headerSize=2;
-  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
-  if (int(input->tell()) != headerSize) {
+  if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("WriterPlsParser::checkHeader: file is too short\n"));
     return false;
   }

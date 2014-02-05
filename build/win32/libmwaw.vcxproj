@@ -486,6 +486,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\WingzParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\WriteNowParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -613,6 +617,7 @@
     <ClInclude Include="..\..\src\lib\NisusWrtStruct.hxx" />
     <ClInclude Include="..\..\src\lib\NisusWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />
+    <ClInclude Include="..\..\src\lib\WingzParser.hxx" />
     <ClInclude Include="..\..\src\lib\WriteNowEntry.hxx" />
     <ClInclude Include="..\..\src\lib\WriteNowParser.hxx" />
     <ClInclude Include="..\..\src\lib\WriteNowText.hxx" />

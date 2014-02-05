@@ -402,6 +402,10 @@ bool File::readFileInformation()
     checkFInfoType("TEXT","Tex-Edit") || checkFInfoType("ttro","Tex-Edit[readOnly]") ||
     checkFInfoType("Tex-Edit");
   }
+  else if (m_fInfoCreator=="WNGZ") {
+    checkFInfoType("WZSS","Wingz[spreadsheet]") || checkFInfoType("WZSC","Wingz[script]") ||
+    checkFInfoType("Wingz");
+  }
   else if (m_fInfoCreator=="WORD") {
     checkFInfoType("WDBN","Microsoft Word 1") || checkFInfoType("Microsoft Word 1");
   }
@@ -516,6 +520,16 @@ bool File::readDataInformation()
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
     m_dataResult.push_back("WriteNow 3-4");
     return true;
+  }
+  if (val[0]==0x574e && val[1]==0x475a && val[2]==0x575a) {
+    if (val[3]==0x5353) {
+      m_dataResult.push_back("Wingz");
+      return true;
+    }
+    if (val[3]==0x5343) {
+      m_dataResult.push_back("Wingz[script]");
+      return true;
+    }
   }
   if (val[0]==3 && val[1]==0x4d52 && val[2]==0x4949 && val[3]==0x80) {
     m_dataResult.push_back("More 2");

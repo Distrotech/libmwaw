@@ -283,6 +283,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="WNGZ") {
+      if (type=="WZSS") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WINGZ, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
+    }
     else if (creator=="ZEBR") {
       if (type=="ZWRT") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1));
@@ -397,6 +403,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITENOW, 3));
       return res;
     }
+  }
+  if (val[0]==0x574e && val[1]==0x475a && val[2]==0x575a && val[3]==0x5353) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Wingz file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WINGZ, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+    return res;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));

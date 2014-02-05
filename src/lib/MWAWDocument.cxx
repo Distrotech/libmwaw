@@ -70,6 +70,7 @@
 #include "MsWrdParser.hxx"
 #include "NisusWrtParser.hxx"
 #include "TeachTxtParser.hxx"
+#include "WingzParser.hxx"
 #include "WriteNowParser.hxx"
 #include "WriterPlsParser.hxx"
 #include "ZWrtParser.hxx"
@@ -167,6 +168,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_NISUSWRITER:
     case MWAW_T_TEACHTEXT:
     case MWAW_T_TEXEDIT:
+    case MWAW_T_WINGZ:
     case MWAW_T_WRITENOW:
     case MWAW_T_WRITERPLUS:
     case MWAW_T_ZWRITE:
@@ -183,7 +185,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
     case MWAW_T_TRAPEZE:
-    case MWAW_T_WINGZ:
     case MWAW_T_XPRESS:
     case MWAW_T_RESERVED1:
     case MWAW_T_RESERVED2:
@@ -388,21 +389,25 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
-      parser.reset(new MsWksSSParser(input, rsrcParser, header));
+    case MWAWDocument::MWAW_T_CLARISWORKS:
+      parser.reset(new ClarisWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_GREATWORKS:
       parser.reset(new GreatWksSSParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MWAW_T_CLARISWORKS:
-      parser.reset(new ClarisWksSSParser(input, rsrcParser, header));
+    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
+      parser.reset(new MsWksSSParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_WINGZ:
+#ifdef DEBUG
+      parser.reset(new WingzParser(input, rsrcParser, header));
+      break;
+#endif
     // TODO
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_TRAPEZE:
-    case MWAWDocument::MWAW_T_WINGZ:
 
     // no spreadsheet
     case MWAWDocument::MWAW_T_ACTA:

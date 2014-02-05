@@ -213,6 +213,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	NisusWrtText.hxx		\
 	TeachTxtParser.cxx		\
 	TeachTxtParser.hxx		\
+	WingzParser.cxx			\
+	WingzParser.hxx			\
 	WriteNowEntry.hxx		\
 	WriteNowParser.cxx		\
 	WriteNowParser.hxx		\

@@ -475,6 +475,10 @@ SOURCE=..\..\src\lib\TeachTxtParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\WingzParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\WriteNowParser.cxx
 # End Source File
 # Begin Source File
@@ -904,6 +908,10 @@ SOURCE=..\..\src\lib\NisusWrtText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\TeachTxtParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\WingzParser.hxx
 # End Source File
 # Begin Source File
 

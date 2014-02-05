@@ -38,8 +38,6 @@
 #ifndef WRITER_PLS_PARSER
 #  define WRITER_PLS_PARSER
 
-#include <list>
-#include <string>
 #include <vector>
 
 #include "MWAWDebug.hxx"
