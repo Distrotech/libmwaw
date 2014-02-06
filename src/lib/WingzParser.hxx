@@ -94,6 +94,12 @@ protected:
   bool readZoneB();
   //! read the spreadshet zone
   bool readSpreadsheet();
+  //! read some spreadsheet size (col/row size or page break)
+  bool readSpreadsheetSize();
+  //! read a font in a spreadsheet
+  bool readSpreadsheetFont();
+  //! read a spreadsheet list of cell
+  bool readSpreadsheetRow();
   //! try to find the next spreadsheet zone
   bool findNextZone(int lastType=0);
 protected:

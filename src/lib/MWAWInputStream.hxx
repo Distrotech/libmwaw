@@ -142,6 +142,8 @@ public:
   long readLong(int num);
   //! try to read a double of size 8: 1.5 bytes exponent, 6.5 bytes mantisse
   bool readDouble8(double &res, bool &isNotANumber);
+  //! try to read a double of size 8: 6.5 bytes mantisse, 1.5 bytes exponent
+  bool readDoubleReverted8(double &res, bool &isNotANumber);
   //! try to read a double of size 10: 2 bytes exponent, 8 bytes mantisse
   bool readDouble10(double &res, bool &isNotANumber);
 

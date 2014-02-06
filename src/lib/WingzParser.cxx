@@ -318,31 +318,90 @@ bool WingzParser::readZoneB()
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// spreadsheet
+////////////////////////////////////////////////////////////
 bool WingzParser::readSpreadsheet()
 {
   MWAWInputStreamPtr input = getInput();
-  long pos=input->tell();
-  if (!input->checkPosition(pos+4*6)) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: the zone seems to short\n"));
-    return false;
-  }
   libmwaw::DebugStream f;
   while (!input->isEnd()) {
-    pos=input->tell();
+    long pos=input->tell();
     int type=(int) input->readULong(1);
     int val=(int) input->readULong(1);
     int dSz=(int) input->readULong(2);
-    if (type==0xFF && val==0xf && dSz==0) {
-      ascii().addPos(pos);
-      ascii().addNote("_");
-      return true;
+    if (type!=0xFF && input->isEnd()) {
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: can not read some zone\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    std::string name("");
+    if (type<=0x10) {
+      static char const *(wh[])= {
+        "", "SheetSize", "SheetSize", "", "", "", "", "" /* cell content or maybe in 12*/,
+        "Formula", "SheetFont", "", "", "", "", "Graphic", "",
+        "PrintInfo"
+      };
+      name=wh[type];
+    }
+    if (name.empty()) {
+      std::stringstream s;
+      s << "ZSheet" << type;
+      name = s.str();
     }
     f.str("");
-    if (type==0xe) f << "Entries(Graphic)";
-    else if (type==0x10) f << "Entries(DocInfo)";
-    else f << "Entries(Zone" << std::hex << type << std::dec << "A)";
-    if (val != 0x80) f << "[" << std::hex << val << std::dec << "]";
-    f << ":";
+    f << "Entries(" << name << "):";
+    if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+
+    bool ok=true;
+    switch (type) {
+    case 1: // col size
+    case 2: // row size
+    case 18: // ?
+    case 19: // ?
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetSize();
+      break;
+    case 3: // never find this block with data ...
+    case 4: // idem
+      ok=input->checkPosition(pos+6+dSz);
+      if (!ok) break;
+      val=(int) input->readLong(2);
+      if (val) f << "id=" << val << ",";
+      if (dSz) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: find some data in zone %d\n", type));
+        f << "###";
+        ascii().addDelimiter(pos+6,'|');
+      }
+      input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    case 9:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetFont();
+      break;
+    case 0xc:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetRow();
+      break;
+    case 0x10:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readPrintInfo();
+      break;
+    case 0xff: // end
+      if (val==0xf && dSz==0) {
+        ascii().addPos(pos);
+        ascii().addNote("_");
+        return true;
+      }
+      ok=false;
+      break;
+    default:
+      ok=false;
+    }
+    if (ok) continue;
+    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     if (type==0xc) dSz+=4;
     else if (type==0x10) dSz+=14;
     else if (type==0xe) { // graphic
@@ -377,6 +436,197 @@ bool WingzParser::readSpreadsheet()
   return true;
 }
 
+bool WingzParser::readSpreadsheetRow()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=12) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  int id=(int) input->readLong(2);
+  long endPos=pos+10+dSz;
+  libmwaw::DebugStream f;
+  f << "Entries(SheetCell)[" << id << "]:";
+  if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetRow: find bad size for data\n"));
+    return false;
+  }
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  while (!input->isEnd()) {
+    pos=input->tell();
+    if (pos>=endPos) break;
+    type=(int) input->readULong(1);
+    f.str("");
+    f << "SheetCell:typ=" << (type&0xf);
+    if (type&0xf0) f << "[high=" << (type>>4) << "]";
+    f << ",";
+    bool ok=true;
+    switch (type &0xf) {
+    case 0: //nothing
+      break;
+    case 1: // style
+      if (pos+6>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+6, librevenge::RVNG_SEEK_SET);
+      break;
+    case 2:
+    case 3: {
+      ok=false;
+      if (pos+9>endPos)
+        break;
+      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+      int fSz=(int) input->readULong(1);
+      if (pos+9+fSz>endPos)
+        break;
+      std::string text("");
+      for (int i=0; i<fSz; ++i) text += (char) input->readULong(1);
+      f << text;
+      input->seek(pos+9+fSz, librevenge::RVNG_SEEK_SET);
+      ok=true;
+      break;
+    }
+    case 5: { // style + double
+      if (pos+16>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+      double value;
+      bool isNAN;
+      input->readDoubleReverted8(value, isNAN);
+      f << value;
+      input->seek(pos+16, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    default:
+      ok=false;
+      break;
+    }
+    if (!ok) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  pos=input->tell();
+  if (pos==endPos) return true;
+  MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetRow: find some extra data\n"));
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote("SheetCell-end:");
+  return true;
+}
+
+bool WingzParser::readSpreadsheetFont()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=9) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  int id=(int) input->readLong(2);
+
+  libmwaw::DebugStream f;
+  f << "Entries(SheetFont)[" << id << "]:";
+  if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
+  if (dSz<26 || !input->checkPosition(pos+6+dSz)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: find bad size for data\n"));
+    return false;
+  }
+  val=(int) input->readLong(2);
+  if (val) f << "used?=" << val << ",";
+  val=(int) input->readLong(2); // always 0?
+  if (val) f << "f0=" << val << ",";
+  int fSz=(int) input->readLong(2);
+  f << "font[sz]=" << fSz << ",";
+  int flag=(int) input->readLong(2); // bold, ..?
+  if (flag) f << "font[flag]=" << std::hex << flag << std::dec << ",";
+  for (int i=0; i<2; ++i) { // always 0?
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i+1 << "=" << val << ",";
+  }
+  val=(int) input->readLong(1); // 0|1|0x14
+  if (val) f << "f3=" << val << ",";
+  for (int i=0; i<3; ++i) { // back, unknown,front color
+    val=(int) input->readULong(4);
+    int col=int(val&0xFFFFFF);
+    int high=(val>>24);
+    if ((i==0&&col!=0xFFFFFF) || i==1 || (i==2&&col))
+      f << "col" << i << "=" << std::hex << col << std::dec << ",";
+    if (high) f << "col" << i << "[high]=" << high << ","; // 0|1
+  }
+  int nSz=(int) input->readULong(1);
+  if (26+nSz>dSz) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: the name size seems bad\n"));
+    f << "###";
+  }
+  else {
+    std::string name("");
+    for (int i=0; i < nSz; ++i) name+=(char) input->readULong(1);
+    f << name << ",";
+  }
+  if (input->tell()!=pos+6+dSz) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: find some extra data\n"));
+    ascii().addDelimiter(input->tell(), '|');
+    input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool WingzParser::readSpreadsheetSize()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=1 && type!=2 && type!=18 && type!=19) return false;
+  libmwaw::DebugStream f;
+  if (type <= 2)
+    f << "Entries(SheetSize)[" << (type==1 ? "col" : "row") << "]:";
+  else // related to page break?
+    f << "Entries(SheetPbrk)[" << (type==18 ? "col" : "row") << "]:";
+  int val=(int) input->readULong(1);
+  if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+  int dSz= (int) input->readULong(2);
+  if (dSz%4 || !input->checkPosition(pos+6+dSz)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetSize: find bad size for data\n"));
+    return false;
+  }
+  int id=(int) input->readLong(2);
+  if (id) f << "id=" << id << ",";
+  f << "pos=[";
+  for (int i=0; i<dSz/4; ++i) {
+    int cell=(int) input->readULong(2); // the row/col number
+    if (cell==0xFFFF) f << "-inf";
+    else if (cell==0x7FFF) f << "inf";
+    else f << cell;
+    val=(int) input->readULong(2);
+    if (type<=2)
+      f << ":" << double(val)/20. << "pt,"; // a dim TWIP
+    else
+      f << "[sz=" << val << "],"; // num row/column
+  }
+  f << "],";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return true;
+}
+
+// retrieve a next spreadheet zone (used when parsing stop for some problem )
 bool WingzParser::findNextZone(int lastType)
 {
   MWAWInputStreamPtr input = getInput();
@@ -464,16 +714,39 @@ bool WingzParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
-  if (!input->checkPosition(pos+0x78)) {
-    MWAW_DEBUG_MSG(("WingzParser::readPrintInfo: file is too short\n"));
+  int type=(int) input->readULong(1);
+  if (type!=0x10) return false;
+  int val=(int) input->readULong(1);
+  int dSz=(int) input->readULong(2);
+  int id=(int) input->readULong(2);
+  if (dSz!=0x7c || !input->checkPosition(pos+20+0x7c)) {
+    MWAW_DEBUG_MSG(("WingzParser::readPrintInfo: the header seem bad\n"));
     return false;
   }
-
   libmwaw::DebugStream f;
+  f << "Entries(PrintInfo):";
+  if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+  if (id) f << "id=" << id << ",";
+  for (int i=0; i<3; ++i) {
+    int dim[2];
+    for (int j=0; j<2; ++j) dim[j]=(int) input->readULong(2);
+    if (i==2)
+      f << "unit=" << dim[0] << "x" << dim[1] << ",";
+    else
+      f << "dim" << i << "=" << dim[0] << "x" << dim[1] << ",";
+  }
+  // 3 small number 0x78,4,6|7
+  for (int i=0; i<3; ++i) {
+    val=(int) input->readULong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
   // print info
   libmwaw::PrinterInfo info;
-  if (!info.read(input)) return false;
-  f << "Entries(PrintInfo):"<< info;
+  input->setReadInverted(false);
+  bool ok=info.read(input);
+  input->setReadInverted(true);
+  if (!ok) return false;
+  f << info;
 
   Vec2i paperSize = info.paper().size();
   Vec2i pageSize = info.page().size();
@@ -506,7 +779,7 @@ bool WingzParser::readPrintInfo()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+0x78, librevenge::RVNG_SEEK_SET);
+  input->seek(pos+20+0x7c, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
