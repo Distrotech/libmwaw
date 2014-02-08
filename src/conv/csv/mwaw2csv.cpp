@@ -45,9 +45,19 @@
 
 #include <libmwaw/libmwaw.hxx>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 int printUsage()
 {
-  printf("Usage: mwaw2csv [-h] [-dc][-fc][-tc] [-Dformat][-F][-Tformat] [-o file.csv] <Mac Spreadsheet Document>\n");
+  printf("Usage: mwaw2csv [OPTION] <Mac Spreadsheet Document>\n");
+  printf("\n");
+  printf("Options:\n");
   printf("\t-h:          Shows this help message\n");
   printf("\t-dc:         Sets the decimal commas to character c: default .\n");
   printf("\t-fc:         Sets the field separator to character c: default ,\n");
@@ -56,14 +66,21 @@ int printUsage()
   printf("\t-Dformat:    Sets the date format: default \"%%m/%%d/%%y\"\n");
   printf("\t-Tformat:    Sets the time format: default \"%%H:%%M:%%S\"\n");
   printf("\t-o file.csv: Defines the ouput file\n");
-  printf("\n\n");
-  printf("\tExample:\n");
-  printf("\t\tmwaw2cvs -d, -D\"%%d/%%m/%%y\" file : Converts a file using french locale\n");
-  printf("\n\n");
-  printf("\tNote:\n");
-  printf("\t\t If -F is present, the formula are generated which english names\n");
-  printf("\t\t Format's options are ignored when converting an AppleWorks/ClarisWorks files\n");
+  printf("\t-v:          Output mwaw2csv version\n");
+  printf("\n");
+  printf("Example:\n");
+  printf("\tmwaw2cvs -d, -D\"%%d/%%m/%%y\" file : Converts a file using french locale\n");
+  printf("\n");
+  printf("Note:\n");
+  printf("\t If -F is present, the formula are generated which english names\n");
+  printf("\t Format's options are ignored when converting an AppleWorks/ClarisWorks files\n");
   return -1;
+}
+
+int printVersion()
+{
+  printf("mwaw2csv %s\n", VERSION);
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -75,7 +92,7 @@ int main(int argc, char *argv[])
   char decSeparator='.', fieldSeparator=',', textSeparator='"';
   std::string dateFormat("%m/%d/%y"), timeFormat("%H:%M:%S");
 
-  while ((ch = getopt(argc, argv, "ho:d:f:t:D:FT:")) != -1) {
+  while ((ch = getopt(argc, argv, "hvo:d:f:t:D:FT:")) != -1) {
     switch (ch) {
     case 'D':
       dateFormat=optarg;
@@ -98,6 +115,9 @@ int main(int argc, char *argv[])
     case 'o':
       output=optarg;
       break;
+    case 'v':
+      printVersion();
+      return 0;
     default:
     case 'h':
       printHelp = true;

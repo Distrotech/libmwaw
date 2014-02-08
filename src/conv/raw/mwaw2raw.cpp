@@ -39,14 +39,29 @@
 
 #include <libmwaw/libmwaw.hxx>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 int printUsage()
 {
   printf("Usage: mwaw2raw [OPTION] <Text Mac Document>\n");
   printf("\n");
   printf("Options:\n");
-  printf("--callgraph           Display the call graph nesting level\n");
-  printf("--help                Shows this help message\n");
+  printf("\t--callgraph:   Display the call graph nesting level\n");
+  printf("\t-h, --help:    Shows this help message\n");
+  printf("\t-v, --version:       Output mwaw2raw version \n");
   return -1;
+}
+
+int printVersion()
+{
+  printf("mwaw2raw %s\n", VERSION);
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -60,7 +75,9 @@ int main(int argc, char *argv[])
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--callgraph"))
       printIndentLevel = true;
-    else if (!file && strncmp(argv[i], "--", 2))
+    else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version"))
+      return printVersion();
+    else if (!file && strncmp(argv[i], "--", 2) && strcmp(argv[i], "-h"))
       file = argv[i];
     else
       return printUsage();

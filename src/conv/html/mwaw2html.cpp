@@ -41,11 +41,28 @@
 
 #include <libmwaw/libmwaw.hxx>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 int printUsage()
 {
   printf("Usage: mwaw2html [-h] <Text Mac Document>\n");
+  printf("\n");
+  printf("Options:\n");
   printf("\t-h:                Shows this help message\n");
+  printf("\t-v:                Output mwaw2html version \n");
   return -1;
+}
+
+int printVersion()
+{
+  printf("mwaw2html %s\n", VERSION);
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -54,8 +71,11 @@ int main(int argc, char *argv[])
   bool printHelp=false;
   int ch;
 
-  while ((ch = getopt(argc, argv, "h")) != -1) {
+  while ((ch = getopt(argc, argv, "hv")) != -1) {
     switch (ch) {
+    case 'v':
+      printVersion();
+      return 0;
     default:
     case 'h':
       printHelp = true;

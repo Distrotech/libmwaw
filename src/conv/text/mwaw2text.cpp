@@ -40,15 +40,31 @@
 
 #include <libmwaw/libmwaw.hxx>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 int printUsage()
 {
   printf("Usage: mwaw2text [OPTION] <Mac Text Document>\n");
   printf("\n");
   printf("Options:\n");
-  printf("-i                Display document metadata instead of the text\n");
-  printf("-h                Shows this help message\n");
-  printf("-o file.txt       Define the output[default stdout]\n");
+  printf(" -i                Display document metadata instead of the text\n");
+  printf(" -h                Shows this help message\n");
+  printf(" -o file.txt       Define the output[default stdout]\n");
+  printf(" -v:               Output mwaw2text version \n");
+  printf("\n");
   return -1;
+}
+
+int printVersion()
+{
+  printf("mwaw2text %s\n", VERSION);
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -61,7 +77,7 @@ int main(int argc, char *argv[])
   bool printHelp=false;
   int ch;
 
-  while ((ch = getopt(argc, argv, "hio:")) != -1) {
+  while ((ch = getopt(argc, argv, "hio:v")) != -1) {
     switch (ch) {
     case 'i':
       isInfo=true;
@@ -69,6 +85,9 @@ int main(int argc, char *argv[])
     case 'o':
       output=optarg;
       break;
+    case 'v':
+      printVersion();
+      return 0;
     default:
     case 'h':
       printHelp = true;

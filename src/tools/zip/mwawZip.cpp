@@ -47,17 +47,32 @@
 #include "xattr.h"
 #include "zip.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 static void usage(const char *cmdname)
 {
-  std::cerr << "Syntax error, expect:\n";
-  std::cerr << "\t " << cmdname << " [-h][-x] filename zipfile\n";
-  std::cerr << "\t where\t filename is the file to zip,\n";
-  std::cerr << "\t where\t zipfile is the file to unzip,\n";
-  std::cerr << "\t\t -h: print this help,\n";
-  std::cerr << "\t\t -x: do not zip a binhex or a zip file,\n";
-  std::cerr << "\t\t -D: only zip the file containing a resource fork or finder information.\n";
+  std::cerr << "Usage: " << cmdname << " [-h][-x][-D] FILENAME ZIPFILE\n";
+  std::cerr << "\n";
+  std::cerr << "try to zip the content of FILENAME in ZIPFILE.\n";
+  std::cerr << "\n";
+  std::cerr << "Options:\n";
+  std::cerr << "\t -h: print this help,\n";
+  std::cerr << "\t -x: do not zip a binhex or a zip file,\n";
+  std::cerr << "\t -v: Output mwawZip version\n";
+  std::cerr << "\t -D: only zip the file containing a resource fork or finder information.\n";
 }
 
+int printVersion()
+{
+  std::cerr << "mwawZip " << VERSION << "\n";
+  return 0;
+}
 
 int __cdecl main(int argc, char **argv)
 {
@@ -65,8 +80,11 @@ int __cdecl main(int argc, char **argv)
   bool verbose=false;
   bool doNotCompressSimpleFile=false;
   int ch;
-  while ((ch = getopt(argc, argv, "hxD")) != -1) {
+  while ((ch = getopt(argc, argv, "hvxD")) != -1) {
     switch (ch) {
+    case 'v':
+      printVersion();
+      return 0;
     case 'x':
       checkZip=true;
       break;

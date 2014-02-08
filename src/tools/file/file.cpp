@@ -44,6 +44,14 @@
 
 #include <sys/stat.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef VERSION
+#define VERSION "UNKNOWN VERSION"
+#endif
+
 namespace libmwaw_tools
 {
 class Exception
@@ -842,12 +850,22 @@ bool File::printResult(std::ostream &o, int verbose) const
 
 void usage(char const *fName)
 {
-  std::cerr << "Syntax error, expect:\n";
-  std::cerr << "\t " << fName << " [-h][-H][-vNum] filename\n";
-  std::cerr << "\t where\t filename is the file path,\n";
-  std::cerr << "\t\t -h: does not print the filename,\n";
-  std::cerr << "\t\t -H: prints the filename[default],\n";
-  std::cerr << "\t\t -vNum: define the verbose level.\n";
+  std::cerr << "Usage: " << fName << " [OPTION] FILENAME\n";
+  std::cerr << "\n";
+  std::cerr << "try to find the file type of FILENAME\n";
+  std::cerr << "\n";
+  std::cerr << "Options:\n";
+  std::cerr << "\t -f: Does not print the filename,\n";
+  std::cerr << "\t -F: Prints the filename[default],\n";
+  std::cerr << "\t -h: Shows this help message,\n";
+  std::cerr << "\t -v: Output mwawFile version\n";
+  std::cerr << "\t -wNum: define the verbose level.\n";
+}
+
+int printVersion()
+{
+  std::cerr << "mwawFile " << VERSION << "\n";
+  return 0;
 }
 
 int main(int argc, char *const argv[])
@@ -855,17 +873,21 @@ int main(int argc, char *const argv[])
   int ch, verbose=0;
   bool printFileName=true;
 
-  while ((ch = getopt(argc, argv, "hHv:")) != -1) {
+  while ((ch = getopt(argc, argv, "fFhvw:")) != -1) {
     switch (ch) {
-    case 'v':
+    case 'w':
       verbose=atoi(optarg);
       break;
-    case 'h':
+    case 'f':
       printFileName = false;
       break;
-    case 'H':
+    case 'F':
       printFileName = true;
       break;
+    case 'v':
+      printVersion();
+      return 0;
+    case 'h':
     case '?':
     default:
       verbose=-1;
