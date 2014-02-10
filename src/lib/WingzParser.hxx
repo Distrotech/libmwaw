@@ -96,10 +96,24 @@ protected:
   bool readSpreadsheet();
   //! read some spreadsheet size (col/row size or page break)
   bool readSpreadsheetSize();
-  //! read a font in a spreadsheet
-  bool readSpreadsheetFont();
+  //! read a style in a spreadsheet
+  bool readSpreadsheetStyle();
+  //! read a spreadsheet style name
+  bool readSpreadsheetStyleName();
   //! read a spreadsheet list of cell
-  bool readSpreadsheetRow();
+  bool readSpreadsheetCellList();
+  //! read a spreedsheet macro
+  bool readSpreadsheetMacro();
+  //! read a spreadsheet unknown zone 5
+  bool readSpreadsheetZone5();
+  //! read a graphic zone
+  bool readGraphic();
+  //! read a chart ( some graphic zone)
+  bool readChartData();
+  //! read a simple text zone data ( some graphic zone)
+  bool readSimpleTextData();
+  //! read a complex text zone data ( some graphic zone)
+  bool readComplexTextData();
   //! try to find the next spreadsheet zone
   bool findNextZone(int lastType=0);
 protected:

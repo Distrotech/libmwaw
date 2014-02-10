@@ -338,8 +338,8 @@ bool WingzParser::readSpreadsheet()
     std::string name("");
     if (type<=0x10) {
       static char const *(wh[])= {
-        "", "SheetSize", "SheetSize", "", "", "", "", "" /* cell content or maybe in 12*/,
-        "Formula", "SheetFont", "", "", "", "", "Graphic", "",
+        "", "SheetSize", "SheetSize", "", "", "", "", "StylName",
+        "Formula", "Style", "", "", "", "Macro", "Graphic", "",
         "PrintInfo"
       };
       name=wh[type];
@@ -377,13 +377,34 @@ bool WingzParser::readSpreadsheet()
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       break;
+    case 5:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetZone5();
+      break;
+    case 7:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetStyleName();
+      break;
     case 9:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok=readSpreadsheetFont();
+      ok=readSpreadsheetStyle();
       break;
     case 0xc:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok=readSpreadsheetRow();
+      ok=readSpreadsheetCellList();
+      break;
+    case 0xd:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetMacro();
+      break;
+    case 0xe:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readGraphic();
+      if (!ok) {
+        ascii().addPos(pos);
+        ascii().addNote("Entries(Graphic):###");
+        ok=findNextZone(0xe) && input->tell()>pos+46;
+      }
       break;
     case 0x10:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -404,24 +425,8 @@ bool WingzParser::readSpreadsheet()
     input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     if (type==0xc) dSz+=4;
     else if (type==0x10) dSz+=14;
-    else if (type==0xe) { // graphic
-      if (dSz>0x80) {
-        // ff->?, 2xx -> textbox ? , 4xx -> chart ?
-        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: find some complex graphic zone\n"));
-        if (!findNextZone(0xe) || input->tell()<pos+0x20) {
-          f << "###";
-          ascii().addPos(pos);
-          ascii().addNote(f.str().c_str());
-          input->seek(pos, librevenge::RVNG_SEEK_END);
-          break;
-        }
-        dSz = int(input->tell()-6-pos);
-      }
-      else
-        dSz+=2;
-    }
-    // zone 16: page size?
-    if (!type || !val || (val&0x3F) || !input->checkPosition(pos+6+dSz)) {
+    else if (type==0xe) dSz+=2;
+    if (!type || type>24 || !val || (val&0x3F) || !input->checkPosition(pos+6+dSz)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -436,7 +441,7 @@ bool WingzParser::readSpreadsheet()
   return true;
 }
 
-bool WingzParser::readSpreadsheetRow()
+bool WingzParser::readSpreadsheetCellList()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
@@ -447,10 +452,10 @@ bool WingzParser::readSpreadsheetRow()
   int id=(int) input->readLong(2);
   long endPos=pos+10+dSz;
   libmwaw::DebugStream f;
-  f << "Entries(SheetCell)[" << id << "]:";
+  f << "Entries(SheetCell)[row,id=" << id << "]:";
   if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
   if (!input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetRow: find bad size for data\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellList: find bad size for data\n"));
     return false;
   }
   for (int i=0; i<2; ++i) {
@@ -495,6 +500,15 @@ bool WingzParser::readSpreadsheetRow()
       ok=true;
       break;
     }
+    case 4:
+      if (pos+10>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+      f << "nan" << input->readLong(2) << ",";
+      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      break;
     case 5: { // style + double
       if (pos+16>endPos) {
         ok=false;
@@ -521,14 +535,63 @@ bool WingzParser::readSpreadsheetRow()
   }
   pos=input->tell();
   if (pos==endPos) return true;
-  MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetRow: find some extra data\n"));
+  MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellList: find some extra data\n"));
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote("SheetCell-end:");
   return true;
 }
 
-bool WingzParser::readSpreadsheetFont()
+// style
+bool WingzParser::readSpreadsheetStyleName()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=7) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  int id=(int) input->readLong(2);
+
+  libmwaw::DebugStream f;
+  f << "Entries(StylName)[" << id << "]:";
+  if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
+  if (dSz<10 || !input->checkPosition(pos+6+dSz)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: find bad size for data\n"));
+    return false;
+  }
+  val=(int) input->readLong(2);
+  if (val!=-1) f << "f0=" << val << ",";
+  for (int i=0; i<2; ++i) { // always 7/7
+    val=(int) input->readLong(1);
+    if (val!=7) f << "f" << i+1 << "0=" << val << ",";
+  }
+  int cell[2];
+  for (int i=0; i<2; ++i) cell[i]=(int) input->readLong(2);
+  f << "cell=" << cell[0] << "x" << cell[1] << ",";
+  val=(int) input->readLong(1);
+  if (val!=-1) f << "f3=" << val << ",";
+  int sSz=(int) input->readULong(1);
+  if (10+sSz>dSz) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: style name seems bad\n"));
+    f << "###";
+  }
+  else {
+    std::string name("");
+    for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
+    f << name << ",";
+    if (input->tell()!=pos+6+dSz) {
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: find some extra data\n"));
+      ascii().addDelimiter(input->tell(), '|');
+    }
+  }
+  input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool WingzParser::readSpreadsheetStyle()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
@@ -539,10 +602,10 @@ bool WingzParser::readSpreadsheetFont()
   int id=(int) input->readLong(2);
 
   libmwaw::DebugStream f;
-  f << "Entries(SheetFont)[" << id << "]:";
+  f << "Entries(Style)[" << id << "]:";
   if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
   if (dSz<26 || !input->checkPosition(pos+6+dSz)) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: find bad size for data\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyle: find bad size for data\n"));
     return false;
   }
   val=(int) input->readLong(2);
@@ -569,7 +632,7 @@ bool WingzParser::readSpreadsheetFont()
   }
   int nSz=(int) input->readULong(1);
   if (26+nSz>dSz) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: the name size seems bad\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyle: the name size seems bad\n"));
     f << "###";
   }
   else {
@@ -578,7 +641,7 @@ bool WingzParser::readSpreadsheetFont()
     f << name << ",";
   }
   if (input->tell()!=pos+6+dSz) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetFont: find some extra data\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyle: find some extra data\n"));
     ascii().addDelimiter(input->tell(), '|');
     input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
   }
@@ -587,6 +650,7 @@ bool WingzParser::readSpreadsheetFont()
   return true;
 }
 
+// some dim or page break pos
 bool WingzParser::readSpreadsheetSize()
 {
   MWAWInputStreamPtr input = getInput();
@@ -626,6 +690,144 @@ bool WingzParser::readSpreadsheetSize()
   return true;
 }
 
+// macro
+bool WingzParser::readSpreadsheetMacro()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=0xd) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  int id=(int) input->readLong(2);
+  long endPos=pos+6+dSz;
+
+  libmwaw::DebugStream f;
+  f << "Entries(Macro)[" << id << "]:";
+  if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+  if (dSz<78 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetMacro: find bad size for data\n"));
+    return false;
+  }
+  long textSize=(long) input->readULong(4);
+  f << "text[size]=" << textSize << ",";
+  long formulaSize=(long) input->readULong(4);
+  f << "formula[size]=" << formulaSize << ",";
+  for (int i=0; i<3; ++i) {
+    val=(int) input->readLong(4);
+    if (val!=formulaSize)
+      f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i<28; ++i) { // find 0 except g18=0|1
+    val=(int) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "Macro[formula]:";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  if (endPos-textSize<=pos) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetMacro: can not find the macros text\n"));
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+
+  input->seek(endPos-textSize, librevenge::RVNG_SEEK_SET);
+  pos=endPos-textSize;
+  f.str("");
+  f << "Macro[text]:";
+  std::string text("");
+  for (long i=0; i<textSize; ++i) text+=(char) input->readLong(1);
+  f << text;
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+// unknown zone
+bool WingzParser::readSpreadsheetZone5()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=5) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  long endPos=pos+6+dSz;
+  int id=(int) input->readLong(2);
+
+  libmwaw::DebugStream f;
+  f << "Entries(ZSheet5)[" << id << "]:";
+  if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
+  if (dSz<2 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetZone5: find bad size for data\n"));
+    return false;
+  }
+  val=(int) input->readULong(2);
+  if (val!=dSz) f << "#dSz=" << val << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  while (!input->isEnd()) {
+    pos=input->tell();
+    if (pos >= endPos) break;
+    type=(int) input->readLong(1);
+    bool ok=true;
+    f.str("");
+    f << "ZSheet5-" << std::hex << type << std::dec << ":";
+    switch (type) {
+    case 0: // nothing
+    case 0x4:
+      break;
+    case 0x3:
+      if (pos+4>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      break;
+    case 0x5: // the row?
+      if (pos+5>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+5, librevenge::RVNG_SEEK_SET);
+      break;
+    case 0x1:
+    case 0x2:
+      if (pos+3>endPos) {
+        ok=false;
+        break;
+      }
+      input->seek(pos+3, librevenge::RVNG_SEEK_SET);
+      break;
+    default:
+      ok=false;
+      break;
+    }
+    if (!ok) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  pos=input->tell();
+  if (pos==endPos)
+    return true;
+  MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetZone5: find some extra data\n"));
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote("ZSheet5-end:###");
+  return true;
+}
+
 // retrieve a next spreadheet zone (used when parsing stop for some problem )
 bool WingzParser::findNextZone(int lastType)
 {
@@ -637,7 +839,7 @@ bool WingzParser::findNextZone(int lastType)
     int type=val&0xFF;
     if (type==0x80) {
       if (!lastCheck) {
-        input->seek(-1, librevenge::RVNG_SEEK_CUR);
+        input->seek(-3, librevenge::RVNG_SEEK_CUR);
         lastCheck=true;
       }
       continue;
@@ -671,6 +873,270 @@ bool WingzParser::findNextZone(int lastType)
   }
   return false;
 }
+
+////////////////////////////////////////////////////////////
+// read a graphic zone
+////////////////////////////////////////////////////////////
+bool WingzParser::readGraphic()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=0xe) return false;
+  int val=(int) input->readULong(1);
+  int dSz=(int) input->readULong(2);
+  int id=(int) input->readULong(2);
+  libmwaw::DebugStream f;
+  f << "Entries(Graphic):";
+  if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+  if (id) f << "id=" << id << ",";
+  if (!input->checkPosition(pos+60)) {
+    MWAW_DEBUG_MSG(("WingzParser::readGraphic: the header seems bad\n"));
+    return false;
+  }
+  input->seek(pos+6, librevenge::RVNG_SEEK_SET);
+  int nSz=(int) input->readULong(1);
+  if (nSz>15) {
+    MWAW_DEBUG_MSG(("WingzParser::readGraphic: the graphic title seems bad\n"));
+    f << "#nSz=" << nSz << ",";
+  }
+  else if (nSz) {
+    std::string name("");
+    for (int i=0; i<nSz; ++i) name+=(char)input->readULong(1);
+    f << name << ",";
+  }
+  input->seek(pos+6+16, librevenge::RVNG_SEEK_SET);
+  int order=(int) input->readULong(2);
+  f << "order=" << order << ",";
+  val=(int) input->readULong(2); // always 0
+  if (val) f << "f1=" << val << ",";
+  // the position seem to be stored as cell + % of the cell width...
+  int decal[4];
+  for (int i=0; i<4; ++i) decal[i]=(int) input->readULong(1);
+  int dim[4]; // the cells which included the picture
+  for (int i=0; i<4; ++i) dim[i]=(int) input->readULong(2);
+  f << "dim=" << dim[0] << ":" << double(decal[2])/255. << "x"
+    << dim[1] << ":" << double(decal[0])/255. << "<->"
+    << dim[2] << ":" << double(decal[3])/255. << "x"
+    << dim[3] << ":" << double(decal[1])/255. << ",";
+  type=(int) input->readULong(2);
+
+  long endPos=pos+8+dSz;
+  if (type==2) {
+    f << "f0=" << std::hex << dSz << std::dec << ",";
+    if (!findNextZone(0xe) || input->tell()<pos+0x46) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: can not determine the graphic end\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    endPos=input->tell();
+    input->seek(pos+40, librevenge::RVNG_SEEK_SET);
+  }
+
+  val=(int) input->readULong(2); // always 0
+  if (val) f << "f2=" << val << ",";
+  long dataPos=input->tell();
+  switch (type) {
+  case 2: { // button, textbox
+    f << "complex,";
+    int sSz=(int)input->readULong(1);
+    if (!input->checkPosition(dataPos+1+sSz)) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: can not find the textbox data\n"));
+      return false;
+    }
+    std::string name("");
+    for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
+    if (sSz) f << name << ",";
+    break;
+  }
+  case 4:
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return readChartData();
+  case 5:
+  case 6:
+  case 7:
+  case 8:
+  case 9: {
+    static int const(expectedSize[])= {0x38, 0x3c, 0x34, 0x40, 0x40};
+    if (!input->checkPosition(endPos) || dSz < expectedSize[type-5]) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: find bad size for shape\n"));
+      return false;
+    }
+    static char const *(what[])= {"line", "arc", "circle", "rectangle", "poly" };
+    f << what[type-5] << ",";
+    for (int i=0; i<4; ++i) { // g0=g3=0, g2=0|-1, g4=0|19|202
+      val=(int) input->readLong(1);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
+    int numColors=type==8?5:3;
+    for (int i=0; i<numColors; ++i) { // back, unknown,front color
+      val=(int) input->readULong(4);
+      int col=int(val&0xFFFFFF);
+      int high=(val>>24);
+      if (((i%2)==0&&col!=0xFFFFFF) || ((i%2)&&col))
+        f << "col" << i << "=" << std::hex << col << std::dec << ",";
+      if (high!=1) f << "col" << i << "[high]=" << high << ","; // 0|1
+    }
+    val=(int) input->readLong(2);
+    if (val!=5) f << "g4=" << val << ",";
+    switch (type) {
+    case 5:
+      // checkme, look like the polygon
+      for (int i=0; i<4; ++i) {
+        static int const(expected[])= {0x1c,2,0/*|1|2*/,0};
+        val=(int) input->readLong(1);
+        if (val != expected[i]) f << "h" << i << "=" << val << ",";
+      }
+      break;
+    case 6:
+      for (int i=0; i<2; ++i) { // cell position?
+        int delta=(int) input->readULong(1);
+        int cell=(int) input->readLong(1);
+        if (val) f << "h" << i << "=" << double(cell)+double(delta)/256. << ",";
+      }
+      for (int i=0; i<2; ++i) { // h2=0|384|a8c, h3=384
+        val=(int) input->readULong(2);
+        if (val) f << "h" << i+2 << "=" << val << ",";
+      }
+      break;
+    case 7:
+      break;
+    case 8: // always 20x20
+      f << "corner?=" << input->readLong(2) << "x" <<  input->readLong(2) << ",";
+      break;
+    case 9: {
+      val=(int) input->readULong(2);
+      if (val) f << "h0=" << val << ",";
+      int nbPt=0;
+      for (int i=0; i<4; ++i) {
+        static int const(expected[])= {0x1c,2,0/*|1|2*/,0};
+        val=(int) input->readLong(1);
+        if (i==2) {
+          nbPt=val;
+          continue;
+        }
+        if (val != expected[i]) f << "h" << i << "=" << val << ",";
+      }
+      f << "nbPt=" << nbPt << ",";
+      if (input->tell()+nbPt*4>endPos) {
+        f << "###";
+        break;
+      }
+      f << "pts=[";
+      for (int i=0; i<nbPt; ++i) {
+        for (int j=0; j<2; ++j) { // checkme
+          int delta=(int) input->readULong(1);
+          int cell=(int) input->readLong(1);
+          f << double(cell)+double(delta)/256. << (j ? "," : "x");
+        }
+      }
+      f << "],";
+      break;
+    }
+    default:
+      break;
+    }
+    break;
+  }
+  case 10: {
+    if (!input->checkPosition(endPos)) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: find bad size for picture\n"));
+      return false;
+    }
+    f << "picture,";
+    long pSz=(long)input->readULong(2);
+    for (int i=0; i<2; ++i) { // g0=0, g1=2
+      val=(int) input->readULong(2);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    if (!pSz || !input->checkPosition(dataPos+6+pSz)) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: can not find the picture data\n"));
+      return false;
+    }
+#ifdef DEBUG_WITH_FILES
+    ascii().skipZone(dataPos, dataPos+6+pSz-1);
+    librevenge::RVNGBinaryData file;
+    input->seek(dataPos+6, librevenge::RVNG_SEEK_SET);
+    input->readDataBlock(pSz, file);
+    static int volatile pictName = 0;
+    f.str("");
+    f << "PICT-" << ++pictName;
+    libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
+    input->seek(dataPos+6+pSz, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  default:
+    MWAW_DEBUG_MSG(("WingzParser::readGraphic: find some unknown type %d\n", type));
+    f << "#typ=" << type << ",";
+  }
+  if (input->tell()!=pos && input->tell()!=endPos)
+    ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool WingzParser::readChartData()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  if (!findNextZone(0xe) || input->tell()<pos+866) {
+    MWAW_DEBUG_MSG(("WingzParser::readChartData: can not determine the graphic end\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  long endPos=input->tell();
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(Chart)";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos+=193;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+
+  ascii().addPos(pos);
+  ascii().addNote("Chart-A0:");
+
+  pos+=153;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<4; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "Chart-A" << i+1 << ":";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    input->seek(pos+113, librevenge::RVNG_SEEK_SET);
+  }
+  pos=input->tell();
+  ascii().addPos(pos);
+  ascii().addNote("Chart-A5:");
+
+  pos+=68;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+
+  int i=0;
+  while (pos+73<=endPos) {
+    pos=input->tell();
+    f.str("");
+    f << "Chart-B" << i++ << ":";
+
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+73, librevenge::RVNG_SEEK_SET);
+    pos=input->tell();
+  }
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
