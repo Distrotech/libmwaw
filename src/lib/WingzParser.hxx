@@ -51,8 +51,10 @@ struct State;
 
 /** \brief the main class to read a Wingz document
  *
- * \note need more file to be sure to treat all document,
- * ie. the structure of many zones is very uncertain, so ...
+ * \note need more files to be sure to treat all documents, ie. as
+ * some flags (defining the following type's field) can appear in many
+ * structures, only having a lot of documents can allow to find all
+ * this type's fields...
  *
  */
 class WingzParser : public MWAWSpreadsheetParser
@@ -102,18 +104,17 @@ protected:
   bool readSpreadsheetStyleName();
   //! read a spreadsheet list of cell
   bool readSpreadsheetCellList();
-  //! read a spreedsheet macro
-  bool readSpreadsheetMacro();
   //! read a spreadsheet unknown zone 5
   bool readSpreadsheetZone5();
   //! read a graphic zone
   bool readGraphic();
   //! read a chart ( some graphic zone)
   bool readChartData();
-  //! read a simple text zone data ( some graphic zone)
-  bool readSimpleTextData();
-  //! read a complex text zone data ( some graphic zone)
-  bool readComplexTextData();
+  //! read a text zone or a button zone ( some graphic zone)
+  bool readTextZone();
+  //! read a macro in a text zone ( some graphic zone)
+  bool readMacro();
+
   //! try to find the next spreadsheet zone
   bool findNextZone(int lastType=0);
 protected:
