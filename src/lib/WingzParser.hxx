@@ -78,6 +78,9 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
+  //! try to send the main spreadsheet
+  bool sendSpreadsheet();
+
   //! finds the different objects zones
   bool createZones();
 
@@ -98,6 +101,8 @@ protected:
   bool readSpreadsheet();
   //! read some spreadsheet size (col/row size or page break)
   bool readSpreadsheetSize();
+  //! read a page break zone
+  bool readSpreadsheetPBreak();
   //! read a style in a spreadsheet
   bool readSpreadsheetStyle();
   //! read a spreadsheet style name

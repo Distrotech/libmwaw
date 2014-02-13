@@ -23,6 +23,7 @@
 - MsWrd*        : parser of Microsoft Word documents
 - NisusWrt*     : parser of Nisus Writer documents,
 - TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
+- Wingz*        : parser of Wingz documents
 - WriteNow*     : parser of WriteNow documents
 - WriterPls*    : parser of WriterPlus documents
 - ZWrt*         : parser of Z-Write documents
@@ -108,7 +109,8 @@ These files defined basic structures which must be used by the parsers :
 ------------------------------------------------------------------------
 ---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
 ---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt/MindWrt ---
----  More/MsWks/MsWrd/NisusWrt/TeachTxt/WriteNow/WriterPls/ZWrt      ---
+---  More/MsWks/MsWrd/NisusWrt/TeachTxt                              ---
+---  Wingz/WriteNow/WriterPls/ZWrt                                   ---
 ------------------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -202,6 +204,8 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 -   NisusWrtText : class which reads the text
 
 TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
+
+WingzParser : parser of Wingz document : v1.1
 
 WriteNowParser : parser of WriteNow document : v1.0-4.0
 -   WriteNowText : class which reads the text and its structures

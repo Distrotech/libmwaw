@@ -65,7 +65,7 @@ struct Cell : public MWAWCell {
   Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1), m_isEmpty(false)
   {
     setPosition(pos);
-  };
+  }
   //! the cell content
   MWAWCellContent m_content;
   //! the formula id

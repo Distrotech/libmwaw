@@ -74,16 +74,75 @@ struct Style {
   std::string m_format;
 };
 
+//! Internal: the cell of a WingzParser
+struct Cell : public MWAWCell {
+  //! constructor
+  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1)
+  {
+    setPosition(pos);
+  }
+  //! the cell content
+  MWAWCellContent m_content;
+  //! the formula id
+  int m_formula;
+};
+
 ////////////////////////////////////////
 //! Internal: the spreadsheet data of a WingzParser
 struct Spreadsheet {
   //! constructor
-  Spreadsheet() : m_styleMap()
+  Spreadsheet() : m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
+    m_cells(), m_styleMap(), m_name("Sheet0")
   {
   }
+  //! returns the row size in point
+  float getRowHeight(int row) const
+  {
+    if (row>=0&&row<(int) m_heightRows.size())
+      return m_heightRows[size_t(row)];
+    return m_heightDefault;
+  }
+  //! convert the m_widthCols in a vector of of point size
+  std::vector<float> convertInPoint(std::vector<float> const &list) const
+  {
+    size_t numCols=size_t(getRightBottomPosition()[0]+1);
+    std::vector<float> res;
+    res.resize(numCols);
+    for (size_t i = 0; i < numCols; i++) {
+      if (i>=list.size() || list[i] < 0) res[i] = m_widthDefault;
+      else res[i] = float(list[i]);
+    }
+    return res;
+  }
+  /** the default column width */
+  float m_widthDefault;
+  /** the column size in points */
+  std::vector<float> m_widthCols;
+  /** the default row height */
+  float m_heightDefault;
+  /** the row height in points */
+  std::vector<float> m_heightRows;
+  /** the list of not empty cells */
+  std::vector<Cell> m_cells;
   //! the list of style
   std::map<int, Style> m_styleMap;
+  /** the spreadsheet name */
+  std::string m_name;
+protected:
+  /** returns the last Right Bottom cell position */
+  Vec2i getRightBottomPosition() const
+  {
+    int maxX = 0, maxY = 0;
+    size_t numCell = m_cells.size();
+    for (size_t i = 0; i < numCell; i++) {
+      Vec2i const &p = m_cells[i].position();
+      if (p[0] > maxX) maxX = p[0];
+      if (p[1] > maxY) maxY = p[1];
+    }
+    return Vec2i(maxX, maxY);
+  }
 };
+
 ////////////////////////////////////////
 //! Internal: the state of a WingzParser
 struct State {
@@ -159,11 +218,9 @@ void WingzParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 
     checkHeader(0L);
     ok = createZones();
-    ascii().addPos(getInput()->tell());
-    ascii().addNote("_");
-    ok=false;
     if (ok) {
       createDocument(docInterface);
+      sendSpreadsheet();
     }
   }
   catch (...) {
@@ -220,7 +277,7 @@ bool WingzParser::createZones()
     ascii().addPos(input->tell());
     ascii().addNote("Entries(Loose)");
   }
-  return false;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -405,10 +462,13 @@ bool WingzParser::readSpreadsheet()
     switch (type) {
     case 1: // col size
     case 2: // row size
-    case 18: // ?
-    case 19: // ?
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetSize();
+      break;
+    case 18:
+    case 19:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readSpreadsheetPBreak();
       break;
     case 3: // never find this block with data ...
     case 4: // idem
@@ -501,32 +561,34 @@ bool WingzParser::readSpreadsheetCellList()
   if (type!=12) return false;
   int val=(int) input->readULong(1);
   int dSz= (int) input->readULong(2);
-  int id=(int) input->readLong(2);
+  int row=(int) input->readLong(2);
+  int firstCol=(int) input->readLong(2);
   long endPos=pos+10+dSz;
   libmwaw::DebugStream f;
-  f << "Entries(SheetCell)[row,id=" << id << "]:";
+  f << "Entries(SheetCell)[row=" << row << "]:";
+  if (firstCol) f << "first[col]=" << firstCol << ",";
   if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
   if (!input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellList: find bad size for data\n"));
     return false;
   }
-  for (int i=0; i<2; ++i) {
-    val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
+  val=(int) input->readLong(2);
+  if (val) f << "f0=" << val << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   while (!input->isEnd()) {
+    Vec2i cellPos(firstCol++, row);
     pos=input->tell();
     if (pos>=endPos) break;
     type=(int) input->readULong(1);
     f.str("");
-    f << "SheetCell:typ=" << (type&0xf);
+    f << "SheetCell[" << cellPos << "]:type=" << (type&0xf);
     if (type&0xf0) {
       f << "[high=" << (type>>4) << "]";
       type &=0xf;
     }
+    f << ",";
     if (type==0) { // empty cell
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -536,32 +598,115 @@ bool WingzParser::readSpreadsheetCellList()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
-    f << ",";
+    WingzParserInternal::Cell cell(cellPos);
     val=(int) input->readULong(1);
     if (val&0xF) {
+      int borders=0;
       f << "bord=";
-      if (val&1) f << "L";
-      if (val&2) f << "R";
-      if (val&4) f << "T";
-      if (val&8) f << "B";
+      if (val&1) {
+        borders|=libmwaw::LeftBit;
+        f << "L";
+      }
+      if (val&2) {
+        borders|=libmwaw::RightBit;
+        f << "R";
+      }
+      if (val&4) {
+        borders|=libmwaw::TopBit;
+        f << "T";
+      }
+      if (val&8) {
+        borders|=libmwaw::BottomBit;
+        f << "B";
+      }
       f << ",";
+      cell.setBorders(borders, MWAWBorder());
     }
     if (val&0xF0) f << "f0=" << (val>>4) << ",";
+
+    MWAWCell::Format format;
     val=(int) input->readULong(1);
-    if ((val&0xF)!=2) f << "digits=" << (val&0xf) << ",";
-    f << "format=" << (val>>4) << ",";
+    format.m_digits= val&0xf;
+    if (format.m_digits!=2) f << "digits=" << format.m_digits << ",";
+    switch (val>>4) {
+    case 0: // general
+      break;
+    case 1:
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+      break;
+    case 2:
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+      break;
+    case 3:
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+      break;
+    case 4:
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+      break;
+    case 5:
+      format.m_format=MWAWCell::F_DATE;
+      format.m_DTFormat="%b %d %y:";
+      break;
+    case 6:
+      format.m_format=MWAWCell::F_DATE;
+      format.m_DTFormat="%b %d";
+      break;
+    case 7:
+      format.m_format=MWAWCell::F_DATE;
+      format.m_DTFormat="%b %y";
+      break;
+    case 8:
+      format.m_format=MWAWCell::F_DATE;
+      format.m_DTFormat="%m/%d/%y";
+      break;
+    case 9:
+      format.m_format=MWAWCell::F_DATE;
+      format.m_DTFormat="%m/%d";
+      break;
+    case 10:
+      format.m_format=MWAWCell::F_TIME;
+      format.m_DTFormat="%I:%M:%S %p";
+      break;
+    case 11:
+      format.m_format=MWAWCell::F_TIME;
+      format.m_DTFormat="%I:%M %p";
+      break;
+    case 12:
+      format.m_format=MWAWCell::F_TIME;
+      format.m_DTFormat="%H:%M:%S";
+      break;
+    case 13:
+      format.m_format=MWAWCell::F_TIME;
+      format.m_DTFormat="%H:%M";
+      break;
+    case 14:
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellList: find cell with custom format\n"));
+      f << "format=custom,";
+      break;
+    default:
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellList: find cell with format=15\n"));
+      f << "##format=15,";
+      break;
+    }
     val=(int) input->readULong(1);
     bool ok=true;
     switch ((val>>4)&7) {
     case 0: // general
       break;
     case 1:
+      cell.setHAlignement(MWAWCell::HALIGN_LEFT);
       f << "align=left,";
       break;
     case 2:
+      cell.setHAlignement(MWAWCell::HALIGN_CENTER);
       f << "align=center,";
       break;
     case 3:
+      cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
       f << "align=right,";
       break;
     default:
@@ -570,11 +715,25 @@ bool WingzParser::readSpreadsheetCellList()
     if (val&0x8F) f << "f1=" << std::hex << (val&0x8F) << std::dec << ",";
     val=(int) input->readLong(2);
     f << "style=" << val << ",";
-    if (type!=1) {
-      val=(int) input->readLong(2);
-      if (val!=-1)
-        f << "formula=" << val << ",";
+    if (m_state->m_spreadsheet.m_styleMap.find(val)==m_state->m_spreadsheet.m_styleMap.end()) {
+      f << "#style,";
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyle: can not find a style\n"));
     }
+    else {
+      WingzParserInternal::Style const &style=m_state->m_spreadsheet.m_styleMap.find(val)->second;
+      cell.setFont(style.m_font);
+      if (!style.m_backgroundColor.isWhite())
+        cell.setBackgroundColor(style.m_backgroundColor);
+    }
+    WingzParserInternal::Style style;
+    f << "format=[" << format << "],";
+    if (type!=1) {
+      // fixme
+      cell.m_formula=(int) input->readLong(2);
+      if (cell.m_formula!=-1)
+        f << "formula=" << cell.m_formula << ",";
+    }
+    MWAWCellContent &content=cell.m_content;
     switch (type) {
     case 1: // only style
       break;
@@ -586,6 +745,12 @@ bool WingzParser::readSpreadsheetCellList()
       int fSz=(int) input->readULong(1);
       if (pos+9+fSz>endPos)
         break;
+      if (format.m_format==MWAWCell::F_UNKNOWN)
+        format.m_format=MWAWCell::F_TEXT;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_TEXT;
+      content.m_textEntry.setBegin(input->tell());
+      content.m_textEntry.setLength(fSz);
       std::string text("");
       for (int i=0; i<fSz; ++i) text += (char) input->readULong(1);
       f << text;
@@ -598,6 +763,11 @@ bool WingzParser::readSpreadsheetCellList()
         ok=false;
         break;
       }
+      if (format.m_format==MWAWCell::F_UNKNOWN)
+        format.m_format=MWAWCell::F_NUMBER;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+      content.setValue(std::numeric_limits<double>::quiet_NaN());
       f << "nan" << input->readLong(2) << ",";
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       break;
@@ -608,7 +778,12 @@ bool WingzParser::readSpreadsheetCellList()
       }
       double value;
       bool isNAN;
-      input->readDoubleReverted8(value, isNAN);
+      if (format.m_format==MWAWCell::F_UNKNOWN)
+        format.m_format=MWAWCell::F_NUMBER;
+      if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+        content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (input->readDoubleReverted8(value, isNAN))
+        content.setValue(value);
       f << value;
       input->seek(pos+16, librevenge::RVNG_SEEK_SET);
       break;
@@ -617,6 +792,8 @@ bool WingzParser::readSpreadsheetCellList()
       ok=false;
       break;
     }
+    cell.setFormat(format);
+    m_state->m_spreadsheet.m_cells.push_back(cell);
     if (!ok) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
@@ -706,7 +883,7 @@ bool WingzParser::readSpreadsheetStyle()
   val=(int) input->readLong(2); // always 0?
   if (val) f << "f0=" << val << ",";
   MWAWFont &font=style.m_font;
-  font.setSize((int) input->readULong(2));
+  font.setSize((float) input->readULong(2));
   int flag=(int) input->readULong(2);
   uint32_t flags=0;
   if (flag&0x1) flags |= MWAWFont::boldBit;
@@ -823,18 +1000,15 @@ bool WingzParser::readSpreadsheetStyle()
   return true;
 }
 
-// some dim or page break pos
+// column/row dim
 bool WingzParser::readSpreadsheetSize()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
   int type=(int) input->readULong(1);
-  if (type!=1 && type!=2 && type!=18 && type!=19) return false;
+  if (type!=1 && type!=2) return false;
   libmwaw::DebugStream f;
-  if (type <= 2)
-    f << "Entries(SheetSize)[" << (type==1 ? "col" : "row") << "]:";
-  else // related to page break?
-    f << "Entries(SheetPbrk)[" << (type==18 ? "col" : "row") << "]:";
+  f << "Entries(SheetSize)[" << (type==1 ? "col" : "row") << "]:";
   int val=(int) input->readULong(1);
   if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
   int dSz= (int) input->readULong(2);
@@ -845,16 +1019,61 @@ bool WingzParser::readSpreadsheetSize()
   int id=(int) input->readLong(2);
   if (id) f << "id=" << id << ",";
   f << "pos=[";
+  float &defaultDim= type==1 ? m_state->m_spreadsheet.m_widthDefault :
+                     m_state->m_spreadsheet.m_heightDefault;
+  std::vector<float> &dimList=type==1 ? m_state->m_spreadsheet.m_widthCols :
+                              m_state->m_spreadsheet.m_heightRows;
+  for (int i=0; i<dSz/4; ++i) {
+    int cell=(int) input->readULong(2); // the row/col number
+    float dim=float(input->readULong(2))/20.f;  // in TWIP
+    if (cell==0xFFFF) f << "-inf";
+    else if (cell==0x7FFF) {
+      defaultDim =dim;
+      f << "inf";
+    }
+    else {
+      if (cell < int(dimList.size()) || cell > int(dimList.size())+1000) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetSize: the cell seems bad\n"));
+        f << "###";
+      }
+      else
+        dimList.resize(size_t(cell)+1, dim);
+      f << cell;
+    }
+    f << ":" << dim << "pt,";
+  }
+  f << "],";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return true;
+}
+
+// page break pos
+bool WingzParser::readSpreadsheetPBreak()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  int type=(int) input->readULong(1);
+  if (type!=18 && type!=19) return false;
+  libmwaw::DebugStream f;
+  f << "Entries(SheetPbrk)[" << (type==18 ? "col" : "row") << "]:";
+  int val=(int) input->readULong(1);
+  if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
+  int dSz= (int) input->readULong(2);
+  if (dSz%4 || !input->checkPosition(pos+6+dSz)) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetPBreak: find bad size for data\n"));
+    return false;
+  }
+  int id=(int) input->readLong(2);
+  if (id) f << "id=" << id << ",";
+  f << "pos=[";
   for (int i=0; i<dSz/4; ++i) {
     int cell=(int) input->readULong(2); // the row/col number
     if (cell==0xFFFF) f << "-inf";
     else if (cell==0x7FFF) f << "inf";
     else f << cell;
-    val=(int) input->readULong(2);
-    if (type<=2)
-      f << ":" << double(val)/20. << "pt,"; // a dim TWIP
-    else
-      f << "[sz=" << val << "],"; // num row/column
+    f << "[sz=" << input->readULong(2) << "],"; // num row/column
   }
   f << "],";
   ascii().addPos(pos);
@@ -1731,6 +1950,53 @@ bool WingzParser::readPrintInfo()
   ascii().addNote(f.str().c_str());
 
   input->seek(pos+20+0x7c, librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// send spreadsheet
+////////////////////////////////////////////////////////////
+bool WingzParser::sendSpreadsheet()
+{
+  MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
+  MWAWInputStreamPtr &input= getInput();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("WingzParser::sendSpreadsheet: I can not find the listener\n"));
+    return false;
+  }
+  WingzParserInternal::Spreadsheet &sheet = m_state->m_spreadsheet;
+  size_t numCell = sheet.m_cells.size();
+  listener->openSheet(sheet.convertInPoint(sheet.m_widthCols), librevenge::RVNG_POINT, sheet.m_name);
+  // DOME: sendPageGraphics();
+
+  int prevRow = -1;
+  for (size_t i = 0; i < numCell; i++) {
+    WingzParserInternal::Cell cell= sheet.m_cells[i];
+    if (cell.position()[1] != prevRow) {
+      while (cell.position()[1] > prevRow) {
+        if (prevRow != -1)
+          listener->closeSheetRow();
+        prevRow++;
+        listener->openSheetRow(sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
+      }
+    }
+
+    listener->openSheetCell(cell, cell.m_content);
+    if (cell.m_content.m_textEntry.valid()) {
+      listener->setFont(cell.getFont());
+      input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+      while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end()) {
+        unsigned char c=(unsigned char) input->readULong(1);
+        if (c==0xd)
+          listener->insertEOL();
+        else
+          listener->insertCharacter(c);
+      }
+    }
+    listener->closeSheetCell();
+  }
+  if (prevRow!=-1) listener->closeSheetRow();
+  listener->closeSheet();
   return true;
 }
 

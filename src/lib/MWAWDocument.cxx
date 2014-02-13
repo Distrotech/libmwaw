@@ -399,10 +399,8 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new MsWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_WINGZ:
-#ifdef DEBUG
       parser.reset(new WingzParser(input, rsrcParser, header));
       break;
-#endif
     // TODO
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
