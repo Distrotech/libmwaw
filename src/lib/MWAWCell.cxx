@@ -746,18 +746,26 @@ std::ostream &operator<<(std::ostream &o, MWAWCellContent::FormulaInstruction co
     o << inst.m_longValue;
   else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Cell) {
     if (!inst.m_positionRelative[0][0]) o << "$";
-    if (inst.m_position[0][0]>=26) o << (char)(inst.m_position[0][0]/26-1 + 'A');
-    o << (char)(inst.m_position[0][0]%26+'A');
+    if (inst.m_position[0][0]<0) o << "C" << inst.m_position[0][0];
+    else {
+      if (inst.m_position[0][0]>=26) o << (char)(inst.m_position[0][0]/26-1 + 'A');
+      o << (char)(inst.m_position[0][0]%26+'A');
+    }
     if (!inst.m_positionRelative[0][1]) o << "$";
-    o << inst.m_position[0][1];
+    if (inst.m_position[0][1]<0) o << "R" << inst.m_position[0][1];
+    else o << inst.m_position[0][1];
   }
   else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_CellList) {
     for (int l=0; l<2; ++l) {
       if (!inst.m_positionRelative[l][0]) o << "$";
-      if (inst.m_position[l][0]>=26) o << (char)(inst.m_position[l][0]/26-1 + 'A');
-      o << (char)(inst.m_position[l][0]%26+'A');
+      if (inst.m_position[l][0]<0) o << "C" << inst.m_position[l][0];
+      else {
+        if (inst.m_position[l][0]>=26) o << (char)(inst.m_position[l][0]/26-1 + 'A');
+        o << (char)(inst.m_position[l][0]%26+'A');
+      }
       if (!inst.m_positionRelative[l][1]) o << "$";
-      o << inst.m_position[l][1];
+      if (inst.m_position[l][1]<0) o << "R" << inst.m_position[l][1];
+      else o << inst.m_position[l][1];
       if (l==0) o << ":";
     }
   }

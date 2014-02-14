@@ -1,8 +1,14 @@
 CHANGES:
 
+2/14/2014:
+- Wingz: add a spreadsheet parser (only export spreadsheet's content
+  but not the frames)
+- check that the output of the different executables are compatible with
+  help2man --help-option=-h --version-option=-v --no-discard-stderr EXECUTABLE
+
 2/2/2014:
 - AppleWorks/ClarisWorks: add a spreadsheet parser for spreadsheet
-  (only export main spreadsheet's content but not the frame), and
+  (only export main spreadsheet's content but not the frames), and
   for database(export the main database content row by row as a
   spreadsheet)
 

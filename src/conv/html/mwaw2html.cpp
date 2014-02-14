@@ -51,7 +51,7 @@
 
 int printUsage()
 {
-  printf("Usage: mwaw2html [-h] <Text Mac Document>\n");
+  printf("Usage: mwaw2html [OPTION] <Text Mac Document>\n");
   printf("\n");
   printf("Options:\n");
   printf("\t-h:                Shows this help message\n");

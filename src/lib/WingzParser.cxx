@@ -92,7 +92,7 @@ struct Cell : public MWAWCell {
 struct Spreadsheet {
   //! constructor
   Spreadsheet() : m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
-    m_cells(), m_styleMap(), m_name("Sheet0")
+    m_cells(), m_cellIdPosMap(), m_formulaMap(), m_styleMap(), m_name("Sheet0")
   {
   }
   //! returns the row size in point
@@ -114,6 +114,8 @@ struct Spreadsheet {
     }
     return res;
   }
+  //! update the cell, ie. look if there is a avalaible formula, ...
+  void update(Cell &cell) const;
   /** the default column width */
   float m_widthDefault;
   /** the column size in points */
@@ -124,6 +126,10 @@ struct Spreadsheet {
   std::vector<float> m_heightRows;
   /** the list of not empty cells */
   std::vector<Cell> m_cells;
+  //! the map cellId to cellPos
+  std::map<int, Vec2i> m_cellIdPosMap;
+  //! the list of formula
+  std::map<int, std::vector<MWAWCellContent::FormulaInstruction> > m_formulaMap;
   //! the list of style
   std::map<int, Style> m_styleMap;
   /** the spreadsheet name */
@@ -142,6 +148,36 @@ protected:
     return Vec2i(maxX, maxY);
   }
 };
+
+void Spreadsheet::update(Cell &cell) const
+{
+  if (cell.m_formula < 0 || m_formulaMap.find(cell.m_formula)==m_formulaMap.end())
+    return;
+  // first, we need to update the relative position
+  std::vector<MWAWCellContent::FormulaInstruction> formula=
+    m_formulaMap.find(cell.m_formula)->second;
+  Vec2i cPos=cell.position();
+  for (size_t i=0; i< formula.size(); ++i) {
+    MWAWCellContent::FormulaInstruction &instr=formula[i];
+    int numToCheck=0;
+    if (instr.m_type==MWAWCellContent::FormulaInstruction::F_Cell)
+      numToCheck=1;
+    else if (instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList)
+      numToCheck=2;
+    for (int j=0; j<numToCheck; ++j) {
+      for (int c=0; c<2; ++c) {
+        if (instr.m_positionRelative[j][c])
+          instr.m_position[j][c]+=cPos[c];
+        if (instr.m_positionRelative[j][c]<0) {
+          MWAW_DEBUG_MSG(("WingzParserInternal::Spreadsheet::update: find some bad cell position\n"));
+          return;
+        }
+      }
+    }
+  }
+  cell.m_content.m_contentType=MWAWCellContent::C_FORMULA;
+  cell.m_content.m_formula=formula;
+}
 
 ////////////////////////////////////////
 //! Internal: the state of a WingzParser
@@ -443,8 +479,8 @@ bool WingzParser::readSpreadsheet()
     std::string name("");
     if (type<=0x10) {
       static char const *(wh[])= {
-        "", "SheetSize", "SheetSize", "", "", "", "", "StylName",
-        "Formula", "Style", "", "", "", "SheetMcro", "Graphic", "",
+        "", "SheetSize", "SheetSize", "", "", "", "", "CellName",
+        "Formula", "Style", "SheetErr", "Sheet2Err", "", "SheetMcro", "Graphic", "",
         "PrintInfo"
       };
       name=wh[type];
@@ -491,12 +527,58 @@ bool WingzParser::readSpreadsheet()
       break;
     case 7:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok=readSpreadsheetStyleName();
+      ok=readSpreadsheetCellName();
+      break;
+    case 8:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=readFormula();
       break;
     case 9:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetStyle();
       break;
+    case 0xa: { // seems related to error in formula 0x1a
+      ok=input->checkPosition(pos+6+dSz);
+      if (!ok) break;
+      val=(int) input->readLong(2);
+      if (val) f << "id=" << val << ",";
+      int fSz=(int) input->readULong(1);
+      if (dSz<1 || dSz!=1+fSz) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: SheetErr size seems bad\n"));
+        f << "###";
+      }
+      else {
+        std::string text("");
+        for (int i=0; i<fSz; ++i) text += (char) input->readULong(1);
+        f << text << ",";
+      }
+      input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    }
+    case 0xb: { // seems related to error in formula 0x1a
+      ok=input->checkPosition(pos+6+dSz);
+      if (!ok) break;
+      val=(int) input->readLong(2);
+      if (val) f << "id=" << val << ",";
+      if (dSz<4) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: Sheet2Err size seems bad\n"));
+        f << "###";
+      }
+      else {
+        f << "pos=" << input->readULong(1) << "x" << input->readULong(1) << ",";
+        val = (int) input->readLong(1);
+        if (val) f << "#g0=" << val << ",";
+        std::string text("");
+        for (int i=0; i<dSz-3; ++i) text += (char) input->readULong(1);
+        f << text << ",";
+      }
+      input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    }
     case 0xc:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetCellList();
@@ -728,7 +810,6 @@ bool WingzParser::readSpreadsheetCellList()
     WingzParserInternal::Style style;
     f << "format=[" << format << "],";
     if (type!=1) {
-      // fixme
       cell.m_formula=(int) input->readLong(2);
       if (cell.m_formula!=-1)
         f << "formula=" << cell.m_formula << ",";
@@ -811,7 +892,7 @@ bool WingzParser::readSpreadsheetCellList()
 }
 
 // style
-bool WingzParser::readSpreadsheetStyleName()
+bool WingzParser::readSpreadsheetCellName()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
@@ -822,10 +903,10 @@ bool WingzParser::readSpreadsheetStyleName()
   int id=(int) input->readLong(2);
 
   libmwaw::DebugStream f;
-  f << "Entries(StylName)[" << id << "]:";
+  f << "Entries(CellName)[" << id << "]:";
   if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
   if (dSz<10 || !input->checkPosition(pos+6+dSz)) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: find bad size for data\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: find bad size for data\n"));
     return false;
   }
   val=(int) input->readLong(2);
@@ -836,12 +917,13 @@ bool WingzParser::readSpreadsheetStyleName()
   }
   int cell[2];
   for (int i=0; i<2; ++i) cell[i]=(int) input->readLong(2);
+  Vec2i cellPos(cell[1],cell[0]);
   f << "cell=" << cell[0] << "x" << cell[1] << ",";
   val=(int) input->readLong(1);
   if (val!=-1) f << "f3=" << val << ",";
   int sSz=(int) input->readULong(1);
   if (10+sSz>dSz) {
-    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: style name seems bad\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: style name seems bad\n"));
     f << "###";
   }
   else {
@@ -849,10 +931,11 @@ bool WingzParser::readSpreadsheetStyleName()
     for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
     f << name << ",";
     if (input->tell()!=pos+6+dSz) {
-      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetStyleName: find some extra data\n"));
+      MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: find some extra data\n"));
       ascii().addDelimiter(input->tell(), '|');
     }
   }
+  m_state->m_spreadsheet.m_cellIdPosMap[id]=cellPos;
   input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -996,6 +1079,390 @@ bool WingzParser::readSpreadsheetStyle()
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
   ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// formula
+////////////////////////////////////////////////////////////
+namespace WingzParserInternal
+{
+struct Functions {
+  char const *m_name;
+  int m_arity;
+};
+
+static Functions const s_listFunctions[] = {
+  { "", -2} /*cell*/,{ "", -2} /*cell*/,{ "", -2} /*cell*/,{ "", -2} /*cell*/,
+  { "", -2} /*cell*/,{ "", -2} /*cell*/,{ "", -2} /*cell*/,{ "", -2} /*cell*/,
+  { "", -2} /*list cell*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  // 10
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*double*/,{ "", -2} /* text*/,{ "", -2} /*1a entry error */,{ "", -2} /*UNKN*/,
+  { "", -2}/*if separator?*/,{ "", -2} /*if separator?*/,{ "", -2} /* convert to?*/,{ "", -2} /*convert to bool*/,
+  // 20
+  { "", -2} /*UNKN*/, { "", -2},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "(", 1} /*spec()*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*+number*/,{ "", -2} /*-number*/,
+  { "", -2} /* *number*/,{ "", -2} /*/number*/,{ "+", 2},{ "-", 2},
+  // 30
+  { "*", 2},{ "/", 2}, { "-", 1},{ "", -2} /*UNKN*/,
+  { "^", 2},{ "Concatenate", 2},{ "And", 2},{ "Or", 2},
+  { "Not", 1},{ "=", 2} ,{ "<", 2} ,{ "<=", 2} ,
+  { ">", 2} ,{ ">=", 2} ,{ "!=", 2} ,{ "", -2} /*UNKN*/,
+  // 40
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "False", 0},{ "True", 0}, { "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "E", 0}/*exp 1*/,{ "Pi", 0},{ "IsErr", 1},
+  // 50
+  { "IsNA", 1},{ "IsNumber", 1},{ "IsString", 1},{ "IsBlank", 1},
+  { "", -2} /*UNKN*/,{ "DAverage", 3},{ "DCount", 3},{ "DMax", 3},
+  { "DMin", 3},{ "DStDev", 3},{ "DStDevP", 3}/*checkme*/,{ "DSum", 3},
+  { "DSumSq", 3},{ "DVar", 3},{ "DVarP", 3}/*checkme*/,{ "Now", 0},
+  // 60
+  { "CMonth", 1},{ "CWeekday", 1},{ "DateValue", 1},{ "Day", 1},
+  { "DayName", 1},{ "Month", 1},{ "MonthName", 1},{ "Year", 1},
+  { "ADate", 2},{ "AddDays", 2},{ "AddMonths", 2},{ "AddYears", 2},
+  { "Date", 3},{ "Hour", 1},{ "Minute", 1},{ "Second", 1},
+  // 70
+  { "TimeValue", 1},{ "AddHours", 2},{ "AddMinutes",2},{ "AddSeconds", 2},
+  { "Atime", 2},{ "Time", 3},{ "CTERM", 3},{ "FV", 3},
+  { "FVL", 3},{ "Interest", 3},{ "LoanTerm", 3},{ "PMT", 3},
+  { "Principal", 3},{ "PV", 3},{ "PVL", 3},{ "Rate", 3},
+  // 80
+  { "SLN", 3},{ "", -2} /*UNKN*/,{ "DDB", 4},{ "SYD", 4},
+  { "BondPrice", 5},{ "BondYTM", 5},{ "IRR", -1},{ "NPV", -1},
+  { "Acosh", 1},{ "Asinh", 1} /*UNKN*/,{ "Atanh", 1},{ "Cosh", 1},
+  { "Sinh", 1},{ "Tanh", 1},{ "If", 3},{ "Choose", -1},
+  // 90
+  { "NA", 0} /*Err*/,{ "NA", 0},{ "Guess", 0},{ "Abs", 1},
+  { "Factorial", 1},{ "Int", 1},{ "Sign", 1},{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Mod", 2},{ "Round", 2},
+  { "Goal", 3},{ "Rand", 0},{ "Exponential", 1} /*odd: maybe set*/,{ "Normal", 1},
+  // a0
+  { "Uniform", 1},{ "Average", -1},{ "Count", -1},{ "Max", -1},
+  { "Min", -1},{ "StD", -1},{ "StDev", -1},{ "Sum", -1},
+  { "SumSq", -1},{ "Var", -1},{ "VarP", -1}/*checkme*/,{ "Char", 1},
+  { "Code", 1},{ "Length", 1},{ "Lower", 1},{ "", -2} /*UNKN*/,
+  // b0
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "Currency", 1},{ "Proper", 1},
+  { "", -2} /*UNKN*/,{ "Exact", 2},{ "NFormat", 2},{ "Left", 2},
+  { "Right", 2},{ "", -2} /*UNKN*/,{ "Collate", 2},{ "Rept", 2},
+  { "Find", 3},{ "Match", 3},{ "MID", 3},{ "Replace", 4},
+  // c0
+  { "Exp", 1},{ "Ln", 1},{ "Log", 1},{ "Logn", 2},
+  { "Sqrt", 1},{ "Acos", 1},{ "Asin", 1},{ "Atan", 1},
+  { "Cos", 1},{ "Degrees", 1},{ "Radians", 1},{ "Sin", 1},
+  { "Tan", 1},{ "Atan2", 2},{ "Col", 0},{ "Row", 0},
+  // d0
+  { "Cols", 1},{ "", -2} /*UNKN*/,{ "Indirect", 1},{ "Range", 1},
+  { "MakeCell", 2},{ "HLookUp", 3},{ "Index", 3},{ "", -2} /*UNKN*/,
+  { "MakeRange", 4},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  // e0
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "N", 1},{ "Cell", 0},{ "Contains", 2},{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  // f0
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+};
+}
+
+bool WingzParser::readFormula()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell(), debPos=pos;
+  int type=(int) input->readULong(1);
+  if (type!=8) return false;
+  int val=(int) input->readULong(1);
+  int dSz= (int) input->readULong(2);
+  long endPos=pos+6+dSz;
+  if (dSz<7 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("WingzParser::readFormula: find bad size for data\n"));
+    return false;
+  }
+  int id=(int) input->readLong(2);
+  libmwaw::DebugStream f;
+  f << "Entries(Formula)[" << id << "]:";
+  if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
+  for (int i=0; i<2; ++i) { // f0=1|2, f1=0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  val=(int) input->readLong(1); // always 0, maybe related to the equal sign
+  if (val) f << "f2=" << val << ",";
+  bool ok = true;
+  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
+  std::string error("");
+  while (long(input->tell()) != endPos) {
+    pos = input->tell();
+    if (pos > endPos) return false;
+    int wh = (int) input->readULong(1);
+    if (wh==0xFF) break; // operator=
+    double value;
+    int arity = 0;
+    bool isNan;
+    MWAWCellContent::FormulaInstruction instr;
+    bool noneInstr=false;
+    switch (wh) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7: { // difference with 0-3 ?
+      if (pos+1+4>endPos) {
+        error="#cell";
+        ok=false;
+        break;
+      }
+      int cPos[2];
+      for (int i=0; i<2; ++i) cPos[i]=(int) input->readLong(2);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+      instr.m_position[0]=Vec2i(cPos[1], cPos[0]);
+      instr.m_positionRelative[0]=Vec2b((wh&1)==0, (wh&2)==0);
+      break;
+    }
+    case 8: {
+      int typ=(int) input->readULong(1);
+      if (typ>0xF || pos+1+9>endPos) {
+        error="#listCell";
+        ok=false;
+        break;
+      }
+      int cPos[4];
+      for (int i=0; i<4; ++i) cPos[i]=(int) input->readLong(2);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      instr.m_position[0]=Vec2i(cPos[2], cPos[0]);
+      instr.m_position[1]=Vec2i(cPos[3], cPos[1]);
+      instr.m_positionRelative[0]=Vec2b((typ&2)==0, (typ&1)==0);
+      instr.m_positionRelative[1]=Vec2b((typ&8)==0, (typ&4)==0);
+      break;
+    }
+    case 0x9: {
+      if (pos+1+2>endPos) {
+        ok=false;
+        break;
+      }
+      int cId=(int) input->readLong(2);
+      if (m_state->m_spreadsheet.m_cellIdPosMap.find(cId)==m_state->m_spreadsheet.m_cellIdPosMap.end()) {
+        MWAW_DEBUG_MSG(("WingzParser::readFormula: can not find cell with id\n"));
+        std::stringstream s;
+        s << "##cellId=" << cId << ",";
+        ok=false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+      instr.m_position[0]=m_state->m_spreadsheet.m_cellIdPosMap.find(cId)->second;
+      instr.m_positionRelative[0]=Vec2b(false,false);
+      break;
+    }
+    case 0x1a: // error related to Sheet2Err
+      if (pos+1+2>endPos) {
+        ok=false;
+        break;
+      }
+      f << "f1a=" << input->readLong(1) << "x" << input->readLong(1) <<",";
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+      instr.m_content="NA";
+      break;
+    case 0x1c:
+    case 0x1d: // appear with if, maybe to separate condition to other ?
+      if (pos+1+2>endPos) {
+        ok=false;
+        break;
+      }
+      noneInstr=true;
+      f << "f" << std::hex << wh << std::dec << "=" << input->readLong(2) << ",";
+      break;
+    case 0x1e: // convert to ?
+    case 0x1f: // convert to bool
+      noneInstr=true;
+      break;
+    case 0x18:
+    case 0x2a:
+    case 0x2b:
+    case 0x2c:
+    case 0x2d:
+      if (endPos-pos<9 || !input->readDoubleReverted8(value, isNan)) {
+        error="#number";
+        ok = false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=value;
+      if (wh>=0x2a&&wh<=0x2d) { // mixed operator + number
+        stack.push_back(std::vector<MWAWCellContent::FormulaInstruction>(1,instr));
+        static char const *(what[])= {"+","-","*","/"};
+
+        instr=MWAWCellContent::FormulaInstruction();
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        instr.m_content=what[wh-0x2a];
+        arity=2;
+      }
+      break;
+    case 0x19: {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+      int fSz=(int) input->readULong(1);
+      if (pos+1+fSz > endPos) {
+        ok=false;
+        break;
+      }
+      for (int i=0; i<fSz; ++i) {
+        char c = (char) input->readULong(1);
+        if (c==0) {
+          ok = i+1==fSz;
+          break;
+        }
+        instr.m_content += c;
+      }
+      break;
+    }
+    case 0xfe: { // checkme
+      if (pos+1+1 > endPos) {
+        ok=false;
+        break;
+      }
+      wh=(int) input->readULong(1);
+      switch (wh) {
+      case 0x25:
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        instr.m_content="CellText";
+        arity=1;
+        break;
+      case 0x27:
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        instr.m_content="IsRange";
+        arity=1;
+        break;
+      case 0x92:
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        instr.m_content="ColOf";
+        arity=1;
+        break;
+      case 0x93:
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        instr.m_content="RowOf";
+        arity=1;
+        break;
+      default: {
+        std::stringstream s;
+        s << "##FunctExtra" << std::hex << wh << std::dec << ",";
+        error=s.str();
+        ok = false;
+        break;
+      }
+      }
+      break;
+    }
+    default:
+      if (wh < 0xf0 && WingzParserInternal::s_listFunctions[wh].m_arity > -2) {
+        instr.m_content=WingzParserInternal::s_listFunctions[wh].m_name;
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        arity=WingzParserInternal::s_listFunctions[wh].m_arity;
+      }
+      if (instr.m_content.empty()) {
+        std::stringstream s;
+        s << "##Funct" << std::hex << wh << std::dec << ",";
+        error=s.str();
+        ok = false;
+      }
+      if (arity==-1) arity=(int)input->readULong(1);
+      break;
+    }
+    if (!ok) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    if (noneInstr) continue;
+    std::vector<MWAWCellContent::FormulaInstruction> child;
+    if (instr.m_type!=MWAWCellContent::FormulaInstruction::F_Function) {
+      child.push_back(instr);
+      stack.push_back(child);
+      continue;
+    }
+    size_t numElt = stack.size();
+    if ((int) numElt < arity) {
+      std::stringstream s;
+      s << instr.m_content << "[##" << arity << "]";
+      error=s.str();
+      ok = false;
+      break;
+    }
+    if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(') {
+      if (instr.m_content[0] != '(')
+        child.push_back(instr);
+
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content="(";
+      child.push_back(instr);
+      for (int i = 0; i < arity; i++) {
+        if (i) {
+          instr.m_content=";";
+          child.push_back(instr);
+        }
+        std::vector<MWAWCellContent::FormulaInstruction> const &node=
+          stack[size_t((int)numElt-arity+i)];
+        child.insert(child.end(), node.begin(), node.end());
+      }
+      instr.m_content=")";
+      child.push_back(instr);
+
+      stack.resize(size_t((int) numElt-arity+1));
+      stack[size_t((int)numElt-arity)] = child;
+      continue;
+    }
+    if (arity==1) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-1].insert(stack[numElt-1].begin(), instr);
+      if (wh==0x3 && pos+2==endPos)
+        break;
+      continue;
+    }
+    if (arity==2) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-2].push_back(instr);
+      stack[numElt-2].insert(stack[numElt-2].end(), stack[numElt-1].begin(), stack[numElt-1].end());
+      stack.resize(numElt-1);
+      continue;
+    }
+    ok=false;
+    error = "### unexpected arity";
+  }
+  pos=input->tell();
+  if (pos!=endPos || !ok || stack.size()!=1 || stack[0].empty()) {
+    MWAW_DEBUG_MSG(("WingzParser::readFormula: can not read a formula\n"));
+    ascii().addDelimiter(pos, '|');
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+
+    for (size_t i = 0; i < stack.size(); ++i) {
+      for (size_t j=0; j < stack[i].size(); ++j)
+        f << stack[i][j] << ",";
+    }
+    if (!error.empty())
+      f << error;
+    else
+      f << "##unknownError,";
+    ascii().addPos(debPos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+
+  m_state->m_spreadsheet.m_formulaMap[id]=stack[0];
+  for (size_t i=0; i < stack[0].size(); ++i)
+    f << stack[0][i];
+  f << ",";
+  ascii().addPos(debPos);
   ascii().addNote(f.str().c_str());
   return true;
 }
@@ -1728,9 +2195,8 @@ bool WingzParser::readMacro()
     if (sz!=scriptSize)
       f << "sel" << i << "=" << std::hex << sz << std::dec << ",";
   }
-  int val;
   for (int i=0; i<28; ++i) { // f22=f24=0|1|2
-    val=(int) input->readLong(2);
+    int val=(int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascii().addPos(pos);
@@ -1980,7 +2446,7 @@ bool WingzParser::sendSpreadsheet()
         listener->openSheetRow(sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
       }
     }
-
+    sheet.update(cell);
     listener->openSheetCell(cell, cell.m_content);
     if (cell.m_content.m_textEntry.valid()) {
       listener->setFont(cell.getFont());

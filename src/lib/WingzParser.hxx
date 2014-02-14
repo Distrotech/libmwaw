@@ -105,8 +105,10 @@ protected:
   bool readSpreadsheetPBreak();
   //! read a style in a spreadsheet
   bool readSpreadsheetStyle();
-  //! read a spreadsheet style name
-  bool readSpreadsheetStyleName();
+  //! read a spreadsheet cell name
+  bool readSpreadsheetCellName();
+  //! read a formula in a spreadsheet
+  bool readFormula();
   //! read a spreadsheet list of cell
   bool readSpreadsheetCellList();
   //! read a spreadsheet unknown zone 5

@@ -73,7 +73,6 @@ int printUsage()
   printf("\n");
   printf("Note:\n");
   printf("\t If -F is present, the formula are generated which english names\n");
-  printf("\t Format's options are ignored when converting an AppleWorks/ClarisWorks files\n");
   return -1;
 }
 

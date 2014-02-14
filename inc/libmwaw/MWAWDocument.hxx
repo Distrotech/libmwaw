@@ -126,7 +126,7 @@ public:
     MWAW_T_TEACHTEXT /** TeachText/SimpleText*/,
     MWAW_T_TEXEDIT /** Tex-Edit (v2)*/,
     MWAW_T_TRAPEZE /** Trapeze spreadsheet: TODO*/,
-    MWAW_T_WINGZ /** Wingz: TODO*/,
+    MWAW_T_WINGZ /** Wingz (v1.1)*/,
     MWAW_T_WRITENOW /** WriteNow*/,
     MWAW_T_WRITERPLUS /** WriterPlus*/,
     MWAW_T_XPRESS /** XPress: TODO*/,
