@@ -688,13 +688,21 @@ bool MWProParser::checkHeader(MWAWHeader *header, bool strict)
   setVersion(vers);
   f << "vers=" << vers << ",";
   if (strict) {
-    if (!readPrintInfo())
-      return false;
     if (vers) {
       input->seek(0xdd, WPX_SEEK_SET);
       // "MP" seems always in this position
       if (input->readULong(2) != 0x4d50)
         return false;
+    }
+    else if (!readPrintInfo()) { // last chance, check DocHeader
+      input->seek(4+0x78, WPX_SEEK_SET);
+      if (input->readULong(2)) return false;
+      val=(int) input->readULong(2);
+      if ((val&0x0280)!=0x0280) return false;
+      for (int i=0; i<4; ++i) {
+        val=(int) input->readLong(1);
+        if (val<-1 || val>1) return false;
+      }
     }
   }
 
@@ -1441,7 +1449,7 @@ bool MWProParser::sendText(shared_ptr<MWProParserInternal::TextZone> zone, bool 
   }
   std::vector<int> pageBreaks=listenerState.getPageBreaksPos();
   for (size_t i = 0; i < pageBreaks.size(); i++) {
-    if (pageBreaks[i] >= zone->m_textLength) {
+    if (pageBreaks[i]<=0 && pageBreaks[i] >= zone->m_textLength) {
       MWAW_DEBUG_MSG(("MWProParser::sendText: page breaks seems bad\n"));
       break;
     }

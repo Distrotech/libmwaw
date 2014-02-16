@@ -736,7 +736,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   f << "FileHeader: vers=" << vers << ",";
 
-  if (version() <= 3) fHeader.m_dataPos = (int) input->readULong(2);
+  if (vers <= 3) fHeader.m_dataPos = (int) input->readULong(2);
 
   for (int i = 0; i < 3; i++) {
     int numParag = (int) input->readLong(2);
@@ -748,7 +748,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     }
   }
 
-  if (version() <= 3) {
+  if (vers <= 3) {
     input->seek(6, WPX_SEEK_CUR); // unknown
     if (input->readLong(1)) f << "hasFooter(?);";
     if (input->readLong(1)) f << "hasHeader(?),";
@@ -768,9 +768,12 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   //
   input->seek(headerSize, WPX_SEEK_SET);
-  if (!readPrintInfo())
-    return false;
-  long testPos = version() <= 3 ? fHeader.m_dataPos : fHeader.m_freeListPos;
+  if (!readPrintInfo()) {
+    input->seek(headerSize+0x78, WPX_SEEK_SET);
+    for (int i=0; i<3; ++i)
+      if (!readWindowsInfo(i) && i==2) return false;
+  }
+  long testPos = vers <= 3 ? fHeader.m_dataPos : fHeader.m_freeListPos;
   input->seek(testPos, WPX_SEEK_SET);
   if (long(input->tell()) != testPos)
     return false;
@@ -780,7 +783,7 @@ bool MWParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 
   // ok, we can finish initialization
   if (header)
-    header->reset(MWAWDocument::MWAW_T_MACWRITE, version());
+    header->reset(MWAWDocument::MWAW_T_MACWRITE, vers);
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
