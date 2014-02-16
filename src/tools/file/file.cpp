@@ -274,7 +274,7 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="DkmR") {
     checkFInfoType("TEXT","Basic text(created by DOCMaker)") || checkFInfoType("DOCMaker");
   }
-  else if (m_fInfoCreator=="Dk@P") {
+  else if (m_fInfoCreator=="Dc@P" || m_fInfoCreator=="Dk@P") {
     checkFInfoType("APPL","DOCMaker") || checkFInfoType("DOCMaker");
   }
   else if (m_fInfoCreator=="DDAP") {
@@ -347,12 +347,6 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="MPNT") {
     checkFInfoType("PNTG","MacPaint") || checkFInfoType("MacPaint");
   }
-  else if (m_fInfoCreator=="MWII") {
-    checkFInfoType("MW2D","MacWrite II") || checkFInfoType("MacWrite II");
-  }
-  else if (m_fInfoCreator=="MWPR") {
-    checkFInfoType("MWPd","MacWrite Pro") || checkFInfoType("MacWrite Pro");
-  }
   else if (m_fInfoCreator=="MSWD") {
     checkFInfoType("WDBN","Microsoft Word 3-5") ||
     checkFInfoType("GLOS","Microsoft Word 3-5[glossary]") ||
@@ -370,6 +364,12 @@ bool File::readFileInformation()
     checkFInfoType("RLRB","Microsoft Works 4") ||
     checkFInfoType("sWRB","Microsoft Works 4[template]") ||
     checkFInfoType("Microsoft Works 3-4");
+  }
+  else if (m_fInfoCreator=="MWII") {
+    checkFInfoType("MW2D","MacWrite II") || checkFInfoType("MacWrite II");
+  }
+  else if (m_fInfoCreator=="MWPR") {
+    checkFInfoType("MWPd","MacWrite Pro") || checkFInfoType("MacWrite Pro");
   }
   else if (m_fInfoCreator=="NISI") {
     checkFInfoType("TEXT","Nisus") || checkFInfoType("GLOS","Nisus[glossary]") ||
@@ -441,6 +441,9 @@ bool File::readFileInformation()
   }
   else if (m_fInfoCreator=="ZWRT") {
     checkFInfoType("Zart","Z-Write") || checkFInfoType("Z-Write");
+  }
+  else if (m_fInfoCreator=="cAni") {
+    checkFInfoType("curs","CursorAnimator") || checkFInfoType("CursorAnimator");
   }
   else if (m_fInfoCreator=="dPro") {
     checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");

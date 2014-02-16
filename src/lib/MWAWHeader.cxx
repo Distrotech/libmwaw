@@ -111,7 +111,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-    else if (creator=="Dk@P") {
+    else if (creator=="Dc@P" || creator=="Dk@P") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_DOCMAKER, 1));
         return res;

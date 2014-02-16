@@ -664,9 +664,8 @@ bool MacWrtProParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
 
   libmwaw::DebugStream f;
-  int headerSize=4;
-  input->seek(headerSize+0x78,librevenge::RVNG_SEEK_SET);
-  if (int(input->tell()) != headerSize+0x78) {
+  int const headerSize=4;
+  if (!input->checkPosition(headerSize+0x78)) {
     MWAW_DEBUG_MSG(("MacWrtProParser::checkHeader: file is too short\n"));
     return false;
   }
@@ -701,13 +700,21 @@ bool MacWrtProParser::checkHeader(MWAWHeader *header, bool strict)
   setVersion(vers);
   f << "vers=" << vers << ",";
   if (strict) {
-    if (!readPrintInfo())
-      return false;
     if (vers) {
       input->seek(0xdd, librevenge::RVNG_SEEK_SET);
       // "MP" seems always in this position
       if (input->readULong(2) != 0x4d50)
         return false;
+    }
+    else if (!readPrintInfo()) { // last chance, check DocHeader
+      input->seek(4+0x78, librevenge::RVNG_SEEK_SET);
+      if (input->readULong(2)) return false;
+      val=(int) input->readULong(2);
+      if ((val&0x0280)!=0x0280) return false;
+      for (int i=0; i<4; ++i) {
+        val=(int) input->readLong(1);
+        if (val<-1 || val>1) return false;
+      }
     }
   }
 
@@ -1458,7 +1465,7 @@ bool MacWrtProParser::sendText(shared_ptr<MacWrtProParserInternal::TextZone> zon
   }
   std::vector<int> pageBreaks=listenerState.getPageBreaksPos();
   for (size_t i = 0; i < pageBreaks.size(); i++) {
-    if (pageBreaks[i] >= zone->m_textLength) {
+    if (pageBreaks[i]<=0 || pageBreaks[i] >= zone->m_textLength) {
       MWAW_DEBUG_MSG(("MacWrtProParser::sendText: page breaks seems bad\n"));
       break;
     }
