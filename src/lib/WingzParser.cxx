@@ -127,7 +127,7 @@ struct Spreadsheet {
   /** the list of not empty cells */
   std::vector<Cell> m_cells;
   //! the map cellId to cellPos
-  std::map<int, Vec2i> m_cellIdPosMap;
+  std::map<int, MWAWCellContent::FormulaInstruction> m_cellIdPosMap;
   //! the list of formula
   std::map<int, std::vector<MWAWCellContent::FormulaInstruction> > m_formulaMap;
   //! the list of style
@@ -187,8 +187,8 @@ struct State {
   {
   }
 
-  //! returns the pattern percent corresponding to an id
-  static bool getPatternPercent(int patId, float &percent);
+  //! returns the pattern percent corresponding to an id and a version
+  static bool getPatternPercent(int patId, int vers, float &percent);
 
   //! the spreadsheet
   Spreadsheet m_spreadsheet;
@@ -198,16 +198,35 @@ struct State {
       m_footerHeight /** the footer height if known */;
 };
 
-bool State::getPatternPercent(int patId, float &perc)
+bool State::getPatternPercent(int patId, int vers, float &perc)
 {
-  if (patId<0 || patId>38) {
+  if (vers==2) {
+    if (patId<0 || patId>38) {
+      MWAW_DEBUG_MSG(("WingzParserInternal::State::getPatternPercent: can not find patId=%d\n", patId));
+      return false;
+    }
+    static float const percent[]= { 0/*none*/, 1, 0.9f, 0.7f, 0.5f, 0.7f, 0.5f, 0.7f, 0.2f, 0.3f, 0.1f, 0.3f, 0.3f,
+                                    0.04f, 0.1f, 0.2f, 0.5f, 0.2f, 0.2f, 0.4f, 0, 0.1f, 0.2f, 0.3f, 0.3f, 0.5f,
+                                    0.3f, 0.3f, 0.2f, 0.2f, 0.2f, 0.3f, 0.3f, 0.2f, 0.3f, 0.4f, 0.4f, 0.5f, 0.4f
+                                  };
+    perc=percent[patId];
+    return true;
+  }
+
+  if (patId<0 || patId>=64) {
     MWAW_DEBUG_MSG(("WingzParserInternal::State::getPatternPercent: can not find patId=%d\n", patId));
     return false;
   }
-  static float const percent[]= { 0/*none*/, 1, 0.9f, 0.7f, 0.5f, 0.7f, 0.5f, 0.7f, 0.2f, 0.3f, 0.1f, 0.3f, 0.3f,
-                                  0.04f, 0.1f, 0.2f, 0.5f, 0.2f, 0.2f, 0.4f, 0, 0.1f, 0.2f, 0.3f, 0.3f, 0.5f,
-                                  0.3f, 0.3f, 0.2f, 0.2f, 0.2f, 0.3f, 0.3f, 0.2f, 0.3f, 0.4f, 0.4f, 0.5f, 0.4f
-                                };
+  static float const percent[]= {
+    0.0f, 1.0f, 0.968750f, 0.93750f, 0.875f, 0.750f, 0.5f, 0.250f,
+    0.250f, 0.18750f, 0.1875f, 0.1250f, 0.0625f, 0.0625f, 0.031250f, 0.0f,
+    0.75f, 0.5f, 0.25f, 0.3750f, 0.25f, 0.1250f, 0.25f, 0.1250f,
+    0.75f, 0.5f, 0.25f, 0.3750f, 0.25f, 0.1250f, 0.25f, 0.1250f,
+    0.75f, 0.5f, 0.5f, 0.5f, 0.5f, 0.25f, 0.25f, 0.234375f,
+    0.6250f, 0.3750f, 0.1250f, 0.25f, 0.218750f, 0.218750f, 0.1250f, 0.093750f,
+    0.5f, 0.5625f, 0.4375f, 0.3750f, 0.218750f, 0.281250f, 0.1875f, 0.093750f,
+    0.593750f, 0.5625f, 0.515625f, 0.343750f, 0.3125f, 0.25f, 0.25f, 0.234375f
+  };
   perc=percent[patId];
   return true;
 }
@@ -301,8 +320,8 @@ bool WingzParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   input->setReadInverted(true);
-  input->seek(12, librevenge::RVNG_SEEK_SET);
-  if (!readZoneA() || !readFontsList() || !readZoneB()) {
+  input->seek(13, librevenge::RVNG_SEEK_SET);
+  if (!readPreferences()) {
     ascii().addPos(input->tell());
     ascii().addNote("Entries(Loose)");
     if (!findNextZone())
@@ -323,20 +342,54 @@ bool WingzParser::createZones()
 ////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-// read a font list
+// read the preferences zone
 ////////////////////////////////////////////////////////////
-bool WingzParser::readFontsList()
+
+bool WingzParser::readPreferences()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
+  int const vers=version();
+  if (!input->checkPosition(pos+172+2*vers)) {
+    MWAW_DEBUG_MSG(("WingzParser::readPreferences: the zone seems to short\n"));
+    return false;
+  }
+
   libmwaw::DebugStream f;
-  f << "Entries(FontList):";
+  f << "Entries(Preferences):";
+  int type=(int) input->readULong(1);
   int val=(int) input->readULong(1);
+  int dSz=(int) input->readULong(2);
+  int id=(int) input->readULong(2);
+  long endPos=pos+4+dSz;
+  if (type!=0 || !input->checkPosition(endPos)) return false;
+  if (val!=0x80) f << "f0=" << val << ",";
+  if (id) f << "id=" << id << ",";
+  ascii().addDelimiter(input->tell(), '|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+18+2*vers, librevenge::RVNG_SEEK_SET);
+
+  for (int i=0; i < 4; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "Preferences-" << i << ":";
+    int const(sz[]) = { 42, 42, 30, 51};
+    input->seek(pos+sz[i], librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  // now a font (or maybe a font list)
+  pos=input->tell();
+  f.str("");
+  f << "Preferences-Fonts:";
+  val=(int) input->readULong(1);
   if (val) f << "f0=" << val << ",";
   long sz=(long) input->readULong(1);
-  long endPos=pos+sz;
+  long fontEndPos=pos+sz;
   if (!input->checkPosition(pos+sz)) {
-    MWAW_DEBUG_MSG(("WingzParser::readFontsList: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readPreferences: the fonts zone seems to short\n"));
     return false;
   }
   int N=(int) input->readULong(1);
@@ -345,15 +398,15 @@ bool WingzParser::readFontsList()
   ascii().addNote(f.str().c_str());
   for (int i=0; i < N; ++i) {
     f.str("");
-    f << "FontList-" << i << ":";
+    f << "Preferences-Font" << i << ":";
     pos=input->tell();
     int fSz=(int) input->readULong(1);
-    if (pos+1+fSz>endPos) {
-      MWAW_DEBUG_MSG(("WingzParser::readFontsList: the %d font size seems bad\n", i));
+    if (pos+1+fSz>fontEndPos) {
+      MWAW_DEBUG_MSG(("WingzParser::readPreferences: the %d font size seems bad\n", i));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
+      input->seek(fontEndPos, librevenge::RVNG_SEEK_SET);
       return true;
     }
     std::string name("");
@@ -362,59 +415,23 @@ bool WingzParser::readFontsList()
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
-  if (input->tell()!=endPos) {
+  if (input->tell()!=fontEndPos) {
     ascii().addPos(input->tell());
-    ascii().addNote("ListFont-end");
-    MWAW_DEBUG_MSG(("WingzParser::readFontsList: find extra data\n"));
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the some unknown zone
-////////////////////////////////////////////////////////////
-
-// the first unknown zone
-bool WingzParser::readZoneA()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=input->tell();
-  if (!input->checkPosition(pos+176)) {
-    MWAW_DEBUG_MSG(("WingzParser::readZoneA: the zone seems to short\n"));
-    return false;
+    ascii().addNote("Preferences-Fontsend");
+    MWAW_DEBUG_MSG(("WingzParser::readPreferences: find extra data\n"));
+    input->seek(fontEndPos, librevenge::RVNG_SEEK_SET);
   }
 
-  libmwaw::DebugStream f;
-  f << "Entries(ZoneA):";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  input->seek(pos+23, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i < 4; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "ZoneA-" << i << ":";
-    int const(sz[]) = { 42, 42, 30, 51};
-    input->seek(pos+sz[i], librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-// the second unknown zone
-bool WingzParser::readZoneB()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=input->tell();
+  // last unknown
+  pos=input->tell();
   if (!input->checkPosition(pos+237)) {
-    MWAW_DEBUG_MSG(("WingzParser::readZoneB: the zone seems to short\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readPreferences: the last zone seems to short\n"));
     return false;
   }
 
-  libmwaw::DebugStream f;
-  f << "Entries(ZoneB):";
-  int val=(int) input->readLong(2);
+  f.str("");
+  f << "Preferences-B0:";
+  val=(int) input->readLong(2);
   if (val) f << "f0=" << val << ",";
   val=(int) input->readLong(2);
   if (val) f << "graph[num]=" << val << ",";
@@ -425,7 +442,7 @@ bool WingzParser::readZoneB()
   }
   int sSz=(int) input->readULong(1);
   if (!input->checkPosition(pos+25+sSz)) {
-    MWAW_DEBUG_MSG(("WingzParser::readZoneB: auto save name seems bad\n"));
+    MWAW_DEBUG_MSG(("WingzParser::readPreferences: auto save name seems bad\n"));
     f << "####";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -448,16 +465,20 @@ bool WingzParser::readZoneB()
 
   pos=input->tell();
   ascii().addPos(pos);
-  ascii().addNote("ZoneB-A");
+  ascii().addNote("Preferences-B1");
   input->seek(pos+96, librevenge::RVNG_SEEK_SET);
 
   pos=input->tell();
   ascii().addPos(pos);
-  ascii().addNote("ZoneB-B");
-  input->seek(pos+92, librevenge::RVNG_SEEK_SET);
+  ascii().addNote("Preferences-B2");
+  if (vers==1)
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  else
+    input->seek(pos+92, librevenge::RVNG_SEEK_SET);
 
   return true;
 }
+
 
 ////////////////////////////////////////////////////////////
 // spreadsheet
@@ -466,6 +487,8 @@ bool WingzParser::readSpreadsheet()
 {
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
+  int const vers=version();
+  int const headerSize=vers==1?4:6;
   while (!input->isEnd()) {
     long pos=input->tell();
     int type=(int) input->readULong(1);
@@ -506,18 +529,40 @@ bool WingzParser::readSpreadsheet()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetPBreak();
       break;
-    case 3: // never find this block with data ...
-    case 4: // idem
-      ok=input->checkPosition(pos+6+dSz);
+    case 3: // a list of int?
+      ok=input->checkPosition(pos+headerSize+dSz);
       if (!ok) break;
-      val=(int) input->readLong(2);
-      if (val) f << "id=" << val << ",";
-      if (dSz) {
-        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: find some data in zone %d\n", type));
-        f << "###";
-        ascii().addDelimiter(pos+6,'|');
+      if (vers>1) {
+        val=(int) input->readLong(2);
+        if (val) f << "id=" << val << ",";
       }
-      input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+      if ((dSz%2)) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: find some data in zone3\n"));
+        f << "###";
+        ascii().addDelimiter(pos+headerSize,'|');
+      }
+      else if (dSz) {
+        f << "val=[";
+        for (int i=0; i<dSz/2; ++i) f << input->readLong(2) << ",";
+        f << "],";
+      }
+      input->seek(pos+headerSize+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    case 4: // never find this block with data ...
+      ok=input->checkPosition(pos+headerSize+dSz);
+      if (!ok) break;
+      if (vers>1) {
+        val=(int) input->readLong(2);
+        if (val) f << "id=" << val << ",";
+      }
+      if (dSz) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: find some data in zone4\n"));
+        f << "###";
+        ascii().addDelimiter(pos+headerSize,'|');
+      }
+      input->seek(pos+headerSize+dSz, librevenge::RVNG_SEEK_SET);
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       break;
@@ -525,6 +570,26 @@ bool WingzParser::readSpreadsheet()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetZone5();
       break;
+    case 6: { // only in v1?
+      ok=input->checkPosition(pos+headerSize+(vers==1 ? 2 : 0) +dSz);
+      if (!ok) break;
+      val=(int) input->readLong(2);
+      if (val) f << "id=" << val << ",";
+      int fSz=(int) input->readULong(1);
+      if (dSz<1 || dSz!=1+fSz) {
+        MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: zone 6 size seems bad\n"));
+        f << "###";
+      }
+      else {
+        std::string text("");
+        for (int i=0; i<fSz; ++i) text += (char) input->readULong(1);
+        f << text << ",";
+      }
+      input->seek(pos+headerSize+(vers==1 ? 2 : 0)+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      break;
+    }
     case 7:
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       ok=readSpreadsheetCellName();
@@ -562,7 +627,7 @@ bool WingzParser::readSpreadsheet()
       if (!ok) break;
       val=(int) input->readLong(2);
       if (val) f << "id=" << val << ",";
-      if (dSz<4) {
+      if ((vers==1&&dSz<2) || (vers==2&&dSz<4)) {
         MWAW_DEBUG_MSG(("WingzParser::readSpreadsheet: Sheet2Err size seems bad\n"));
         f << "###";
       }
@@ -617,18 +682,24 @@ bool WingzParser::readSpreadsheet()
     }
     if (ok) continue;
     input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-    if (type==0xc) dSz+=4;
-    else if (type==0x10) dSz+=14;
-    else if (type==0xe) dSz+=2;
-    if (!type || type>24 || !val || (val&0x3F) || !input->checkPosition(pos+6+dSz)) {
+    if (vers==1) {
+      if (type==6 || type==7 || type==0x11) dSz+=2;
+    }
+    else {
+      if (type==0xc) dSz+=4;
+      else if (type==0xe) dSz+=2;
+      else if (type==0x10) dSz+=14;
+    }
+    if (!type || (vers==2 && !val) || (type>24 && !(vers==1&&type>100 && type<104)) ||
+        (val&0x3F) || !input->checkPosition(pos+headerSize+dSz)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
     int id=(int) input->readLong(2);
     if (id) f << "id=" << id << ",";
-    if (input->tell() != pos+6+dSz)
+    if (input->tell() != pos+headerSize+dSz)
       ascii().addDelimiter(input->tell(), '|');
-    input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+    input->seek(pos+headerSize+dSz, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -638,6 +709,7 @@ bool WingzParser::readSpreadsheet()
 bool WingzParser::readSpreadsheetCellList()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long pos=input->tell();
   int type=(int) input->readULong(1);
   if (type!=12) return false;
@@ -645,7 +717,7 @@ bool WingzParser::readSpreadsheetCellList()
   int dSz= (int) input->readULong(2);
   int row=(int) input->readLong(2);
   int firstCol=(int) input->readLong(2);
-  long endPos=pos+10+dSz;
+  long endPos=pos+(vers==1 ? 6 : 10)+dSz;
   libmwaw::DebugStream f;
   f << "Entries(SheetCell)[row=" << row << "]:";
   if (firstCol) f << "first[col]=" << firstCol << ",";
@@ -676,7 +748,7 @@ bool WingzParser::readSpreadsheetCellList()
       ascii().addNote(f.str().c_str());
       continue;
     }
-    if (pos+6>endPos) {
+    if (pos+(vers==1 ? 4 : 6)>endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -815,16 +887,17 @@ bool WingzParser::readSpreadsheetCellList()
         f << "formula=" << cell.m_formula << ",";
     }
     MWAWCellContent &content=cell.m_content;
+    long dPos=input->tell();
     switch (type) {
     case 1: // only style
       break;
     case 2:
     case 3: {
       ok=false;
-      if (pos+9>endPos)
+      if (dPos+1>endPos)
         break;
       int fSz=(int) input->readULong(1);
-      if (pos+9+fSz>endPos)
+      if (dPos+1+fSz>endPos)
         break;
       if (format.m_format==MWAWCell::F_UNKNOWN)
         format.m_format=MWAWCell::F_TEXT;
@@ -835,12 +908,12 @@ bool WingzParser::readSpreadsheetCellList()
       std::string text("");
       for (int i=0; i<fSz; ++i) text += (char) input->readULong(1);
       f << text;
-      input->seek(pos+9+fSz, librevenge::RVNG_SEEK_SET);
+      input->seek(dPos+1+fSz, librevenge::RVNG_SEEK_SET);
       ok=true;
       break;
     }
     case 4:
-      if (pos+10>endPos) {
+      if (dPos+2>endPos) {
         ok=false;
         break;
       }
@@ -850,10 +923,9 @@ bool WingzParser::readSpreadsheetCellList()
         content.m_contentType=MWAWCellContent::C_NUMBER;
       content.setValue(std::numeric_limits<double>::quiet_NaN());
       f << "nan" << input->readLong(2) << ",";
-      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       break;
     case 5: { // style + double
-      if (pos+16>endPos) {
+      if (dPos+8>endPos) {
         ok=false;
         break;
       }
@@ -866,7 +938,7 @@ bool WingzParser::readSpreadsheetCellList()
       if (input->readDoubleReverted8(value, isNAN))
         content.setValue(value);
       f << value;
-      input->seek(pos+16, librevenge::RVNG_SEEK_SET);
+      input->seek(dPos+8, librevenge::RVNG_SEEK_SET);
       break;
     }
     default:
@@ -874,6 +946,10 @@ bool WingzParser::readSpreadsheetCellList()
       break;
     }
     cell.setFormat(format);
+    // change the reference date from 1/1/1904 to 1/1/1900
+    if (format.m_format==MWAWCell::F_DATE && content.isValueSet())
+      content.setValue(content.m_value+1462.);
+
     m_state->m_spreadsheet.m_cells.push_back(cell);
     if (!ok) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -901,7 +977,7 @@ bool WingzParser::readSpreadsheetCellName()
   int val=(int) input->readULong(1);
   int dSz= (int) input->readULong(2);
   int id=(int) input->readLong(2);
-
+  long endPos=pos+6+dSz;
   libmwaw::DebugStream f;
   f << "Entries(CellName)[" << id << "]:";
   if (val!=0x40) f << "fl=" << std::hex << val << std::dec << ",";
@@ -911,18 +987,44 @@ bool WingzParser::readSpreadsheetCellName()
   }
   val=(int) input->readLong(2);
   if (val!=-1) f << "f0=" << val << ",";
-  for (int i=0; i<2; ++i) { // always 7/7
-    val=(int) input->readLong(1);
-    if (val!=7) f << "f" << i+1 << "0=" << val << ",";
-  }
-  int cell[2];
-  for (int i=0; i<2; ++i) cell[i]=(int) input->readLong(2);
-  Vec2i cellPos(cell[1],cell[0]);
-  f << "cell=" << cell[0] << "x" << cell[1] << ",";
-  val=(int) input->readLong(1);
-  if (val!=-1) f << "f3=" << val << ",";
   int sSz=(int) input->readULong(1);
-  if (10+sSz>dSz) {
+  if ((sSz!=7&&sSz!=12) || input->tell()+sSz>endPos) {
+    MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: can not determine the block type\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  MWAWCellContent::FormulaInstruction instr;
+  if (sSz==7) { // a cell
+    val=(int) input->readLong(1);
+    if (val!=7) f << "f1=" << val << ",";
+    int cell[2];
+    for (int i=0; i<2; ++i) cell[i]=(int) input->readLong(2);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+    instr.m_position[0]=Vec2i(cell[1],cell[0]);
+    instr.m_positionRelative[0]=Vec2b(false,false);
+    f << "cell=" << instr.m_position[0] << ",";
+  }
+  else { // a cell list
+    for (int i=0; i< 2; ++i) {
+      val=(int) input->readLong(1);
+      if (val!=7) f << "f" << i+1 << "=" << val << ",";
+    }
+    int cell[4];
+    for (int i=0; i<4; ++i) cell[i]=(int) input->readLong(2);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+    instr.m_position[0]=Vec2i(cell[2], cell[0]);
+    instr.m_position[1]=Vec2i(cell[3], cell[1]);
+    instr.m_positionRelative[0]=instr.m_positionRelative[1]=Vec2b(false,false);
+    f << "cell=" << instr.m_position[0] << "<->" << instr.m_position[1] << ",";
+  }
+  val=(int) input->readLong(1);
+  if (val!=-1) f << "g0=" << val << ",";
+
+  sSz=(int) input->readULong(1);
+  if (input->tell()+sSz>endPos) {
     MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: style name seems bad\n"));
     f << "###";
   }
@@ -930,13 +1032,13 @@ bool WingzParser::readSpreadsheetCellName()
     std::string name("");
     for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
     f << name << ",";
-    if (input->tell()!=pos+6+dSz) {
+    if (input->tell()!=endPos) {
       MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetCellName: find some extra data\n"));
       ascii().addDelimiter(input->tell(), '|');
     }
   }
-  m_state->m_spreadsheet.m_cellIdPosMap[id]=cellPos;
-  input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
+  m_state->m_spreadsheet.m_cellIdPosMap[id]=instr;
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   return true;
@@ -1015,7 +1117,7 @@ bool WingzParser::readSpreadsheetStyle()
     }
   }
   float percent;
-  if (patId && m_state->getPatternPercent(patId, percent)) {
+  if (patId && m_state->getPatternPercent(patId, version(), percent)) {
     style.m_backgroundColor=MWAWColor::barycenter(percent, colors[0], 1.f-percent, colors[1]);
     if (!style.m_backgroundColor.isWhite())
       f << "cellColor=" << style.m_backgroundColor << ",";
@@ -1105,14 +1207,14 @@ static Functions const s_listFunctions[] = {
   { "", -2}/*if separator?*/,{ "", -2} /*if separator?*/,{ "", -2} /* convert to?*/,{ "", -2} /*convert to bool*/,
   // 20
   { "", -2} /*UNKN*/, { "", -2},{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-  { "", -2} /*UNKN*/,{ "(", 1} /*spec()*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*+number*/,{ "", -2} /*-number*/,
+  { "", -2} /*UNKN*/,{ "(", 1} /*spec()*/,{ "", -2}/*UNKN*/ ,{ "", -2} /*UNKN*/,
+  { "", -2} /*convert to?*/,{ "", -2} /*UNKN*/,{ "", -2} /*+number*/,{ "", -2} /*-number*/,
   { "", -2} /* *number*/,{ "", -2} /*/number*/,{ "+", 2},{ "-", 2},
   // 30
   { "*", 2},{ "/", 2}, { "-", 1},{ "", -2} /*UNKN*/,
   { "^", 2},{ "Concatenate", 2},{ "And", 2},{ "Or", 2},
   { "Not", 1},{ "=", 2} ,{ "<", 2} ,{ "<=", 2} ,
-  { ">", 2} ,{ ">=", 2} ,{ "!=", 2} ,{ "", -2} /*UNKN*/,
+  { ">", 2} ,{ ">=", 2} ,{ "<>", 2} ,{ "", -2} /*UNKN*/,
   // 40
   { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
   { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
@@ -1165,7 +1267,7 @@ static Functions const s_listFunctions[] = {
   { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
   // e0
   { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
-  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "FunctE4", 2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
   { "N", 1},{ "Cell", 0},{ "Contains", 2},{ "", -2} /*UNKN*/,
   { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
   // f0
@@ -1249,7 +1351,8 @@ bool WingzParser::readFormula()
       instr.m_positionRelative[1]=Vec2b((typ&8)==0, (typ&4)==0);
       break;
     }
-    case 0x9: {
+    case 0x9:
+    case 0xa: {
       if (pos+1+2>endPos) {
         ok=false;
         break;
@@ -1259,12 +1362,11 @@ bool WingzParser::readFormula()
         MWAW_DEBUG_MSG(("WingzParser::readFormula: can not find cell with id\n"));
         std::stringstream s;
         s << "##cellId=" << cId << ",";
+        error=s.str();
         ok=false;
         break;
       }
-      instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
-      instr.m_position[0]=m_state->m_spreadsheet.m_cellIdPosMap.find(cId)->second;
-      instr.m_positionRelative[0]=Vec2b(false,false);
+      instr=m_state->m_spreadsheet.m_cellIdPosMap.find(cId)->second;
       break;
     }
     case 0x1a: // error related to Sheet2Err
@@ -1287,6 +1389,9 @@ bool WingzParser::readFormula()
       break;
     case 0x1e: // convert to ?
     case 0x1f: // convert to bool
+    case 0x26:
+    case 0x27:
+    case 0x28: // convert to ?
       noneInstr=true;
       break;
     case 0x18:
@@ -1471,6 +1576,7 @@ bool WingzParser::readFormula()
 bool WingzParser::readSpreadsheetSize()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long pos=input->tell();
   int type=(int) input->readULong(1);
   if (type!=1 && type!=2) return false;
@@ -1479,12 +1585,14 @@ bool WingzParser::readSpreadsheetSize()
   int val=(int) input->readULong(1);
   if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
   int dSz= (int) input->readULong(2);
-  if (dSz%4 || !input->checkPosition(pos+6+dSz)) {
+  if (dSz%4 || !input->checkPosition(pos+(vers==1 ? 4 : 6)+dSz)) {
     MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetSize: find bad size for data\n"));
     return false;
   }
-  int id=(int) input->readLong(2);
-  if (id) f << "id=" << id << ",";
+  if (vers>1) {
+    int id=(int) input->readLong(2);
+    if (id) f << "id=" << id << ",";
+  }
   f << "pos=[";
   float &defaultDim= type==1 ? m_state->m_spreadsheet.m_widthDefault :
                      m_state->m_spreadsheet.m_heightDefault;
@@ -1520,6 +1628,7 @@ bool WingzParser::readSpreadsheetSize()
 bool WingzParser::readSpreadsheetPBreak()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long pos=input->tell();
   int type=(int) input->readULong(1);
   if (type!=18 && type!=19) return false;
@@ -1528,12 +1637,14 @@ bool WingzParser::readSpreadsheetPBreak()
   int val=(int) input->readULong(1);
   if (val!=0x80) f << "fl=" << std::hex << val << std::dec << ",";
   int dSz= (int) input->readULong(2);
-  if (dSz%4 || !input->checkPosition(pos+6+dSz)) {
+  if (dSz%4 || !input->checkPosition(pos+(vers==1 ? 4 : 6)+dSz)) {
     MWAW_DEBUG_MSG(("WingzParser::readSpreadsheetPBreak: find bad size for data\n"));
     return false;
   }
-  int id=(int) input->readLong(2);
-  if (id) f << "id=" << id << ",";
+  if (vers==2) {
+    int id=(int) input->readLong(2);
+    if (id) f << "id=" << id << ",";
+  }
   f << "pos=[";
   for (int i=0; i<dSz/4; ++i) {
     int cell=(int) input->readULong(2); // the row/col number
@@ -1722,7 +1833,7 @@ bool WingzParser::readGraphic()
   val=(int) input->readULong(2); // always 0
   if (val) f << "f2=" << val << ",";
 
-  long endPos=pos+8+dSz;
+  long endPos=pos+(version()==1 ? 4 : 8)+dSz;
   long dataPos=input->tell();
   switch (type) {
   case 0:
@@ -1764,7 +1875,7 @@ bool WingzParser::readGraphic()
   case 7:
   case 8:
   case 9: {
-    static int const(expectedSize[])= {0x38, 0x3c, 0x34, 0x40, 0x40};
+    static int const(expectedSize[])= {0x38, 0x3c, 0x34, 0x40, 0x40 };
     if (!input->checkPosition(endPos) || dSz < expectedSize[type-5]) {
       MWAW_DEBUG_MSG(("WingzParser::readGraphic: find bad size for shape\n"));
       return false;
@@ -1840,6 +1951,8 @@ bool WingzParser::readGraphic()
       f << "],";
       break;
     }
+    case 0xa:
+      break;
     default:
       break;
     }
@@ -2238,15 +2351,21 @@ bool WingzParser::readChartData()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell(), debPos=pos;
+  libmwaw::DebugStream f;
+  f << "Entries(Chart):";
+  int val=(int) input->readLong(2);
+  f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  f << "f1=" << val << ",";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  if (val>0)
+    return true;
   if (!input->checkPosition(pos+866)) {
     MWAW_DEBUG_MSG(("WingzParser::readChartData: the zone seems to short\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  libmwaw::DebugStream f;
-  f << "Entries(Chart)";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
 
   pos+=193;
   f.str("");
@@ -2318,15 +2437,23 @@ bool WingzParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (!input || !input->hasDataFork())
     return false;
 
-  int const headerSize=12;
+  int const headerSize=13;
   if (!input->checkPosition(headerSize)) {
     MWAW_DEBUG_MSG(("WingzParser::checkHeader: file is too short\n"));
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
-  if (input->readULong(2)!=0x574e || input->readULong(2)!=0x475a || // WNGZ
-      input->readULong(2)!=0x575a || input->readULong(2)!=0x5353) // WZSS
+  int values[4];
+  for (int i=0; i<4; ++i)
+    values[i]=(int) input->readULong(2);
+  bool isWingz=true;
+  if (values[0]==0x574e && values[1]==0x475a && values[2]==0x575a && values[3]==0x5353) // WNGZWZSS
+    isWingz=true;
+  else if (values[0]==0x4241 && values[1]==0x545F && values[2]==0x4254 && values[3]==0x5353) // BAT_BTSS
+    isWingz=false;
+  else
     return false;
+  setVersion(isWingz ? 2 : 1);
   input->setReadInverted(true);
   libmwaw::DebugStream f;
   f << "FileHeader:";
@@ -2334,10 +2461,15 @@ bool WingzParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   for (int i=0; i<4; ++i)
     name += (char) input->readULong(1);
   f << "vers=" << name << ",";
+  int val=(int) input->readLong(1);
+  if (val>=1) { // SgB
+    MWAW_DEBUG_MSG(("WingzParser::checkHeader: Arrgh reading protected file is not implemeneted...\n"));
+    return false;
+  }
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
   if (header)
-    header->reset(MWAWDocument::MWAW_T_WINGZ, 1, MWAWDocument::MWAW_K_SPREADSHEET);
+    header->reset(isWingz ? MWAWDocument::MWAW_T_WINGZ : MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET);
   input->seek(12,librevenge::RVNG_SEEK_SET);
   input->setReadInverted(false);
   return true;
@@ -2349,13 +2481,16 @@ bool WingzParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 bool WingzParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
+  int const vers=version();
   long pos = input->tell();
   int type=(int) input->readULong(1);
   if (type!=0x10) return false;
   int val=(int) input->readULong(1);
   int dSz=(int) input->readULong(2);
-  int id=(int) input->readULong(2);
-  if (dSz!=0x7c || !input->checkPosition(pos+20+0x7c)) {
+  int id=vers==1 ? 0 : (int) input->readULong(2);
+  int expectedSize=vers==1 ? 0x8a : 0x7c;
+  long endPos=pos+(vers==1 ? 4+0x8a : 20+0x7c);
+  if (dSz!=expectedSize || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("WingzParser::readPrintInfo: the header seem bad\n"));
     return false;
   }
@@ -2415,7 +2550,7 @@ bool WingzParser::readPrintInfo()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+20+0x7c, librevenge::RVNG_SEEK_SET);
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 

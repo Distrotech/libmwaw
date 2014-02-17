@@ -149,6 +149,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     switch (type) {
     case MWAW_T_ACTA:
     case MWAW_T_BEAGLEWORKS:
+    case MWAW_T_CLARISRESOLVE:
     case MWAW_T_CLARISWORKS:
     case MWAW_T_DOCMAKER:
     case MWAW_T_EDOC:
@@ -174,7 +175,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_ZWRITE:
       confidence = MWAW_C_EXCELLENT;
       break;
-    case MWAW_T_CLARISRESOLVE:
     case MWAW_T_FRAMEMAKER:
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
@@ -401,8 +401,12 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_WINGZ:
       parser.reset(new WingzParser(input, rsrcParser, header));
       break;
-    // TODO
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
+#ifdef DEBUG
+      parser.reset(new WingzParser(input, rsrcParser, header));
+#endif
+      break;
+    // TODO
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_TRAPEZE:

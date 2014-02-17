@@ -32,7 +32,7 @@
 */
 
 /*
- * Parser to convert spreadsheet Wingz document
+ * Parser to convert spreadsheet ClarisResolve/Wingz document
  *
  */
 #ifndef WINGZ_PARSER
@@ -91,12 +91,8 @@ protected:
   // low level
   //
 
-  //! read the header zone ( a unknown zone)
-  bool readZoneA();
-  //! read a list of fonts
-  bool readFontsList();
-  //! read the second unknown zone
-  bool readZoneB();
+  //! read the preference zone ( the first zone)
+  bool readPreferences();
   //! read the spreadshet zone
   bool readSpreadsheet();
   //! read some spreadsheet size (col/row size or page break)

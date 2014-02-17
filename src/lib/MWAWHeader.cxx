@@ -223,12 +223,6 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-    else if (creator=="WORD") {
-      if (type=="WDBN") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 1));
-        return res;
-      }
-    }
     else if (creator=="MSWK") {
       if (type=="AWWP") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3));
@@ -277,6 +271,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="Rslv") {
+      if (type=="RsWs") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
+    }
     else if (creator=="TBB5") {
       if (type=="TEXT" || type=="ttro") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_TEXEDIT, 1));
@@ -286,6 +286,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     else if (creator=="WNGZ") {
       if (type=="WZSS") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WINGZ, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
+    }
+    else if (creator=="WORD") {
+      if (type=="WDBN") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 1));
         return res;
       }
     }
@@ -407,6 +413,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0x574e && val[1]==0x475a && val[2]==0x575a && val[3]==0x5353) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Wingz file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WINGZ, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+    return res;
+  }
+  if (val[0]==0x4241 && val[1]==0x545F && val[2]==0x4254 && val[3]==0x5353) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a ClarisResolve file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET));
     return res;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {

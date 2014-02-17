@@ -398,6 +398,9 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="RTF ") {
     checkFInfoType("RTF ","RTF ") || checkFInfoType("RTF");
   }
+  else if (m_fInfoCreator=="Rslv") {
+    checkFInfoType("RsWs","Claris Resolve") || checkFInfoType("Claris Resolve");
+  }
   else if (m_fInfoCreator=="SIT!") {
     checkFInfoType("SIT5", "archive SIT") ||
     checkFInfoType("SITD", "archive SIT") ||
@@ -530,6 +533,10 @@ bool File::readDataInformation()
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
     m_dataResult.push_back("WriteNow 3-4");
+    return true;
+  }
+  if (val[0]==0x4241 && val[1]==0x545F && val[2]==0x4254 && val[3]==0x5353) {
+    m_dataResult.push_back("Claris Resolve");
     return true;
   }
   if (val[0]==0x574e && val[1]==0x475a && val[2]==0x575a) {
