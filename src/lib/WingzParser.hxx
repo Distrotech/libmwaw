@@ -118,6 +118,8 @@ protected:
   //! read a macro in a text zone ( some graphic zone)
   bool readMacro();
 
+  //! try to decode an encrypted input
+  bool decodeEncrypted();
   //! try to find the next spreadsheet zone
   bool findNextZone(int lastType=0);
 protected:

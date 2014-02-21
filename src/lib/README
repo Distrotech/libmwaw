@@ -23,7 +23,7 @@
 - MsWrd*        : parser of Microsoft Word documents
 - NisusWrt*     : parser of Nisus Writer documents,
 - TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
-- Wingz*        : parser of Wingz documents
+- Wingz*        : parser of Claris Resolve/Wingz documents
 - WriteNow*     : parser of WriteNow documents
 - WriterPls*    : parser of WriterPlus documents
 - ZWrt*         : parser of Z-Write documents
@@ -205,7 +205,7 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 
 TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
 
-WingzParser : parser of Wingz document : v1.1
+WingzParser : parser of Claris Resolve/Wingz document : v1.1
 
 WriteNowParser : parser of WriteNow document : v1.0-4.0
 -   WriteNowText : class which reads the text and its structures

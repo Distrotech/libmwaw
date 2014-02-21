@@ -183,13 +183,15 @@ void Spreadsheet::update(Cell &cell) const
 //! Internal: the state of a WingzParser
 struct State {
   //! constructor
-  State() : m_spreadsheet(), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_encrypted(false), m_spreadsheet(), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
 
   //! returns the pattern percent corresponding to an id and a version
   static bool getPatternPercent(int patId, int vers, float &percent);
 
+  //! a flag to know if the data is encrypted
+  bool m_encrypted;
   //! the spreadsheet
   Spreadsheet m_spreadsheet;
   int m_numPages /** the number of page of the final document */;
@@ -267,12 +269,15 @@ void WingzParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
-    // create the asciiFile
-    ascii().setStream(getInput());
-    ascii().open(asciiName());
-
-    checkHeader(0L);
-    ok = createZones();
+    if (m_state->m_encrypted)
+      ok = decodeEncrypted();
+    if (ok) {
+      // create the asciiFile
+      ascii().setStream(getInput());
+      ascii().open(asciiName());
+      checkHeader(0L);
+      ok = createZones();
+    }
     if (ok) {
       createDocument(docInterface);
       sendSpreadsheet();
@@ -471,10 +476,31 @@ bool WingzParser::readPreferences()
   pos=input->tell();
   ascii().addPos(pos);
   ascii().addNote("Preferences-B2");
+  input->seek(pos+58, librevenge::RVNG_SEEK_SET);
+
+  pos=input->tell();
+  f.str("");
+  f << "Preferences[passwd]";
+  for (int i=0; i<2; ++i) {
+    input->seek(pos+i*17, librevenge::RVNG_SEEK_SET);
+    int len=(int) input->readULong(1);
+    if (!len) continue;
+    if (len>16) {
+      MWAW_DEBUG_MSG(("WingzParser::readPreferences: passwd size seems bad\n"));
+      f << "###len" << i << "=" << len << ",";
+      break;
+    }
+    std::string passwd("");
+    for (int c=0; c<len; ++c) passwd += (char) input->readULong(1);
+    f << passwd << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
   if (vers==1)
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
   else
-    input->seek(pos+92, librevenge::RVNG_SEEK_SET);
+    input->seek(pos+34, librevenge::RVNG_SEEK_SET);
 
   return true;
 }
@@ -1951,11 +1977,17 @@ bool WingzParser::readGraphic()
       f << "],";
       break;
     }
-    case 0xa:
-      break;
     default:
       break;
     }
+    break;
+  }
+  case 0xb: {
+    if (!input->checkPosition(endPos)) {
+      MWAW_DEBUG_MSG(("WingzParser::readGraphic: find bad size for group\n"));
+      return false;
+    }
+    f << "group,";
     break;
   }
   case 10: {
@@ -2427,6 +2459,47 @@ bool WingzParser::readChartData()
 }
 
 ////////////////////////////////////////////////////////////
+// decode an encrypted file
+////////////////////////////////////////////////////////////
+bool WingzParser::decodeEncrypted()
+{
+  MWAWInputStreamPtr input = getInput();
+  long length=input->size();
+  if (length<=13) {
+    MWAW_DEBUG_MSG(("WingzParser::decodeEncrypted: the file seems too short\n"));
+    return false;
+  }
+  input->seek(0, librevenge::RVNG_SEEK_SET);
+  unsigned long read;
+  uint8_t const *data=input->read(size_t(length), read);
+  if (!data || length!=long(read)) {
+    MWAW_DEBUG_MSG(("WingzParser::decodeEncrypted: can not read the buffer\n"));
+    return false;
+  }
+  uint8_t *buffer=new uint8_t[length];
+  if (!buffer) {
+    MWAW_DEBUG_MSG(("WingzParser::decodeEncrypted: can not allocate a buffer\n"));
+    return false;
+  }
+
+  for (int i=0; i<12; i++) buffer[i]=data[i];
+  buffer[12]=0;
+  int delta=0;
+  for (long i=13; i<length; ++i) {
+    uint8_t const codeString[]= { 0x53, 0x66, 0xA5, 0x35, 0x5A, 0xAA, 0x55, 0xE3 };
+    uint8_t v=uint8_t((codeString[(delta&7)]+delta)&0xFF);
+    buffer[i]=(data[i]^v);
+    delta++;
+  }
+
+  shared_ptr<librevenge::RVNGInputStream> newInput
+  (new librevenge::RVNGStringStream(buffer, (unsigned int)length));
+  getParserState()->m_input.reset(new MWAWInputStream(newInput, false));
+  delete [] buffer;
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
 bool WingzParser::checkHeader(MWAWHeader *header, bool /*strict*/)
@@ -2462,8 +2535,12 @@ bool WingzParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     name += (char) input->readULong(1);
   f << "vers=" << name << ",";
   int val=(int) input->readLong(1);
-  if (val>=1) { // SgB
-    MWAW_DEBUG_MSG(("WingzParser::checkHeader: Arrgh reading protected file is not implemeneted...\n"));
+  if (val==1) { // SgB
+    MWAW_DEBUG_MSG(("WingzParser::checkHeader: Find an encrypted file...\n"));
+    m_state->m_encrypted=true;
+  }
+  else if (val) {
+    MWAW_DEBUG_MSG(("WingzParser::checkHeader: Find unknown encryped flag...\n"));
     return false;
   }
   ascii().addPos(0);

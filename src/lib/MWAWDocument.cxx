@@ -176,6 +176,8 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
       confidence = MWAW_C_EXCELLENT;
       break;
     case MWAW_T_FRAMEMAKER:
+    case MWAW_T_FULLIMPACT:
+    case MWAW_T_FULLPAINT:
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
@@ -184,6 +186,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_PAGEMAKER:
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
+    case MWAW_T_SUPERPAINT:
     case MWAW_T_TRAPEZE:
     case MWAW_T_XPRESS:
     case MWAW_T_RESERVED1:
@@ -389,6 +392,9 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_CLARISRESOLVE:
+      parser.reset(new WingzParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::MWAW_T_CLARISWORKS:
       parser.reset(new ClarisWksSSParser(input, rsrcParser, header));
       break;
@@ -401,12 +407,8 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_WINGZ:
       parser.reset(new WingzParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MWAW_T_CLARISRESOLVE:
-#ifdef DEBUG
-      parser.reset(new WingzParser(input, rsrcParser, header));
-#endif
-      break;
     // TODO
+    case MWAWDocument::MWAW_T_FULLIMPACT:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_TRAPEZE:
@@ -415,6 +417,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_DOCMAKER:
     case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FULLWRITE:
     case MWAWDocument::MWAW_T_HANMACWORDJ:
     case MWAWDocument::MWAW_T_HANMACWORDK:
@@ -427,6 +430,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
     case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_SUPERPAINT:
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
     case MWAWDocument::MWAW_T_WRITENOW:
@@ -549,6 +553,8 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
 
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
+    case MWAWDocument::MWAW_T_FULLIMPACT:
+    case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FRAMEMAKER:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MACDRAFT:
@@ -558,6 +564,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_SUPERPAINT:
     case MWAWDocument::MWAW_T_TRAPEZE:
     case MWAWDocument::MWAW_T_WINGZ:
     case MWAWDocument::MWAW_T_XPRESS:
