@@ -440,6 +440,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWGraphicDecoder.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWGraphicEncoder.cxx"
 				>
 			</File>
@@ -862,6 +866,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWFontSJISConverter.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWGraphicDecoder.hxx"
 				>
 			</File>
 			<File

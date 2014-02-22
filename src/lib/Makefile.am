@@ -156,6 +156,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWFontConverter.hxx		\
 	MWAWFontSJISConverter.cxx	\
 	MWAWFontSJISConverter.hxx	\
+	MWAWGraphicDecoder.cxx		\
+	MWAWGraphicDecoder.hxx		\
 	MWAWGraphicEncoder.cxx		\
 	MWAWGraphicEncoder.hxx		\
 	MWAWGraphicListener.cxx		\

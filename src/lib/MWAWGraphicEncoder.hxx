@@ -46,10 +46,10 @@ namespace MWAWGraphicEncoderInternal
 struct State;
 }
 /** main class used to define store librevenge::RVNGDrawingInterface
-    lists of command in a librevenge::RVNGBinaryData. MWAWGraphicDecoder
+    lists of command in a librevenge::RVNGBinaryData. \see MWAWGraphicDecoder
     can be used to decode back the pictures...
 
-	\note: as this class implements the functions librevenge::RVNGDrawingInterface,
+	\note as this class implements the functions librevenge::RVNGDrawingInterface,
   the documentation is not duplicated..
 */
 class MWAWGraphicEncoder : public librevenge::RVNGDrawingInterface

@@ -38,6 +38,7 @@
 #include <string.h>
 
 #include "MWAWHeader.hxx"
+#include "MWAWGraphicDecoder.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPropertyHandler.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -82,38 +83,6 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
 shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict);
-
-/** Small class used to reconstruct a librevenge::RVNGBinary with mimeType="image/mwaw-odg" created by libmwaw */
-class GraphicExporter : public MWAWPropertyHandler
-{
-public:
-  /** constructor */
-  GraphicExporter(librevenge::RVNGDrawingInterface *output) : MWAWPropertyHandler(), m_output(output) { }
-  /** destructor */
-  ~GraphicExporter() {};
-
-  /** insert an element */
-  void insertElement(const char *psName);
-  /** insert an element ( with a librevenge::RVNGPropertyList ) */
-  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList);
-  /** insert an element ( with a librevenge::RVNGPropertyListVector parameter ) */
-  void insertElement(const char *psName, const librevenge::RVNGPropertyList &xPropList,
-                     const librevenge::RVNGPropertyListVector &vector);
-  /** insert a sequence of character */
-  void characters(const librevenge::RVNGString &sCharacters)
-  {
-    if (!m_output) return;
-    m_output->insertText(sCharacters);
-  }
-private:
-  /// copy constructor (undefined)
-  GraphicExporter(GraphicExporter const &);
-  /// operator= (undefined)
-  GraphicExporter operator=(GraphicExporter const &);
-  /** the interface output */
-  librevenge::RVNGDrawingInterface *m_output;
-};
-
 }
 
 MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInputStream *input,  MWAWDocument::Type &type, Kind &kind)
@@ -310,7 +279,7 @@ bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, libre
     MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: called with no data or no converter\n"));
     return false;
   }
-  MWAWDocumentInternal::GraphicExporter tmpHandler(paintInterface);
+  MWAWGraphicDecoder tmpHandler(paintInterface);
   try {
     if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
   }
@@ -603,163 +572,6 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
   }
 
   return false;
-}
-
-////////////////////////////////////////////////////////////
-// GraphicExporter implementation
-////////////////////////////////////////////////////////////
-void GraphicExporter::insertElement(const char *psName)
-{
-  if (!m_output) return;
-  if (!psName || !*psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
-    return;
-  }
-
-  bool ok=true;
-  switch (psName[0]) {
-  case 'C':
-    if (strcmp(psName,"CloseLink")==0)
-      m_output->closeLink();
-    else if (strcmp(psName,"CloseListElement")==0)
-      m_output->closeListElement();
-    else if (strcmp(psName,"CloseOrderedListLevel")==0)
-      m_output->closeOrderedListLevel();
-    else if (strcmp(psName,"CloseParagraph")==0)
-      m_output->closeParagraph();
-    else if (strcmp(psName,"CloseSpan")==0)
-      m_output->closeSpan();
-    else if (strcmp(psName,"CloseTableCell")==0)
-      m_output->closeTableCell();
-    else if (strcmp(psName,"CloseTableRow")==0)
-      m_output->closeTableRow();
-    else if (strcmp(psName,"CloseUnorderedListLevel")==0)
-      m_output->closeUnorderedListLevel();
-    else
-      ok=false;
-    break;
-  case 'E':
-    if (strcmp(psName,"EndDocument")==0)
-      m_output->endDocument();
-    else if (strcmp(psName,"EndPage")==0)
-      m_output->endPage();
-    else if (strcmp(psName,"EndLayer")==0)
-      m_output->endLayer();
-    else if (strcmp(psName,"EndEmbeddedGraphics")==0)
-      m_output->endEmbeddedGraphics();
-    else if (strcmp(psName,"EndTableObject")==0)
-      m_output->endTableObject();
-    else if (strcmp(psName,"EndTextObject")==0)
-      m_output->endTextObject();
-    else
-      ok=false;
-    break;
-  case 'I':
-    if (strcmp(psName,"InsertTab")==0)
-      m_output->insertTab();
-    else if (strcmp(psName,"InsertSpace")==0)
-      m_output->insertSpace();
-    else if (strcmp(psName,"InsertLineBreak")==0)
-      m_output->insertLineBreak();
-    else
-      ok=false;
-    break;
-  default:
-    ok=false;
-    break;
-  }
-  if (!ok) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
-  }
-}
-
-void GraphicExporter::insertElement(const char *psName, const librevenge::RVNGPropertyList &propList)
-{
-  if (!m_output) return;
-  if (!psName || !*psName) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called without any name\n"));
-    return;
-  }
-
-  bool ok=true;
-  switch (psName[0]) {
-  case 'D':
-    if (strcmp(psName,"DefineCharacterStyle")==0)
-      m_output->defineCharacterStyle(propList);
-    else if (strcmp(psName,"DefineParagraphStyle")==0)
-      m_output->defineParagraphStyle(propList);
-
-    else if (strcmp(psName,"DrawEllipse")==0)
-      m_output->drawEllipse(propList);
-    else if (strcmp(psName,"DrawGraphicObject")==0)
-      m_output->drawGraphicObject(propList);
-    else if (strcmp(psName,"DrawPath")==0)
-      m_output->drawPath(propList);
-    else if (strcmp(psName,"DrawPolygon")==0)
-      m_output->drawPolygon(propList);
-    else if (strcmp(psName,"DrawPolyline")==0)
-      m_output->drawPolyline(propList);
-    else if (strcmp(psName,"DrawRectangle")==0)
-      m_output->drawRectangle(propList);
-    else
-      ok=false;
-    break;
-  case 'I':
-    if (strcmp(psName,"InsertCoveredTableCell")==0)
-      m_output->insertCoveredTableCell(propList);
-    else if (strcmp(psName,"InsertField")==0)
-      m_output->insertField(propList);
-    else
-      ok=false;
-    break;
-  case 'O':
-    if (strcmp(psName,"OpenLink")==0)
-      m_output->openLink(propList);
-    else if (strcmp(psName,"OpenListElement")==0)
-      m_output->openListElement(propList);
-    else if (strcmp(psName,"OpenOrderedListLevel")==0)
-      m_output->openOrderedListLevel(propList);
-    else if (strcmp(psName,"OpenParagraph")==0)
-      m_output->openParagraph(propList);
-    else if (strcmp(psName,"OpenSpan")==0)
-      m_output->openSpan(propList);
-    else if (strcmp(psName,"OpenTableCell")==0)
-      m_output->openTableCell(propList);
-    else if (strcmp(psName,"OpenTableRow")==0)
-      m_output->openTableRow(propList);
-    else if (strcmp(psName,"OpenUnorderedListLevel")==0)
-      m_output->openUnorderedListLevel(propList);
-    else
-      ok=false;
-    break;
-  case 'S':
-    if (strcmp(psName,"SetMetaData")==0)
-      m_output->setDocumentMetaData(propList);
-    else if (strcmp(psName,"SetStyle")==0)
-      m_output->setStyle(propList);
-
-    else if (strcmp(psName,"StartDocument")==0)
-      m_output->startDocument(propList);
-    else if (strcmp(psName,"StartEmbeddedGraphics")==0)
-      m_output->startEmbeddedGraphics(propList);
-    else if (strcmp(psName,"StartLayer")==0)
-      m_output->startLayer(propList);
-    else if (strcmp(psName,"StartPage")==0)
-      m_output->startPage(propList);
-    else if (strcmp(psName,"StartTableObject")==0)
-      m_output->startTableObject(propList);
-    else if (strcmp(psName,"StartTextObject")==0)
-      m_output->startTextObject(propList);
-    else
-      ok=false;
-    break;
-  default:
-    ok=false;
-    break;
-  }
-  if (!ok) {
-    MWAW_DEBUG_MSG(("GraphicExporter::insertElement: called with unexpected name %s\n", psName));
-  }
 }
 
 }

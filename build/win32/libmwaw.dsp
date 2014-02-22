@@ -355,6 +355,10 @@ SOURCE=..\..\src\lib\MWAWFontSJISConverter.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWGraphicDecoder.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWGraphicEncoder.cxx
 # End Source File
 # Begin Source File
@@ -776,6 +780,10 @@ SOURCE=..\..\src\lib\MWAWFontConverter.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWFontSJISConverter.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWGraphicDecoder.hxx
 # End Source File
 # Begin Source File
 
