@@ -2481,9 +2481,11 @@ bool WingzParser::decodeEncrypted()
     MWAW_DEBUG_MSG(("WingzParser::decodeEncrypted: can not allocate a buffer\n"));
     return false;
   }
-
+  // the first 12 bytes encoded
   for (int i=0; i<12; i++) buffer[i]=data[i];
+  // reset the crypt flag to avoid problem
   buffer[12]=0;
+  // the next data are encrypted using a basic xor method...
   int delta=0;
   for (long i=13; i<length; ++i) {
     uint8_t const codeString[]= { 0x53, 0x66, 0xA5, 0x35, 0x5A, 0xAA, 0x55, 0xE3 };
@@ -2492,10 +2494,11 @@ bool WingzParser::decodeEncrypted()
     delta++;
   }
 
+  // finally replace the actual input with a new input
   shared_ptr<librevenge::RVNGInputStream> newInput
   (new librevenge::RVNGStringStream(buffer, (unsigned int)length));
-  getParserState()->m_input.reset(new MWAWInputStream(newInput, false));
   delete [] buffer;
+  getParserState()->m_input.reset(new MWAWInputStream(newInput, false));
   return true;
 }
 

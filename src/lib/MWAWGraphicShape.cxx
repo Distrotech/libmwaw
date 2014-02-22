@@ -46,7 +46,7 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWGraphicInterface.hxx"
+#include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicStyle.hxx"
 
 #include "MWAWGraphicShape.hxx"

@@ -46,12 +46,12 @@
 
 #include "MWAWPropertyHandler.hxx"
 
-#include "MWAWGraphicInterface.hxx"
+#include "MWAWGraphicEncoder.hxx"
 
-//! a name space used to define internal data of MWAWGraphicInterface
-namespace MWAWGraphicInterfaceInternal
+//! a name space used to define internal data of MWAWGraphicEncoder
+namespace MWAWGraphicEncoderInternal
 {
-//! the state of a MWAWGraphicInterface
+//! the state of a MWAWGraphicEncoder
 struct State {
   //! constructor
   State() : m_encoder()
@@ -63,15 +63,15 @@ struct State {
 
 }
 
-MWAWGraphicInterface::MWAWGraphicInterface() : m_state(new MWAWGraphicInterfaceInternal::State)
+MWAWGraphicEncoder::MWAWGraphicEncoder() : librevenge::RVNGDrawingInterface(), m_state(new MWAWGraphicEncoderInternal::State)
 {
 }
 
-MWAWGraphicInterface::~MWAWGraphicInterface()
+MWAWGraphicEncoder::~MWAWGraphicEncoder()
 {
 }
 
-bool MWAWGraphicInterface::getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType)
+bool MWAWGraphicEncoder::getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType)
 {
   if (!m_state->m_encoder.getData(result))
     return false;
@@ -79,223 +79,222 @@ bool MWAWGraphicInterface::getBinaryResult(librevenge::RVNGBinaryData &result, s
   return true;
 }
 
-void MWAWGraphicInterface::startDocument(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startDocument(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartDocument", list);
 }
 
-void MWAWGraphicInterface::endDocument()
+void MWAWGraphicEncoder::endDocument()
 {
   m_state->m_encoder.insertElement("EndDocument");
 }
 
-void MWAWGraphicInterface::setDocumentMetaData(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::setDocumentMetaData(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("SetDocumentMetaData", list);
 }
 
-void MWAWGraphicInterface::startPage(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startPage(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartPage", list);
 }
 
-void MWAWGraphicInterface::endPage()
+void MWAWGraphicEncoder::endPage()
 {
   m_state->m_encoder.insertElement("EndPage");
 }
 
-void MWAWGraphicInterface::setStyle(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::setStyle(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("SetStyle", list);
 }
 
-void MWAWGraphicInterface::startLayer(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startLayer(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartLayer", list);
 }
 
-void MWAWGraphicInterface::endLayer()
+void MWAWGraphicEncoder::endLayer()
 {
   m_state->m_encoder.insertElement("EndLayer");
 }
 
-void MWAWGraphicInterface::startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartEmbeddedGraphics", list);
 }
 
-void MWAWGraphicInterface::endEmbeddedGraphics()
+void MWAWGraphicEncoder::endEmbeddedGraphics()
 {
   m_state->m_encoder.insertElement("StartEmbeddedGraphics");
 }
 
-void MWAWGraphicInterface::drawRectangle(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::drawRectangle(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawRectangle", list);
 }
 
-void MWAWGraphicInterface::drawEllipse(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::drawEllipse(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawEllipse", list);
 }
 
-void MWAWGraphicInterface::drawPolygon(const ::librevenge::RVNGPropertyList &vertices)
+void MWAWGraphicEncoder::drawPolygon(const ::librevenge::RVNGPropertyList &vertices)
 {
   m_state->m_encoder.insertElement("DrawPolygon", vertices);
 }
 
-void MWAWGraphicInterface::drawPolyline(const ::librevenge::RVNGPropertyList &vertices)
+void MWAWGraphicEncoder::drawPolyline(const ::librevenge::RVNGPropertyList &vertices)
 {
   m_state->m_encoder.insertElement("DrawPolyline", vertices);
 }
 
-void MWAWGraphicInterface::drawPath(const ::librevenge::RVNGPropertyList &path)
+void MWAWGraphicEncoder::drawPath(const ::librevenge::RVNGPropertyList &path)
 {
   m_state->m_encoder.insertElement("DrawPath", path);
 }
 
-void MWAWGraphicInterface::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawGraphicObject", list);
 }
 
-void MWAWGraphicInterface::startTextObject(const ::librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startTextObject(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartTextObject", list);
 }
 
-void MWAWGraphicInterface::endTextObject()
+void MWAWGraphicEncoder::endTextObject()
 {
   m_state->m_encoder.insertElement("EndTextObject");
 }
 
-void MWAWGraphicInterface::startTableObject(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::startTableObject(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartTableObject", list);
 }
 
-void MWAWGraphicInterface::endTableObject()
+void MWAWGraphicEncoder::endTableObject()
 {
   m_state->m_encoder.insertElement("EndTableObject");
 }
 
-void MWAWGraphicInterface::openTableRow(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openTableRow(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenTableRow", list);
 }
 
-void MWAWGraphicInterface::closeTableRow()
+void MWAWGraphicEncoder::closeTableRow()
 {
   m_state->m_encoder.insertElement("CloseTableRow");
 }
 
-void MWAWGraphicInterface::openTableCell(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openTableCell(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenTableCell", list);
 }
 
-void MWAWGraphicInterface::closeTableCell()
+void MWAWGraphicEncoder::closeTableCell()
 {
   m_state->m_encoder.insertElement("CloseTableCell");
 }
 
-void MWAWGraphicInterface::insertCoveredTableCell(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::insertCoveredTableCell(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("InsertCoveredTableCell", list);
 }
 
-void MWAWGraphicInterface::insertTab()
+void MWAWGraphicEncoder::insertTab()
 {
   m_state->m_encoder.insertElement("InsertTab");
 }
 
-void MWAWGraphicInterface::insertSpace()
+void MWAWGraphicEncoder::insertSpace()
 {
   m_state->m_encoder.insertElement("InsertSpace");
 }
 
-void MWAWGraphicInterface::insertText(const librevenge::RVNGString &text)
+void MWAWGraphicEncoder::insertText(const librevenge::RVNGString &text)
 {
   m_state->m_encoder.characters(text.cstr());
 }
 
-void MWAWGraphicInterface::insertLineBreak()
+void MWAWGraphicEncoder::insertLineBreak()
 {
   m_state->m_encoder.insertElement("InsertLineBreak");
-  insertText("\n");
 }
 
-void MWAWGraphicInterface::insertField(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::insertField(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("InsertField", list);
 }
 
-void MWAWGraphicInterface::openLink(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openLink(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenLink", list);
 }
 
-void MWAWGraphicInterface::closeLink()
+void MWAWGraphicEncoder::closeLink()
 {
   m_state->m_encoder.insertElement("CloseLink");
 }
 
-void MWAWGraphicInterface::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openOrderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenOrderedListLevel", list);
 }
 
-void MWAWGraphicInterface::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openUnorderedListLevel(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenUnorderedListLevel", list);
 }
 
-void MWAWGraphicInterface::closeOrderedListLevel()
+void MWAWGraphicEncoder::closeOrderedListLevel()
 {
   m_state->m_encoder.insertElement("CloseOrderedListLevel");
 }
 
-void MWAWGraphicInterface::closeUnorderedListLevel()
+void MWAWGraphicEncoder::closeUnorderedListLevel()
 {
   m_state->m_encoder.insertElement("CloseOrderedListLevel");
 }
 
-void MWAWGraphicInterface::openListElement(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openListElement(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenListElement", list);
 }
 
-void MWAWGraphicInterface::closeListElement()
+void MWAWGraphicEncoder::closeListElement()
 {
   m_state->m_encoder.insertElement("CloseListElement");
 }
 
-void MWAWGraphicInterface::defineParagraphStyle(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::defineParagraphStyle(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DefineParagraphStyle", list);
 }
 
-void MWAWGraphicInterface::openParagraph(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openParagraph(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenParagraph", list);
 }
 
-void MWAWGraphicInterface::closeParagraph()
+void MWAWGraphicEncoder::closeParagraph()
 {
   m_state->m_encoder.insertElement("CloseParagraph");
 }
 
-void MWAWGraphicInterface::defineCharacterStyle(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::defineCharacterStyle(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DefineCharacterStyle", list);
 }
 
-void MWAWGraphicInterface::openSpan(const librevenge::RVNGPropertyList &list)
+void MWAWGraphicEncoder::openSpan(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenSpan", list);
 }
 
-void MWAWGraphicInterface::closeSpan()
+void MWAWGraphicEncoder::closeSpan()
 {
   m_state->m_encoder.insertElement("CloseSpan");
 }

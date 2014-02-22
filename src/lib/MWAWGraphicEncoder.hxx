@@ -33,31 +33,32 @@
 * instead of those above.
 */
 
-#ifndef __MWAW_GRAPHIC_INTERFACE_HXX__
-#define __MWAW_GRAPHIC_INTERFACE_HXX__
+#ifndef __MWAW_GRAPHIC_ENCODER_HXX__
+#define __MWAW_GRAPHIC_ENCODER_HXX__
 
 #include <librevenge/librevenge.h>
 #include <libmwaw_internal.hxx>
 
 class MWAWPropertyHandlerEncoder;
 
-namespace MWAWGraphicInterfaceInternal
+namespace MWAWGraphicEncoderInternal
 {
 struct State;
 }
-/** main class used to define the final interface to generate picture
+/** main class used to define store librevenge::RVNGDrawingInterface
+    lists of command in a librevenge::RVNGBinaryData. MWAWGraphicDecoder
+    can be used to decode back the pictures...
 
-	\note: as this class implements the functions
-	librevenge::RVNGDrawingInterface, the documentation is not
-	duplicated..
+	\note: as this class implements the functions librevenge::RVNGDrawingInterface,
+  the documentation is not duplicated..
 */
-class MWAWGraphicInterface
+class MWAWGraphicEncoder : public librevenge::RVNGDrawingInterface
 {
 public:
   /// constructor
-  MWAWGraphicInterface();
+  MWAWGraphicEncoder();
   /// destructor
-  ~MWAWGraphicInterface();
+  ~MWAWGraphicEncoder();
   /// return the final graphic
   bool getBinaryResult(librevenge::RVNGBinaryData &result, std::string &mimeType);
 
@@ -118,7 +119,7 @@ public:
 
 protected:
   //! the actual state
-  shared_ptr<MWAWGraphicInterfaceInternal::State> m_state;
+  shared_ptr<MWAWGraphicEncoderInternal::State> m_state;
 };
 
 #endif

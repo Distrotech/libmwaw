@@ -208,7 +208,7 @@ public:
 
   /** Parses the graphic contained in the binary data and called documentInterface to reconstruct
     a graphic. The input is normally send to a librevenge::RVNGXXXInterface with mimeType="image/mwaw-odg",
-    ie. it must correspond to a picture created by the MWAWGraphicInterface class via
+    ie. it must correspond to a picture created by the MWAWGraphicEncoder class via
     a MWAWPropertyEncoder.
 
    \param binary a list of librevenge::RVNGDrawingInterface stored in a documentInterface,

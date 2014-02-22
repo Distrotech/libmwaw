@@ -351,7 +351,7 @@ struct MWAWNote {
 // forward declarations of basic classes and smart pointers
 class MWAWEntry;
 class MWAWFont;
-class MWAWGraphicInterface;
+class MWAWGraphicEncoder;
 class MWAWGraphicShape;
 class MWAWGraphicStyle;
 class MWAWHeader;

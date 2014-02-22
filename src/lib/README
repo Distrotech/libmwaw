@@ -93,7 +93,7 @@ These files defined basic structures which must be used by the parsers :
 
 ## MWAWGraphicListener
 	The graphic listener (used to create odg picture) with
-  - MWAWGraphicInterface.hxx to define a generic interface to create ODG file
+  - MWAWGraphicEncoder.hxx to define a generic interface to create ODG file
   - MWAWGraphicShape.hxx to define basic graphic shape
   - MWAWGraphicStyle.hxx to store the graphic style's properties
 

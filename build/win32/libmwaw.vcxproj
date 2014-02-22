@@ -366,7 +366,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MWAWGraphicInterface.cxx">
+    <ClCompile Include="..\..\src\lib\MWAWGraphicEncoder.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -584,7 +584,7 @@
     <ClInclude Include="..\..\src\lib\MWAWFont.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWFontConverter.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWFontSJISConverter.hxx" />
-    <ClInclude Include="..\..\src\lib\MWAWGraphicInterface.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWGraphicEncoder.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWGraphicListener.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWGraphicShape.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWGraphicStyle.hxx" />

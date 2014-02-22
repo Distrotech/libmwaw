@@ -440,7 +440,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWGraphicInterface.cxx"
+				RelativePath="..\..\src\lib\MWAWGraphicEncoder.cxx"
 				>
 			</File>
 			<File
@@ -865,7 +865,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MWAWGraphicInterface.hxx"
+				RelativePath="..\..\src\lib\MWAWGraphicEncoder.hxx"
 				>
 			</File>
 			<File

@@ -43,7 +43,7 @@
 
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWGraphicInterface.hxx"
+#include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWInputStream.hxx"
@@ -76,7 +76,7 @@ struct GraphicState {
   //! the list of actual subdocument
   std::vector<MWAWSubDocumentPtr> m_subDocuments;
   /// the property handler
-  shared_ptr<MWAWGraphicInterface> m_interface;
+  shared_ptr<librevenge::RVNGDrawingInterface> m_interface;
 };
 
 /** the state of a MWAWGraphicListener */
@@ -411,7 +411,7 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
     return;
   }
   m_gs.reset(new MWAWGraphicListenerInternal::GraphicState);
-  m_gs->m_interface.reset(new MWAWGraphicInterface);
+  m_gs->m_interface.reset(new MWAWGraphicEncoder);
   m_gs->m_box=bdbox;
   m_ps->m_isGraphicStarted = true;
   m_ps->m_origin=bdbox[0];
@@ -446,8 +446,14 @@ bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::stri
   }
   m_gs->m_interface->endPage();
   m_gs->m_interface->endDocument();
-  bool ok=m_gs->m_interface->getBinaryResult(data, mimeType);
-  m_gs->m_interface.reset();
+  MWAWGraphicEncoder *interface=dynamic_cast<MWAWGraphicEncoder *>(m_gs->m_interface.get());
+  if (!interface) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: oops the interface is not a property handler\n"));
+    m_ps->m_isGraphicStarted = false;
+    m_gs.reset();
+    return false;
+  }
+  bool ok=interface->getBinaryResult(data, mimeType);
   m_ps->m_isGraphicStarted = false;
   m_gs.reset();
   return ok;
