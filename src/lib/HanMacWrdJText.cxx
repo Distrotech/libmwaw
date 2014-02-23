@@ -476,7 +476,7 @@ bool HanMacWrdJText::canSendTextAsGraphic(HanMacWrdJTextInternal::TextZone const
   return true;
 }
 
-bool HanMacWrdJText::sendText(long id, long cPos, bool asGraphic)
+bool HanMacWrdJText::sendText(long id, long cPos, MWAWBasicListenerPtr listener)
 {
   if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
     MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not find text zone with id %lx\n", id));
@@ -485,7 +485,7 @@ bool HanMacWrdJText::sendText(long id, long cPos, bool asGraphic)
   int zId = m_state->m_idTextZoneMap.find(id)->second;
   if (zId < 0 || zId >= (int) m_state->m_textZoneList.size())
     return false;
-  return sendText(m_state->m_textZoneList[size_t(zId)], cPos, asGraphic);
+  return sendText(m_state->m_textZoneList[size_t(zId)], cPos, listener);
 }
 
 bool HanMacWrdJText::sendMainText()
@@ -493,7 +493,7 @@ bool HanMacWrdJText::sendMainText()
   for (size_t i=0; i < m_state->m_textZoneList.size(); i++) {
     if (m_state->m_textZoneList[i].m_type != HanMacWrdJTextInternal::TextZone::T_Main)
       continue;
-    sendText(m_state->m_textZoneList[i],0,false);
+    sendText(m_state->m_textZoneList[i],0);
     return true;
   }
   MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not find the main zone\n"));
@@ -501,15 +501,15 @@ bool HanMacWrdJText::sendMainText()
 }
 
 
-bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long fPos, bool asGraphic)
+bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long fPos, MWAWBasicListenerPtr listener)
 {
   if (!zone.m_entry.valid()) {
     MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: call without entry\n"));
     return false;
   }
-  MWAWBasicListenerPtr listener;
-  if (asGraphic)
-    listener=m_parserState->m_graphicListener;
+  bool withLocalListener=false;
+  if (listener)
+    withLocalListener=true;
   else
     listener=m_parserState->m_textListener;
   if (!listener) {
@@ -555,11 +555,6 @@ bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long
 
   long cPos=fPos, endCPos=-1;
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
-
-  if (isMain && asGraphic) {
-    MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not send main zone has graphic\n"));
-    isMain=false;
-  }
   if (isMain)
     m_mainParser->newPage(1);
   if (isMain && !m_state->m_sectionList.size()) {
@@ -626,7 +621,7 @@ bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long
           switch (tkn.m_type) {
           case 1:
             expectedChar=0x1;
-            if (asGraphic) {
+            if (withLocalListener) {
               MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: unexpected token type=1 in graphic\n"));
               break;
             }
@@ -634,7 +629,7 @@ bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long
             break;
           case 2: {
             expectedChar=0x11;
-            if (asGraphic) {
+            if (withLocalListener) {
               MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not insert footnote in graphic\n"));
               break;
             }
@@ -653,7 +648,7 @@ bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long
           case 8: // TOC, ok to ignore
             break;
           case 0x20:
-            if (asGraphic) {
+            if (withLocalListener) {
               MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not insert bookmark in graphic\n"));
               break;
             }

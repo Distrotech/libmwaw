@@ -77,7 +77,7 @@ protected:
   //! send the main text zone
   bool sendMainText();
   //! send a text zone
-  bool sendText(long id, long subId, bool asGraphic=false);
+  bool sendText(long id, long subId, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long subId);
   //! sends the data which have not yet been sent to the listener
@@ -103,7 +103,7 @@ protected:
   bool readSections(shared_ptr<HanMacWrdKZone> zone);
 
   /** try to send a text zone (type 1)*/
-  bool sendText(HanMacWrdKZone &zone, bool asGraphic=false);
+  bool sendText(HanMacWrdKZone &zone, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   /** check if we can send a textzone has graphic */
   bool canSendTextAsGraphic(HanMacWrdKZone &zone);
 

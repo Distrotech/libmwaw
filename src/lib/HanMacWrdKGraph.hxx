@@ -122,7 +122,7 @@ protected:
   bool sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
 
   //! ask main parser to send a text zone
-  bool sendText(long textId, long id, bool asGraphic=false);
+  bool sendText(long textId, long id, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   /** return a list textZId -> type which
       3(footnote), 4(textbox), 9(table), 10(comment) */
   std::map<long,int> getTextFrameInformations() const;

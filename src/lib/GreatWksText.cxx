@@ -485,9 +485,9 @@ bool GreatWksText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
   return ok;
 }
 
-bool GreatWksText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksText::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
 {
-  if (!m_parserState->getMainListener()) {
+  if (!listener && !m_parserState->getMainListener()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendTextbox: can not find a listener\n"));
     return false;
   }
@@ -497,11 +497,11 @@ bool GreatWksText::sendTextbox(MWAWEntry const &entry, bool inGraphic)
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   GreatWksTextInternal::Zone zone;
   if (readZone(zone)) {
-    sendZone(zone, inGraphic);
+    sendZone(zone, listener);
     return true;
   }
 
-  return sendSimpleTextbox(entry, inGraphic);
+  return sendSimpleTextbox(entry, listener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1174,12 +1174,9 @@ void GreatWksText::flushExtra()
   }
 }
 
-bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
 {
-  MWAWBasicListenerPtr listener;
-  if (inGraphic)
-    listener=m_parserState->m_graphicListener;
-  else
+  if (!listener)
     listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendSimpleTextbox: can not find a listener\n"));
@@ -1331,11 +1328,11 @@ bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic)
   return true;
 }
 
-bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraphic)
+bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener)
 {
-  MWAWBasicListenerPtr listener;
-  if (inGraphic)
-    listener=m_parserState->m_graphicListener;
+  bool inLocalZone=false;
+  if (listener)
+    inLocalZone=true;
   else
     listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
@@ -1429,7 +1426,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, bool inGraph
         f << "###";
         break;
       }
-      if (inGraphic) {
+      if (inLocalZone) {
         MWAW_DEBUG_MSG(("GreatWksText::sendZone: oops, can not send a picture in a graphic zone\n"));
         break;
       }

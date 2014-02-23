@@ -42,6 +42,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWFont.hxx"
+#include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
@@ -389,17 +390,17 @@ public:
   //! the parser function
   void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   {
-    parse(listener, false);
+    parse(listener);
   }
   //! the graphic parser function
   void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType)
   {
-    parse(listener, true);
+    parse(listener);
   }
 
 protected:
   //! the parser function
-  void parse(MWAWBasicListenerPtr listener, bool inGraphic);
+  void parse(MWAWBasicListenerPtr listener);
   /** the graph parser */
   GreatWksGraph *m_graphParser;
 
@@ -408,7 +409,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWBasicListenerPtr listener, bool inGraphic)
+void SubDocument::parse(MWAWBasicListenerPtr listener)
 {
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no listener\n"));
@@ -417,7 +418,7 @@ void SubDocument::parse(MWAWBasicListenerPtr listener, bool inGraphic)
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  m_graphParser->sendTextbox(m_zone,inGraphic);
+  m_graphParser->sendTextbox(m_zone,listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -463,9 +464,9 @@ int GreatWksGraph::numPages() const
   return nPages;
 }
 
-bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
 {
-  return m_callback.m_sendTextbox && (m_mainParser->*m_callback.m_sendTextbox)(entry, inGraphic);
+  return m_callback.m_sendTextbox && (m_mainParser->*m_callback.m_sendTextbox)(entry, listener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1759,15 +1760,17 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   MWAWPosition finalPos(pos);
   finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
-      m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry) &&
-      graphicListener && !graphicListener->isDocumentStarted()) {
+      m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry)) {
+    MWAWGraphicEncoder graphicEncoder;
+    MWAWGraphicListenerPtr graphicListener
+    (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
     graphicListener->startGraphic(Box2f(Vec2f(0,0),newSz));
+    bool ok=sendTextboxAsGraphic(Box2f(Vec2f(0,0),newSz), text, style, graphicListener);
+    graphicListener->endGraphic();
     librevenge::RVNGBinaryData data;
     std::string type;
-    bool ok=sendTextboxAsGraphic(Box2f(Vec2f(0,0),newSz), text, style);
-    if (!graphicListener->endGraphic(data, type) || !ok)
+    if (!graphicEncoder.getBinaryResult(data, type) || !ok)
       return false;
     listener->insertPicture(finalPos, data, type);
     return true;
@@ -1781,12 +1784,10 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
 }
 
 bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text,
-    MWAWGraphicStyle const &style)
+    MWAWGraphicStyle const &style, MWAWGraphicListenerPtr listener)
 {
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
   libmwaw::SubDocumentType subdocType;
-  if (!graphicListener || !graphicListener->isDocumentStarted() ||
-      graphicListener->isSubDocumentOpened(subdocType)) {
+  if (!listener || !listener->isDocumentStarted() || listener->isSubDocumentOpened(subdocType)) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendTextboxAsGraphic: unexpected graphic state\n"));
     return false;
   }
@@ -1798,7 +1799,7 @@ bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal
      the original box */
   if (text.m_rotate)
     textBox=libmwaw::rotateBoxFromCenter(box, (float) -text.m_rotate);
-  graphicListener->insertTextBox(textBox, doc, text.getStyle(style));
+  listener->insertTextBox(textBox, doc, text.getStyle(style));
   return true;
 }
 
@@ -1851,26 +1852,7 @@ bool GreatWksGraph::sendPicture(MWAWEntry const &entry, MWAWPosition pos)
 ////////////////////////////////////////////////////////////
 bool GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
-  MWAWListenerPtr listener=m_parserState->getMainListener();
-  if (!listener) {
-    MWAW_DEBUG_MSG(("GreatWksGraph::sendTextbox: can not find the listener\n"));
-    return true;
-  }
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-  if (graphicListener && !graphicListener->isDocumentStarted()) {
-    sendGroupChild(group,zone,pos);
-    return true;
-  }
-  size_t numChilds=group.m_childList.size();
-  int numFrames=(int) zone.m_frameList.size();
-  if (!numChilds) return true;
-  for (size_t c=0; c<numChilds; c++) {
-    int childId=group.m_childList[c];
-    if (childId<=0 || childId>int(numFrames)) continue;
-    shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
-    if (!frame) continue;
-    sendFrame(frame, zone);
-  }
+  sendGroupChild(group,zone,pos);
   return true;
 }
 
@@ -1938,7 +1920,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
       break;
     case GreatWksGraphInternal::Frame::T_TEXT:
       sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                           static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style);
+                           static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style, listener);
       break;
     case GreatWksGraphInternal::Frame::T_PICTURE:
     case GreatWksGraphInternal::Frame::T_BAD:
@@ -1952,8 +1934,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
 void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &group, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos)
 {
   MWAWListenerPtr listener=m_parserState->getMainListener();
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-  if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
+  if (!listener) {
     MWAW_DEBUG_MSG(("GreatWksGraph::sendGroupChild: can not find the listeners\n"));
     return;
   }
@@ -2006,6 +1987,9 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
     }
 
     if (numDataToMerge>1) {
+      MWAWGraphicEncoder graphicEncoder;
+      MWAWGraphicListenerPtr graphicListener
+      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
       graphicListener->startGraphic(partialBdBox);
       size_t lastChild = isLast ? c : c-1;
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
@@ -2030,7 +2014,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           break;
         case GreatWksGraphInternal::Frame::T_TEXT:
           sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
-                               static_cast<GreatWksGraphInternal::FrameText const &>(*child), style);
+                               static_cast<GreatWksGraphInternal::FrameText const &>(*child), style, graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_PICTURE:
         case GreatWksGraphInternal::Frame::T_BAD:
@@ -2039,9 +2023,10 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           break;
         }
       }
+      graphicListener->endGraphic();
       librevenge::RVNGBinaryData data;
       std::string type;
-      if (graphicListener->endGraphic(data,type)) {
+      if (graphicEncoder.getBinaryResult(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_box[0]);
         partialPos.setSize(partialBdBox.size());
         listener->insertPicture(partialPos, data, type);

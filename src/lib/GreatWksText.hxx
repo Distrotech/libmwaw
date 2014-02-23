@@ -84,7 +84,7 @@ protected:
   //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
   bool canSendTextBoxAsGraphic(MWAWEntry const &entry);
   //! try to send the textbox text
-  bool sendTextbox(MWAWEntry const &entry, bool inGraphic);
+  bool sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
   //! read the final font id corresponding to a file id
@@ -101,9 +101,9 @@ protected:
   //! try to read the end of a zone ( line + frame position )
   bool readZonePositions(GreatWksTextInternal::Zone &zone);
   //! try to send a zone
-  bool sendZone(GreatWksTextInternal::Zone const &zone, bool inGraphic=false);
+  bool sendZone(GreatWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   //! try to send simplified textbox zone
-  bool sendSimpleTextbox(MWAWEntry const &entry, bool inGraphic=false);
+  bool sendSimpleTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   //! try to read a font
   bool readFont(MWAWFont &font);
   //! try to read a ruler

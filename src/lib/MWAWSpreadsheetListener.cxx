@@ -1089,32 +1089,10 @@ void MWAWSpreadsheetListener::insertPicture
     m_documentInterface->defineGraphicStyle(list);
     m_documentInterface->drawEllipse(shapePList);
     break;
-  case MWAWGraphicShape::C_Path: {
-    // odt seems to have some problem displaying path so...
-    MWAWGraphicListenerPtr graphicListener=m_parserState.m_graphicListener;
-    if (!graphicListener || graphicListener->isDocumentStarted()) {
-      // no way to do differently
-      m_documentInterface->defineGraphicStyle(list);
-      m_documentInterface->drawPath(shapePList);
-      return;
-    }
-    // first create the picture, reset origin (if it is bad)
-    Box2f bdbox = shape.getBdBox(style,true);
-    graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
-    graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
-
-    librevenge::RVNGBinaryData data;
-    std::string mime;
-    if (!graphicListener->endGraphic(data,mime))
-      return;
-    if (!openFrame(pos)) return;
-    librevenge::RVNGPropertyList propList;
-    propList.insert("librevenge:mime-type", mime.c_str());
-    propList.insert("office:binary-data", data);
-    m_documentInterface->insertBinaryObject(propList);
-    closeFrame();
+  case MWAWGraphicShape::C_Path:
+    m_documentInterface->defineGraphicStyle(list);
+    m_documentInterface->drawPath(shapePList);
     break;
-  }
   case MWAWGraphicShape::C_Polyline:
     m_documentInterface->defineGraphicStyle(list);
     m_documentInterface->drawPolyline(shapePList);

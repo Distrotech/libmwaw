@@ -228,11 +228,11 @@ bool GreatWksParser::sendHF(int id)
   return m_textParser->sendHF(id);
 }
 
-bool GreatWksParser::sendTextbox(MWAWEntry const &entry, bool inGraphic)
+bool GreatWksParser::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();
-  bool ok=m_textParser->sendTextbox(entry, inGraphic);
+  bool ok=m_textParser->sendTextbox(entry, listener);
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
   return ok;
 }

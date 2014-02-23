@@ -42,12 +42,13 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWCell.hxx"
-#include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWTextListener.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -828,6 +829,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
+
 void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
@@ -840,7 +842,7 @@ void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDoc
     return;
   }
   long pos = m_input->tell();
-  m_graphParser->sendText(m_id, m_subId,true);
+  m_graphParser->sendText(m_id, m_subId, listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -910,9 +912,9 @@ int HanMacWrdKGraph::numPages() const
   return nPages;
 }
 
-bool HanMacWrdKGraph::sendText(long textId, long id, bool asGraphic)
+bool HanMacWrdKGraph::sendText(long textId, long id, MWAWBasicListenerPtr listener)
 {
-  return m_mainParser->sendText(textId, id, asGraphic);
+  return m_mainParser->sendText(textId, id, listener);
 }
 
 std::map<long,int> HanMacWrdKGraph::getTextFrameInformations() const
@@ -1227,18 +1229,20 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
     if (frame.m_style.hasPattern()) {
       HanMacWrdKGraphInternal::TextBox const &textbox=
         static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
-      MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-      if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0) &&
-          graphicListener && !graphicListener->isDocumentStarted()) {
+      if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_textFileId,0)) {
         textbox.m_parsed=true;
         MWAWSubDocumentPtr subdoc
         (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
         Box2f box(Vec2f(0,0),pos.size());
+        MWAWGraphicEncoder graphicEncoder;
+        MWAWGraphicListenerPtr graphicListener
+        (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
         graphicListener->startGraphic(box);
+        graphicListener->insertTextBox(box, subdoc, textbox.m_style);
+        graphicListener->endGraphic();
         librevenge::RVNGBinaryData data;
         std::string type;
-        graphicListener->insertTextBox(box, subdoc, textbox.m_style);
-        if (!graphicListener->endGraphic(data, type))
+        if (!graphicEncoder.getBinaryResult(data, type))
           return false;
         listener->insertPicture(pos, data, type, extras);
         return true;
@@ -1298,9 +1302,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
   }
   case 11: {
     HanMacWrdKGraphInternal::Group const &group=static_cast<HanMacWrdKGraphInternal::Group const &>(frame);
-    MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-    if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) &&
-        (!graphicListener || graphicListener->isDocumentStarted() || !canCreateGraphic(group))) {
+    if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) && !canCreateGraphic(group)) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
       framePos.setOrigin(Vec2f(0,0));
@@ -1330,20 +1332,19 @@ bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
-  MWAWGraphicListenerPtr graphicListener = m_parserState->m_graphicListener;
-  if (!graphicListener || graphicListener->isDocumentStarted()) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendEmptyPicture: can not use the graphic listener\n"));
-    return false;
-  }
   Box2f box=Box2f(Vec2f(0,0),pictSz);
+  MWAWGraphicEncoder graphicEncoder;
+  MWAWGraphicListenerPtr graphicListener
+  (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
   graphicListener->startGraphic(box);
   MWAWGraphicStyle defStyle;
   graphicListener->insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
   graphicListener->insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener->endGraphic();
   librevenge::RVNGBinaryData data;
   std::string type;
-  if (!graphicListener->endGraphic(data,type)) return false;
+  if (!graphicEncoder.getBinaryResult(data,type)) return false;
   m_parserState->m_textListener->insertPicture(pictPos, data, type);
   return true;
 }
@@ -1952,31 +1953,8 @@ bool HanMacWrdKGraph::sendGroup(long groupId, MWAWPosition pos)
 
 bool HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWAWPosition pos)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
-  if (!listener) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find the listener\n"));
-    return true;
-  }
   group.m_parsed=true;
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-  if (graphicListener && !graphicListener->isDocumentStarted()) {
-    sendGroupChild(group,pos);
-    return true;
-  }
-  std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt;
-  for (size_t c=0; c<group.m_childsList.size(); ++c) {
-    long fId=group.m_childsList[c].m_fileId;
-    fIt=m_state->m_framesMap.find(fId);
-    if (fIt != m_state->m_framesMap.end() && fIt->first==fId && fIt->second) {
-      HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
-      MWAWPosition fPos(pos);
-      fPos.setOrigin(frame.m_pos[0]-group.m_pos[0]+pos.origin());
-      fPos.setSize(frame.m_pos.size());
-      sendFrame(frame, fPos);
-      continue;
-    }
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find child %lx\n", fId));
-  }
+  sendGroupChild(group,pos);
   return true;
 }
 
@@ -2054,8 +2032,7 @@ void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWA
 void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group, MWAWPosition const &pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
-  if (!listener || !graphicListener || graphicListener->isDocumentStarted()) {
+  if (!listener) {
     MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find the listeners\n"));
     return;
   }
@@ -2108,6 +2085,9 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
 
     if (numDataToMerge>1) {
       partialBdBox.extend(3);
+      MWAWGraphicEncoder graphicEncoder;
+      MWAWGraphicListenerPtr graphicListener
+      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
       graphicListener->startGraphic(partialBdBox);
       size_t lastChild = isLast ? c : c-1;
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
@@ -2142,9 +2122,10 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
           break;
         }
       }
+      graphicListener->endGraphic();
       librevenge::RVNGBinaryData data;
       std::string type;
-      if (graphicListener->endGraphic(data,type)) {
+      if (graphicEncoder.getBinaryResult(data,type)) {
         partialPos.setOrigin(pos.origin()+partialBdBox[0]-group.m_pos[0]);
         partialPos.setSize(partialBdBox.size());
         listener->insertPicture(partialPos, data, type);

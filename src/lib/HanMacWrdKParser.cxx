@@ -163,9 +163,9 @@ void HanMacWrdKParser::init()
   m_textParser.reset(new HanMacWrdKText(*this));
 }
 
-bool HanMacWrdKParser::sendText(long id, long subId, bool asGraphic)
+bool HanMacWrdKParser::sendText(long id, long subId, MWAWBasicListenerPtr listener)
 {
-  return m_textParser->sendText(id, subId, asGraphic);
+  return m_textParser->sendText(id, subId, listener);
 }
 
 bool HanMacWrdKParser::canSendTextAsGraphic(long id, long subId)

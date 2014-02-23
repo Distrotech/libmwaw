@@ -44,9 +44,11 @@
 #include "MWAWTextListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSubDocument.hxx"
@@ -625,7 +627,8 @@ void MarinerWrtGraph::sendToken(int zoneId, long tokenId)
 
 void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
 {
-  if (!m_parserState->m_textListener) {
+  MWAWListenerPtr listener=m_parserState->m_textListener;
+  if (!listener) {
     MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: can not find the listener\n"));
     return;
   }
@@ -669,14 +672,14 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: can not find pattern\n"));
   }
   // retrieve the actual font to get the ruler color + a basic estimation of the line height
-  MWAWFont actFont=m_parserState->m_textListener->getFont();
+  MWAWFont actFont=listener->getFont();
   MWAWColor col;
   actFont.getColor(col);
   float lineH = actFont.size() > 0 ? actFont.size() : 12.f;
   float totalWidth=0;
   for (size_t l=0; l < listW.size(); ++l) totalWidth += listW[l];
   if (lineH<totalWidth) lineH=totalWidth;
-  Box2f box(Vec2f(0,-lineH/2.f), Vec2f(sz)+Vec2f(0,lineH/2.f));
+  Box2f box(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH));
   MWAWPosition pos(box[0], box[1], librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   MWAWGraphicStyle pStyle;
@@ -692,26 +695,28 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     pStyle.setPattern(pat.m_pattern);
     shape=MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), Vec2f(float(sz[0]),listW[0])));
   }
-  MWAWGraphicListenerPtr graphicListener=m_parserState->m_graphicListener;
 
-  if (listW.size()==1 || !graphicListener || graphicListener->isDocumentStarted()) {
+  if (listW.size()==1) {
     shape.m_bdBox=box;
-    m_parserState->m_textListener->insertPicture(pos,shape, pStyle);
+    listener->insertPicture(pos,shape, pStyle);
+    return;
   }
-  else {
-    librevenge::RVNGBinaryData data;
-    std::string mime;
-    graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
-    float actH = (lineH-totalWidth)/2.f;
-    for (size_t l=0; l < listW.size(); ++l) {
-      if ((l%2)==0)
-        graphicListener->insertPicture(Box2f(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,actH+listW[l])),
-                                       shape, pStyle);
-      actH += listW[l];
-    }
-    if (graphicListener->endGraphic(data,mime))
-      m_parserState->m_textListener->insertPicture(pos,data,mime);
+  MWAWGraphicEncoder graphicEncoder;
+  MWAWGraphicListenerPtr graphicListener
+  (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
+  graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
+  float actH = (lineH-totalWidth)/2.f;
+  for (size_t l=0; l < listW.size(); ++l) {
+    if ((l%2)==0)
+      graphicListener->insertPicture(Box2f(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,actH+listW[l])),
+                                     shape, pStyle);
+    actH += listW[l];
   }
+  graphicListener->endGraphic();
+  librevenge::RVNGBinaryData data;
+  std::string mime;
+  if (graphicEncoder.getBinaryResult(data,mime))
+    listener->insertPicture(pos,data,mime);
 }
 
 void MarinerWrtGraph::sendPicture(MarinerWrtGraphInternal::Token const &tkn)

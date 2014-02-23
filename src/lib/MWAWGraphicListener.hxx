@@ -61,14 +61,19 @@ class MWAWGraphicListener : public MWAWBasicListener
 {
 public:
   /** constructor */
-  MWAWGraphicListener(MWAWParserState &parserState);
+  MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface);
   /** destructor */
   virtual ~MWAWGraphicListener();
 
   /** starts a new graphic */
   void startGraphic(Box2f const &bdbox);
-  /** ends the actual graphic and fill the final librevenge::RVNGBinaryData, ... */
+  /** ends the actual graphic */
+  void endGraphic();
+
+  // remove me
+  MWAWGraphicListener(MWAWParserState &parserState);
   bool endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType);
+
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 

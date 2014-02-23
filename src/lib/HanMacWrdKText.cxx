@@ -404,7 +404,7 @@ bool HanMacWrdKText::canSendTextAsGraphic(long id, long subId)
   return false;
 }
 
-bool HanMacWrdKText::sendText(long id, long subId, bool asGraphic)
+bool HanMacWrdKText::sendText(long id, long subId, MWAWBasicListenerPtr listener)
 {
   std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt
     =m_state->m_IdTextMaps.lower_bound(id);
@@ -415,7 +415,7 @@ bool HanMacWrdKText::sendText(long id, long subId, bool asGraphic)
   while (tIt != m_state->m_IdTextMaps.end() && tIt->first == id) {
     shared_ptr<HanMacWrdKZone> zone = (tIt++)->second;
     if (!zone || zone->m_subId != subId) continue;
-    sendText(*zone, asGraphic);
+    sendText(*zone, listener);
     return true;
   }
   MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find the text zone\n"));
@@ -496,16 +496,13 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
   return true;
 }
 
-bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, bool asGraphic)
+bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWBasicListenerPtr listener)
 {
   if (!zone.valid()) {
     MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: called without any zone\n"));
     return false;
   }
-  MWAWBasicListenerPtr listener;
-  if (asGraphic)
-    listener=m_parserState->m_graphicListener;
-  else
+  if (!listener)
     listener=m_parserState->m_textListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find a listener\n"));
@@ -527,10 +524,6 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, bool asGraphic)
   bool isMain = false;
   if (m_state->m_IdTypeMaps.find(zone.m_id)!= m_state->m_IdTypeMaps.end())
     isMain = m_state->m_IdTypeMaps.find(zone.m_id)->second == 0;
-  if (isMain && asGraphic) {
-    MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not send main zone has graphic\n"));
-    isMain=false;
-  }
   int actPage = 1, actCol = 0, numCol=1, actSection = 1;
   float width = float(72.0*m_mainParser->getPageWidth());
 
