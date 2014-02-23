@@ -1049,6 +1049,32 @@ void MWAWSpreadsheetListener::insertPicture
     }
     return;
   }
+
+  // now check that the anchor is coherent with the actual state
+  switch (pos.m_anchorTo) {
+  case MWAWPosition::Page:
+    break;
+  case MWAWPosition::Paragraph:
+    if (m_ps->m_isParagraphOpened)
+      _flushText();
+    else
+      _openParagraph();
+    break;
+  case MWAWPosition::Unknown:
+  default:
+    MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture: UNKNOWN position, insert as char position\n"));
+  // fallthrough intended
+  case MWAWPosition::CharBaseLine:
+  case MWAWPosition::Char:
+    if (m_ps->m_isSpanOpened)
+      _flushText();
+    else
+      _openSpan();
+    break;
+  case MWAWPosition::Frame:
+    break;
+  }
+
   librevenge::RVNGPropertyList shapePList;
   _handleFrameParameters(shapePList, pos);
   shapePList.remove("svg:x");
