@@ -66,6 +66,17 @@ public:
   /** returns true if a subdocument is open  */
   virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
 
+  /** sets the documents language */
+  virtual void setDocumentLanguage(std::string locale) = 0;
+
+  // ------ header/footer --------
+  /** insert a header */
+  virtual bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
+  /** insert a footer */
+  virtual bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
+  /** returns true if the header/footer is open */
+  virtual bool isHeaderFooterOpened() const = 0;
+
   // ------ text data -----------
   //! adds a basic character, ..
   virtual void insertChar(uint8_t character)=0;
@@ -150,9 +161,6 @@ public:
   //! destructor
   virtual ~MWAWListener() {}
 
-  /** sets the documents language */
-  virtual void setDocumentLanguage(std::string locale) = 0;
-
   /** starts the document */
   virtual void startDocument() = 0;
   /** ends the document */
@@ -170,14 +178,6 @@ public:
 
   \note this forces the opening of a new page if no page is opened.*/
   virtual MWAWPageSpan const &getPageSpan() = 0;
-
-  // ------ header/footer --------
-  /** insert a header */
-  virtual bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
-  /** insert a footer */
-  virtual bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
-  /** returns true if the header/footer is open */
-  virtual bool isHeaderFooterOpened() const = 0;
 
   // ------- subdocument -----------------
   /** insert a note */

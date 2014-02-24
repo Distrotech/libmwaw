@@ -64,7 +64,7 @@ namespace MWAWGraphicListenerInternal
 /** the global graphic state of MWAWGraphicListener */
 struct GraphicState {
   //! constructor
-  GraphicState() : m_box(), m_sentListMarkers(), m_subDocuments()
+  GraphicState() : m_box(), m_metaData(), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
   {
   }
   //! destructor
@@ -73,6 +73,10 @@ struct GraphicState {
   }
   /** the graphic bdbox */
   Box2f m_box;
+
+  //! the document meta data
+  librevenge::RVNGPropertyList m_metaData;
+  bool m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   //! the list of actual subdocument
@@ -86,6 +90,11 @@ struct State {
   //! destructor
   ~State() { }
 
+//! returns true if we are in a text zone, ie. either in a textbox or a table cell
+  bool isInTextZone() const
+  {
+    return m_isTextBoxOpened || m_isTableCellOpened;
+  }
   //! the origin position
   Vec2f m_origin;
   //! a buffer to stored the text
@@ -99,7 +108,7 @@ struct State {
   shared_ptr<MWAWList> m_list;
 
   bool m_isGraphicStarted;
-  bool m_isTextZoneOpened;
+  bool m_isTextBoxOpened;
   bool m_isFrameOpened;
 
   bool m_isSpanOpened;
@@ -126,7 +135,7 @@ private:
 
 State::State() : m_origin(0,0),
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_list(),
-  m_isGraphicStarted(false), m_isTextZoneOpened(false), m_isFrameOpened(false),
+  m_isGraphicStarted(false), m_isTextBoxOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
@@ -150,7 +159,7 @@ MWAWGraphicListener::~MWAWGraphicListener()
 ///////////////////
 void MWAWGraphicListener::insertChar(uint8_t character)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: called outside a text zone\n"));
     return;
   }
@@ -164,7 +173,7 @@ void MWAWGraphicListener::insertChar(uint8_t character)
 
 void MWAWGraphicListener::insertCharacter(unsigned char c)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: called outside a text zone\n"));
     return;
   }
@@ -182,7 +191,7 @@ void MWAWGraphicListener::insertCharacter(unsigned char c)
 
 int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &input, long endPos)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertCharacter: called outside a text zone\n"));
     return 0;
   }
@@ -218,7 +227,7 @@ int MWAWGraphicListener::insertCharacter(unsigned char c, MWAWInputStreamPtr &in
 
 void MWAWGraphicListener::insertUnicode(uint32_t val)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertUnicode: called outside a text zone\n"));
     return;
   }
@@ -231,7 +240,7 @@ void MWAWGraphicListener::insertUnicode(uint32_t val)
 
 void MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString const &str)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertUnicodeString: called outside a text zone\n"));
     return;
   }
@@ -241,7 +250,7 @@ void MWAWGraphicListener::insertUnicodeString(librevenge::RVNGString const &str)
 
 void MWAWGraphicListener::insertEOL(bool soft)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertEOL: called outside a text zone\n"));
     return;
   }
@@ -260,7 +269,7 @@ void MWAWGraphicListener::insertEOL(bool soft)
 
 void MWAWGraphicListener::insertTab()
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTab: called outside a text zone\n"));
     return;
   }
@@ -274,7 +283,7 @@ void MWAWGraphicListener::insertTab()
 ///////////////////
 void MWAWGraphicListener::setFont(MWAWFont const &font)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::setFont: called outside a text zone\n"));
     return;
   }
@@ -304,7 +313,7 @@ bool MWAWGraphicListener::isParagraphOpened() const
 
 void MWAWGraphicListener::setParagraph(MWAWParagraph const &para)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::setParagraph: called outside a text zone\n"));
     return;
   }
@@ -323,7 +332,7 @@ MWAWParagraph const &MWAWGraphicListener::getParagraph() const
 ///////////////////
 void MWAWGraphicListener::insertField(MWAWField const &field)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::setParagraph: called outside a text zone\n"));
     return;
   }
@@ -380,7 +389,7 @@ void MWAWGraphicListener::insertField(MWAWField const &field)
 
 void MWAWGraphicListener::openLink(MWAWLink const &link)
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openLink: called outside a textbox\n"));
     return;
   }
@@ -423,6 +432,8 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
   m_ps->m_origin=bdbox[0];
 
   m_documentInterface->startDocument(librevenge::RVNGPropertyList());
+  m_documentInterface->setDocumentMetaData(m_gs->m_metaData);
+
   librevenge::RVNGPropertyList list;
   list.insert("svg:x",bdbox[0].x(), librevenge::RVNG_POINT);
   list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
@@ -446,7 +457,7 @@ void MWAWGraphicListener::endGraphic()
     MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a table zone\n"));
     closeTable();
   }
-  if (m_ps->m_isTextZoneOpened) {
+  if (m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a text zone\n"));
     if (m_ps->m_isParagraphOpened)
       _closeParagraph();
@@ -462,6 +473,12 @@ void MWAWGraphicListener::endGraphic()
 ///////////////////
 // document
 ///////////////////
+void MWAWGraphicListener::setDocumentLanguage(std::string locale)
+{
+  if (!locale.length()) return;
+  m_gs->m_metaData.insert("librevenge:language", locale.c_str());
+}
+
 bool MWAWGraphicListener::isDocumentStarted() const
 {
   return m_ps->m_isGraphicStarted;
@@ -469,7 +486,7 @@ bool MWAWGraphicListener::isDocumentStarted() const
 
 bool MWAWGraphicListener::canWriteText() const
 {
-  return m_ps->m_isGraphicStarted && (m_ps->m_isTextZoneOpened || m_ps->m_isTableCellOpened);
+  return m_ps->m_isGraphicStarted && m_ps->isInTextZone();
 }
 
 Box2f const &MWAWGraphicListener::getGraphicBdBox()
@@ -484,7 +501,7 @@ void MWAWGraphicListener::_openParagraph()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openParagraph: called outsize a text zone\n"));
     return;
   }
@@ -503,7 +520,7 @@ void MWAWGraphicListener::_openParagraph()
 
 void MWAWGraphicListener::_closeParagraph()
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_closeParagraph: called outsize a text zone\n"));
     return;
   }
@@ -536,7 +553,7 @@ void MWAWGraphicListener::_openListElement()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openListElement: called outsize a text zone\n"));
     return;
   }
@@ -590,7 +607,7 @@ int MWAWGraphicListener::_getListId() const
 
 void MWAWGraphicListener::_changeList()
 {
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_changeList: called outsize a text zone\n"));
     return;
   }
@@ -649,7 +666,7 @@ void MWAWGraphicListener::_openSpan()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openSpan: called outsize a text zone\n"));
     return;
   }
@@ -676,7 +693,7 @@ void MWAWGraphicListener::_closeSpan()
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
     return;
-  if (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableCellOpened) {
+  if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_closeSpan: called outsize a text zone\n"));
     return;
   }
@@ -717,6 +734,56 @@ void MWAWGraphicListener::_flushText()
   }
   m_documentInterface->insertText(tmpText);
   m_ps->m_textBuffer.clear();
+}
+
+///////////////////
+// header/footer
+///////////////////
+bool MWAWGraphicListener::isHeaderFooterOpened() const
+{
+  return m_gs->m_isHeaderFooterStarted;
+}
+
+bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
+{
+  if (m_gs->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertHeader: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  // we do not have any header interface, so mimick it by creating a textbox
+  if (!openFrame())
+    return false;
+  librevenge::RVNGPropertyList propList(extras);
+  Box2f bdbox(Vec2f(20,20), Vec2f(-20,-10)); // fixme
+  _handleFrameParameters(propList, bdbox, MWAWGraphicStyle::emptyStyle());
+
+  m_documentInterface->startTextObject(propList);
+  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->endTextObject();
+  closeFrame();
+  return true;
+}
+
+bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
+{
+  if (m_gs->m_isHeaderFooterStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertFooter: Oops a header/footer is already opened\n"));
+    return false;
+  }
+  MWAW_DEBUG_MSG(("MWAWGraphicListener::insertFooter: inserting footer is very experimental\n"));
+
+  // we do not have any header interface, so mimick it by creating a textbox
+  if (!openFrame())
+    return false;
+  librevenge::RVNGPropertyList propList(extras);
+  Box2f bdbox(Vec2f(20,m_gs->m_box.size()[1]-40.f), Vec2f(-20,-10)); // fixme
+  _handleFrameParameters(propList, bdbox, MWAWGraphicStyle::emptyStyle());
+
+  m_documentInterface->startTextObject(propList);
+  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_HEADER_FOOTER);
+  m_documentInterface->endTextObject();
+  closeFrame();
+  return true;
 }
 
 ///////////////////
@@ -841,7 +908,7 @@ void MWAWGraphicListener::insertTextBox
 
 void MWAWGraphicListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
 {
-  if (!m_ps->m_isGraphicStarted || m_ps->m_isTextZoneOpened || m_ps->m_isTableCellOpened) {
+  if (!m_ps->m_isGraphicStarted || m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertGroup: can not insert a group\n"));
     return;
   }
@@ -1042,7 +1109,11 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
 
   m_ps->m_list.reset();
   if (subDocumentType==libmwaw::DOC_TEXT_BOX)
-    m_ps->m_isTextZoneOpened=true;
+    m_ps->m_isTextBoxOpened=true;
+  else if (subDocumentType==libmwaw::DOC_HEADER_FOOTER) {
+    m_ps->m_isTextBoxOpened=true;
+    m_gs->m_isHeaderFooterStarted = true;
+  }
 
   // Check whether the document is calling itself
   bool sendDoc = true;
@@ -1071,6 +1142,9 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
 
   _endSubDocument();
   _popParsingState();
+
+  if (subDocumentType==libmwaw::DOC_HEADER_FOOTER)
+    m_gs->m_isHeaderFooterStarted = false;
 }
 
 bool MWAWGraphicListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const
@@ -1089,7 +1163,7 @@ void MWAWGraphicListener::_startSubDocument()
 
 void MWAWGraphicListener::_endSubDocument()
 {
-  if (!m_ps->m_isGraphicStarted || (!m_ps->m_isTextZoneOpened && !m_ps->m_isTableOpened)) return;
+  if (!m_ps->m_isGraphicStarted || (!m_ps->m_isTextBoxOpened && !m_ps->m_isTableOpened)) return;
   if (m_ps->m_isTableOpened)
     closeTable();
   if (m_ps->m_isParagraphOpened)

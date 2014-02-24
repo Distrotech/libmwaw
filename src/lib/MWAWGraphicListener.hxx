@@ -71,6 +71,8 @@ public:
     return Graphic;
   }
 
+  /** sets the documents language */
+  void setDocumentLanguage(std::string locale);
   /** starts a new graphic */
   void startGraphic(Box2f const &bdbox);
   /** ends the actual graphic */
@@ -83,6 +85,14 @@ public:
   void handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+
+  // ------ header/footer --------
+  /** insert a header */
+  bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras);
+  /** insert a footer */
+  bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras);
+  /** returns true if the header/footer is open */
+  bool isHeaderFooterOpened() const;
 
   // ------ general information --------
   /** returns true if a text zone is opened */
