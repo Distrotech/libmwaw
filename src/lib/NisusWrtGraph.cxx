@@ -92,8 +92,8 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(NisusWrtGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos, librevenge::RVNGPropertyList const &extras) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos), m_extras(extras) {}
+  SubDocument(NisusWrtGraph &pars, MWAWInputStreamPtr input, int id, MWAWPosition const &pos) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(id), m_position(pos) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -116,8 +116,6 @@ protected:
   int m_id;
   //! the pict position
   MWAWPosition m_position;
-  //! the property list
-  librevenge::RVNGPropertyList m_extras;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -132,7 +130,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  m_graphParser->sendPicture(m_id, true, m_position, m_extras);
+  m_graphParser->sendPicture(m_id, true, m_position);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -420,8 +418,7 @@ std::vector<NisusWrtGraphInternal::RSSOEntry> NisusWrtGraph::findRSSOEntry(MWAWI
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                                librevenge::RVNGPropertyList extras)
+bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos)
 {
   MWAWRSRCParserPtr rsrcParser = m_mainParser->getRSRCParser();
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
@@ -464,12 +461,12 @@ bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPo
     pictPos.setRelativePosition(MWAWPosition::Frame);
     pictPos.setOrigin(Vec2f(0,0));
     MWAWSubDocumentPtr subdoc
-    (new NisusWrtGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos, extras));
+    (new NisusWrtGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos));
     listener->insertTextBox(framePos, subdoc);
     return true;
   }
   // first the picture
-  listener->insertPicture(pictPos, data, "image/pict", extras);
+  listener->insertPicture(pictPos, data, "image/pict");
   // then the author possible picture
   pictPos.setClippingPosition(Vec2f(), Vec2f());
   for (size_t i=0; i < listRSSO.size(); i++) {
@@ -477,7 +474,7 @@ bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPo
     MWAWPosition rssoPos(pictPos);
     rssoPos.setOrigin(pictPos.origin()+rssoEntry.m_position.min());
     rssoPos.setSize(rssoEntry.m_position.size());
-    sendPicture(rssoEntry.m_id, false, rssoPos, extras);
+    sendPicture(rssoEntry.m_id, false, rssoPos);
   }
   return true;
 }
@@ -534,7 +531,7 @@ void NisusWrtGraph::flushExtra()
     MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
     MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
-    sendPicture(entry.id(), false, pictPos, librevenge::RVNGPropertyList());
+    sendPicture(entry.id(), false, pictPos);
   }
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -370,11 +370,11 @@ void NisusWrtParser::getFootnoteInfo(NisusWrtStruct::FootnoteInfo &fInfo) const
 ////////////////////////////////////////////////////////////
 // interface with the graph parser
 ////////////////////////////////////////////////////////////
-bool NisusWrtParser::sendPicture(int pictId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
+bool NisusWrtParser::sendPicture(int pictId, MWAWPosition const &pictPos)
 {
   if (!rsrcInput()) return false;
   long pos = rsrcInput()->tell();
-  bool ok=m_graphParser->sendPicture(pictId, true, pictPos, extras);
+  bool ok=m_graphParser->sendPicture(pictId, true, pictPos);
   rsrcInput()->seek(pos, librevenge::RVNG_SEEK_SET);
   return ok;
 }

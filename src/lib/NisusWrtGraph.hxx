@@ -90,8 +90,7 @@ protected:
   void flushExtra();
 
   //! try to send a picture
-  bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos,
-                   librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
+  bool sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPos);
   //! try to send the page graphic
   bool sendPageGraphics();
 

@@ -104,8 +104,7 @@ protected:
   // interface with the graph parser
 
   //! try to send a picture
-  bool sendPicture(int pictId, MWAWPosition const &pictPos,
-                   librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
+  bool sendPicture(int pictId, MWAWPosition const &pictPos);
 
 protected:
   //! finds the different objects zones
