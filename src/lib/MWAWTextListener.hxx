@@ -68,6 +68,12 @@ public:
   /** destructor */
   virtual ~MWAWTextListener();
 
+  /** returns the listener type */
+  Type getType() const
+  {
+    return Text;
+  }
+
   /** sets the documents language */
   void setDocumentLanguage(std::string locale);
 

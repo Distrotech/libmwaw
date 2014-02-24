@@ -70,6 +70,12 @@ public:
   /** destructor */
   virtual ~MWAWSpreadsheetListener();
 
+  /** returns the listener type */
+  Type getType() const
+  {
+    return Spreadsheet;
+  }
+
   /** sets the documents language */
   void setDocumentLanguage(std::string locale);
 

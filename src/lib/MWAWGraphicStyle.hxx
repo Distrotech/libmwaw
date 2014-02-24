@@ -198,6 +198,13 @@ public:
     m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
     m_gradientStopList.push_back(GradientStop(1.0, MWAWColor::black()));
   }
+  /** returns an empty style. Can be used to initialize a default frame style...*/
+  static MWAWGraphicStyle emptyStyle()
+  {
+    MWAWGraphicStyle res;
+    res.m_lineWidth=0;
+    return res;
+  }
   //! virtual destructor
   virtual ~MWAWGraphicStyle() { }
   //! returns true if the border is defined

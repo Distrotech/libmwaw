@@ -52,9 +52,13 @@ public:
   //! destructor
   virtual ~MWAWBasicListener() {}
 
+  //! the listener type
+  enum Type { Graphic, Spreadsheet, Text };
   /** the different break type */
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
 
+  /** returns the listener type */
+  virtual Type getType() const = 0;
   /** returns true if a document is opened */
   virtual bool isDocumentStarted() const =0;
   /** returns true if we can add text data */
@@ -109,6 +113,20 @@ public:
   virtual void openLink(MWAWLink const &link)=0;
   //! close a link
   virtual void closeLink()=0;
+
+  // ------- table -----------------
+  /** closes this table */
+  virtual void closeTable() = 0;
+  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
+  virtual void openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow=false) = 0;
+  /** closes this row */
+  virtual void closeTableRow() = 0;
+  /** open a cell */
+  virtual void openTableCell(MWAWCell const &cell) = 0;
+  /** close a cell */
+  virtual void closeTableCell() = 0;
+  /** add empty cell */
+  virtual void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1)) = 0;
 
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
@@ -182,18 +200,6 @@ public:
   // ------- table -----------------
   /** open a table*/
   virtual void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList()) = 0;
-  /** closes this table */
-  virtual void closeTable() = 0;
-  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
-  virtual void openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow=false) = 0;
-  /** closes this row */
-  virtual void closeTableRow() = 0;
-  /** open a cell */
-  virtual void openTableCell(MWAWCell const &cell) = 0;
-  /** close a cell */
-  virtual void closeTableCell() = 0;
-  /** add empty cell */
-  virtual void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1)) = 0;
 };
 
 #endif

@@ -65,6 +65,12 @@ public:
   /** destructor */
   virtual ~MWAWGraphicListener();
 
+  /** returns the listener type */
+  Type getType() const
+  {
+    return Graphic;
+  }
+
   /** starts a new graphic */
   void startGraphic(Box2f const &bdbox);
   /** ends the actual graphic */
@@ -142,6 +148,22 @@ public:
   void insertTextBox(Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
   /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
   void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
+
+  // ------- table (finish me) -----------------
+
+  /** closes this table */
+  void closeTable();
+  /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
+  void openTableRow(float h, librevenge::RVNGUnit unit, bool headerRow=false);
+  /** closes this row */
+  void closeTableRow();
+  /** open a cell */
+  void openTableCell(MWAWCell const &cell);
+  /** close a cell */
+  void closeTableCell();
+  /** add empty cell */
+  void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
+
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */
   bool canOpenSectionAddBreak() const
@@ -211,6 +233,8 @@ protected:
   std::vector<shared_ptr<MWAWGraphicListenerInternal::State> > m_psStack;
   //! the parser state
   MWAWParserState &m_parserState;
+  //! the document interface
+  librevenge::RVNGDrawingInterface *m_documentInterface;
 
 private:
   MWAWGraphicListener(const MWAWGraphicListener &);
