@@ -277,7 +277,8 @@ ClarisWksTable::ClarisWksTable(ClarisWksDocument &document) :
 }
 
 ClarisWksTable::~ClarisWksTable()
-{ }
+{
+}
 
 int ClarisWksTable::version() const
 {
@@ -286,7 +287,7 @@ int ClarisWksTable::version() const
 
 bool ClarisWksTable::askMainToSendZone(int number)
 {
-  return m_document.sendZone(number, false);
+  return m_document.sendZone(number);
 }
 
 // fixme

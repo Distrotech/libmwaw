@@ -129,7 +129,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   }
 
   assert(m_parser);
-  static_cast<ClarisWksSSParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
+  static_cast<ClarisWksSSParser *>(m_parser)->m_document->sendZone(m_id, listener, m_position);
 }
 }
 
@@ -206,7 +206,7 @@ void ClarisWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface
     }
     if (ok) {
       createDocument(docInterface);
-      m_document->sendZone(1, false);
+      m_document->sendZone(1);
     }
     ascii().reset();
   }

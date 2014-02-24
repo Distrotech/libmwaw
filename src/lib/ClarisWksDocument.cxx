@@ -267,7 +267,7 @@ bool ClarisWksDocument::canSendZoneAsGraphic(int zoneId) const
   return false;
 }
 
-bool ClarisWksDocument::sendZone(int zoneId, bool asGraphic, MWAWPosition position)
+bool ClarisWksDocument::sendZone(int zoneId, MWAWBasicListenerPtr listener, MWAWPosition position)
 {
   shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
   if (!zMap) return false;
@@ -276,13 +276,13 @@ bool ClarisWksDocument::sendZone(int zoneId, bool asGraphic, MWAWPosition positi
   bool res = false;
   switch (zMap->m_fileType) {
   case 0:
-    res = getGraphParser()->sendGroup(zoneId, asGraphic, position);
+    res = getGraphParser()->sendGroup(zoneId, listener, position);
     break;
   case 1:
-    res = getTextParser()->sendZone(zoneId, asGraphic);
+    res = getTextParser()->sendZone(zoneId, listener);
     break;
   case 4:
-    res = getGraphParser()->sendBitmap(zoneId, asGraphic, position);
+    res = getGraphParser()->sendBitmap(zoneId, listener, position);
     break;
   case 5:
     res = getPresentationParser()->sendZone(zoneId);

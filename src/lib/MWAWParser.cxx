@@ -51,7 +51,6 @@ MWAWParserState::MWAWParserState(MWAWParserState::Type type, MWAWInputStreamPtr 
   }
   m_fontConverter.reset(new MWAWFontConverter);
   m_listManager.reset(new MWAWListManager);
-  m_graphicListener.reset(new MWAWGraphicListener(*this));
 }
 
 MWAWParserState::~MWAWParserState()

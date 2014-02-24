@@ -142,11 +142,6 @@ MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vect
   m_gs->m_interface = shared_ptr<librevenge::RVNGDrawingInterface>(documentInterface, MWAW_shared_ptr_noop_deleter<librevenge::RVNGDrawingInterface>());
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState) : MWAWBasicListener(),
-  m_gs(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState)
-{
-}
-
 MWAWGraphicListener::~MWAWGraphicListener()
 {
 }
@@ -423,12 +418,7 @@ void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::startGraphic: the graphic is already started\n"));
     return;
   }
-  if (m_gs && m_gs->m_interface)
-    m_gs->clear();
-  else {
-    m_gs.reset(new MWAWGraphicListenerInternal::GraphicState);
-    m_gs->m_interface.reset(new MWAWGraphicEncoder);
-  }
+  m_gs->clear();
   m_gs->m_box=bdbox;
   m_ps->m_isGraphicStarted = true;
   m_ps->m_origin=bdbox[0];
@@ -464,40 +454,7 @@ void MWAWGraphicListener::endGraphic()
   m_gs->m_interface->endPage();
   m_gs->m_interface->endDocument();
   m_ps->m_isGraphicStarted = false;
-  m_gs.reset();
-}
-
-bool MWAWGraphicListener::endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType)
-{
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: the graphic is not started\n"));
-    return false;
-  }
-  if (m_ps->m_inSubDocument) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a sub document\n"));
-    return false;
-  }
-
-  if (m_ps->m_isTextZoneOpened) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a text zone\n"));
-    if (m_ps->m_isParagraphOpened)
-      _closeParagraph();
-    m_ps->m_paragraph.m_listLevelIndex = 0;
-    _changeList(); // flush the list exterior
-  }
-  m_gs->m_interface->endPage();
-  m_gs->m_interface->endDocument();
-  MWAWGraphicEncoder *interface=dynamic_cast<MWAWGraphicEncoder *>(m_gs->m_interface.get());
-  if (!interface) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: oops the interface is not a property handler\n"));
-    m_ps->m_isGraphicStarted = false;
-    m_gs.reset();
-    return false;
-  }
-  bool ok=interface->getBinaryResult(data, mimeType);
-  m_ps->m_isGraphicStarted = false;
-  m_gs.reset();
-  return ok;
+  m_gs->clear();
 }
 
 ///////////////////

@@ -96,7 +96,7 @@ protected:
   void setProperty(MWAWBasicListener &listener, ClarisWksTextInternal::Paragraph const &ruler, int listId=-1);
 
   //! sends the zone data to the listener (if it exists )
-  bool sendZone(int number, bool asGraphic=false);
+  bool sendZone(int number, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
   //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(int number) const;
 
@@ -123,7 +123,7 @@ protected:
   bool readTextSection(ClarisWksTextInternal::Zone &zone);
 
   //! send the text zone to the listener
-  bool sendText(ClarisWksTextInternal::Zone const &zone, bool asGraphic);
+  bool sendText(ClarisWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener);
   //! check if we can send a textzone has graphic
   bool canSendTextAsGraphic(ClarisWksTextInternal::Zone const &zone) const;
 

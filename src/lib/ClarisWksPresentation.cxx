@@ -324,7 +324,7 @@ bool ClarisWksPresentation::sendZone(int number)
     if (main) m_document.newPage(actPage++);
     int id = presentation->m_zoneIdList[p];
     if (id > 0 && presentation->okChildId(id))
-      m_document.sendZone(id, false);
+      m_document.sendZone(id);
   }
   return true;
 }

@@ -70,10 +70,6 @@ public:
   /** ends the actual graphic */
   void endGraphic();
 
-  // remove me
-  MWAWGraphicListener(MWAWParserState &parserState);
-  bool endGraphic(librevenge::RVNGBinaryData &data, std::string &mimeType);
-
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 

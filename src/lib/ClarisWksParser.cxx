@@ -129,7 +129,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   }
 
   assert(m_parser);
-  static_cast<ClarisWksParser *>(m_parser)->m_document->sendZone(m_id, false,m_position);
+  static_cast<ClarisWksParser *>(m_parser)->m_document->sendZone(m_id, listener, m_position);
 }
 }
 
@@ -225,7 +225,7 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
         if (mainZonesList[i]==headerId ||
             mainZonesList[i]==footerId)
           continue;
-        m_document->sendZone(mainZonesList[i], false, pos);
+        m_document->sendZone(mainZonesList[i], MWAWBasicListenerPtr(), pos);
       }
       m_document->getPresentationParser()->flushExtra();
       m_document->getGraphParser()->flushExtra();

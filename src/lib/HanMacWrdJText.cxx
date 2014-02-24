@@ -2354,7 +2354,7 @@ void HanMacWrdJText::flushExtra()
       MWAW_DEBUG_MSG(("HanMacWrdJText::flushExtra: find some unsent zone\n"));
       first = false;
     }
-    sendText(m_state->m_textZoneList[z],0,false);
+    sendText(m_state->m_textZoneList[z],0);
     m_parserState->m_textListener->insertEOL();
   }
 #endif

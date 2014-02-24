@@ -1274,12 +1274,12 @@ bool ClarisWksText::canSendTextAsGraphic(ClarisWksTextInternal::Zone const &zone
   return true;
 }
 
-bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGraphic)
+bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener)
 {
-  MWAWBasicListenerPtr listener;
   zone.m_parsed=true;
-  if (asGraphic)
-    listener=m_parserState->m_graphicListener;
+  bool localListener=false;
+  if (listener)
+    localListener=true;
   else
     listener=m_parserState->getMainListener();
   if (!listener || !listener->canWriteText()) {
@@ -1296,7 +1296,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
   int actPage = 1;
   size_t numZones = zone.m_zones.size();
   if (main) {
-    if (!asGraphic)
+    if (!localListener)
       m_document.newPage(actPage);
     else {
       MWAW_DEBUG_MSG(("ClarisWksText::sendText: try to send main zone as graphic\n"));
@@ -1348,7 +1348,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
           nextSection = -1;
         }
         numCols = section.numColumns();
-        int actCols = asGraphic ? 1 : listener->getSection().numColumns();
+        int actCols = localListener ? 1 : listener->getSection().numColumns();
         if (numCols > 1  || actCols > 1) {
           if (listener->isSectionOpened())
             listener->closeSection();
@@ -1445,7 +1445,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, bool asGra
                 tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), librevenge::RVNG_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
-              m_document.sendZone(token.m_zoneId, false, tPos);
+              m_document.sendZone(token.m_zoneId, MWAWBasicListenerPtr(), tPos);
             }
             else
               f << "###";
@@ -1971,14 +1971,14 @@ bool ClarisWksText::canSendTextAsGraphic(int number) const
   return canSendTextAsGraphic(*iter->second);
 }
 
-bool ClarisWksText::sendZone(int number, bool asGraphic)
+bool ClarisWksText::sendZone(int number, MWAWBasicListenerPtr listener)
 {
   std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.find(number);
   if (iter == m_state->m_zoneMap.end())
     return false;
   shared_ptr<ClarisWksTextInternal::Zone> zone = iter->second;
-  sendText(*zone, asGraphic);
+  sendText(*zone, listener);
   return true;
 }
 
@@ -1995,7 +1995,7 @@ void ClarisWksText::flushExtra()
     listener->insertEOL();
     if (zone->m_parsed) // can be a header/footer in draw zone
       continue;
-    sendText(*zone, false);
+    sendText(*zone, listener);
   }
 }
 
