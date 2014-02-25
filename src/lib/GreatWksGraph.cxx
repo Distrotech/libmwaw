@@ -1762,12 +1762,13 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
       m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry)) {
+    Box2f box(Vec2f(0,0),newSz);
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener
-    (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-    graphicListener->startGraphic(Box2f(Vec2f(0,0),newSz));
-    bool ok=sendTextboxAsGraphic(Box2f(Vec2f(0,0),newSz), text, style, graphicListener);
-    graphicListener->endGraphic();
+    (new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
+    graphicListener->startDocument();
+    bool ok=sendTextboxAsGraphic(box, text, style, graphicListener);
+    graphicListener->endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
     if (!graphicEncoder.getBinaryResult(data, type) || !ok)
@@ -1988,9 +1989,8 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
 
     if (numDataToMerge>1) {
       MWAWGraphicEncoder graphicEncoder;
-      MWAWGraphicListenerPtr graphicListener
-      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-      graphicListener->startGraphic(partialBdBox);
+      MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, partialBdBox, &graphicEncoder));
+      graphicListener->startDocument();
       size_t lastChild = isLast ? c : c-1;
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
         int localCId = group.m_childList[ch];
@@ -2023,7 +2023,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           break;
         }
       }
-      graphicListener->endGraphic();
+      graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicEncoder.getBinaryResult(data,type)) {

@@ -57,17 +57,31 @@ public:
   /** the different break type */
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
 
+  //------- generic accessor ---
   /** returns the listener type */
   virtual Type getType() const = 0;
-  /** returns true if a document is opened */
-  virtual bool isDocumentStarted() const =0;
   /** returns true if we can add text data */
   virtual bool canWriteText() const =0;
   /** returns true if a subdocument is open  */
   virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
 
+  // ------ main document -------
   /** sets the documents language */
   virtual void setDocumentLanguage(std::string locale) = 0;
+  /** starts the document */
+  virtual void startDocument() = 0;
+  /** returns true if a document is opened */
+  virtual bool isDocumentStarted() const =0;
+  /** ends the document */
+  virtual void endDocument(bool sendDelayedSubDoc=true) = 0;
+
+  // ------ page --------
+  /** returns true if a page is opened */
+  virtual bool isPageSpanOpened() const = 0;
+  /** returns the current page span
+
+  \note this forces the opening of a new page if no page is opened.*/
+  virtual MWAWPageSpan const &getPageSpan() = 0;
 
   // ------ header/footer --------
   /** insert a header */
@@ -161,23 +175,10 @@ public:
   //! destructor
   virtual ~MWAWListener() {}
 
-  /** starts the document */
-  virtual void startDocument() = 0;
-  /** ends the document */
-  virtual void endDocument(bool sendDelayedSubDoc=true) = 0;
-
   /** function called to add a subdocument */
   virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
   /** returns try if a subdocument is open  */
   virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
-
-  // ------ page --------
-  /** returns true if a page is opened */
-  virtual bool isPageSpanOpened() const = 0;
-  /** returns the current page span
-
-  \note this forces the opening of a new page if no page is opened.*/
-  virtual MWAWPageSpan const &getPageSpan() = 0;
 
   // ------- subdocument -----------------
   /** insert a note */

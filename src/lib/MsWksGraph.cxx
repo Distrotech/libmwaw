@@ -2181,11 +2181,10 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
     return;
   }
   MWAWGraphicEncoder graphicEncoder;
-  MWAWGraphicListenerPtr graphicListener
-  (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-  graphicListener->startGraphic(group.m_box);
+  MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, group.m_box, &graphicEncoder));
+  graphicListener->startDocument();
   sendGroup(group, graphicListener);
-  graphicListener->endGraphic();
+  graphicListener->endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
   if (graphicEncoder.getBinaryResult(data,type))
@@ -2245,9 +2244,8 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
 
     if (numDataToMerge>1) {
       MWAWGraphicEncoder graphicEncoder;
-      MWAWGraphicListenerPtr graphicListener
-      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-      graphicListener->startGraphic(partialBdBox);
+      MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, partialBdBox, &graphicEncoder));
+      graphicListener->startDocument();
       size_t lastChild = isLast ? c : c-1;
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
         int localCId = group.m_childs[ch];
@@ -2272,7 +2270,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
           graphicListener->insertTextBox(box, subdoc, style);
         }
       }
-      graphicListener->endGraphic();
+      graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicEncoder.getBinaryResult(data,type)) {
@@ -2686,18 +2684,17 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   switch (zone->type()) {
   case MsWksGraphInternal::Zone::Text: {
     MsWksGraphInternal::TextBox &textbox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
-    MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListenerPtr graphicListener
-    (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
     Box2f box(Vec2f(0,0),textbox.m_box.size());
-    graphicListener->startGraphic(box);
+    MWAWGraphicEncoder graphicEncoder;
+    MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
+    graphicListener.startDocument();
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBox, id));
     // a textbox can not have border
     MWAWGraphicStyle style(textbox.m_style);
     style.m_lineWidth=0;
-    graphicListener->insertTextBox(box, subdoc, style);
-    graphicListener->endGraphic();
+    graphicListener.insertTextBox(box, subdoc, style);
+    graphicListener.endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
     if (graphicEncoder.getBinaryResult(data, type))

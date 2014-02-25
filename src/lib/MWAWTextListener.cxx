@@ -1180,28 +1180,19 @@ void MWAWTextListener::insertPicture
     m_documentInterface->drawEllipse(shapePList);
     break;
   case MWAWGraphicShape::C_Path: {
-    // odt seems to have some problem displaying path so...
-    MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListenerPtr graphicListener
-    (new MWAWGraphicListener(m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-    if (!graphicListener) {
-      MWAW_DEBUG_MSG(("MWAWTextListener::insertPicture: can not create a graphic encoder\n"));
-      // no way to do differently
-      m_documentInterface->defineGraphicStyle(list);
-      m_documentInterface->drawPath(shapePList);
-      break;
-    }
+    // odt seems to have some problem displaying path so
     // first create the picture, reset origin (if it is bad)
     Box2f bdbox = shape.getBdBox(style,true);
-    graphicListener->startGraphic(Box2f(Vec2f(0,0),bdbox.size()));
-    graphicListener->insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
-    graphicListener->endGraphic();
+    MWAWGraphicEncoder graphicEncoder;
+    MWAWGraphicListener graphicListener(m_parserState, Box2f(Vec2f(0,0),bdbox.size()), &graphicEncoder);
+    graphicListener.startDocument();
+    graphicListener.insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
+    graphicListener.endDocument();
 
     librevenge::RVNGBinaryData data;
     std::string mime;
-    if (!graphicEncoder.getBinaryResult(data,mime))
-      return;
-    if (!openFrame(pos)) return;
+    if (!graphicEncoder.getBinaryResult(data,mime) || !openFrame(pos))
+      break;
     librevenge::RVNGPropertyList propList;
     propList.insert("librevenge:mime-type", mime.c_str());
     propList.insert("office:binary-data", data);

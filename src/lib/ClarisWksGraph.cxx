@@ -2406,11 +2406,10 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   if (!mainGroup && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListenerPtr graphicListener
-    (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-    graphicListener->startGraphic(box);
+    MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
+    graphicListener->startDocument();
     sendGroup(group, group.m_blockToSendList, graphicListener);
-    graphicListener->endGraphic();
+    graphicListener->endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
     if (graphicEncoder.getBinaryResult(data,type)) {
@@ -2543,11 +2542,10 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         continue;
       }
       MWAWGraphicEncoder graphicEncoder;
-      MWAWGraphicListenerPtr graphicListener
-      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-      graphicListener->startGraphic(box);
+      MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
+      graphicListener->startDocument();
       sendGroup(group, groupList, graphicListener);
-      graphicListener->endGraphic();
+      graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicEncoder.getBinaryResult(data,type)) {
@@ -2609,12 +2607,11 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
       (dset && dset->m_fileType==1) && m_document.canSendZoneAsGraphic(zId)) {
     Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
     MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListenerPtr graphicListener
-    (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-    graphicListener->startGraphic(box);
+    MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
+    graphicListener.startDocument();
     shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
-    graphicListener->insertTextBox(box, doc, cStyle);
-    graphicListener->endGraphic();
+    graphicListener.insertTextBox(box, doc, cStyle);
+    graphicListener.endDocument();
     librevenge::RVNGBinaryData data;
     std::string mime;
     if (graphicEncoder.getBinaryResult(data,mime))

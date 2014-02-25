@@ -702,17 +702,16 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     return;
   }
   MWAWGraphicEncoder graphicEncoder;
-  MWAWGraphicListenerPtr graphicListener
-  (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-  graphicListener->startGraphic(Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)));
+  MWAWGraphicListener graphicListener(*m_parserState, Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)), &graphicEncoder);
+  graphicListener.startDocument();
   float actH = (lineH-totalWidth)/2.f;
   for (size_t l=0; l < listW.size(); ++l) {
     if ((l%2)==0)
-      graphicListener->insertPicture(Box2f(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,actH+listW[l])),
-                                     shape, pStyle);
+      graphicListener.insertPicture(Box2f(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,actH+listW[l])),
+                                    shape, pStyle);
     actH += listW[l];
   }
-  graphicListener->endGraphic();
+  graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string mime;
   if (graphicEncoder.getBinaryResult(data,mime))

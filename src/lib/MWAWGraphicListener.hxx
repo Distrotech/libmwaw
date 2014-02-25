@@ -62,6 +62,10 @@ class MWAWGraphicListener : public MWAWBasicListener
 public:
   /** constructor */
   MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface);
+  /** simplified constructor (can be used for a embedded graphic with one page).
+
+   \note the box coordinates must be given in point.*/
+  MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface);
   /** destructor */
   virtual ~MWAWGraphicListener();
 
@@ -73,11 +77,14 @@ public:
 
   /** sets the documents language */
   void setDocumentLanguage(std::string locale);
-  /** starts a new graphic */
-  void startGraphic(Box2f const &bdbox);
-  /** ends the actual graphic */
-  void endGraphic();
+  /** starts a new document */
+  void startDocument();
+  /** ends the actual document */
+  void endDocument(bool delayed=true);
 
+  // ------ general information --------
+  /** returns true if a text zone is opened */
+  bool canWriteText() const;
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 
@@ -86,6 +93,14 @@ public:
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
+  // ------ page --------
+  /** returns true if a page is opened */
+  bool isPageSpanOpened() const;
+  /** returns the current page span
+
+  \note this forces the opening of a new page if no page is opened.*/
+  MWAWPageSpan const &getPageSpan();
+
   // ------ header/footer --------
   /** insert a header */
   bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras);
@@ -93,12 +108,6 @@ public:
   bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras);
   /** returns true if the header/footer is open */
   bool isHeaderFooterOpened() const;
-
-  // ------ general information --------
-  /** returns true if a text zone is opened */
-  bool canWriteText() const;
-  /** returns the graphic bdbox.*/
-  Box2f const &getGraphicBdBox();
 
   // ------ text data -----------
   //! adds a basic character, ..
@@ -198,6 +207,11 @@ public:
   void insertBreak(BreakType breakType);
 
 protected:
+  //! does open a new page (low level)
+  void _openPageSpan(bool sendHeaderFooters=true);
+  //! does close a page (low level)
+  void _closePageSpan();
+
   void _startSubDocument();
   void _endSubDocument();
 
@@ -236,7 +250,7 @@ protected:
 
 protected:
   //! the actual global state
-  shared_ptr<MWAWGraphicListenerInternal::GraphicState> m_gs;
+  shared_ptr<MWAWGraphicListenerInternal::GraphicState> m_ds;
   //! the actual local parse state
   shared_ptr<MWAWGraphicListenerInternal::State> m_ps;
   //! stack of local state

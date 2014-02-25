@@ -64,19 +64,19 @@ namespace MWAWGraphicListenerInternal
 /** the global graphic state of MWAWGraphicListener */
 struct GraphicState {
   //! constructor
-  GraphicState() : m_box(), m_metaData(), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
+  GraphicState(std::vector<MWAWPageSpan> const &pageList) :
+    m_pageList(pageList), m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
   {
   }
   //! destructor
   ~GraphicState()
   {
   }
-  /** the graphic bdbox */
-  Box2f m_box;
-
+  //! the pages definition
+  std::vector<MWAWPageSpan> m_pageList;
   //! the document meta data
   librevenge::RVNGPropertyList m_metaData;
-  bool m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
+  bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   //! the list of actual subdocument
@@ -104,10 +104,11 @@ struct State {
   MWAWFont m_font;
   //! the paragraph
   MWAWParagraph m_paragraph;
-
+//! true if a page is open
+  bool m_isPageSpanOpened;
+//! the list of list
   shared_ptr<MWAWList> m_list;
 
-  bool m_isGraphicStarted;
   bool m_isTextBoxOpened;
   bool m_isFrameOpened;
 
@@ -124,6 +125,11 @@ struct State {
   bool m_isTableColumnOpened;
   bool m_isTableCellOpened;
 
+  MWAWPageSpan m_pageSpan;
+  unsigned m_currentPage;
+  int m_numPagesRemainingInSpan;
+  int m_currentPageNumber;
+
   bool m_inLink;
   bool m_inSubDocument;
   libmwaw::SubDocumentType m_subDocumentType;
@@ -134,20 +140,35 @@ private:
 };
 
 State::State() : m_origin(0,0),
-  m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_list(),
-  m_isGraphicStarted(false), m_isTextBoxOpened(false), m_isFrameOpened(false),
+  m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_isPageSpanOpened(false), m_list(),
+  m_isTextBoxOpened(false), m_isFrameOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
+  m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
   m_inLink(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &, librevenge::RVNGDrawingInterface *documentInterface) : MWAWBasicListener(),
-  m_gs(new MWAWGraphicListenerInternal::GraphicState), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface) : MWAWBasicListener(),
+  m_ds(new MWAWGraphicListenerInternal::GraphicState(pageList)), m_ps(new MWAWGraphicListenerInternal::State),
+  m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
+  MWAW_DEBUG_MSG(("MWAWGraphicListener::MWAWGraphicListener: general constructor is not implemented\n"));
+}
+
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWBasicListener(),
+  m_ds(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
+{
+  MWAWPageSpan pageSpan;
+  pageSpan.setMargins(0);
+  pageSpan.setPageSpan(1);
+  pageSpan.setFormWidth(box.size().x()/72.);
+  pageSpan.setFormLength(box.size().y()/72.);
+  m_ds.reset(new MWAWGraphicListenerInternal::GraphicState(std::vector<MWAWPageSpan>(1, pageSpan)));
+  m_ps->m_origin=box[0];
 }
 
 MWAWGraphicListener::~MWAWGraphicListener()
@@ -420,54 +441,29 @@ void MWAWGraphicListener::closeLink()
 ///////////////////
 // document
 ///////////////////
-void MWAWGraphicListener::startGraphic(Box2f const &bdbox)
+void MWAWGraphicListener::startDocument()
 {
-  if (m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::startGraphic: the graphic is already started\n"));
+  if (m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::startDocument: the document is already started\n"));
     return;
   }
-  *m_gs=MWAWGraphicListenerInternal::GraphicState();
-  m_gs->m_box=bdbox;
-  m_ps->m_isGraphicStarted = true;
-  m_ps->m_origin=bdbox[0];
-
+  m_ds->m_isDocumentStarted=true;
   m_documentInterface->startDocument(librevenge::RVNGPropertyList());
-  m_documentInterface->setDocumentMetaData(m_gs->m_metaData);
-
-  librevenge::RVNGPropertyList list;
-  list.insert("svg:x",bdbox[0].x(), librevenge::RVNG_POINT);
-  list.insert("svg:y",bdbox[0].y(), librevenge::RVNG_POINT);
-  list.insert("svg:width",bdbox.size().x(), librevenge::RVNG_POINT);
-  list.insert("svg:height",bdbox.size().y(), librevenge::RVNG_POINT);
-  list.insert("librevenge:enforce-frame",true);
-  m_documentInterface->startPage(list);
+  m_documentInterface->setDocumentMetaData(m_ds->m_metaData);
 }
 
-void MWAWGraphicListener::endGraphic()
+void MWAWGraphicListener::endDocument(bool /*delayed*/)
 {
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: the graphic is not started\n"));
+  if (m_ps->m_isPageSpanOpened)
+    _closePageSpan();
+
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::endDocument: the document is not started\n"));
     return;
   }
-  if (m_ps->m_inSubDocument) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a sub document\n"));
-    return;
-  }
-  if (m_ps->m_isTableOpened) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a table zone\n"));
-    closeTable();
-  }
-  if (m_ps->isInTextZone()) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::endGraphic: we are in a text zone\n"));
-    if (m_ps->m_isParagraphOpened)
-      _closeParagraph();
-    m_ps->m_paragraph.m_listLevelIndex = 0;
-    _changeList(); // flush the list exterior
-  }
-  m_documentInterface->endPage();
   m_documentInterface->endDocument();
-  m_ps->m_isGraphicStarted = false;
-  *m_gs=MWAWGraphicListenerInternal::GraphicState();
+  m_ds->m_isDocumentStarted=true;
+  *m_ds=MWAWGraphicListenerInternal::GraphicState(std::vector<MWAWPageSpan>());
 }
 
 ///////////////////
@@ -476,22 +472,109 @@ void MWAWGraphicListener::endGraphic()
 void MWAWGraphicListener::setDocumentLanguage(std::string locale)
 {
   if (!locale.length()) return;
-  m_gs->m_metaData.insert("librevenge:language", locale.c_str());
+  m_ds->m_metaData.insert("librevenge:language", locale.c_str());
 }
 
 bool MWAWGraphicListener::isDocumentStarted() const
 {
-  return m_ps->m_isGraphicStarted;
+  return m_ds->m_isDocumentStarted;
 }
 
 bool MWAWGraphicListener::canWriteText() const
 {
-  return m_ps->m_isGraphicStarted && m_ps->isInTextZone();
+  return m_ps->m_isPageSpanOpened && m_ps->isInTextZone();
 }
 
-Box2f const &MWAWGraphicListener::getGraphicBdBox()
+///////////////////
+// page
+///////////////////
+bool MWAWGraphicListener::isPageSpanOpened() const
 {
-  return m_gs->m_box;
+  return m_ps->m_isPageSpanOpened;
+}
+
+MWAWPageSpan const &MWAWGraphicListener::getPageSpan()
+{
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
+  return m_ps->m_pageSpan;
+}
+
+void MWAWGraphicListener::_openPageSpan(bool /*sendHeaderFooters*/)
+{
+  if (m_ps->m_isPageSpanOpened)
+    return;
+
+  if (!m_ds->m_isDocumentStarted)
+    startDocument();
+
+  if (m_ds->m_pageList.size()==0) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find any page\n"));
+    throw libmwaw::ParseException();
+  }
+  unsigned actPage = 0;
+  std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
+  while (actPage < m_ps->m_currentPage) {
+    actPage+=(unsigned)it++->getPageSpan();
+    if (it == m_ds->m_pageList.end()) {
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find current page\n"));
+      throw libmwaw::ParseException();
+    }
+  }
+
+  MWAWPageSpan &currentPage = *it;
+  librevenge::RVNGPropertyList propList;
+  currentPage.getPageProperty(propList);
+  propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
+  // now add data for embedded graph
+  propList.insert("svg:x",m_ps->m_origin.x(), librevenge::RVNG_POINT);
+  propList.insert("svg:y",m_ps->m_origin.y(), librevenge::RVNG_POINT);
+  propList.insert("svg:width",72.*currentPage.getFormWidth(), librevenge::RVNG_POINT);
+  propList.insert("svg:height",72.*currentPage.getFormLength(), librevenge::RVNG_POINT);
+  propList.insert("librevenge:enforce-frame",true);
+
+  if (!m_ps->m_isPageSpanOpened)
+    m_documentInterface->startPage(propList);
+  m_ps->m_isPageSpanOpened = true;
+  m_ps->m_pageSpan = currentPage;
+
+#if 0
+  // fixme
+
+  // we insert the header footer
+  if (sendHeaderFooters)
+    currentPage.sendHeaderFooters(this);
+#endif
+
+  // first paragraph in span (necessary for resetting page number)
+  m_ps->m_firstParagraphInPageSpan = true;
+  m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
+  m_ps->m_currentPage++;
+}
+
+void MWAWGraphicListener::_closePageSpan()
+{
+  if (!m_ps->m_isPageSpanOpened)
+    return;
+
+  m_ps->m_isPageSpanOpened = false;
+  if (m_ps->m_inSubDocument) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::endDocument: we are in a sub document\n"));
+    _endSubDocument();
+    _popParsingState();
+  }
+  if (m_ps->m_isTableOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::_closePageSpan: we are in a table zone\n"));
+    closeTable();
+  }
+  if (m_ps->isInTextZone()) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::_closePageSpan: we are in a text zone\n"));
+    if (m_ps->m_isParagraphOpened)
+      _closeParagraph();
+    m_ps->m_paragraph.m_listLevelIndex = 0;
+    _changeList(); // flush the list exterior
+  }
+  m_documentInterface->endPage();
 }
 
 ///////////////////
@@ -636,7 +719,7 @@ void MWAWGraphicListener::_changeList()
       m_ps->m_listOrderedLevels.resize(actualLevel);
       return;
     }
-    m_parserState.m_listManager->needToSend(newListId, m_gs->m_sentListMarkers);
+    m_parserState.m_listManager->needToSend(newListId, m_ds->m_sentListMarkers);
     m_ps->m_list = theList;
     m_ps->m_list->setLevel((int)newLevel);
   }
@@ -741,12 +824,12 @@ void MWAWGraphicListener::_flushText()
 ///////////////////
 bool MWAWGraphicListener::isHeaderFooterOpened() const
 {
-  return m_gs->m_isHeaderFooterStarted;
+  return m_ds->m_isHeaderFooterStarted;
 }
 
 bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
 {
-  if (m_gs->m_isHeaderFooterStarted) {
+  if (m_ds->m_isHeaderFooterStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertHeader: Oops a header/footer is already opened\n"));
     return false;
   }
@@ -766,7 +849,7 @@ bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, libreveng
 
 bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras)
 {
-  if (m_gs->m_isHeaderFooterStarted) {
+  if (m_ds->m_isHeaderFooterStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertFooter: Oops a header/footer is already opened\n"));
     return false;
   }
@@ -776,7 +859,8 @@ bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, libreveng
   if (!openFrame())
     return false;
   librevenge::RVNGPropertyList propList(extras);
-  Box2f bdbox(Vec2f(20,m_gs->m_box.size()[1]-40.f), Vec2f(-20,-10)); // fixme
+  MWAWPageSpan page(getPageSpan()); // fixme
+  Box2f bdbox(Vec2f(20,72.f*float(page.getFormLength())-40.f), Vec2f(-20,-10));
   _handleFrameParameters(propList, bdbox, MWAWGraphicStyle::emptyStyle());
 
   m_documentInterface->startTextObject(propList);
@@ -814,10 +898,12 @@ void MWAWGraphicListener::insertBreak(BreakType)
 void MWAWGraphicListener::insertPicture
 (Box2f const &bdbox, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
 {
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the graphic is not started\n"));
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the document is not started\n"));
     return;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   if (m_ps->m_isFrameOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
@@ -853,14 +939,16 @@ void MWAWGraphicListener::insertPicture
 void MWAWGraphicListener::insertPicture
 (Box2f const &bdbox, MWAWGraphicStyle const &style, const librevenge::RVNGBinaryData &binaryData, std::string type)
 {
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the graphic is not started\n"));
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the document is not started\n"));
     return;
   }
   if (m_ps->m_isFrameOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: a frame is already open\n"));
     return;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   librevenge::RVNGPropertyList list;
   style.addTo(list);
   m_documentInterface->setStyle(list);
@@ -880,10 +968,12 @@ void MWAWGraphicListener::insertPicture
 void MWAWGraphicListener::insertTextBox
 (Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style)
 {
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTextBox: the graphic is not started\n"));
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTextBox: the document is not started\n"));
     return;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   if (!openFrame())
     return;
   librevenge::RVNGPropertyList propList;
@@ -908,10 +998,12 @@ void MWAWGraphicListener::insertTextBox
 
 void MWAWGraphicListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
 {
-  if (!m_ps->m_isGraphicStarted || m_ps->isInTextZone()) {
+  if (!m_ds->m_isDocumentStarted || m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertGroup: can not insert a group\n"));
     return;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_GRAPHIC_GROUP);
 }
 
@@ -1019,26 +1111,26 @@ void MWAWGraphicListener::closeTableCell()
 ///////////////////
 bool MWAWGraphicListener::openFrame()
 {
-  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: called in table but cell is not opened\n"));
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: the document is not started\n"));
     return false;
   }
-  if (!m_ps->m_isGraphicStarted) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: the graphic is not started\n"));
+  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: called in table but cell is not opened\n"));
     return false;
   }
   if (m_ps->m_isFrameOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: called but a frame is already opened\n"));
     return false;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   m_ps->m_isFrameOpened = true;
   return true;
 }
 
 void MWAWGraphicListener::closeFrame()
 {
-  if (!m_ps->m_isGraphicStarted)
-    return;
   if (!m_ps->m_isFrameOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::closeFrame: called but no frame is already opened\n"));
     return;
@@ -1048,7 +1140,7 @@ void MWAWGraphicListener::closeFrame()
 
 void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
 {
-  if (!m_ps->m_isGraphicStarted)
+  if (!m_ds->m_isDocumentStarted)
     return;
 
   Vec2f size=bdbox.size();
@@ -1096,13 +1188,15 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
 ///////////////////
 void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
 {
-  if (!m_ps->m_isGraphicStarted) {
+  if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::handleSubDocument: the graphic is not started\n"));
     return;
   }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
   Vec2f actOrigin=m_ps->m_origin;
   _pushParsingState();
-  m_ps->m_isGraphicStarted=true;
+  m_ps->m_isPageSpanOpened=true;
   m_ps->m_origin=actOrigin-orig;
   _startSubDocument();
   m_ps->m_subDocumentType = subDocumentType;
@@ -1112,15 +1206,15 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
     m_ps->m_isTextBoxOpened=true;
   else if (subDocumentType==libmwaw::DOC_HEADER_FOOTER) {
     m_ps->m_isTextBoxOpened=true;
-    m_gs->m_isHeaderFooterStarted = true;
+    m_ds->m_isHeaderFooterStarted = true;
   }
 
   // Check whether the document is calling itself
   bool sendDoc = true;
-  for (size_t i = 0; i < m_gs->m_subDocuments.size(); i++) {
+  for (size_t i = 0; i < m_ds->m_subDocuments.size(); i++) {
     if (!subDocument)
       break;
-    if (subDocument == m_gs->m_subDocuments[i]) {
+    if (subDocument == m_ds->m_subDocuments[i]) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::handleSubDocument: recursif call, stop...\n"));
       sendDoc = false;
       break;
@@ -1128,7 +1222,7 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
   }
   if (sendDoc) {
     if (subDocument) {
-      m_gs->m_subDocuments.push_back(subDocument);
+      m_ds->m_subDocuments.push_back(subDocument);
       shared_ptr<MWAWGraphicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
       try {
         subDocument->parseGraphic(listen, subDocumentType);
@@ -1136,7 +1230,7 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
       catch (...) {
         MWAW_DEBUG_MSG(("Works: MWAWGraphicListener::handleSubDocument exception catched \n"));
       }
-      m_gs->m_subDocuments.pop_back();
+      m_ds->m_subDocuments.pop_back();
     }
   }
 
@@ -1144,12 +1238,12 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
   _popParsingState();
 
   if (subDocumentType==libmwaw::DOC_HEADER_FOOTER)
-    m_gs->m_isHeaderFooterStarted = false;
+    m_ds->m_isHeaderFooterStarted = false;
 }
 
 bool MWAWGraphicListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const
 {
-  if (!m_ps->m_isGraphicStarted || !m_ps->m_inSubDocument)
+  if (!m_ds->m_isDocumentStarted || !m_ps->m_inSubDocument)
     return false;
   subdocType = m_ps->m_subDocumentType;
   return true;
@@ -1157,19 +1251,21 @@ bool MWAWGraphicListener::isSubDocumentOpened(libmwaw::SubDocumentType &subdocTy
 
 void MWAWGraphicListener::_startSubDocument()
 {
-  if (!m_ps->m_isGraphicStarted) return;
+  if (!m_ds->m_isDocumentStarted) return;
   m_ps->m_inSubDocument = true;
 }
 
 void MWAWGraphicListener::_endSubDocument()
 {
-  if (!m_ps->m_isGraphicStarted || (!m_ps->m_isTextBoxOpened && !m_ps->m_isTableOpened)) return;
+  if (!m_ds->m_isDocumentStarted) return;
   if (m_ps->m_isTableOpened)
     closeTable();
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
-  m_ps->m_paragraph.m_listLevelIndex=0;
-  _changeList(); // flush the list exterior
+  if (m_ps->isInTextZone()) {
+    m_ps->m_paragraph.m_listLevelIndex=0;
+    _changeList(); // flush the list exterior
+  }
 }
 
 ///////////////////

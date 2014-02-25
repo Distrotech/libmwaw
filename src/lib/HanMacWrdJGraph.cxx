@@ -2009,14 +2009,13 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
 
   Box2f box=Box2f(Vec2f(0,0),pictSz);
   MWAWGraphicEncoder graphicEncoder;
-  MWAWGraphicListenerPtr graphicListener
-  (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-  graphicListener->startGraphic(box);
+  MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
+  graphicListener.startDocument();
   MWAWGraphicStyle defStyle;
-  graphicListener->insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
-  graphicListener->insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
-  graphicListener->insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
-  graphicListener->endGraphic();
+  graphicListener.insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
+  graphicListener.insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
+  graphicListener.insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
   if (!graphicEncoder.getBinaryResult(data,type)) return false;
@@ -2141,11 +2140,10 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
         (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
         Box2f box(Vec2f(0,0),pos.size());
         MWAWGraphicEncoder graphicEncoder;
-        MWAWGraphicListenerPtr graphicListener
-        (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-        graphicListener->startGraphic(box);
-        graphicListener->insertTextBox(box, subdoc, format.m_style);
-        graphicListener->endGraphic();
+        MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
+        graphicListener.startDocument();
+        graphicListener.insertTextBox(box, subdoc, format.m_style);
+        graphicListener.endDocument();
         librevenge::RVNGBinaryData data;
         std::string type;
         if (!graphicEncoder.getBinaryResult(data, type))
@@ -2866,9 +2864,8 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
     if (numDataToMerge>1) {
       partialBdBox.extend(3);
       MWAWGraphicEncoder graphicEncoder;
-      MWAWGraphicListenerPtr graphicListener
-      (new MWAWGraphicListener(*m_parserState, std::vector<MWAWPageSpan>(), &graphicEncoder));
-      graphicListener->startGraphic(partialBdBox);
+      MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, partialBdBox, &graphicEncoder));
+      graphicListener->startDocument();
       size_t lastChild = isLast ? c : c-1;
       for (size_t ch=childNotSent; ch <= lastChild; ++ch) {
         long localFId=group.m_childsList[ch];
@@ -2909,7 +2906,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
           break;
         }
       }
-      graphicListener->endGraphic();
+      graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicEncoder.getBinaryResult(data,type)) {
