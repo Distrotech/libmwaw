@@ -40,6 +40,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWDebug.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
@@ -102,7 +103,7 @@ protected:
 
   //! try to send a picture
   bool sendPicture(int pId, MWAWPosition const &pos,
-                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+                   MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   //
   // low level
   //

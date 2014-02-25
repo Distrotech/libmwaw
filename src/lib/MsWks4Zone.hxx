@@ -135,7 +135,7 @@ protected:
   void sendRBIL(int id, Vec2i const &sz);
 
   //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras);
+  void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
 
   /** return the text positions ( used for frame text) */
   MWAWEntry getTextPosition() const;

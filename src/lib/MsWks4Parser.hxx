@@ -97,7 +97,7 @@ protected:
   void sendFrameText(MWAWEntry const &entry, std::string const &frame);
 
   //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras);
+  void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle);
 
 private:
   MsWks4Parser(MsWks4Parser const &orig);

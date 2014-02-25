@@ -416,7 +416,7 @@ void MsWks4Parser::sendFrameText(MWAWEntry const &entry, std::string const &fram
   parser->readContentZones(ent, false);
 }
 
-void MsWks4Parser::sendOLE(int id, MWAWPosition const &pictPos, librevenge::RVNGPropertyList extras)
+void MsWks4Parser::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
 {
   if (!getTextListener()) return;
 
@@ -427,7 +427,7 @@ void MsWks4Parser::sendOLE(int id, MWAWPosition const &pictPos, librevenge::RVNG
     MWAW_DEBUG_MSG(("MsWks4Parser::sendOLE: can not find OLE%d\n", id));
     return;
   }
-  getTextListener()->insertPicture(pictPos, data, type, extras);
+  getTextListener()->insertPicture(pictPos, data, type, style);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

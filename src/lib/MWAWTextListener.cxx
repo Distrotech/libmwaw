@@ -1222,7 +1222,7 @@ void MWAWTextListener::insertPicture
 
 void MWAWTextListener::insertPicture
 (MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
- librevenge::RVNGPropertyList frameExtras)
+ MWAWGraphicStyle const &style)
 {
   // sanity check: avoid to send to many small pict
   float factor=pos.getScaleFactor(pos.unit(), librevenge::RVNG_POINT);
@@ -1234,7 +1234,7 @@ void MWAWTextListener::insertPicture
     }
     return;
   }
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, style)) return;
 
   librevenge::RVNGPropertyList propList;
   propList.insert("librevenge:mime-type", type.c_str());
@@ -1247,6 +1247,13 @@ void MWAWTextListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
+bool MWAWTextListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
+{
+  librevenge::RVNGPropertyList list;
+  style.addFrameTo(list);
+  return openFrame(pos,list);
+}
+
 bool MWAWTextListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
 {
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
@@ -1641,7 +1648,7 @@ void MWAWTextListener::_endSubDocument()
 ///////////////////
 // table
 ///////////////////
-void MWAWTextListener::openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras)
+void MWAWTextListener::openTable(MWAWTable const &table)
 {
   if (m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWTextListener::openTable: called with m_isTableOpened=true\n"));
@@ -1652,7 +1659,7 @@ void MWAWTextListener::openTable(MWAWTable const &table, librevenge::RVNGPropert
     _closeParagraph();
 
   // default value: which can be redefined by table
-  librevenge::RVNGPropertyList propList(tableExtras);
+  librevenge::RVNGPropertyList propList;
   propList.insert("table:align", "left");
   propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
 

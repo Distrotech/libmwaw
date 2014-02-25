@@ -41,6 +41,7 @@
 
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
@@ -141,8 +142,7 @@ protected:
   int findNumHardBreaks(int blockId);
 
   //! try to send a picture
-  bool sendPictureZone(int blockId, MWAWPosition const &pictPos,
-                       librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
+  bool sendPictureZone(int blockId, MWAWPosition const &pictPos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
 
   //! send a textbox zone
   bool sendTextBoxZone(int blockId, MWAWPosition const &pos,
@@ -167,7 +167,7 @@ protected:
 #endif
 
   //! try to send a picture
-  bool sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone, MWAWPosition pictPos, librevenge::RVNGPropertyList const &extras);
+  bool sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone, MWAWPosition pictPos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
 
   //! try to send a text
   bool sendText(shared_ptr<MacWrtProParserInternal::TextZone> zone, bool mainZone = false);

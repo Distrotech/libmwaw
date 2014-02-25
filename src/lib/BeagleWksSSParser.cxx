@@ -1498,32 +1498,19 @@ bool BeagleWksSSParser::sendPageFrames()
 bool BeagleWksSSParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
   MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
-  librevenge::RVNGPropertyList extra;
 
   fPos.setPagePos(frame.m_page > 0 ? frame.m_page : 1, frame.m_origin);
   fPos.setRelativePosition(MWAWPosition::Page);
-
   fPos.m_wrapping = frame.m_wrap==0 ? MWAWPosition::WNone : MWAWPosition::WDynamic;
-  if (!frame.m_border.isEmpty() &&
-      frame.m_bordersSet==(libmwaw::LeftBit|libmwaw::RightBit|
-                           libmwaw::TopBit|libmwaw::BottomBit))
-    frame.m_border.addTo(extra,"");
-  else if (!frame.m_border.isEmpty() && frame.m_bordersSet) {
-    if (frame.m_bordersSet & libmwaw::LeftBit)
-      frame.m_border.addTo(extra,"left");
-    if (frame.m_bordersSet & libmwaw::RightBit)
-      frame.m_border.addTo(extra,"right");
-    if (frame.m_bordersSet & libmwaw::TopBit)
-      frame.m_border.addTo(extra,"top");
-    if (frame.m_bordersSet & libmwaw::BottomBit)
-      frame.m_border.addTo(extra,"bottom");
-  }
-  return sendPicture(frame.m_pictId, fPos, extra);
+
+  MWAWGraphicStyle style=MWAWGraphicStyle::emptyStyle();
+  style.setBorders(frame.m_bordersSet, frame.m_border);
+  return sendPicture(frame.m_pictId, fPos, style);
 }
 
 // read/send picture (edtp resource)
 bool BeagleWksSSParser::sendPicture
-(int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
+(int pId, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
 {
   MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
   if (!listener) {
@@ -1544,7 +1531,7 @@ bool BeagleWksSSParser::sendPicture
   if (!m_structureManager->readPicture(pId, data))
     return false;
 
-  listener->insertPicture(pictPos, data, "image/pict", frameExtras);
+  listener->insertPicture(pictPos, data, "image/pict", style);
   return true;
 }
 

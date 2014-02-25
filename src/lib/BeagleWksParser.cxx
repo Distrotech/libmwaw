@@ -380,7 +380,7 @@ bool BeagleWksParser::sendPageFrames()
 bool BeagleWksParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
   MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
-  librevenge::RVNGPropertyList extra;
+  MWAWGraphicStyle style=MWAWGraphicStyle::emptyStyle();
   if (frame.m_charAnchor)
     fPos.setRelativePosition(MWAWPosition::Char);
   else {
@@ -388,22 +388,9 @@ bool BeagleWksParser::sendFrame(BeagleWksStructManager::Frame const &frame)
     fPos.setRelativePosition(MWAWPosition::Page);
 
     fPos.m_wrapping = frame.m_wrap==0 ? MWAWPosition::WNone : MWAWPosition::WDynamic;
-    if (!frame.m_border.isEmpty() &&
-        frame.m_bordersSet==(libmwaw::LeftBit|libmwaw::RightBit|
-                             libmwaw::TopBit|libmwaw::BottomBit))
-      frame.m_border.addTo(extra,"");
-    else if (!frame.m_border.isEmpty() && frame.m_bordersSet) {
-      if (frame.m_bordersSet & libmwaw::LeftBit)
-        frame.m_border.addTo(extra,"left");
-      if (frame.m_bordersSet & libmwaw::RightBit)
-        frame.m_border.addTo(extra,"right");
-      if (frame.m_bordersSet & libmwaw::TopBit)
-        frame.m_border.addTo(extra,"top");
-      if (frame.m_bordersSet & libmwaw::BottomBit)
-        frame.m_border.addTo(extra,"bottom");
-    }
+    style.setBorders(frame.m_bordersSet, frame.m_border);
   }
-  return sendPicture(frame.m_pictId, fPos, extra);
+  return sendPicture(frame.m_pictId, fPos, style);
 }
 
 ////////////////////////////////////////////////////////////
@@ -573,7 +560,7 @@ bool BeagleWksParser::readLastZone()
 
 // read/send picture (edtp resource)
 bool BeagleWksParser::sendPicture
-(int pId, MWAWPosition const &pictPos, librevenge::RVNGPropertyList frameExtras)
+(int pId, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
@@ -594,7 +581,7 @@ bool BeagleWksParser::sendPicture
   if (!m_structureManager->readPicture(pId, data))
     return false;
 
-  listener->insertPicture(pictPos, data, "image/pict", frameExtras);
+  listener->insertPicture(pictPos, data, "image/pict", style);
   return true;
 }
 

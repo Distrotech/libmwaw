@@ -192,7 +192,7 @@ void MsWks4Zone::init()
                               static_cast<MsWksGraph::OLECallback>(&MsWks4Zone::sendOLE));
 }
 
-void  MsWks4Zone::setAscii(std::string const &oleName)
+void MsWks4Zone::setAscii(std::string const &oleName)
 {
   std::string fName = libmwaw::Debug::flattenFileName(oleName);
   m_zone->initAsciiFile(fName);
@@ -227,9 +227,9 @@ void MsWks4Zone::sendRBIL(int id, Vec2i const &sz)
   m_graphParser->sendObjects(sendData);
 }
 
-void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, librevenge::RVNGPropertyList frameExtras)
+void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle)
 {
-  m_mainParser->sendOLE(id, pos, frameExtras);
+  m_mainParser->sendOLE(id, pos, frameStyle);
 }
 
 ////////////////////////////////////////////////////////////

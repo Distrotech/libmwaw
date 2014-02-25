@@ -189,8 +189,7 @@ protected:
   bool readGroupUnknown(ClarisWksGraphInternal::Group &group, int zoneSz, int id);
 
   //! sends a picture zone
-  bool sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPosition pos,
-                   librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
+  bool sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPosition pos);
 
   //! sends a basic graphic zone
   bool sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosition pos);

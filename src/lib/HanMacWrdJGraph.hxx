@@ -137,13 +137,13 @@ protected:
 
 
   /** try to send a frame to the listener */
-  bool sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos);
   /** try to send a basic picture to the listener */
   bool sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &pict, MWAWPosition pos);
   /** try to send a comment box to the listener */
   bool sendComment(HanMacWrdJGraphInternal::CommentFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
   /** try to send a picture frame */
-  bool sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos);
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
@@ -170,7 +170,7 @@ protected:
   /** return the footnote text zone id and the list of first char position */
   bool getFootnoteInformations(long &textZId, std::vector<long> &fPosList) const;
   /** try to send a frame to the listener */
-  bool sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(long frameId, MWAWPosition pos);
   //! ask main parser to send a text zone
   bool sendText(long textId, long fPos, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
 

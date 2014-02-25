@@ -80,8 +80,7 @@ public:
   /** callback used to send a frame */
   typedef void (MWAWParser::* FrameCallback)(MWAWEntry const &entry, std::string const &frame);
   /** callback used to send a OLE */
-  typedef void (MWAWParser::* OLECallback)(int id, MWAWPosition const &pos,
-      librevenge::RVNGPropertyList frameExtras);
+  typedef void (MWAWParser::* OLECallback)(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
 
   //! constructor
   MsWksGraph(MWAWParser &parser, MsWksZone &zone);

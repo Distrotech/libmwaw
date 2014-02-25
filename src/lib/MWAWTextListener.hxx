@@ -45,6 +45,7 @@
 #include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
+#include "MWAWGraphicStyle.hxx"
 
 #include "MWAWListener.hxx"
 
@@ -168,8 +169,7 @@ public:
 
   /** adds a picture in given position */
   void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
-                     std::string type="image/pict",
-                     librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+                     std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** adds a shape picture in given position */
   void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
@@ -180,7 +180,7 @@ public:
 
   // ------- table -----------------
   /** open a table*/
-  void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList());
+  void openTable(MWAWTable const &table);
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
@@ -222,7 +222,11 @@ protected:
   void _endSubDocument();
 
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
-  bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  /** tries to open a frame */
+  bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
+  /** remove: the old function used to open a frame */
+  bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
+  /** tries to close the last open frame */
   void closeFrame();
 
 
@@ -243,10 +247,14 @@ protected:
   */
   int _getListId() const;
 
+  /** low level: the function which opens a new span property */
   void _openSpan();
+  /** low level: the function which closes the last opened span property */
   void _closeSpan();
 
+  /** low level: flush the deferred text */
   void _flushText();
+  /** low level: flush the deferred tabs */
   void _flushDeferredTabs();
 
   void _insertBreakIfNecessary(librevenge::RVNGPropertyList &propList);

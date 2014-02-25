@@ -136,6 +136,25 @@ bool MWAWGraphicStyle::Pattern::getBinary(librevenge::RVNGBinaryData &data, std:
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
+void MWAWGraphicStyle::setBorders(int wh, MWAWBorder const &border)
+{
+  int const allBits = libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit;
+  if (wh & (~allBits)) {
+    MWAW_DEBUG_MSG(("MWAWGraphicStyle::setBorders: unknown borders\n"));
+    return;
+  }
+  size_t numData = 4;
+  if (m_bordersList.size() < numData) {
+    MWAWBorder emptyBorder;
+    emptyBorder.m_style = MWAWBorder::None;
+    m_bordersList.resize(numData, emptyBorder);
+  }
+  if (wh & libmwaw::LeftBit) m_bordersList[libmwaw::Left] = border;
+  if (wh & libmwaw::RightBit) m_bordersList[libmwaw::Right] = border;
+  if (wh & libmwaw::TopBit) m_bordersList[libmwaw::Top] = border;
+  if (wh & libmwaw::BottomBit) m_bordersList[libmwaw::Bottom] = border;
+}
+
 void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) const
 {
   if (!hasLine())
@@ -315,6 +334,34 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
   }
 }
 
+void MWAWGraphicStyle::addFrameTo(librevenge::RVNGPropertyList &list) const
+{
+  if (m_backgroundOpacity>=0) {
+    if (!m_backgroundColor.isWhite())
+      list.insert("fo:background-color", m_backgroundColor.str().c_str());
+    list.insert("style:background-transparency", 1.-m_backgroundOpacity, librevenge::RVNG_PERCENT);
+  }
+  for (size_t c = 0; c < m_bordersList.size(); c++) {
+    switch (c) {
+    case libmwaw::Left:
+      m_bordersList[c].addTo(list, "left");
+      break;
+    case libmwaw::Right:
+      m_bordersList[c].addTo(list, "right");
+      break;
+    case libmwaw::Top:
+      m_bordersList[c].addTo(list, "top");
+      break;
+    case libmwaw::Bottom:
+      m_bordersList[c].addTo(list, "bottom");
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MWAWGraphicStyle::addFrameTo: can not send %d border\n",int(c)));
+      break;
+    }
+  }
+}
+
 int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
 {
   if (m_lineWidth < a.m_lineWidth) return -1;
@@ -372,6 +419,21 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   if (m_gradientBorder > a.m_gradientBorder) return 1;
   diff=m_gradientPercentCenter.cmp(a.m_gradientPercentCenter);
   if (diff) return diff;
+
+  size_t numBorders=m_bordersList.size();
+  if (a.m_bordersList.size()>numBorders)
+    numBorders=a.m_bordersList.size();
+  for (size_t b=0; b<numBorders; ++b) {
+    bool empty=b>=m_bordersList.size() || m_bordersList[b].isEmpty();
+    bool aEmpty=b>=a.m_bordersList.size() || a.m_bordersList[b].isEmpty();
+    if (empty!=aEmpty) return empty ? 1 : -1;
+    diff=m_bordersList[b].compare(a.m_bordersList[b]);
+    if (diff) return diff;
+  }
+  if (m_backgroundColor < a.m_backgroundColor) return -1;
+  if (m_backgroundColor > a.m_backgroundColor) return 1;
+  if (m_backgroundOpacity < a.m_backgroundOpacity) return -1;
+  if (m_backgroundOpacity > a.m_backgroundOpacity) return 1;
   if (m_gradientRadius < a.m_gradientRadius) return -1;
   if (m_gradientRadius > a.m_gradientRadius) return 1;
   if (m_rotate < a.m_rotate) return -1;
@@ -481,6 +543,23 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     o << "offset=" << st.m_shadowOffset << ",";
     o << "],";
   }
+  if (st.hasBorders()) {
+    for (size_t i = 0; i < st.m_bordersList.size(); i++) {
+      if (st.m_bordersList[i].m_style == MWAWBorder::None)
+        continue;
+      o << "bord";
+      if (i < 4) {
+        static char const *wh[] = { "L", "R", "T", "B"};
+        o << wh[i];
+      }
+      else o << "[#wh=" << i << "]";
+      o << "=" << st.m_bordersList[i] << ",";
+    }
+  }
+  if (!st.m_backgroundColor.isWhite())
+    o << "background[color]=" << st.m_backgroundColor << ",";
+  if (st.m_backgroundOpacity>=0)
+    o << "background[opacity]=" << 100.f *st.m_backgroundOpacity << "%,";
   o << st.m_extra;
   return o;
 }

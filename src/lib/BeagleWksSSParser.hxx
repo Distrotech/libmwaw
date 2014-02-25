@@ -41,6 +41,7 @@
 
 #include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
@@ -97,7 +98,7 @@ protected:
   bool sendFrame(BeagleWksStructManager::Frame const &frame);
   //! try to send a picture
   bool sendPicture(int pId, MWAWPosition const &pos,
-                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+                   MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
 protected:
   //! finds the different objects zones
   bool createZones();

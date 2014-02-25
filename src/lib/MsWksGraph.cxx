@@ -2725,7 +2725,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     if (!bmap.getPictureData(input, data,type,m_zone.getPalette(4)))
       break;
     m_zone.ascii().skipZone(bmap.m_dataPos, bmap.m_pos.end()-1);
-    listener->insertPicture(pictPos, data, type, extras);
+    listener->insertPicture(pictPos, data, type, zone->m_style);
     return;
   }
   case MsWksGraphInternal::Zone::Shape: {
@@ -2738,7 +2738,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     std::string type;
     if (!zone->getBinaryData(input, data,type))
       break;
-    listener->insertPicture(pictPos, data, type, extras);
+    listener->insertPicture(pictPos, data, type, zone->m_style);
     return;
   }
   case MsWksGraphInternal::Zone::Textv4: {
@@ -2765,7 +2765,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
       return;
     }
     MsWksGraphInternal::OLEZone &ole = static_cast<MsWksGraphInternal::OLEZone &>(*zone);
-    (m_mainParser->*m_oleCallback)(ole.m_oleId, pictPos, extras);
+    (m_mainParser->*m_oleCallback)(ole.m_oleId, pictPos, zone->m_style);
     return;
   }
   case MsWksGraphInternal::Zone::Unknown:

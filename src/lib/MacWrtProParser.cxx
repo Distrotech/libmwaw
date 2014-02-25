@@ -1629,7 +1629,7 @@ bool MacWrtProParser::sendText(shared_ptr<MacWrtProParserInternal::TextZone> zon
 // try to send a picture
 ////////////////////////////////////////////////////////////
 bool MacWrtProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
-                                      librevenge::RVNGPropertyList extras)
+                                      MWAWGraphicStyle const &style)
 {
   std::map<int, shared_ptr<MacWrtProParserInternal::Zone> >::iterator it;
   it = m_state->m_dataMap.find(blockId);
@@ -1637,13 +1637,12 @@ bool MacWrtProParser::sendPictureZone(int blockId, MWAWPosition const &pictPos,
     MWAW_DEBUG_MSG(("MacWrtProParser::sendPictureZone: can not find picture zone\n"));
     return false;
   }
-  sendPicture(it->second, pictPos, extras);
+  sendPicture(it->second, pictPos, style);
   return true;
 }
 
 bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone,
-                                  MWAWPosition pictPos,
-                                  librevenge::RVNGPropertyList const &extras)
+                                  MWAWPosition pictPos, MWAWGraphicStyle const &style)
 {
   if (!zone) return false;
   if (zone->m_type != 1) {
@@ -1719,7 +1718,7 @@ bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone
       librevenge::RVNGBinaryData data;
       input->seek(4, librevenge::RVNG_SEEK_SET);
       input->readDataBlock(pictSize, data);
-      getTextListener()->insertPicture(pictPos, data, "image/pict", extras);
+      getTextListener()->insertPicture(pictPos, data, "image/pict", style);
     }
     return true;
   }
@@ -1736,7 +1735,7 @@ bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone
     librevenge::RVNGBinaryData data;
     std::string type;
     if (pict->getBinary(data,type))
-      getTextListener()->insertPicture(pictPos, data, type, extras);
+      getTextListener()->insertPicture(pictPos, data, type, style);
   }
   return true;
 }

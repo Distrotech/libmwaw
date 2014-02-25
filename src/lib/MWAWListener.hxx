@@ -40,6 +40,8 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWGraphicStyle.hxx"
+
 class MWAWCell;
 class MWAWTable;
 
@@ -84,9 +86,9 @@ public:
   virtual MWAWPageSpan const &getPageSpan() = 0;
 
   // ------ header/footer --------
-  /** insert a header */
+  /** insert a header (interaction with MWAWPageSpan which fills the parameters for openHeader) */
   virtual bool insertHeader(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
-  /** insert a footer */
+  /** insert a footer (interaction with MWAWPageSpan which fills the parameters for openFooter) */
   virtual bool insertFooter(MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList const &extras) = 0;
   /** returns true if the header/footer is open */
   virtual bool isHeaderFooterOpened() const = 0;
@@ -188,8 +190,7 @@ public:
 
   /** adds a picture in given position */
   virtual void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
-                             std::string type="image/pict",
-                             librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList()) = 0;
+                             std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle()) = 0;
   /** adds a shape picture in given position */
   virtual void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
                              MWAWGraphicStyle const &style) = 0;
@@ -200,7 +201,7 @@ public:
 
   // ------- table -----------------
   /** open a table*/
-  virtual void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList()) = 0;
+  virtual void openTable(MWAWTable const &table) = 0;
 };
 
 #endif

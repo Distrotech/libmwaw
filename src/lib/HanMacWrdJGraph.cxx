@@ -1918,7 +1918,7 @@ bool HanMacWrdJGraph::readTableFormatsList(HanMacWrdJGraphInternal::Table &table
 // send data to a listener
 ////////////////////////////////////////////////////////////
 
-bool HanMacWrdJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendFrame(long frameId, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
 
@@ -1933,7 +1933,7 @@ bool HanMacWrdJGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNG
     MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: frame %lx is not initialized\n", frameId));
     return false;
   }
-  return sendFrame(*frame, pos, extras);
+  return sendFrame(*frame, pos);
 }
 
 // --- basic shape
@@ -1959,7 +1959,7 @@ bool HanMacWrdJGraph::sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &
 }
 
 // picture
-bool HanMacWrdJGraph::sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
 #ifdef DEBUG_WITH_FILES
@@ -1992,7 +1992,7 @@ bool HanMacWrdJGraph::sendPictureFrame(HanMacWrdJGraphInternal::PictureFrame con
   }
 #endif
 
-  m_parserState->m_textListener->insertPicture(pos, data, "image/pict", extras);
+  m_parserState->m_textListener->insertPicture(pos, data, "image/pict");
 
   return true;
 }
@@ -2116,7 +2116,7 @@ bool HanMacWrdJGraph::sendTableUnformatted(long fId)
 ////////////////////////////////////////////////////////////
 // low level
 ////////////////////////////////////////////////////////////
-bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWAWPosition pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
@@ -2148,11 +2148,11 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
         std::string type;
         if (!graphicEncoder.getBinaryResult(data, type))
           return false;
-        listener->insertPicture(pos, data, type, extras);
+        listener->insertPicture(pos, data, type);
         return true;
       }
     }
-    return sendTextbox(static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame), pos, extras);
+    return sendTextbox(static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame), pos);
   }
   case 6: {
     HanMacWrdJGraphInternal::PictureFrame const &pict =
@@ -2168,10 +2168,10 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::EmptyPicture, 0));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
-    return sendPictureFrame(pict, pos, extras);
+    return sendPictureFrame(pict, pos);
   }
   case 8:
     frame.m_parsed = true;
@@ -2190,7 +2190,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
        (*this, input, HanMacWrdJGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     if (pos.m_anchorTo==MWAWPosition::Page ||
@@ -2203,7 +2203,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       (new HanMacWrdJGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
       pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     if (table.sendTable(listener, pos.m_anchorTo==MWAWPosition::Frame))
@@ -2212,7 +2212,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
   }
   case 10:
     frame.m_parsed = true;
-    return sendComment(static_cast<HanMacWrdJGraphInternal::CommentFrame const &>(frame), pos, extras);
+    return sendComment(static_cast<HanMacWrdJGraphInternal::CommentFrame const &>(frame), pos);
   case 11: {
     HanMacWrdJGraphInternal::Group const &group=static_cast<HanMacWrdJGraphInternal::Group const &>(frame);
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) && !canCreateGraphic(group)) {
@@ -2223,7 +2223,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::Group, group.m_fileId));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     sendGroup(group, pos);

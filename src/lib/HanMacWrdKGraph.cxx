@@ -1148,7 +1148,7 @@ bool HanMacWrdKGraph::readPicture(shared_ptr<HanMacWrdKZone> zone)
 ////////////////////////////////////////////////////////////
 // send data to a listener
 ////////////////////////////////////////////////////////////
-bool HanMacWrdKGraph::sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPicture(long pictId, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   std::map<long, shared_ptr<HanMacWrdKGraphInternal::Picture> >::const_iterator pIt
@@ -1158,11 +1158,11 @@ bool HanMacWrdKGraph::sendPicture(long pictId, MWAWPosition pos, librevenge::RVN
     MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendPicture: can not find the picture %lx\n", pictId));
     return false;
   }
-  sendPicture(*pIt->second, pos, extras);
+  sendPicture(*pIt->second, pos);
   return true;
 }
 
-bool HanMacWrdKGraph::sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos)
 {
 #ifdef DEBUG_WITH_FILES
   bool firstTime = picture.m_parsed == false;
@@ -1188,12 +1188,12 @@ bool HanMacWrdKGraph::sendPicture(HanMacWrdKGraphInternal::Picture const &pictur
     libmwaw::Debug::dumpFile(data, f.str().c_str());
   }
 #endif
-  m_parserState->m_textListener->insertPicture(pos, data, "image/pict", extras);
+  m_parserState->m_textListener->insertPicture(pos, data, "image/pict");
 
   return true;
 }
 
-bool HanMacWrdKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendFrame(long frameId, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt=
@@ -1204,10 +1204,10 @@ bool HanMacWrdKGraph::sendFrame(long frameId, MWAWPosition pos, librevenge::RVNG
   }
   if (pos.size()[0]<=0 || pos.size()[1]<=0)
     pos.setSize(fIt->second->m_pos.size());
-  return sendFrame(*fIt->second, pos, extras);
+  return sendFrame(*fIt->second, pos);
 }
 
-bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos)
 {
   MWAWTextListenerPtr listener=m_parserState->m_textListener;
   if (!listener) return true;
@@ -1243,12 +1243,12 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
         std::string type;
         if (!graphicEncoder.getBinaryResult(data, type))
           return false;
-        listener->insertPicture(pos, data, type, extras);
+        listener->insertPicture(pos, data, type);
         return true;
       }
     }
   case 10:
-    return sendTextBox(static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame), pos, extras);
+    return sendTextBox(static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame), pos);
   case 6: {
     HanMacWrdKGraphInternal::PictureFrame const &pict =
       static_cast<HanMacWrdKGraphInternal::PictureFrame const &>(frame);
@@ -1263,10 +1263,10 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::EmptyPicture, pict.m_fileId));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
-    return sendPictureFrame(pict, pos, extras);
+    return sendPictureFrame(pict, pos);
   }
   case 8:
     return sendShapeGraph(static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame), pos);
@@ -1279,7 +1279,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, HanMacWrdKGraphInternal::SubDocument::UnformattedTable, frame.m_fileId));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     if (pos.m_anchorTo==MWAWPosition::Page ||
@@ -1292,7 +1292,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
       pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     if (table.sendTable(listener,pos.m_anchorTo==MWAWPosition::Frame))
@@ -1308,7 +1308,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::Group, frame.m_fileId));
-      listener->insertTextBox(pos, subdoc, extras);
+      listener->insertTextBox(pos, subdoc);
       return true;
     }
     sendGroup(group, pos);
@@ -1347,13 +1347,13 @@ bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
   return true;
 }
 
-bool HanMacWrdKGraph::sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
   //fixme: check if we have border
-  sendPicture(pict.m_fileId, pos, extras);
+  sendPicture(pict.m_fileId, pos);
   return true;
 }
 

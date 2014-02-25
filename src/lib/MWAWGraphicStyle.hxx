@@ -191,7 +191,7 @@ public:
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
     m_pattern(),
     m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
-    m_rotate(0), m_extra("")
+    m_backgroundColor(MWAWColor::white()), m_backgroundOpacity(-1), m_bordersList(), m_rotate(0), m_extra("")
   {
     m_arrows[0]=m_arrows[1]=false;
     m_flip[0]=m_flip[1]=false;
@@ -243,6 +243,17 @@ public:
   {
     return hasSurfaceColor() || hasPattern() || hasGradient();
   }
+  //! set the background color
+  void setBackgroundColor(MWAWColor const &col, float opacity = 1)
+  {
+    m_backgroundColor = col;
+    m_backgroundOpacity = opacity;
+  }
+  //! returns true if the background is defined
+  bool hasBackgroundColor() const
+  {
+    return m_backgroundOpacity > 0;
+  }
   //! set the shadow color
   void setShadowColor(MWAWColor const &col, float opacity = 1)
   {
@@ -254,11 +265,29 @@ public:
   {
     return m_shadowOpacity > 0;
   }
+  //! return true if the cell has some border
+  bool hasBorders() const
+  {
+    return m_bordersList.size() != 0;
+  }
+  //! return the frame border: libmwaw::Left | ...
+  std::vector<MWAWBorder> const &borders() const
+  {
+    return m_bordersList;
+  }
+  //! reset the border
+  void resetBorders()
+  {
+    m_bordersList.resize(0);
+  }
+  //! sets the cell border: wh=libmwaw::LeftBit|...
+  void setBorders(int wh, MWAWBorder const &border);
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st);
-  //! add to propList
+  //! add all the parameters to the propList excepted the frame parameter: the background and the borders
   void addTo(librevenge::RVNGPropertyList &pList, bool only1d=false) const;
-
+  //! add all the frame parameters to propList: the background and the borders
+  void addFrameTo(librevenge::RVNGPropertyList &pList) const;
   /** compare two styles */
   int cmp(MWAWGraphicStyle const &a) const;
 
@@ -307,7 +336,20 @@ public:
   //! two bool to indicated if extremity has arrow or not
   bool m_arrows[2];
 
+  //
+  // related to the frame
+  //
+
+  //! the background color
+  MWAWColor m_backgroundColor;
+  //! true if the background has some color
+  float m_backgroundOpacity;
+  //! the borders MWAWBorder::Pos (for a frame)
+  std::vector<MWAWBorder> m_bordersList;
+
+  //
   // some transformation: must probably be somewhere else
+  //
 
   //! the rotation
   float m_rotate;

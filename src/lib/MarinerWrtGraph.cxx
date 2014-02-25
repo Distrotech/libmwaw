@@ -119,16 +119,9 @@ struct Token {
     return false;
   }
   //! add border properties
-  void addPictBorderProperties(librevenge::RVNGPropertyList &pList) const
+  void addPictBorder(MWAWGraphicStyle &style) const
   {
     if (!hasPictBorders()) return;
-    bool sameBorders=true;
-    for (int i=0; i < 3; ++i) {
-      if (m_pictBorderType[i]==m_pictBorderType[i+1])
-        continue;
-      sameBorders=false;
-      break;
-    }
     for (int i = 0; i < 4; i++) {
       if (m_pictBorderType[i] <=0)
         continue;
@@ -177,12 +170,8 @@ struct Token {
         border.m_style = MWAWBorder::None;
         break;
       }
-      if (sameBorders) {
-        border.addTo(pList);
-        break;
-      }
-      static char const *(wh[]) = { "left", "top", "right", "bottom"};
-      border.addTo(pList, wh[i]);
+      static int const wh[] = { libmwaw::LeftBit, libmwaw::TopBit, libmwaw::RightBit, libmwaw::BottomBit };
+      style.setBorders(wh[i], border);
     }
   }
   //! operator<<
@@ -746,10 +735,10 @@ void MarinerWrtGraph::sendPicture(MarinerWrtGraphInternal::Token const &tkn)
   }
   MWAWPosition posi(Vec2i(0,0),dim,librevenge::RVNG_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
-  librevenge::RVNGPropertyList extras;
-  tkn.addPictBorderProperties(extras);
+  MWAWGraphicStyle style;
+  tkn.addPictBorder(style);
   if (m_parserState->m_textListener)
-    m_parserState->m_textListener->insertPicture(posi, data, "image/pict", extras);
+    m_parserState->m_textListener->insertPicture(posi, data, "image/pict", style);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 

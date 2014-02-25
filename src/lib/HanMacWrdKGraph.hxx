@@ -117,9 +117,9 @@ protected:
   // interface with mainParser
 
   /** try to send a frame to the listener */
-  bool sendFrame(long frameId, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(long frameId, MWAWPosition pos);
   /** try to send a picture to the listener */
-  bool sendPicture(long pictId, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPicture(long pictId, MWAWPosition pos);
 
   //! ask main parser to send a text zone
   bool sendText(long textId, long id, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
@@ -135,13 +135,13 @@ protected:
   bool checkGroupStructures(long fileId, long fileSubId, std::multimap<long, long> &seens, bool inGroup);
 
   /** try to send a picture to the listener */
-  bool sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPicture(HanMacWrdKGraphInternal::Picture const &picture, MWAWPosition pos);
   /** try to send a frame to the listener */
-  bool sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWAWPosition pos);
   /** try to send a basic picture to the listener */
   bool sendShapeGraph(HanMacWrdKGraphInternal::ShapeGraph const &shape, MWAWPosition pos);
   /** try to send a picture frame */
-  bool sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame const &pict, MWAWPosition pos);
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */

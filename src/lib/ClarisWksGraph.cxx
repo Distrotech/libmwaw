@@ -2549,9 +2549,9 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       librevenge::RVNGBinaryData data;
       std::string type;
       if (graphicEncoder.getBinaryResult(data,type)) {
-        librevenge::RVNGPropertyList extras;
-        extras.insert("style:background-transparency", "100%");
-        listener->insertPicture(pos, data, type, extras);
+        MWAWGraphicStyle style(MWAWGraphicStyle::emptyStyle());
+        style.m_backgroundOpacity=0;
+        listener->insertPicture(pos, data, type, style);
       }
       g=lastOk;
     }
@@ -2809,8 +2809,7 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWBasi
   return true;
 }
 
-bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict,
-                                 MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPosition pos)
 {
   bool send = false;
   bool posOk = pos.size()[0] > 0 && pos.size()[1] > 0;
@@ -2838,7 +2837,7 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict,
           librevenge::RVNGBinaryData data;
           std::string type;
           if (thePict->getBinary(data,type))
-            listener->insertPicture(pos, data, type, extras);
+            listener->insertPicture(pos, data, type);
         }
         send = true;
       }
@@ -2862,7 +2861,7 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict,
         librevenge::RVNGBinaryData data;
         input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
         input->readDataBlock(entry.length(), data);
-        listener->insertPicture(pos, data, "image/pict", extras);
+        listener->insertPicture(pos, data, "image/pict");
       }
       send = true;
       break;

@@ -127,7 +127,7 @@ public:
   // ------- chart -----------------
   /** adds a chart in given position */
   void insertChart(MWAWPosition const &pos, MWAWChart &chart,
-                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+                   MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
 
   // ------ text data -----------
 
@@ -186,8 +186,7 @@ public:
 
   /** adds a picture in given position */
   void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
-                     std::string type="image/pict",
-                     librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
+                     std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** adds a shape picture in given position */
   void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
@@ -198,11 +197,9 @@ public:
 
   // ------- table -----------------
   /** adds a table in given position */
-  void insertTable(MWAWPosition const &pos, MWAWTable &table,
-                   librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList());
-
+  void insertTable(MWAWPosition const &pos, MWAWTable &table, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** open a table */
-  void openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras=librevenge::RVNGPropertyList());
+  void openTable(MWAWTable const &table);
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
@@ -246,7 +243,9 @@ protected:
   void _endSubDocument();
 
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
-  bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
+  /** tries to open a frame */
+  bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   void closeFrame();
 
 

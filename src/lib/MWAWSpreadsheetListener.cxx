@@ -1115,7 +1115,7 @@ void MWAWSpreadsheetListener::insertPicture
 
 void MWAWSpreadsheetListener::insertPicture
 (MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type,
- librevenge::RVNGPropertyList frameExtras)
+ MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertPicture insert a picture outside a sheet is not implemented\n"));
@@ -1131,7 +1131,7 @@ void MWAWSpreadsheetListener::insertPicture
     }
     return;
   }
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, style)) return;
 
   librevenge::RVNGPropertyList propList;
   propList.insert("librevenge:mime-type", type.c_str());
@@ -1144,6 +1144,13 @@ void MWAWSpreadsheetListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
+bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
+{
+  librevenge::RVNGPropertyList list;
+  style.addFrameTo(list);
+  return openFrame(pos,list);
+}
+
 bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
@@ -1714,13 +1721,13 @@ void MWAWSpreadsheetListener::closeSheetCell()
 }
 
 void MWAWSpreadsheetListener::insertTable
-(MWAWPosition const &pos, MWAWTable &table, librevenge::RVNGPropertyList frameExtras)
+(MWAWPosition const &pos, MWAWTable &table, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertTable insert a table outside a sheet is not implemented\n"));
     return;
   }
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, style)) return;
 
   _pushParsingState();
   _startSubDocument();
@@ -1744,13 +1751,13 @@ void MWAWSpreadsheetListener::insertTable
 // chart
 ///////////////////
 void MWAWSpreadsheetListener::insertChart
-(MWAWPosition const &pos, MWAWChart &chart, librevenge::RVNGPropertyList frameExtras)
+(MWAWPosition const &pos, MWAWChart &chart, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertChart outside a chart in a sheet is not implemented\n"));
     return;
   }
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, style)) return;
 
   _pushParsingState();
   _startSubDocument();
@@ -1769,7 +1776,7 @@ void MWAWSpreadsheetListener::insertChart
   closeFrame();
 }
 
-void MWAWSpreadsheetListener::openTable(MWAWTable const &table, librevenge::RVNGPropertyList tableExtras)
+void MWAWSpreadsheetListener::openTable(MWAWTable const &table)
 {
   if (m_ps->m_isFrameOpened || m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openTable: no frame is already open...\n"));
@@ -1780,7 +1787,7 @@ void MWAWSpreadsheetListener::openTable(MWAWTable const &table, librevenge::RVNG
     _closeParagraph();
 
   // default value: which can be redefined by table
-  librevenge::RVNGPropertyList propList(tableExtras);
+  librevenge::RVNGPropertyList propList;
   propList.insert("table:align", "left");
   propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
 

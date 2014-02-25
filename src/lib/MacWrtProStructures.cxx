@@ -146,6 +146,23 @@ struct Block {
       o << bl.m_extra << ",";
     return o;
   }
+  //! update the style to include frame style
+  void fillFrame(MWAWGraphicStyle &style) const
+  {
+    if (!m_surfaceColor.isWhite())
+      style.setBackgroundColor(m_surfaceColor);
+    if (!hasBorders())
+      return;
+    for (int w=0; w < 4; ++w) {
+      MWAWBorder border(m_lineBorder);
+      border.m_width=m_borderWList[w]; // ok also for setAll
+      if (border.isEmpty())
+        continue;
+      static int const wh[] = { libmwaw::LeftBit, libmwaw::RightBit, libmwaw::TopBit, libmwaw::BottomBit};
+      style.setBorders(wh[w], border);
+    }
+  }
+
   void fillFramePropertyList(librevenge::RVNGPropertyList &extra) const
   {
     if (!m_surfaceColor.isWhite())
@@ -2552,9 +2569,9 @@ bool MacWrtProStructures::send(int blockId, bool mainZone)
   else if (block->isText())
     m_mainParser.sendTextZone(block->m_fileBlock, mainZone);
   else if (block->isGraphic()) {
-    librevenge::RVNGPropertyList extras;
-    block->fillFramePropertyList(extras);
-    m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition(), extras);
+    MWAWGraphicStyle style;
+    block->fillFrame(style);
+    m_mainParser.sendPictureZone(block->m_fileBlock, block->getPosition(), style);
   }
   else if (block->m_type == 3) {
     if (m_state->m_tablesMap.find(blockId) == m_state->m_tablesMap.end()) {
