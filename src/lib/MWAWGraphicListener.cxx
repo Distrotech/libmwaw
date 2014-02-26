@@ -976,7 +976,7 @@ void MWAWGraphicListener::insertPicture
 }
 
 void MWAWGraphicListener::insertTextBox
-(Box2f const &bdbox, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style)
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTextBox: the document is not started\n"));
@@ -987,21 +987,22 @@ void MWAWGraphicListener::insertTextBox
   if (!openFrame())
     return;
   librevenge::RVNGPropertyList propList;
-  _handleFrameParameters(propList, bdbox, style);
+  _handleFrameParameters(propList, pos, style);
   float rotate = style.m_rotate;
   // flip does not works on text, so we ignore it...
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
+  float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
   if (rotate<0||rotate>0) {
     propList.insert("librevenge:rotate", rotate);
-    Vec2f size=bdbox.size();
+    Vec2f size=pointFactor*pos.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
-    Vec2f center=bdbox[0]-m_ps->m_origin+0.5f*size;
+    Vec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
     propList.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
     propList.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
   m_documentInterface->startTextObject(propList);
-  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_TEXT_BOX);
+  handleSubDocument(pointFactor*pos.origin(), subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->endTextObject();
   closeFrame();
 }

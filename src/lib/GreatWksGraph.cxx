@@ -1800,7 +1800,10 @@ bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal
      the original box */
   if (text.m_rotate)
     textBox=libmwaw::rotateBoxFromCenter(box, (float) -text.m_rotate);
-  listener->insertTextBox(textBox, doc, text.getStyle(style));
+  MWAWPosition textPos(textBox[0], textBox.size(), librevenge::RVNG_POINT);
+  textPos.m_anchorTo=MWAWPosition::Page;
+  textPos.m_wrapping = MWAWPosition::WBackground;
+  listener->insertTextBox(textPos, doc, text.getStyle(style));
   return true;
 }
 

@@ -110,6 +110,21 @@ struct Style : public MWAWGraphicStyle {
   Style(): MWAWGraphicStyle(), m_id(-1), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0)
   {
   }
+  //! returns the wrapping
+  MWAWPosition::Wrapping getWrapping() const
+  {
+    switch (m_wrapping&3) {
+    case 0:
+      return MWAWPosition::WRunThrough;
+      break;
+    case 1:
+    case 2:
+      return MWAWPosition::WDynamic;
+    default:
+      break;
+    }
+    return MWAWPosition::WNone;
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Style const &st)
   {
@@ -406,7 +421,7 @@ struct ZoneZone : public Zone {
   int m_subId;
   //! the style id
   int m_styleId;
-  //! the wraping separator
+  //! the wrapping separator
   int m_wrappingSep;
   //! flag
   int m_flags[9];
@@ -2330,14 +2345,15 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
       ClarisWksGraphInternal::ZoneZone const &zone=
         static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zone.m_id);
+      MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
+      pos.m_anchorTo=MWAWPosition::Page;
       if (dset && dset->m_fileType==4) {
-        MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
         sendBitmap(zone.m_id, listener, pos);
         continue;
       }
       shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zone.m_id));
       if (dset && dset->m_fileType==1)
-        listener->insertTextBox(box, doc, zone.m_style);
+        listener->insertTextBox(pos, doc, zone.m_style);
       else
         listener->insertGroup(box, doc);
     }
@@ -2584,17 +2600,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   int zId = childZone.m_id;
   shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
   ClarisWksGraphInternal::Style const cStyle = childZone.m_style;
-  switch (cStyle.m_wrapping&3) {
-  case 0:
-    pos.m_wrapping = MWAWPosition::WRunThrough;
-    break;
-  case 1:
-  case 2:
-    pos.m_wrapping = MWAWPosition::WDynamic;
-    break;
-  default:
-    break;
-  }
+  pos.m_wrapping=cStyle.getWrapping();
   // if this is a group, try to send it as a picture
   bool isLinked=group.isLinked(zId);
   bool isGroup = dset && dset->m_fileType==0;
@@ -2609,7 +2615,10 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
     graphicListener.startDocument();
     shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
-    graphicListener.insertTextBox(box, doc, cStyle);
+    MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+    textPos.m_anchorTo=MWAWPosition::Page;
+    textPos.m_wrapping=pos.m_wrapping;
+    graphicListener.insertTextBox(textPos, doc, cStyle);
     graphicListener.endDocument();
     librevenge::RVNGBinaryData data;
     std::string mime;
@@ -2792,17 +2801,7 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWBasi
       pos.setSize(Vec2f(1,1));
     }
   }
-  if (dynamic_cast<MWAWGraphicListener *>(&listener)) {
-    MWAWGraphicStyle style;
-    style.m_lineWidth=0;
-    dynamic_cast<MWAWGraphicListener &>(listener).insertPicture(pos, data, "image/pict", style);
-  }
-  else if (dynamic_cast<MWAWListener *>(&listener))
-    dynamic_cast<MWAWListener &>(listener).insertPicture(pos, data, "image/pict");
-  else {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not determine the listener type\n"));
-  }
-
+  listener.insertPicture(pos, data, "image/pict");
   return true;
 }
 

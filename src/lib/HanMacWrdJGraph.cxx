@@ -2140,7 +2140,9 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
         MWAWGraphicEncoder graphicEncoder;
         MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
         graphicListener.startDocument();
-        graphicListener.insertTextBox(box, subdoc, format.m_style);
+        MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+        textPos.m_anchorTo=MWAWPosition::Page;
+        graphicListener.insertTextBox(textPos, subdoc, format.m_style);
         graphicListener.endDocument();
         librevenge::RVNGBinaryData data;
         std::string type;
@@ -2778,7 +2780,9 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
         static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-      listener->insertTextBox(box, subdoc, format.m_style);
+      MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+      textPos.m_anchorTo=MWAWPosition::Page;
+      listener->insertTextBox(textPos, subdoc, format.m_style);
       break;
     }
     case 8: {
@@ -2881,7 +2885,9 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
             static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(child);
           MWAWSubDocumentPtr subdoc
           (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-          graphicListener->insertTextBox(box, subdoc, format.m_style);
+          MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+          textPos.m_anchorTo=MWAWPosition::Page;
+          graphicListener->insertTextBox(textPos, subdoc, format.m_style);
           break;
         }
         case 8: {

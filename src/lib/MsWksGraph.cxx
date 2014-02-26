@@ -2267,7 +2267,10 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
           // a textbox can not have border
           MWAWGraphicStyle style(localChild.m_style);
           style.m_lineWidth=0;
-          graphicListener->insertTextBox(box, subdoc, style);
+          MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+          textPos.m_anchorTo=MWAWPosition::Page;
+          textPos.m_wrapping =  MWAWPosition::WBackground;
+          graphicListener->insertTextBox(textPos, subdoc, style);
         }
       }
       graphicListener->endDocument();
@@ -2349,7 +2352,10 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
       // a textbox can not have border
       MWAWGraphicStyle style(child.m_style);
       style.m_lineWidth=0;
-      listener->insertTextBox(box, subdoc, style);
+      MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+      textPos.m_anchorTo=MWAWPosition::Page;
+      textPos.m_wrapping =  MWAWPosition::WBackground;
+      listener->insertTextBox(textPos, subdoc, style);
     }
     else {
       MWAW_DEBUG_MSG(("MsWksGraph::sendGroup: find some unexpected child\n"));
@@ -2691,7 +2697,10 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     // a textbox can not have border
     MWAWGraphicStyle style(textbox.m_style);
     style.m_lineWidth=0;
-    graphicListener.insertTextBox(box, subdoc, style);
+    MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+    textPos.m_anchorTo=MWAWPosition::Page;
+    textPos.m_wrapping=pos.m_wrapping;
+    graphicListener.insertTextBox(textPos, subdoc, style);
     graphicListener.endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
