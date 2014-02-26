@@ -68,7 +68,7 @@ struct Border {
   //! return a border corresponding to a type
   static MWAWBorder getBorder(int type);
   //! add to frame properties
-  void addToFrame(librevenge::RVNGPropertyList &pList) const;
+  void addTo(MWAWGraphicStyle &style) const;
   //! return true if we have a shadow
   bool hasShadow() const
   {

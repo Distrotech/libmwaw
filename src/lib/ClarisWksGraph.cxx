@@ -501,8 +501,7 @@ struct Group : public ClarisWksStruct::DSET {
            m_idLinkedZonesMap.find(id)->second.isLinked();
   }
   /** add the frame name if needed */
-  bool addFrameName(int id, int subId, librevenge::RVNGPropertyList &framePList,
-                    librevenge::RVNGPropertyList &textboxPList) const
+  bool addFrameName(int id, int subId, MWAWGraphicStyle &style) const
   {
     if (!isLinked(id)) return false;
     LinkedZones const &lZones = m_idLinkedZonesMap.find(id)->second;
@@ -514,13 +513,13 @@ struct Group : public ClarisWksStruct::DSET {
     if (it != lZones.m_mapIdChild.begin()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, subId);
-      framePList.insert("librevenge:frame-name",fName);
+      style.m_frameName=fName.cstr();
     }
     ++it;
     if (it != lZones.m_mapIdChild.end()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%d-%d", id, it->first);
-      textboxPList.insert("librevenge:next-frame-name",fName);
+      style.m_frameNextName=fName.cstr();
     }
     return true;
   }
@@ -2440,9 +2439,9 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     MWAWPosition lPos;
     lPos.m_anchorTo=MWAWPosition::Frame;
     MWAWSubDocumentPtr doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, group.m_id, lPos));
-    librevenge::RVNGPropertyList extras;
-    extras.insert("style:background-transparency", "100%");
-    listener->insertTextBox(position, doc, extras);
+    MWAWGraphicStyle style(MWAWGraphicStyle::emptyStyle());
+    style.m_backgroundOpacity=0;
+    listener->insertTextBox(position, doc, style);
     return true;
   }
 
@@ -2627,18 +2626,17 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     MWAW_DEBUG_MSG(("find old subs zone\n"));
     return false;
   }
-  librevenge::RVNGPropertyList extras;
+  MWAWGraphicStyle style=MWAWGraphicStyle::emptyStyle();
   if (dset && dset->m_fileType==1) { // checkme: use style for textbox
     MWAWColor color;
     if (cStyle.hasSurfaceColor() && getSurfaceColor(cStyle, color))
-      extras.insert("fo:background-color", color.str().c_str());
+      style.setBackgroundColor(color);
     else
-      extras.insert("style:background-transparency", "100%");
+      style.m_backgroundOpacity=0;
     if (cStyle.hasLine()) {
-      std::stringstream stream;
-      stream << cStyle.m_lineWidth*0.03 << "cm solid "
-             << cStyle.m_lineColor.str();
-      extras.insert("fo:border", stream.str().c_str());
+      MWAWBorder border;
+      border.m_color=cStyle.m_lineColor;
+      style.setBorders(15, border);
       // extend the frame to add border
       float extend = float(cStyle.m_lineWidth*0.85);
       pos.setOrigin(pos.origin()-Vec2f(extend,extend));
@@ -2646,10 +2644,9 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     }
   }
   else
-    extras.insert("style:background-transparency", "100%");
+    style.m_backgroundOpacity=0;
   if (createFrame) {
-    librevenge::RVNGPropertyList textboxExtras;
-    group.addFrameName(zId, childZone.m_subId, extras, textboxExtras);
+    group.addFrameName(zId, childZone.m_subId, style);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {
       MWAWPosition lPos;
@@ -2659,7 +2656,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     }
     if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
       pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
-    listener->insertTextBox(pos, doc, extras, textboxExtras);
+    listener->insertTextBox(pos, doc, style);
     return true;
   }
   return m_document.sendZone(zId);

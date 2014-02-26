@@ -35,6 +35,7 @@
 #include <string>
 
 #include "MWAWEntry.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "FullWrtStruct.hxx"
@@ -123,21 +124,19 @@ MWAWBorder Border::getBorder(int type)
   return res;
 }
 
-void Border::addToFrame(librevenge::RVNGPropertyList &pList) const
+void Border::addTo(MWAWGraphicStyle &style) const
 {
   if (!m_backColor.isWhite())
-    pList.insert("fo:background-color", m_backColor.str().c_str());
+    style.setBackgroundColor(m_backColor);
   if (hasShadow()) {
-    std::stringstream s;
-    s << m_shadowColor.str() << " " << 0.03527f*float(m_shadowDepl[0]) << "cm "
-      << 0.03527f*float(m_shadowDepl[1]) << "cm";
-    pList.insert("style:shadow", s.str().c_str());
+    style.m_shadowOffset=m_shadowDepl;
+    style.setShadowColor(m_shadowColor);
   }
   if (m_frameBorder.isEmpty())
     return;
   MWAWBorder bord=m_frameBorder;
   bord.m_color = m_color[0];
-  bord.addTo(pList,"");
+  style.setBorders(15, bord);
 }
 
 bool Border::read(shared_ptr<FullWrtStruct::Entry> zone, int fSz)

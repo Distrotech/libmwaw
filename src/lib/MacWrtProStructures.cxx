@@ -163,35 +163,17 @@ struct Block {
     }
   }
 
-  void fillFramePropertyList(librevenge::RVNGPropertyList &extra) const
-  {
-    if (!m_surfaceColor.isWhite())
-      extra.insert("fo:background-color", m_surfaceColor.str().c_str());
-    if (!hasBorders())
-      return;
-    bool setAll = hasSameBorders();
-    for (int w=0; w < 4; ++w) {
-      if (w && setAll) break;
-      MWAWBorder border(m_lineBorder);
-      border.m_width=m_borderWList[w]; // ok also for setAll
-      if (border.isEmpty())
-        continue;
-      static char const *(wh[]) = { "left", "right", "top", "bottom" };
-      if (setAll)
-        border.addTo(extra);
-      else
-        border.addTo(extra,wh[w]);
-    }
-  }
-
+  //! returns true is this is a graphic zone
   bool isGraphic() const
   {
     return m_fileBlock > 0 && m_contentType == GRAPHIC;
   }
+  //! returns true is this is a text zone (or a not)
   bool isText() const
   {
     return m_fileBlock > 0 && (m_contentType == TEXT || m_contentType == NOTE);
   }
+  //! returns true is this is a table zone
   bool isTable() const
   {
     return m_fileBlock <= 0 && m_type == 3;
@@ -2561,9 +2543,9 @@ bool MacWrtProStructures::send(int blockId, bool mainZone)
   block->m_send = true;
   if (block->m_type == 4 && block->m_textboxCellType == 0) {
     block->m_textboxCellType = 2;
-    librevenge::RVNGPropertyList extras;
-    block->fillFramePropertyList(extras);
-    m_mainParser.sendTextBoxZone(blockId, block->getPosition(), extras);
+    MWAWGraphicStyle style;
+    block->fillFrame(style);
+    m_mainParser.sendTextBoxZone(blockId, block->getPosition(), style);
     block->m_textboxCellType = 0;
   }
   else if (block->isText())
@@ -2597,9 +2579,9 @@ bool MacWrtProStructures::send(int blockId, bool mainZone)
     if (listener) listener->insertChar(' ');
   }
   else if (block->m_type == 8) {   // empty frame
-    librevenge::RVNGPropertyList extras;
-    block->fillFramePropertyList(extras);
-    m_mainParser.sendEmptyFrameZone(block->getPosition(), extras);
+    MWAWGraphicStyle style;
+    block->fillFrame(style);
+    m_mainParser.sendEmptyFrameZone(block->getPosition(), style);
   }
   else {
     MWAW_DEBUG_MSG(("MacWrtProStructures::send: can not send block with type=%d\n", block->m_type));

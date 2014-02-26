@@ -1114,11 +1114,13 @@ void MWAWTextListener::insertComment(MWAWSubDocumentPtr &subDocument)
 }
 
 void MWAWTextListener::insertTextBox
-(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras, librevenge::RVNGPropertyList textboxExtras)
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &frameStyle)
 {
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, frameStyle)) return;
 
-  librevenge::RVNGPropertyList propList(textboxExtras);
+  librevenge::RVNGPropertyList propList;
+  if (!frameStyle.m_frameNextName.empty())
+    propList.insert("librevenge:next-frame-name",frameStyle.m_frameNextName.c_str());
   m_documentInterface->openTextBox(propList);
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
@@ -1249,13 +1251,6 @@ void MWAWTextListener::insertPicture
 ///////////////////
 bool MWAWTextListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
-  librevenge::RVNGPropertyList list;
-  style.addFrameTo(list);
-  return openFrame(pos,list);
-}
-
-bool MWAWTextListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
-{
   if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened) {
     MWAW_DEBUG_MSG(("MWAWTextListener::openFrame: called in table but cell is not opened\n"));
     return false;
@@ -1303,7 +1298,8 @@ bool MWAWTextListener::openFrame(MWAWPosition const &pos, librevenge::RVNGProper
     return false;
   }
 
-  librevenge::RVNGPropertyList propList(extras);
+  librevenge::RVNGPropertyList propList;
+  style.addFrameTo(propList);
   _handleFrameParameters(propList, fPos);
   m_documentInterface->openFrame(propList);
 

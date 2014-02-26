@@ -223,7 +223,7 @@ public:
       m_intWrap[i] = m_extWrap[i]=1.0;
   }
   //! add property to frame extra values
-  void addTo(librevenge::RVNGPropertyList &frames) const
+  void addTo(MWAWGraphicStyle style) const
   {
     if (m_style.hasLine()) {
       MWAWBorder border;
@@ -249,10 +249,10 @@ public:
         MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::FrameFormat::addTo: unexpected type\n"));
         break;
       }
-      border.addTo(frames, "");
+      style.setBorders(15, border);
     }
     if (m_style.hasSurfaceColor())
-      frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());
+      style.setBackgroundColor(m_style.m_surfaceColor);
   }
 
   //! operator<<
@@ -2037,51 +2037,49 @@ bool HanMacWrdJGraph::sendComment(HanMacWrdJGraphInternal::CommentFrame const &c
   HanMacWrdJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(comment.m_formatId);
 
-  MWAWGraphicStyle const &style=format.m_style;
-  std::stringstream stream;
-  stream << style.m_lineWidth*0.03 << "cm solid " << style.m_lineColor;
-  pList.insert("fo:border-left", stream.str().c_str());
-  pList.insert("fo:border-bottom", stream.str().c_str());
-  pList.insert("fo:border-right", stream.str().c_str());
+  MWAWGraphicStyle style=format.m_style;
+  MWAWBorder border;
+  border.m_color=style.m_lineColor;
+  border.m_width=style.m_lineWidth;
+  style.setBorders(libmwaw::LeftBit|libmwaw::BottomBit|libmwaw::RightBit, border);
 
-  stream.str("");
-  stream << 20*style.m_lineWidth*0.03 << "cm solid " << style.m_lineColor;
-  pList.insert("fo:border-top", stream.str().c_str());
+  border.m_width=20*style.m_lineWidth;
+  style.setBorders(libmwaw::TopBit, border);
 
   if (style.hasSurfaceColor())
-    pList.insert("fo:background-color", style.m_surfaceColor.str().c_str());
+    style.setBackgroundColor(style.m_surfaceColor);
 
   MWAWSubDocumentPtr subdoc(new HanMacWrdJGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdJGraphInternal::SubDocument::Text, comment.m_zId));
-  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, style);
 
   return true;
 }
 
 // ----- textbox
-bool HanMacWrdJGraph::sendTextbox(HanMacWrdJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdJGraph::sendTextbox(HanMacWrdJGraphInternal::TextboxFrame const &textbox, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textbox.getBdBox().size());
-  librevenge::RVNGPropertyList pList(extras), tbExtras;
 
   HanMacWrdJGraphInternal::FrameFormat const &format=
     m_state->getFrameFormat(textbox.m_formatId);
-  format.addTo(pList);
+  MWAWGraphicStyle style;
+  format.addTo(style);
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
     subdoc.reset(new HanMacWrdJGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
   else {
     librevenge::RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_fileId);
-    pList.insert("librevenge:frame-name",fName);
+    style.m_frameName=fName.cstr();
   }
   if (textbox.m_linkToFId) {
     librevenge::RVNGString fName;
     fName.sprintf("Frame%ld", textbox.m_linkToFId);
-    tbExtras.insert("librevenge:next-frame-name",fName);
+    style.m_frameNextName=fName.cstr();
   }
-  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList, tbExtras);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, style);
 
   return true;
 }

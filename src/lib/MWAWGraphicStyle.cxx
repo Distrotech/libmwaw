@@ -234,7 +234,14 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
     list.insert("draw:marker-end-center", "false");
     list.insert("draw:marker-end-width", "5pt");
   }
-
+  if (hasShadow()) {
+    list.insert("draw:shadow", "visible");
+    list.insert("draw:shadow-color", m_shadowColor.str().c_str());
+    list.insert("draw:shadow-opacity", m_shadowOpacity, librevenge::RVNG_PERCENT);
+    // in cm
+    list.insert("draw:shadow-offset-x", double(m_shadowOffset[0])/72.*2.54, librevenge::RVNG_GENERIC); // cm
+    list.insert("draw:shadow-offset-y", double(m_shadowOffset[1])/72.*2.54, librevenge::RVNG_GENERIC); // cm
+  }
   if (only1D || !hasSurface()) {
     list.insert("draw:fill", "none");
     return;
@@ -324,6 +331,42 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
       list.insert("draw:opacity", surfaceOpacity, librevenge::RVNG_PERCENT);
     }
   }
+}
+
+void MWAWGraphicStyle::addFrameTo(librevenge::RVNGPropertyList &list) const
+{
+  if (m_backgroundOpacity>=0) {
+    if (m_backgroundOpacity>0)
+      list.insert("fo:background-color", m_backgroundColor.str().c_str());
+    if (m_backgroundOpacity<1)
+      list.insert("style:background-transparency", 1.-m_backgroundOpacity, librevenge::RVNG_PERCENT);
+  }
+  if (hasBorders()) {
+    if (hasSameBorders())
+      m_bordersList[0].addTo(list, "");
+    else {
+      for (size_t c = 0; c < m_bordersList.size(); c++) {
+        if (c >= 4) break;
+        switch (c) {
+        case libmwaw::Left:
+          m_bordersList[c].addTo(list, "left");
+          break;
+        case libmwaw::Right:
+          m_bordersList[c].addTo(list, "right");
+          break;
+        case libmwaw::Top:
+          m_bordersList[c].addTo(list, "top");
+          break;
+        case libmwaw::Bottom:
+          m_bordersList[c].addTo(list, "bottom");
+          break;
+        default:
+          MWAW_DEBUG_MSG(("MWAWGraphicStyle::addFrameTo: can not send %d border\n",int(c)));
+          break;
+        }
+      }
+    }
+  }
   if (hasShadow()) {
     list.insert("draw:shadow", "visible");
     list.insert("draw:shadow-color", m_shadowColor.str().c_str());
@@ -332,34 +375,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
     list.insert("draw:shadow-offset-x", double(m_shadowOffset[0])/72.*2.54, librevenge::RVNG_GENERIC); // cm
     list.insert("draw:shadow-offset-y", double(m_shadowOffset[1])/72.*2.54, librevenge::RVNG_GENERIC); // cm
   }
-}
-
-void MWAWGraphicStyle::addFrameTo(librevenge::RVNGPropertyList &list) const
-{
-  if (m_backgroundOpacity>=0) {
-    if (!m_backgroundColor.isWhite())
-      list.insert("fo:background-color", m_backgroundColor.str().c_str());
-    list.insert("style:background-transparency", 1.-m_backgroundOpacity, librevenge::RVNG_PERCENT);
-  }
-  for (size_t c = 0; c < m_bordersList.size(); c++) {
-    switch (c) {
-    case libmwaw::Left:
-      m_bordersList[c].addTo(list, "left");
-      break;
-    case libmwaw::Right:
-      m_bordersList[c].addTo(list, "right");
-      break;
-    case libmwaw::Top:
-      m_bordersList[c].addTo(list, "top");
-      break;
-    case libmwaw::Bottom:
-      m_bordersList[c].addTo(list, "bottom");
-      break;
-    default:
-      MWAW_DEBUG_MSG(("MWAWGraphicStyle::addFrameTo: can not send %d border\n",int(c)));
-      break;
-    }
-  }
+  if (!m_frameName.empty())
+    list.insert("librevenge:frame-name",m_frameName.c_str());
 }
 
 int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
@@ -434,6 +451,11 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   if (m_backgroundColor > a.m_backgroundColor) return 1;
   if (m_backgroundOpacity < a.m_backgroundOpacity) return -1;
   if (m_backgroundOpacity > a.m_backgroundOpacity) return 1;
+  if (m_frameName < a.m_frameName) return -1;
+  if (m_frameName > a.m_frameName) return 1;
+  if (m_frameNextName < a.m_frameNextName) return -1;
+  if (m_frameNextName > a.m_frameNextName) return 1;
+
   if (m_gradientRadius < a.m_gradientRadius) return -1;
   if (m_gradientRadius > a.m_gradientRadius) return 1;
   if (m_rotate < a.m_rotate) return -1;
@@ -560,6 +582,10 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     o << "background[color]=" << st.m_backgroundColor << ",";
   if (st.m_backgroundOpacity>=0)
     o << "background[opacity]=" << 100.f *st.m_backgroundOpacity << "%,";
+  if (!st.m_frameName.empty())
+    o << "frame[name]=" << st.m_frameName << ",";
+  if (!st.m_frameNextName.empty())
+    o << "frame[linkedto]=" << st.m_frameNextName << ",";
   o << st.m_extra;
   return o;
 }

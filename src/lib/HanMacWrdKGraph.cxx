@@ -466,18 +466,15 @@ struct TextBox : public Frame {
     return !m_linkedIdList.empty() || m_isLinked;
   }
   //! add property to frame extra values
-  void addTo(librevenge::RVNGPropertyList &frames, librevenge::RVNGPropertyList &tbExtra) const
+  void addTo(MWAWGraphicStyle &style) const
   {
     if (m_type == 10) {
-      std::stringstream stream;
-      stream << m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
-      frames.insert("fo:border-left", stream.str().c_str());
-      frames.insert("fo:border-bottom", stream.str().c_str());
-      frames.insert("fo:border-right", stream.str().c_str());
-
-      stream.str("");
-      stream << m_borders[0][1]*m_style.m_lineWidth*0.03 << "cm solid " << m_style.m_lineColor;
-      frames.insert("fo:border-top", stream.str().c_str());
+      MWAWBorder border;
+      border.m_width=m_style.m_lineWidth;
+      border.m_color = m_style.m_lineColor;
+      style.setBorders(libmwaw::LeftBit|libmwaw::BottomBit|libmwaw::RightBit, border);
+      border.m_width=m_borders[0][1]*m_style.m_lineWidth;
+      style.setBorders(libmwaw::TopBit, border);
     }
     else if (m_style.hasLine()) {
       MWAWBorder border;
@@ -503,21 +500,21 @@ struct TextBox : public Frame {
         MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::TextBox::addTo: unexpected type\n"));
         break;
       }
-      border.addTo(frames, "");
+      style.setBorders(15, border);
     }
     // now the link
     if (m_type==4 && m_isLinked) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", m_fileId);
-      frames.insert("librevenge:frame-name",fName);
+      style.m_frameName=fName.cstr();
     }
     if (m_type==4 && !m_linkedIdList.empty()) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", m_linkedIdList[0]);
-      tbExtra.insert("librevenge:next-frame-name",fName);
+      style.m_frameNextName=fName.cstr();
     }
     if (m_style.hasSurfaceColor())
-      frames.insert("fo:background-color", m_style.m_surfaceColor.str().c_str());
+      style.setBackgroundColor(m_style.m_surfaceColor);
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextBox const &textbox)
@@ -1357,7 +1354,7 @@ bool HanMacWrdKGraph::sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame con
   return true;
 }
 
-bool HanMacWrdKGraph::sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras)
+bool HanMacWrdKGraph::sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
   Vec2f textboxSz = textbox.getBdBox().size();
@@ -1370,12 +1367,12 @@ bool HanMacWrdKGraph::sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbo
   else if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(textboxSz);
 
-  librevenge::RVNGPropertyList pList(extras), tbExtra;
-  textbox.addTo(pList, tbExtra);
+  MWAWGraphicStyle style;
+  textbox.addTo(style);
   MWAWSubDocumentPtr subdoc;
   if (!textbox.m_isLinked)
     subdoc.reset(new HanMacWrdKGraphInternal::SubDocument(*this, m_parserState->m_input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-  m_parserState->m_textListener->insertTextBox(pos, subdoc, pList, tbExtra);
+  m_parserState->m_textListener->insertTextBox(pos, subdoc, style);
 
   return true;
 }

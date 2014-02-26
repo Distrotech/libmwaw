@@ -1777,10 +1777,10 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
     return true;
   }
 
-  librevenge::RVNGPropertyList extra;
+  MWAWGraphicStyle frameStyle;
   if (style.hasSurfaceColor())
-    extra.insert("fo:background-color", style.m_surfaceColor.str().c_str());
-  listener->insertTextBox(finalPos, doc, extra);
+    frameStyle.setBackgroundColor(style.m_surfaceColor);
+  listener->insertTextBox(finalPos, doc, frameStyle);
   return true;
 }
 

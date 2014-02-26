@@ -145,7 +145,7 @@ protected:
   /** try to send an empty picture */
   bool sendEmptyPicture(MWAWPosition pos);
   /** try to send a textbox to the listener */
-  bool sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos, librevenge::RVNGPropertyList extras=librevenge::RVNGPropertyList());
+  bool sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos);
   /** try to send a table unformatted*/
   bool sendTableUnformatted(long fId);
 

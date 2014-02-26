@@ -532,11 +532,11 @@ bool FullWrtGraph::sendSideBar(FullWrtGraphInternal::SideBar const &frame)
   pos.m_wrapping=(frame.m_wrapping==3) ?
                  MWAWPosition::WBackground : MWAWPosition::WDynamic;
   FullWrtStruct::Border border;
-  librevenge::RVNGPropertyList pList;
+  MWAWGraphicStyle style;
   if (frame.m_borderId && getBorder(frame.m_borderId, border))
-    border.addToFrame(pList);
+    border.addTo(style);
   MWAWSubDocumentPtr doc(new FullWrtGraphInternal::SubDocument(*this,frame.m_fileId,border.m_frontColor));
-  listener->insertTextBox(pos, doc, pList);
+  listener->insertTextBox(pos, doc, style);
   return true;
 }
 

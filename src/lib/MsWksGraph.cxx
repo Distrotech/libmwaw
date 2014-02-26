@@ -122,7 +122,7 @@ struct Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &) const { }
+  virtual void fillFrame(MWAWGraphicStyle &) const { }
 
   //! return the box
   Box2f getLocalBox(bool extendWithBord=true) const
@@ -560,10 +560,10 @@ struct TextBox : public Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const
+  virtual void fillFrame(MWAWGraphicStyle &style) const
   {
     if (!m_style.m_baseSurfaceColor.isWhite())
-      extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
+      style.setBackgroundColor(m_style.m_baseSurfaceColor);
   }
 
   //! the number of positions
@@ -629,10 +629,10 @@ struct TextBoxv4 : public Zone {
   }
 
   //! add frame parameters to propList (if needed )
-  virtual void fillFramePropertyList(librevenge::RVNGPropertyList &extras) const
+  virtual void fillFrame(MWAWGraphicStyle &style) const
   {
     if (!m_style.m_baseSurfaceColor.isWhite())
-      extras.insert("fo:background-color", m_style.m_baseSurfaceColor.str().c_str());
+      style.setBackgroundColor(m_style.m_baseSurfaceColor);
   }
 
   //! the text of positions (0-0: means no text)
@@ -2677,8 +2677,6 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     pictPos = zone->getPosition(pos.m_anchorTo);
   if (pictPos.m_anchorTo == MWAWPosition::Page)
     pictPos.setOrigin(pictPos.origin()+m_state->m_leftTopPos);
-  librevenge::RVNGPropertyList extras;
-  zone->fillFramePropertyList(extras);
 
   MWAWInputStreamPtr input=m_zone.getInput();
   switch (zone->type()) {
@@ -2705,14 +2703,14 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     MsWksGraphInternal::Table &table = static_cast<MsWksGraphInternal::Table &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::Table, table.m_tableId));
-    listener->insertTextBox(pictPos, subdoc, extras);
+    listener->insertTextBox(pictPos, subdoc, zone->m_style);
     return;
   }
   case MsWksGraphInternal::Zone::ChartZone: {
     MsWksGraphInternal::Chart &chart = static_cast<MsWksGraphInternal::Chart &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::Chart, chart.m_chartId));
-    listener->insertTextBox(pictPos, subdoc, extras);
+    listener->insertTextBox(pictPos, subdoc, zone->m_style);
     return;
   }
   case MsWksGraphInternal::Zone::Group:
@@ -2745,18 +2743,19 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     MsWksGraphInternal::TextBoxv4 &textbox = static_cast<MsWksGraphInternal::TextBoxv4 &>(*zone);
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBoxv4, textbox.m_text, textbox.m_frame));
-    librevenge::RVNGPropertyList textboxExtra;
+    MWAWGraphicStyle style;
+    zone->fillFrame(style);
     if (zone->m_ids[1] > 0) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[0]);
-      extras.insert("librevenge:frame-name",fName);
+      style.m_frameName=fName.cstr();
     }
     if (zone->m_ids[2] > 0) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[2]);
-      textboxExtra.insert("librevenge:next-frame-name",fName);
+      style.m_frameNextName=fName.cstr();
     }
-    listener->insertTextBox(pictPos, subdoc, extras, textboxExtra);
+    listener->insertTextBox(pictPos, subdoc, style);
     return;
   }
   case MsWksGraphInternal::Zone::OLE: {

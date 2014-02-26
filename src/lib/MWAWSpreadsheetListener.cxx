@@ -1016,15 +1016,17 @@ void MWAWSpreadsheetListener::insertComment(MWAWSubDocumentPtr &subDocument)
 }
 
 void MWAWSpreadsheetListener::insertTextBox
-(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, librevenge::RVNGPropertyList frameExtras, librevenge::RVNGPropertyList textboxExtras)
+(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &frameStyle)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertTextBox insert a textbox outside a sheet is not implemented\n"));
     return;
   }
-  if (!openFrame(pos, frameExtras)) return;
+  if (!openFrame(pos, frameStyle)) return;
 
-  librevenge::RVNGPropertyList propList(textboxExtras);
+  librevenge::RVNGPropertyList propList;
+  if (!frameStyle.m_frameNextName.empty())
+    propList.insert("librevenge:next-frame-name",frameStyle.m_frameNextName.c_str());
   m_documentInterface->openTextBox(propList);
   handleSubDocument(subDocument, libmwaw::DOC_TEXT_BOX);
   m_documentInterface->closeTextBox();
@@ -1146,13 +1148,6 @@ void MWAWSpreadsheetListener::insertPicture
 ///////////////////
 bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
-  librevenge::RVNGPropertyList list;
-  style.addFrameTo(list);
-  return openFrame(pos,list);
-}
-
-bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras)
-{
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openFrame insert a frame outside a sheet is not implemented\n"));
     return false;
@@ -1200,7 +1195,8 @@ bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, librevenge::RVN
     return false;
   }
 
-  librevenge::RVNGPropertyList propList(extras);
+  librevenge::RVNGPropertyList propList;
+  style.addFrameTo(propList);
   if (!propList["draw:fill"])
     propList.insert("draw:fill","none");
   _handleFrameParameters(propList, fPos);

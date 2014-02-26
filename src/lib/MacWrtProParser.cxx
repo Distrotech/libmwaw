@@ -1335,13 +1335,12 @@ bool MacWrtProParser::readTextTokens(shared_ptr<MacWrtProParserInternal::Zone> z
 ////////////////////////////////////////////////////////////
 // try to send a empty zone
 ////////////////////////////////////////////////////////////
-bool MacWrtProParser::sendEmptyFrameZone(MWAWPosition const &pos,
-    librevenge::RVNGPropertyList extras)
+bool MacWrtProParser::sendEmptyFrameZone(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
   shared_ptr<MacWrtProParserInternal::SubDocument> subdoc
   (new MacWrtProParserInternal::SubDocument(*this, getInput(), -3));
   if (getTextListener())
-    getTextListener()->insertTextBox(pos, subdoc, extras);
+    getTextListener()->insertTextBox(pos, subdoc, style);
   return true;
 }
 
@@ -1396,13 +1395,12 @@ bool MacWrtProParser::sendTextZone(int blockId, bool mainZone)
   return true;
 }
 
-bool MacWrtProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos,
-                                      librevenge::RVNGPropertyList extras)
+bool MacWrtProParser::sendTextBoxZone(int blockId, MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
   shared_ptr<MacWrtProParserInternal::SubDocument> subdoc
   (new MacWrtProParserInternal::SubDocument(*this, getInput(), blockId));
   if (getTextListener())
-    getTextListener()->insertTextBox(pos, subdoc, extras);
+    getTextListener()->insertTextBox(pos, subdoc, style);
   return true;
 }
 

@@ -145,11 +145,9 @@ protected:
   bool sendPictureZone(int blockId, MWAWPosition const &pictPos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
 
   //! send a textbox zone
-  bool sendTextBoxZone(int blockId, MWAWPosition const &pos,
-                       librevenge::RVNGPropertyList extras = librevenge::RVNGPropertyList());
-
+  bool sendTextBoxZone(int blockId, MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   //! try to send an empty zone (can exist in MacWrtPro1.5)
-  bool sendEmptyFrameZone(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
+  bool sendEmptyFrameZone(MWAWPosition const &pos, MWAWGraphicStyle const &style);
 
   //
   // low level

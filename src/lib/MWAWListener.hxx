@@ -196,8 +196,7 @@ public:
                              MWAWGraphicStyle const &style) = 0;
   /** adds a textbox in given position */
   virtual void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
-                             librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList(),
-                             librevenge::RVNGPropertyList textboxExtras=librevenge::RVNGPropertyList()) = 0;
+                             MWAWGraphicStyle const &frameStyle=MWAWGraphicStyle::emptyStyle()) = 0;
 
   // ------- table -----------------
   /** open a table*/

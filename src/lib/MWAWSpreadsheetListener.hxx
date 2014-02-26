@@ -192,8 +192,7 @@ public:
                      MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
-                     librevenge::RVNGPropertyList frameExtras=librevenge::RVNGPropertyList(),
-                     librevenge::RVNGPropertyList textboxExtras=librevenge::RVNGPropertyList());
+                     MWAWGraphicStyle const &frameStyle=MWAWGraphicStyle::emptyStyle());
 
   // ------- table -----------------
   /** adds a table in given position */
@@ -243,7 +242,6 @@ protected:
   void _endSubDocument();
 
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
-  bool openFrame(MWAWPosition const &pos, librevenge::RVNGPropertyList extras);
   /** tries to open a frame */
   bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   void closeFrame();

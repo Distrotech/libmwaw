@@ -191,7 +191,8 @@ public:
     m_shadowColor(MWAWColor::black()), m_shadowOpacity(0), m_shadowOffset(1,1),
     m_pattern(),
     m_gradientType(G_None), m_gradientStopList(), m_gradientAngle(0), m_gradientBorder(0), m_gradientPercentCenter(0.5f,0.5f), m_gradientRadius(1),
-    m_backgroundColor(MWAWColor::white()), m_backgroundOpacity(-1), m_bordersList(), m_rotate(0), m_extra("")
+    m_backgroundColor(MWAWColor::white()), m_backgroundOpacity(-1), m_bordersList(), m_frameName(""), m_frameNextName(""),
+    m_rotate(0), m_extra("")
   {
     m_arrows[0]=m_arrows[1]=false;
     m_flip[0]=m_flip[1]=false;
@@ -265,10 +266,21 @@ public:
   {
     return m_shadowOpacity > 0;
   }
-  //! return true if the cell has some border
+  //! return true if the frame has some border
   bool hasBorders() const
   {
-    return m_bordersList.size() != 0;
+    return !m_bordersList.empty();
+  }
+  //! return true if the frame has some border
+  bool hasSameBorders() const
+  {
+    if (m_bordersList.empty()) return true;
+    if (m_bordersList.size()!=4) return false;
+    for (size_t i=1; i<m_bordersList.size(); ++i) {
+      if (m_bordersList[i]!=m_bordersList[0])
+        return false;
+    }
+    return true;
   }
   //! return the frame border: libmwaw::Left | ...
   std::vector<MWAWBorder> const &borders() const
@@ -346,6 +358,10 @@ public:
   float m_backgroundOpacity;
   //! the borders MWAWBorder::Pos (for a frame)
   std::vector<MWAWBorder> m_bordersList;
+  //! the frame name
+  std::string m_frameName;
+  //! the frame next name (if there is a link)
+  std::string m_frameNextName;
 
   //
   // some transformation: must probably be somewhere else
