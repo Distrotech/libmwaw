@@ -517,8 +517,8 @@ void MWAWGraphicListener::_openPageSpan(bool /*sendHeaderFooters*/)
   while (actPage < m_ps->m_currentPage) {
     actPage+=(unsigned)it++->getPageSpan();
     if (it == m_ds->m_pageList.end()) {
-      MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find current page\n"));
-      throw libmwaw::ParseException();
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find current page, use the previous one\n"));
+      --it;
     }
   }
 
@@ -886,9 +886,24 @@ bool MWAWGraphicListener::openSection(MWAWSection const &)
   return false;
 }
 
-void MWAWGraphicListener::insertBreak(BreakType)
+void MWAWGraphicListener::insertBreak(BreakType breakType)
 {
-  MWAW_DEBUG_MSG(("MWAWGraphicListener::insertBreak: must not be called\n"));
+  if (m_ps->m_inSubDocument)
+    return;
+
+  switch (breakType) {
+  case ColumnBreak:
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertBreak: must not be called on column\n"));
+    break;
+  case SoftPageBreak:
+  case PageBreak:
+    if (!m_ps->m_isPageSpanOpened)
+      _openPageSpan();
+    _closePageSpan();
+    break;
+  default:
+    break;
+  }
 }
 
 ///////////////////
@@ -937,7 +952,7 @@ void MWAWGraphicListener::insertPicture
 }
 
 void MWAWGraphicListener::insertPicture
-(Box2f const &bdbox, MWAWGraphicStyle const &style, const librevenge::RVNGBinaryData &binaryData, std::string type)
+(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData, std::string type, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the document is not started\n"));
@@ -954,12 +969,7 @@ void MWAWGraphicListener::insertPicture
   m_documentInterface->setStyle(list);
 
   list.clear();
-  Vec2f pt=bdbox[0]-m_ps->m_origin;
-  list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
-  list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
-  pt=bdbox.size();
-  list.insert("svg:width",pt.x(), librevenge::RVNG_POINT);
-  list.insert("svg:height",pt.y(), librevenge::RVNG_POINT);
+  _handleFrameParameters(list, pos, style);
   list.insert("librevenge:mime-type", type.c_str());
   list.insert("office:binary-data", binaryData);
   m_documentInterface->drawGraphicObject(list);
@@ -1176,6 +1186,170 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
     list.insert("svg:height",size.y(), librevenge::RVNG_POINT);
   else if (size.y()<0)
     list.insert("fo:min-height",-size.y(), librevenge::RVNG_POINT);
+
+  float const padding = 0; // fillme
+  list.insert("fo:padding-top",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-bottom",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-left",padding, librevenge::RVNG_POINT);
+  list.insert("fo:padding-right",padding, librevenge::RVNG_POINT);
+}
+
+void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, MWAWPosition const &pos, MWAWGraphicStyle const &style)
+{
+  if (!m_ds->m_isDocumentStarted)
+    return;
+
+  librevenge::RVNGUnit unit = pos.unit();
+  float pointFactor = pos.getInvUnitScale(librevenge::RVNG_POINT);
+  float inchFactor=pos.getInvUnitScale(librevenge::RVNG_INCH);
+  // first compute the origin ( in given unit and in point)
+  Vec2f origin = pos.origin()-pointFactor*m_ps->m_origin;
+  Vec2f originPt = (1.f/pointFactor)*pos.origin()-m_ps->m_origin;
+  Vec2f size = pos.size();
+  // checkme: do we still need to do that ?
+  if (style.hasGradient(true)) {
+    if (style.m_rotate<0 || style.m_rotate>0) {
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
+    }
+    // ok, first send a background rectangle
+    librevenge::RVNGPropertyList rectList;
+    m_documentInterface->setStyle(rectList);
+    rectList.clear();
+    rectList.insert("svg:x",originPt[0], librevenge::RVNG_POINT);
+    rectList.insert("svg:y",originPt[1], librevenge::RVNG_POINT);
+    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), unit);
+    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), unit);
+    m_documentInterface->drawRectangle(rectList);
+
+    list.insert("draw:stroke", "none");
+    list.insert("draw:fill", "none");
+  }
+  else
+    style.addTo(list);
+
+  list.insert("svg:x",originPt[0], librevenge::RVNG_POINT);
+  list.insert("svg:y",originPt[1], librevenge::RVNG_POINT);
+  if (size.x()>0)
+    list.insert("svg:width",size.x(), unit);
+  else if (size.x()<0)
+    list.insert("fo:min-width",-size.x(), unit);
+  if (size.y()>0)
+    list.insert("svg:height",size.y(), unit);
+  else if (size.y()<0)
+    list.insert("fo:min-height",-size.y(), unit);
+  if (pos.order() > 0)
+    list.insert("draw:z-index", pos.order());
+
+  if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {
+    list.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
+    list.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
+  }
+  Vec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
+  Vec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
+  if (TLClip[0] > 0 || TLClip[1] > 0 || RBClip[0] > 0 || RBClip[1] > 0) {
+    // in ODF1.2 we need to separate the value with ,
+    std::stringstream s;
+    s << "rect(" << TLClip[1] << "pt " << RBClip[0] << "pt "
+      <<  RBClip[1] << "pt " << TLClip[0] << "pt)";
+    list.insert("fo:clip", s.str().c_str());
+  }
+
+  if (pos.m_wrapping ==  MWAWPosition::WDynamic)
+    list.insert("style:wrap", "dynamic");
+  else if (pos.m_wrapping ==  MWAWPosition::WBackground) {
+    list.insert("style:wrap", "run-through");
+    list.insert("style:run-through", "background");
+  }
+  else if (pos.m_wrapping ==  MWAWPosition::WForeground) {
+    list.insert("style:wrap", "run-through");
+    list.insert("style:run-through", "foreground");
+  }
+  else if (pos.m_wrapping ==  MWAWPosition::WRunThrough)
+    list.insert("style:wrap", "run-through");
+  else
+    list.insert("style:wrap", "none");
+  if (pos.m_anchorTo != MWAWPosition::Page) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: only page anchor is implemented\n"));
+  }
+  else {
+    double w = m_ps->m_pageSpan.getFormWidth();
+    double h = m_ps->m_pageSpan.getFormLength();
+    w *= inchFactor;
+    h *= inchFactor;
+    double newPosition;
+    switch (pos.m_yPos) {
+    case MWAWPosition::YFull:
+      list.insert("svg:height", double(h), unit);
+    // fallthrough intended
+    case MWAWPosition::YTop:
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        list.insert("style:vertical-pos", "from-top");
+        newPosition = origin[1];
+        if (newPosition > h -pos.size()[1])
+          newPosition = h - pos.size()[1];
+        list.insert("svg:y", double(newPosition), unit);
+      }
+      else
+        list.insert("style:vertical-pos", "top");
+      break;
+    case MWAWPosition::YCenter:
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        list.insert("style:vertical-pos", "from-top");
+        newPosition = (h - pos.size()[1])/2.0;
+        if (newPosition > h -pos.size()[1]) newPosition = h - pos.size()[1];
+        list.insert("svg:y", double(newPosition), unit);
+      }
+      else
+        list.insert("style:vertical-pos", "middle");
+      break;
+    case MWAWPosition::YBottom:
+      if (origin[1] < 0.0 || origin[1] > 0.0) {
+        list.insert("style:vertical-pos", "from-top");
+        newPosition = h - pos.size()[1]-origin[1];
+        if (newPosition > h -pos.size()[1]) newPosition = h -pos.size()[1];
+        else if (newPosition < 0) newPosition = 0;
+        list.insert("svg:y", double(newPosition), unit);
+      }
+      else
+        list.insert("style:vertical-pos", "bottom");
+      break;
+    default:
+      break;
+    }
+
+    switch (pos.m_xPos) {
+    case MWAWPosition::XFull:
+      list.insert("svg:width", double(w), unit);
+    // fallthrough intended
+    case MWAWPosition::XLeft:
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        list.insert("style:horizontal-pos", "from-left");
+        list.insert("svg:x", double(origin[0]), unit);
+      }
+      else
+        list.insert("style:horizontal-pos", "left");
+      break;
+    case MWAWPosition::XRight:
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        list.insert("style:horizontal-pos", "from-left");
+        list.insert("svg:x",double(w - pos.size()[0] + origin[0]), unit);
+      }
+      else
+        list.insert("style:horizontal-pos", "right");
+      break;
+    case MWAWPosition::XCenter:
+      if (origin[0] < 0.0 || origin[0] > 0.0) {
+        list.insert("style:horizontal-pos", "from-left");
+        list.insert("svg:x", double((w - pos.size()[0])/2. + origin[0]), unit);
+      }
+      else
+        list.insert("style:horizontal-pos", "center");
+      break;
+    default:
+      break;
+    }
+
+  }
   float const padding = 0; // fillme
   list.insert("fo:padding-top",padding, librevenge::RVNG_POINT);
   list.insert("fo:padding-bottom",padding, librevenge::RVNG_POINT);

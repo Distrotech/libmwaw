@@ -64,8 +64,6 @@ public:
   virtual Type getType() const = 0;
   /** returns true if we can add text data */
   virtual bool canWriteText() const =0;
-  /** returns true if a subdocument is open  */
-  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
 
   // ------ main document -------
   /** sets the documents language */
@@ -168,6 +166,13 @@ public:
   virtual bool closeSection()=0;
   //! inserts a break type: ColumBreak, PageBreak, ..
   virtual void insertBreak(BreakType breakType)=0;
+
+  // ------- subdocument ---------------
+  /** returns true if a subdocument is open  */
+  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
+  /** adds a picture in given position */
+  virtual void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
+                             std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle()) = 0;
 };
 
 /** This class contains a virtual interface to text listener and the spreadsheet listener */
@@ -179,8 +184,6 @@ public:
 
   /** function called to add a subdocument */
   virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
-  /** returns try if a subdocument is open  */
-  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
 
   // ------- subdocument -----------------
   /** insert a note */

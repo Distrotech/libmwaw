@@ -158,8 +158,8 @@ public:
 
   // ------- subdocument -----------------
   /** adds a picture in given position */
-  void insertPicture(Box2f const &bdbox, MWAWGraphicStyle const &style,
-                     const librevenge::RVNGBinaryData &binaryData, std::string type="image/pict");
+  void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
+                     std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** adds a shape picture in given position */
   void insertPicture(Box2f const &bdbox, MWAWGraphicShape const &shape,
                      MWAWGraphicStyle const &style);
@@ -215,6 +215,10 @@ protected:
   void _startSubDocument();
   void _endSubDocument();
 
+  /** adds in propList the frame parameters.
+
+   \note if there is some gradient, first draw a rectangle to print the gradient and them update propList */
+  void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos, MWAWGraphicStyle const &style);
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
   bool openFrame();
   void closeFrame();

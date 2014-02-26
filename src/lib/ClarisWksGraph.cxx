@@ -2795,7 +2795,7 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWBasi
   if (dynamic_cast<MWAWGraphicListener *>(&listener)) {
     MWAWGraphicStyle style;
     style.m_lineWidth=0;
-    dynamic_cast<MWAWGraphicListener &>(listener).insertPicture(Box2f(pos.origin(),pos.origin()+pos.size()), style, data, "image/pict");
+    dynamic_cast<MWAWGraphicListener &>(listener).insertPicture(pos, data, "image/pict", style);
   }
   else if (dynamic_cast<MWAWListener *>(&listener))
     dynamic_cast<MWAWListener &>(listener).insertPicture(pos, data, "image/pict");
