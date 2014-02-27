@@ -93,7 +93,7 @@ struct State {
 //! returns true if we are in a text zone, ie. either in a textbox or a table cell
   bool isInTextZone() const
   {
-    return m_isTextBoxOpened || m_isTableCellOpened;
+    return m_inNote || m_isTextBoxOpened || m_isTableCellOpened;
   }
   //! the origin position
   Vec2f m_origin;
@@ -104,13 +104,18 @@ struct State {
   MWAWFont m_font;
   //! the paragraph
   MWAWParagraph m_paragraph;
-//! true if a page is open
+  //! true if a page is open
   bool m_isPageSpanOpened;
-//! the list of list
+  //! the list of list
   shared_ptr<MWAWList> m_list;
 
   bool m_isTextBoxOpened;
+  //! a flag to know if openFrame was called
   bool m_isFrameOpened;
+  //! the frame position
+  MWAWPosition m_framePosition;
+  //! the frame style
+  MWAWGraphicStyle m_frameStyle;
 
   bool m_isSpanOpened;
   bool m_isParagraphOpened;
@@ -131,6 +136,7 @@ struct State {
   int m_currentPageNumber;
 
   bool m_inLink;
+  bool m_inNote;
   bool m_inSubDocument;
   libmwaw::SubDocumentType m_subDocumentType;
 
@@ -141,13 +147,13 @@ private:
 
 State::State() : m_origin(0,0),
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_isPageSpanOpened(false), m_list(),
-  m_isTextBoxOpened(false), m_isFrameOpened(false),
+  m_isTextBoxOpened(false), m_isFrameOpened(false), m_framePosition(), m_frameStyle(),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
   m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
-  m_inLink(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
+  m_inLink(false), m_inNote(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
 }
@@ -582,7 +588,7 @@ void MWAWGraphicListener::_closePageSpan()
 ///////////////////
 void MWAWGraphicListener::_openParagraph()
 {
-  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+  if (m_ps->m_inNote || (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened))
     return;
   if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openParagraph: called outsize a text zone\n"));
@@ -634,7 +640,7 @@ void MWAWGraphicListener::_resetParagraphState(const bool isListElement)
 ///////////////////
 void MWAWGraphicListener::_openListElement()
 {
-  if (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened)
+  if (m_ps->m_inNote || (m_ps->m_isTableOpened && !m_ps->m_isTableCellOpened))
     return;
   if (!m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openListElement: called outsize a text zone\n"));
@@ -690,7 +696,7 @@ int MWAWGraphicListener::_getListId() const
 
 void MWAWGraphicListener::_changeList()
 {
-  if (!m_ps->isInTextZone()) {
+  if (m_ps->m_inNote || !m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_changeList: called outsize a text zone\n"));
     return;
   }
@@ -834,11 +840,11 @@ bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, libreveng
     return false;
   }
   // we do not have any header interface, so mimick it by creating a textbox
-  if (!openFrame())
-    return false;
-  librevenge::RVNGPropertyList propList(extras);
   MWAWPosition pos(Vec2f(20,20), Vec2f(-20,-10), librevenge::RVNG_POINT); // fixme
   pos.m_anchorTo=MWAWPosition::Page;
+  if (!openFrame(pos))
+    return false;
+  librevenge::RVNGPropertyList propList(extras);
   _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
 
   m_documentInterface->startTextObject(propList);
@@ -857,12 +863,12 @@ bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, libreveng
   MWAW_DEBUG_MSG(("MWAWGraphicListener::insertFooter: inserting footer is very experimental\n"));
 
   // we do not have any header interface, so mimick it by creating a textbox
-  if (!openFrame())
-    return false;
-  librevenge::RVNGPropertyList propList(extras);
   MWAWPageSpan page(getPageSpan()); // fixme
   MWAWPosition pos(Vec2f(20,72.f*float(page.getFormLength())-40.f), Vec2f(-20,-10), librevenge::RVNG_POINT);
   pos.m_anchorTo=MWAWPosition::Page;
+  if (!openFrame(pos))
+    return false;
+  librevenge::RVNGPropertyList propList(extras);
   _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
 
   m_documentInterface->startTextObject(propList);
@@ -906,6 +912,45 @@ void MWAWGraphicListener::insertBreak(BreakType breakType)
   default:
     break;
   }
+}
+
+///////////////////
+// note/comment ( we inserted them as text between -- -- )
+///////////////////
+void MWAWGraphicListener::insertComment(MWAWSubDocumentPtr &subDocument)
+{
+  if (!canWriteText() || m_ps->m_inNote) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertComment try to insert recursively or outside a text zone\n"));
+    return;
+  }
+  // first check that a paragraph is already open
+  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+    _openParagraph();
+  insertChar(' ');
+  insertUnicode(0x2014); // -
+  insertChar(' ');
+  handleSubDocument(subDocument, libmwaw::DOC_COMMENT_ANNOTATION);
+  insertChar(' ');
+  insertUnicode(0x2014); // -
+  insertChar(' ');
+}
+
+void MWAWGraphicListener::insertNote(MWAWNote const &, MWAWSubDocumentPtr &subDocument)
+{
+  if (!canWriteText() || m_ps->m_inNote) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertNote try to insert recursively or outside a text zone\n"));
+    return;
+  }
+  // first check that a paragraph is already open
+  if (!m_ps->m_isParagraphOpened && !m_ps->m_isListElementOpened)
+    _openParagraph();
+  insertChar(' ');
+  insertUnicode(0x2014); // -
+  insertChar(' ');
+  handleSubDocument(subDocument, libmwaw::DOC_NOTE);
+  insertChar(' ');
+  insertUnicode(0x2014); // -
+  insertChar(' ');
 }
 
 ///////////////////
@@ -986,7 +1031,7 @@ void MWAWGraphicListener::insertTextBox
   }
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
-  if (!openFrame())
+  if (!openFrame(pos))
     return;
   librevenge::RVNGPropertyList propList;
   _handleFrameParameters(propList, pos, style);
@@ -1023,6 +1068,65 @@ void MWAWGraphicListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr sub
 ///////////////////
 // table
 ///////////////////
+void MWAWGraphicListener::insertTable
+(MWAWPosition const &pos, MWAWTable &table, MWAWGraphicStyle const &style)
+{
+  if (!m_ds->m_isDocumentStarted || m_ps->m_inSubDocument) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTable insert a table in a subdocument is not implemented\n"));
+    return;
+  }
+  if (!openFrame(pos, style)) return;
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
+
+  shared_ptr<MWAWBasicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
+  try {
+    table.sendTable(listen);
+  }
+  catch (...) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTable exception catched \n"));
+  }
+  _endSubDocument();
+  _popParsingState();
+
+  closeFrame();
+}
+
+void MWAWGraphicListener::openTable(MWAWTable const &table)
+{
+  if (!m_ps->m_isFrameOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: called outside openFrame\n"));
+    return;
+  }
+  openTable(m_ps->m_framePosition, table, m_ps->m_frameStyle);
+}
+
+void MWAWGraphicListener::openTable(MWAWPosition const &pos, MWAWTable const &table, MWAWGraphicStyle const &style)
+{
+  if (m_ps->m_isFrameOpened || m_ps->m_isTableOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: no frame is already open...\n"));
+    return;
+  }
+
+  if (m_ps->m_isParagraphOpened)
+    _closeParagraph();
+
+  librevenge::RVNGPropertyList propList;
+  // default value: which can be redefined by table
+  propList.insert("table:align", "left");
+  propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
+
+  _handleFrameParameters(propList, pos, style);
+  table.addTablePropertiesTo(propList);
+  m_documentInterface->startTableObject(propList);
+  m_ps->m_isTableOpened = true;
+}
+
 void MWAWGraphicListener::closeTable()
 {
   if (!m_ps->m_isTableOpened) {
@@ -1122,7 +1226,7 @@ void MWAWGraphicListener::closeTableCell()
 ///////////////////
 // frame
 ///////////////////
-bool MWAWGraphicListener::openFrame()
+bool MWAWGraphicListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openFrame: the document is not started\n"));
@@ -1139,6 +1243,8 @@ bool MWAWGraphicListener::openFrame()
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
   m_ps->m_isFrameOpened = true;
+  m_ps->m_framePosition=pos;
+  m_ps->m_frameStyle=style;
   return true;
 }
 
@@ -1339,7 +1445,8 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
     m_ps->m_isTextBoxOpened=true;
     m_ds->m_isHeaderFooterStarted = true;
   }
-
+  else if (subDocumentType==libmwaw::DOC_COMMENT_ANNOTATION || subDocumentType==libmwaw::DOC_NOTE)
+    m_ps->m_inNote=true;
   // Check whether the document is calling itself
   bool sendDoc = true;
   for (size_t i = 0; i < m_ds->m_subDocuments.size(); i++) {

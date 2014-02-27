@@ -89,6 +89,10 @@ public:
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+  /** tries to open a frame */
+  bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
+  /** tries to close the last open frame */
+  void closeFrame();
 
   /** returns true if we can add text data */
   bool canWriteText() const
@@ -221,11 +225,6 @@ protected:
   void _endSubDocument();
 
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos);
-  /** tries to open a frame */
-  bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
-  /** tries to close the last open frame */
-  void closeFrame();
-
 
   void _openParagraph();
   void _closeParagraph();

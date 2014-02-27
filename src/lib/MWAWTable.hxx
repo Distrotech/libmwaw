@@ -139,10 +139,10 @@ public:
 
   Note: either send the table ( and returns true ) or do nothing.
    */
-  bool sendTable(MWAWListenerPtr listener, bool inFrame=true);
+  bool sendTable(MWAWBasicListenerPtr listener, bool inFrame=true);
 
   /** try to send the table as basic text */
-  bool sendAsText(MWAWListenerPtr listener);
+  bool sendAsText(MWAWBasicListenerPtr listener);
 
   // interface with the content listener
 
@@ -166,7 +166,7 @@ protected:
   /** a function which fills to posToCellId vector using the cell position */
   bool buildPosToCellId();
   //! send extra line
-  void sendExtraLines(MWAWListenerPtr listener) const;
+  void sendExtraLines(MWAWBasicListenerPtr listener) const;
 
 protected:
   /** a int to indicate what data are given in entries*/

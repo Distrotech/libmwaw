@@ -97,6 +97,10 @@ public:
   }
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
+  /** store the position and the style (which will be needed further to insert a textbox or a table with openTable) */
+  bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
+  /** close a frame */
+  void closeFrame();
 
   // ------ page --------
   /** returns true if a page is opened */
@@ -171,9 +175,23 @@ public:
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
   /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
   void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
+  /** insert a note
 
-  // ------- table (finish me) -----------------
+   \note as RVNGDrawingInterface does not accept note, note can only be inserted in a text zone (and are inserted between --) */
+  void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument);
+  /** adds comment
 
+   \note as RVNGDrawingInterface does not accept comment, comment can only be inserted in a text zone (and are inserted between --) */
+  void insertComment(MWAWSubDocumentPtr &subDocument);
+
+  // ------- table -----------------
+
+  /** adds a table in given position */
+  void insertTable(MWAWPosition const &pos, MWAWTable &table, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
+  /** open a table (using the last parameters of openFrame for the position ) */
+  void openTable(MWAWTable const &table);
+  /** open a table in a given position */
+  void openTable(MWAWPosition const &pos, MWAWTable const &table, MWAWGraphicStyle const &style);
   /** closes this table */
   void closeTable();
   /** open a row with given height ( if h < 0.0, set min-row-height = -h )*/
@@ -188,6 +206,7 @@ public:
   void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
 
   // ------- section ---------------
+
   /** returns true if we can add open a section, add page break, ... */
   bool canOpenSectionAddBreak() const
   {
@@ -223,9 +242,6 @@ protected:
 
    \note if there is some gradient, first draw a rectangle to print the gradient and them update propList */
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos, MWAWGraphicStyle const &style);
-  bool openFrame();
-  void closeFrame();
-
 
   void _openParagraph();
   void _closeParagraph();

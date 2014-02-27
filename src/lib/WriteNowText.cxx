@@ -474,7 +474,7 @@ struct Cell : public MWAWCell {
     m_zonesList(), m_footnoteList() {}
 
   //! send the content
-  bool sendContent(MWAWListenerPtr, MWAWTable &);
+  bool sendContent(MWAWBasicListenerPtr, MWAWTable &);
   //! the text parser
   WriteNowText &m_parser;
   //! the list of zone
@@ -586,7 +586,7 @@ struct State {
   std::map<long, shared_ptr<ContentZones> > m_contentMap;
 };
 
-bool Cell::sendContent(MWAWListenerPtr, MWAWTable &)
+bool Cell::sendContent(MWAWBasicListenerPtr, MWAWTable &)
 {
   /** as a cell can be arbitrary cutted in small part,
       we must retrieve the last ruler */

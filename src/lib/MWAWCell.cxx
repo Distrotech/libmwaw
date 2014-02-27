@@ -528,7 +528,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
 }
 
 // send data to listener
-bool MWAWCell::send(MWAWListenerPtr listener, MWAWTable &table)
+bool MWAWCell::send(MWAWBasicListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   listener->openTableCell(*this);
@@ -537,7 +537,7 @@ bool MWAWCell::send(MWAWListenerPtr listener, MWAWTable &table)
   return ok;
 }
 
-bool MWAWCell::sendContent(MWAWListenerPtr, MWAWTable &)
+bool MWAWCell::sendContent(MWAWBasicListenerPtr, MWAWTable &)
 {
   MWAW_DEBUG_MSG(("MWAWCell::sendContent: must not be called!!!\n"));
   return false;
