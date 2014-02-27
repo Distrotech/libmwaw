@@ -2254,12 +2254,14 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
         MsWksGraphInternal::Zone const &localChild=*(m_state->m_zonesList[size_t(localCId)]);
         Box2f origBdBox=localChild.getLocalBox(false);
         Vec2f decal=localChild.m_decal[0]+localChild.m_decal[1];
-        Box2f box(origBdBox[0]+decal,origBdBox[1]+decal);
+        MWAWPosition pictPos(origBdBox[0]+decal, origBdBox.size(), librevenge::RVNG_POINT);
+        pictPos.m_anchorTo=MWAWPosition::Page;
+        pictPos.m_wrapping =  MWAWPosition::WBackground;
         if (localChild.type()==MsWksGraphInternal::Zone::Group)
           sendGroup(static_cast<MsWksGraphInternal::GroupZone const &>(localChild), graphicListener);
         else if (localChild.type()==MsWksGraphInternal::Zone::Shape) {
           MsWksGraphInternal::BasicShape const &shape=static_cast<MsWksGraphInternal::BasicShape const &>(localChild);
-          graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
+          graphicListener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
         }
         else if (localChild.type()==MsWksGraphInternal::Zone::Text) {
           shared_ptr<MsWksGraphInternal::SubDocument> subdoc
@@ -2267,10 +2269,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
           // a textbox can not have border
           MWAWGraphicStyle style(localChild.m_style);
           style.m_lineWidth=0;
-          MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-          textPos.m_anchorTo=MWAWPosition::Page;
-          textPos.m_wrapping =  MWAWPosition::WBackground;
-          graphicListener->insertTextBox(textPos, subdoc, style);
+          graphicListener->insertTextBox(pictPos, subdoc, style);
         }
       }
       graphicListener->endDocument();
@@ -2338,13 +2337,15 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
       continue;
     MsWksGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
     Vec2f decal=child.m_decal[0]+child.m_decal[1];
-    Box2f box(child.m_box[0]+decal,child.m_box[1]+decal);
+    MWAWPosition pictPos(child.m_box[0]+decal, child.m_box.size(), librevenge::RVNG_POINT);
+    pictPos.m_anchorTo=MWAWPosition::Page;
+    pictPos.m_wrapping =  MWAWPosition::WBackground;
 
     if (child.type()==MsWksGraphInternal::Zone::Group)
       sendGroup(static_cast<MsWksGraphInternal::GroupZone const &>(child), listener);
     else if (child.type()==MsWksGraphInternal::Zone::Shape) {
       MsWksGraphInternal::BasicShape const &shape=static_cast<MsWksGraphInternal::BasicShape const &>(child);
-      listener->insertPicture(box, shape.m_shape, shape.getStyle());
+      listener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
     }
     else if (child.type()==MsWksGraphInternal::Zone::Text) {
       shared_ptr<MsWksGraphInternal::SubDocument> subdoc
@@ -2352,10 +2353,7 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
       // a textbox can not have border
       MWAWGraphicStyle style(child.m_style);
       style.m_lineWidth=0;
-      MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-      textPos.m_anchorTo=MWAWPosition::Page;
-      textPos.m_wrapping =  MWAWPosition::WBackground;
-      listener->insertTextBox(textPos, subdoc, style);
+      listener->insertTextBox(pictPos, subdoc, style);
     }
     else {
       MWAW_DEBUG_MSG(("MsWksGraph::sendGroup: find some unexpected child\n"));

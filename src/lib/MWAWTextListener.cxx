@@ -1188,7 +1188,9 @@ void MWAWTextListener::insertPicture
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListener graphicListener(m_parserState, Box2f(Vec2f(0,0),bdbox.size()), &graphicEncoder);
     graphicListener.startDocument();
-    graphicListener.insertPicture(Box2f(-1*bdbox[0],-1*bdbox[0]+bdbox.size()), shape, style);
+    MWAWPosition pathPos(-1*bdbox[0],bdbox.size(),librevenge::RVNG_POINT);
+    pathPos.m_anchorTo=MWAWPosition::Page;
+    graphicListener.insertPicture(pathPos, shape, style);
     graphicListener.endDocument();
 
     librevenge::RVNGBinaryData data;

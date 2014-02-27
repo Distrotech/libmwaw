@@ -1331,13 +1331,15 @@ bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setOrder(-1);
 
   Box2f box=Box2f(Vec2f(0,0),pictSz);
+  MWAWPosition shapePos(Vec2f(0,0),pictSz, librevenge::RVNG_POINT);
+  shapePos.m_anchorTo=MWAWPosition::Page;
   MWAWGraphicEncoder graphicEncoder;
   MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
   graphicListener.startDocument();
   MWAWGraphicStyle defStyle;
-  graphicListener.insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
-  graphicListener.insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
-  graphicListener.insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::rectangle(box), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(box[0],box[1]), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
   graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
@@ -1999,6 +2001,8 @@ void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWA
       continue;
     HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
     Box2f box=frame.getBdBox();
+    MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
+    pictPos.m_anchorTo=MWAWPosition::Page;
     switch (frame.m_type) {
     case 4: {
       frame.m_parsed=true;
@@ -2006,16 +2010,14 @@ void HanMacWrdKGraph::sendGroup(HanMacWrdKGraphInternal::Group const &group, MWA
         static_cast<HanMacWrdKGraphInternal::TextBox const &>(frame);
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-      MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-      textPos.m_anchorTo=MWAWPosition::Page;
-      listener->insertTextBox(textPos, subdoc, textbox.m_style);
+      listener->insertTextBox(pictPos, subdoc, textbox.m_style);
       break;
     }
     case 8: {
       frame.m_parsed=true;
       HanMacWrdKGraphInternal::ShapeGraph const &shape=
         static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(frame);
-      listener->insertPicture(box, shape.m_shape, shape.getStyle());
+      listener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
       break;
     }
     case 11:
@@ -2095,6 +2097,8 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
           continue;
         HanMacWrdKGraphInternal::Frame const &child=*fIt->second;
         Box2f box=child.getBdBox();
+        MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
+        pictPos.m_anchorTo=MWAWPosition::Page;
         switch (child.m_type) {
         case 4: {
           child.m_parsed=true;
@@ -2102,16 +2106,14 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
             static_cast<HanMacWrdKGraphInternal::TextBox const &>(child);
           MWAWSubDocumentPtr subdoc
           (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-          MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-          textPos.m_anchorTo=MWAWPosition::Page;
-          graphicListener->insertTextBox(textPos, subdoc, textbox.m_style);
+          graphicListener->insertTextBox(pictPos, subdoc, textbox.m_style);
           break;
         }
         case 8: {
           child.m_parsed=true;
           HanMacWrdKGraphInternal::ShapeGraph const &shape=
             static_cast<HanMacWrdKGraphInternal::ShapeGraph const &>(child);
-          graphicListener->insertPicture(box, shape.m_shape, shape.getStyle());
+          graphicListener->insertPicture(pictPos, shape.m_shape, shape.getStyle());
           break;
         }
         case 11:

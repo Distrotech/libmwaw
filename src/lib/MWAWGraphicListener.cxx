@@ -837,11 +837,12 @@ bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, libreveng
   if (!openFrame())
     return false;
   librevenge::RVNGPropertyList propList(extras);
-  Box2f bdbox(Vec2f(20,20), Vec2f(-20,-10)); // fixme
-  _handleFrameParameters(propList, bdbox, MWAWGraphicStyle::emptyStyle());
+  MWAWPosition pos(Vec2f(20,20), Vec2f(-20,-10), librevenge::RVNG_POINT); // fixme
+  pos.m_anchorTo=MWAWPosition::Page;
+  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
 
   m_documentInterface->startTextObject(propList);
-  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_HEADER_FOOTER);
+  handleSubDocument(pos.origin(), subDocument, libmwaw::DOC_HEADER_FOOTER);
   m_documentInterface->endTextObject();
   closeFrame();
   return true;
@@ -860,11 +861,12 @@ bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, libreveng
     return false;
   librevenge::RVNGPropertyList propList(extras);
   MWAWPageSpan page(getPageSpan()); // fixme
-  Box2f bdbox(Vec2f(20,72.f*float(page.getFormLength())-40.f), Vec2f(-20,-10));
-  _handleFrameParameters(propList, bdbox, MWAWGraphicStyle::emptyStyle());
+  MWAWPosition pos(Vec2f(20,72.f*float(page.getFormLength())-40.f), Vec2f(-20,-10), librevenge::RVNG_POINT);
+  pos.m_anchorTo=MWAWPosition::Page;
+  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
 
   m_documentInterface->startTextObject(propList);
-  handleSubDocument(bdbox[0], subDocument, libmwaw::DOC_HEADER_FOOTER);
+  handleSubDocument(pos.origin(), subDocument, libmwaw::DOC_HEADER_FOOTER);
   m_documentInterface->endTextObject();
   closeFrame();
   return true;
@@ -911,7 +913,7 @@ void MWAWGraphicListener::insertBreak(BreakType breakType)
 ///////////////////
 
 void MWAWGraphicListener::insertPicture
-(Box2f const &bdbox, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
+(MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertPicture: the document is not started\n"));
@@ -927,7 +929,7 @@ void MWAWGraphicListener::insertPicture
   librevenge::RVNGPropertyList list, shapePList;
   style.addTo(list, shape.getType()==MWAWGraphicShape::Line);
   m_documentInterface->setStyle(list);
-  switch (shape.addTo(bdbox[0]-m_ps->m_origin, style.hasSurface(), shapePList)) {
+  switch (shape.addTo(1.f/pos.getInvUnitScale(librevenge::RVNG_POINT)*pos.origin()-m_ps->m_origin, style.hasSurface(), shapePList)) {
   case MWAWGraphicShape::C_Ellipse:
     m_documentInterface->drawEllipse(shapePList);
     break;
@@ -1147,52 +1149,6 @@ void MWAWGraphicListener::closeFrame()
     return;
   }
   m_ps->m_isFrameOpened = false;
-}
-
-void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, Box2f const &bdbox, MWAWGraphicStyle const &style)
-{
-  if (!m_ds->m_isDocumentStarted)
-    return;
-
-  Vec2f size=bdbox.size();
-  Vec2f pt=bdbox[0]-m_ps->m_origin;
-  // checkme: do we still need to do that ?
-  if (style.hasGradient(true)) {
-    if (style.m_rotate<0 || style.m_rotate>0) {
-      MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: rotation is not implemented\n"));
-    }
-    // ok, first send a background rectangle
-    librevenge::RVNGPropertyList rectList;
-    m_documentInterface->setStyle(rectList);
-    rectList.clear();
-    rectList.insert("svg:x",pt[0], librevenge::RVNG_POINT);
-    rectList.insert("svg:y",pt[1], librevenge::RVNG_POINT);
-    rectList.insert("svg:width",size.x()>0 ? size.x() : -size.x(), librevenge::RVNG_POINT);
-    rectList.insert("svg:height",size.y()>0 ? size.y() : -size.y(), librevenge::RVNG_POINT);
-    m_documentInterface->drawRectangle(rectList);
-
-    list.insert("draw:stroke", "none");
-    list.insert("draw:fill", "none");
-  }
-  else
-    style.addTo(list);
-
-  list.insert("svg:x",pt[0], librevenge::RVNG_POINT);
-  list.insert("svg:y",pt[1], librevenge::RVNG_POINT);
-  if (size.x()>0)
-    list.insert("svg:width",size.x(), librevenge::RVNG_POINT);
-  else if (size.x()<0)
-    list.insert("fo:min-width",-size.x(), librevenge::RVNG_POINT);
-  if (size.y()>0)
-    list.insert("svg:height",size.y(), librevenge::RVNG_POINT);
-  else if (size.y()<0)
-    list.insert("fo:min-height",-size.y(), librevenge::RVNG_POINT);
-
-  float const padding = 0; // fillme
-  list.insert("fo:padding-top",padding, librevenge::RVNG_POINT);
-  list.insert("fo:padding-bottom",padding, librevenge::RVNG_POINT);
-  list.insert("fo:padding-left",padding, librevenge::RVNG_POINT);
-  list.insert("fo:padding-right",padding, librevenge::RVNG_POINT);
 }
 
 void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, MWAWPosition const &pos, MWAWGraphicStyle const &style)

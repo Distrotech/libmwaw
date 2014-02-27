@@ -1916,7 +1916,9 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
     case GreatWksGraphInternal::Frame::T_BASIC: {
       GreatWksGraphInternal::FrameShape const &shape=static_cast<GreatWksGraphInternal::FrameShape const &>(*frame);
       shape.updateStyle(style);
-      listener->insertPicture(box, shape.m_shape, style);
+      MWAWPosition shapePos(box[0], box.size(), librevenge::RVNG_POINT);
+      shapePos.m_anchorTo=MWAWPosition::Page;
+      listener->insertPicture(shapePos, shape.m_shape, style);
       break;
     }
     case GreatWksGraphInternal::Frame::T_GROUP:
@@ -2009,7 +2011,9 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         case GreatWksGraphInternal::Frame::T_BASIC: {
           GreatWksGraphInternal::FrameShape const &shape=static_cast<GreatWksGraphInternal::FrameShape const &>(*child);
           shape.updateStyle(style);
-          graphicListener->insertPicture(box, shape.m_shape, style);
+          MWAWPosition shapePos(box[0], box.size(), librevenge::RVNG_POINT);
+          shapePos.m_anchorTo=MWAWPosition::Page;
+          graphicListener->insertPicture(shapePos, shape.m_shape, style);
           break;
         }
         case GreatWksGraphInternal::Frame::T_GROUP:

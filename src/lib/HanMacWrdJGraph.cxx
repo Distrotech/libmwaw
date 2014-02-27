@@ -2008,13 +2008,15 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setOrder(-1);
 
   Box2f box=Box2f(Vec2f(0,0),pictSz);
+  MWAWPosition shapePos(Vec2f(0,0),pictSz, librevenge::RVNG_POINT);
+  shapePos.m_anchorTo=MWAWPosition::Page;
   MWAWGraphicEncoder graphicEncoder;
   MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
   graphicListener.startDocument();
   MWAWGraphicStyle defStyle;
-  graphicListener.insertPicture(box, MWAWGraphicShape::rectangle(box), defStyle);
-  graphicListener.insertPicture(box, MWAWGraphicShape::line(box[0],box[1]), defStyle);
-  graphicListener.insertPicture(box, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::rectangle(box), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(box[0],box[1]), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
   graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
@@ -2773,6 +2775,8 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
     HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
     Box2f box=frame.getBdBox();
     HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
+    MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
+    pictPos.m_anchorTo=MWAWPosition::Page;
     switch (frame.m_type) {
     case 4: {
       frame.m_parsed=true;
@@ -2780,9 +2784,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
         static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(frame);
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-      MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-      textPos.m_anchorTo=MWAWPosition::Page;
-      listener->insertTextBox(textPos, subdoc, format.m_style);
+      listener->insertTextBox(pictPos, subdoc, format.m_style);
       break;
     }
     case 8: {
@@ -2794,7 +2796,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
         if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
         if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
       }
-      listener->insertPicture(box, shape.m_shape, style);
+      listener->insertPicture(pictPos, shape.m_shape, style);
       break;
     }
     case 11:
@@ -2878,6 +2880,8 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
         HanMacWrdJGraphInternal::Frame const &child=*m_state->m_framesList[size_t(fIt->second)];
         Box2f box=child.getBdBox();
         HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(child.m_formatId);
+        MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
+        pictPos.m_anchorTo=MWAWPosition::Page;
         switch (child.m_type) {
         case 4: {
           child.m_parsed=true;
@@ -2885,9 +2889,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
             static_cast<HanMacWrdJGraphInternal::TextboxFrame const &>(child);
           MWAWSubDocumentPtr subdoc
           (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-          MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
-          textPos.m_anchorTo=MWAWPosition::Page;
-          graphicListener->insertTextBox(textPos, subdoc, format.m_style);
+          graphicListener->insertTextBox(pictPos, subdoc, format.m_style);
           break;
         }
         case 8: {
@@ -2899,7 +2901,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
             if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
             if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
           }
-          graphicListener->insertPicture(box, shape.m_shape, style);
+          graphicListener->insertPicture(pictPos, shape.m_shape, style);
           break;
         }
         case 11:

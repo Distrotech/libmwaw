@@ -168,29 +168,10 @@ public:
   virtual void insertBreak(BreakType breakType)=0;
 
   // ------- subdocument ---------------
-  /** returns true if a subdocument is open  */
-  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
-  /** adds a picture in given position */
-  virtual void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
-                             std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle()) = 0;
-};
-
-/** This class contains a virtual interface to text listener and the spreadsheet listener */
-class MWAWListener : public MWAWBasicListener
-{
-public:
-  //! destructor
-  virtual ~MWAWListener() {}
-
   /** function called to add a subdocument */
   virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
-
-  // ------- subdocument -----------------
-  /** insert a note */
-  virtual void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)=0;
-  /** adds comment */
-  virtual void insertComment(MWAWSubDocumentPtr &subDocument) = 0;
-
+  /** returns true if a subdocument is open  */
+  virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
   /** adds a picture in given position */
   virtual void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
                              std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle()) = 0;
@@ -200,6 +181,20 @@ public:
   /** adds a textbox in given position */
   virtual void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument,
                              MWAWGraphicStyle const &frameStyle=MWAWGraphicStyle::emptyStyle()) = 0;
+};
+
+/** This class contains a virtual interface to text listener and the spreadsheet listener */
+class MWAWListener : public MWAWBasicListener
+{
+public:
+  //! destructor
+  virtual ~MWAWListener() {}
+
+  // ------- subdocument -----------------
+  /** insert a note */
+  virtual void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument)=0;
+  /** adds comment */
+  virtual void insertComment(MWAWSubDocumentPtr &subDocument) = 0;
 
   // ------- table -----------------
   /** open a table*/

@@ -2341,12 +2341,12 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
     if (!child) continue;
     Box2f box=child->getBdBox();
     ClarisWksGraphInternal::Zone::Type type=child->getType();
+    MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
+    pos.m_anchorTo=MWAWPosition::Page;
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
       ClarisWksGraphInternal::ZoneZone const &zone=
         static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zone.m_id);
-      MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
-      pos.m_anchorTo=MWAWPosition::Page;
       if (dset && dset->m_fileType==4) {
         sendBitmap(zone.m_id, listener, pos);
         continue;
@@ -2363,7 +2363,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
       MWAWGraphicStyle style(shape.m_style);
       if (shape.m_shape.m_type!=MWAWGraphicShape::Line)
         style.m_arrows[0]=style.m_arrows[1]=false;
-      listener->insertPicture(box, shape.m_shape, style);
+      listener->insertPicture(pos, shape.m_shape, style);
     }
     else if (type!=ClarisWksGraphInternal::Zone::T_DataBox) {
       MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: find unexpected type!!!\n"));

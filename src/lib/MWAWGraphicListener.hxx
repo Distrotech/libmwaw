@@ -88,8 +88,13 @@ public:
   /** returns true if a document is opened */
   bool isDocumentStarted() const;
 
-  /** function called to add a subdocument */
+  /** function called to add a subdocument and modify the origin*/
   void handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
+  /** function called to add a subdocument */
+  void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
+  {
+    handleSubDocument(Vec2f(0,0), subDocument, subDocumentType);
+  }
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
 
@@ -161,8 +166,7 @@ public:
   void insertPicture(MWAWPosition const &pos, const librevenge::RVNGBinaryData &binaryData,
                      std::string type="image/pict", MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** adds a shape picture in given position */
-  void insertPicture(Box2f const &bdbox, MWAWGraphicShape const &shape,
-                     MWAWGraphicStyle const &style);
+  void insertPicture(MWAWPosition const &pos, MWAWGraphicShape const &shape, MWAWGraphicStyle const &style);
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
   /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
@@ -219,7 +223,6 @@ protected:
 
    \note if there is some gradient, first draw a rectangle to print the gradient and them update propList */
   void _handleFrameParameters(librevenge::RVNGPropertyList &propList, MWAWPosition const &pos, MWAWGraphicStyle const &style);
-  void _handleFrameParameters(librevenge::RVNGPropertyList &propList, Box2f const &pos, MWAWGraphicStyle const &style);
   bool openFrame();
   void closeFrame();
 
