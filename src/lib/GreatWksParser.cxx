@@ -228,7 +228,7 @@ bool GreatWksParser::sendHF(int id)
   return m_textParser->sendHF(id);
 }
 
-bool GreatWksParser::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
+bool GreatWksParser::sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener)
 {
   MWAWInputStreamPtr input = getInput();
   long actPos = input->tell();

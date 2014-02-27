@@ -476,7 +476,7 @@ bool HanMacWrdJText::canSendTextAsGraphic(HanMacWrdJTextInternal::TextZone const
   return true;
 }
 
-bool HanMacWrdJText::sendText(long id, long cPos, MWAWBasicListenerPtr listener)
+bool HanMacWrdJText::sendText(long id, long cPos, MWAWListenerPtr listener)
 {
   if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
     MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not find text zone with id %lx\n", id));
@@ -501,7 +501,7 @@ bool HanMacWrdJText::sendMainText()
 }
 
 
-bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long fPos, MWAWBasicListenerPtr listener)
+bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long fPos, MWAWListenerPtr listener)
 {
   if (!zone.m_entry.valid()) {
     MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: call without entry\n"));

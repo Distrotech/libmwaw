@@ -79,11 +79,11 @@ protected:
   //! send the main text zone
   bool sendMainText();
   //! send a text zone
-  bool sendText(long id, long cPos, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
+  bool sendText(long id, long cPos, MWAWListenerPtr listener=MWAWListenerPtr());
   //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long cPos);
   //! send a text zone
-  bool sendText(HanMacWrdJTextInternal::TextZone const &zone, long cPos, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
+  bool sendText(HanMacWrdJTextInternal::TextZone const &zone, long cPos, MWAWListenerPtr listener=MWAWListenerPtr());
   //! check if we can send a textzone has graphic
   bool canSendTextAsGraphic(HanMacWrdJTextInternal::TextZone const &zone, long cPos);
   //! sends the data which have not yet been sent to the listener

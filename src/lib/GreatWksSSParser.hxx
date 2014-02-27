@@ -90,7 +90,7 @@ protected:
   //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
   bool canSendTextBoxAsGraphic(MWAWEntry const &entry);
   //! try to  textbox's text
-  bool sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener);
+  bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener);
 
   // interface with the graph parser
 

@@ -96,7 +96,7 @@ struct TableCell : public MWAWCell {
   void update(Table const &table);
 
   //! send the cell content to a listener
-  virtual bool sendContent(MWAWBasicListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell)
@@ -244,7 +244,7 @@ void TableCell::update(Table const &table)
   }
 }
 
-bool TableCell::sendContent(MWAWBasicListenerPtr listener, MWAWTable &table)
+bool TableCell::sendContent(MWAWListenerPtr listener, MWAWTable &table)
 {
   if (!listener) return true;
   if (m_zoneId <= 0)

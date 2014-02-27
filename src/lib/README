@@ -73,6 +73,10 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWSubDocument.hxx
 	Files to parse document inspired of libwpd/WP*
 
+## MWAWListener.hxx
+	The abstract class of all listener
+## MWAWGraphicListener
+	The graphic listener (used to create odg picture) with
 ## MWAWTextListener.hxx
 	The text listener uses to create odt...
 ## MWAWSpreadsheetListener.hxx
@@ -91,11 +95,11 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWParagraph.hxx 
 	store the paragraph property
 
-## MWAWGraphicListener
-	The graphic listener (used to create odg picture) with
-  - MWAWGraphicEncoder.hxx to define a generic interface to create ODG file
-  - MWAWGraphicShape.hxx to define basic graphic shape
-  - MWAWGraphicStyle.hxx to store the graphic style's properties
+## MWAWGraphicShape.hxx to define basic graphic shape
+## MWAWGraphicStyle.hxx to store the graphic style's properties
+
+## MWAWGraphicDecoder.hxx to uncompress RVNGBinaryData into RVNGDrawInterface orders 
+## MWAWGraphicEncoder.hxx to compress RVNGDrawInterface orders into a RVNGBinaryData
 
 ## MWAWList.hxx
 	store a simple list definition 

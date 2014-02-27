@@ -147,12 +147,12 @@ public:
       listener.
 
       By default: calls openTableCell(*this), sendContent and then closeTableCell() */
-  virtual bool send(MWAWBasicListenerPtr listener, MWAWTable &table);
+  virtual bool send(MWAWListenerPtr listener, MWAWTable &table);
   /** function called when the content of a cell must be send to the listener,
       ie. when MWAWTable::sendTable or MWAWTable::sendAsText is called.
 
       \note default behavior: does nothing and prints an error in debug mode.*/
-  virtual bool sendContent(MWAWBasicListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
 
   // position
 

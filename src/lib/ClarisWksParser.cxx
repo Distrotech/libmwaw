@@ -225,7 +225,7 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
         if (mainZonesList[i]==headerId ||
             mainZonesList[i]==footerId)
           continue;
-        m_document->sendZone(mainZonesList[i], MWAWBasicListenerPtr(), pos);
+        m_document->sendZone(mainZonesList[i], MWAWListenerPtr(), pos);
       }
       m_document->getPresentationParser()->flushExtra();
       m_document->getGraphParser()->flushExtra();

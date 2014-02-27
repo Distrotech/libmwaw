@@ -1274,7 +1274,7 @@ bool ClarisWksText::canSendTextAsGraphic(ClarisWksTextInternal::Zone const &zone
   return true;
 }
 
-bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener)
+bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListenerPtr listener)
 {
   zone.m_parsed=true;
   bool localListener=false;
@@ -1445,7 +1445,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWBasicL
                 tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), librevenge::RVNG_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
-              m_document.sendZone(token.m_zoneId, MWAWBasicListenerPtr(), tPos);
+              m_document.sendZone(token.m_zoneId, MWAWListenerPtr(), tPos);
             }
             else
               f << "###";
@@ -1951,7 +1951,7 @@ bool ClarisWksText::readParagraph(int id)
   return true;
 }
 
-void ClarisWksText::setProperty(MWAWBasicListener &listener, ClarisWksTextInternal::Paragraph const &ruler, int listId)
+void ClarisWksText::setProperty(MWAWListener &listener, ClarisWksTextInternal::Paragraph const &ruler, int listId)
 {
   if (listId <= 0) {
     listener.setParagraph(ruler);
@@ -1971,7 +1971,7 @@ bool ClarisWksText::canSendTextAsGraphic(int number) const
   return canSendTextAsGraphic(*iter->second);
 }
 
-bool ClarisWksText::sendZone(int number, MWAWBasicListenerPtr listener)
+bool ClarisWksText::sendZone(int number, MWAWListenerPtr listener)
 {
   std::map<int, shared_ptr<ClarisWksTextInternal::Zone> >::iterator iter
     = m_state->m_zoneMap.find(number);

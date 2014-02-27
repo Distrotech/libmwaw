@@ -1660,7 +1660,6 @@ void MWAWTextListener::openTable(MWAWTable const &table)
   librevenge::RVNGPropertyList propList;
   propList.insert("table:align", "left");
   propList.insert("fo:margin-left", *m_ps->m_paragraph.m_margins[1], *m_ps->m_paragraph.m_marginsUnit);
-
   _pushParsingState();
   _startSubDocument();
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;

@@ -163,7 +163,7 @@ void HanMacWrdKParser::init()
   m_textParser.reset(new HanMacWrdKText(*this));
 }
 
-bool HanMacWrdKParser::sendText(long id, long subId, MWAWBasicListenerPtr listener)
+bool HanMacWrdKParser::sendText(long id, long subId, MWAWListenerPtr listener)
 {
   return m_textParser->sendText(id, subId, listener);
 }

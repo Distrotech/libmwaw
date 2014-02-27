@@ -357,7 +357,7 @@ struct TableCell : public MWAWCell {
   {
   }
   //! call when the content of a cell must be send
-  virtual bool sendContent(MWAWBasicListenerPtr listener, MWAWTable &table);
+  virtual bool sendContent(MWAWListenerPtr listener, MWAWTable &table);
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TableCell const &cell);
   //! the cell id ( corresponding to the last data in the main zones list )
@@ -554,7 +554,7 @@ struct TextBox : public Frame {
   std::string m_extra;
 };
 
-bool TableCell::sendContent(MWAWBasicListenerPtr, MWAWTable &table)
+bool TableCell::sendContent(MWAWListenerPtr, MWAWTable &table)
 {
   if (m_id < 0)
     return true;
@@ -909,7 +909,7 @@ int HanMacWrdKGraph::numPages() const
   return nPages;
 }
 
-bool HanMacWrdKGraph::sendText(long textId, long id, MWAWBasicListenerPtr listener)
+bool HanMacWrdKGraph::sendText(long textId, long id, MWAWListenerPtr listener)
 {
   return m_mainParser->sendText(textId, id, listener);
 }

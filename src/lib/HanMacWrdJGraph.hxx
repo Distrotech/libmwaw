@@ -172,7 +172,7 @@ protected:
   /** try to send a frame to the listener */
   bool sendFrame(long frameId, MWAWPosition pos);
   //! ask main parser to send a text zone
-  bool sendText(long textId, long fPos, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
+  bool sendText(long textId, long fPos, MWAWListenerPtr listener=MWAWListenerPtr());
 
   //
   // low level

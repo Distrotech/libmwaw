@@ -107,11 +107,11 @@ protected:
   //! check if we can send a group as graphic
   bool canSendGroupAsGraphic(int number) const;
   //! sends the zone data to the listener (if it exists )
-  bool sendGroup(int number, MWAWBasicListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
+  bool sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
   //! check if we can send a group as graphic
   bool canSendBitmapAsGraphic(int number) const;
   //! sends the bitmap data to the listener (if it exists )
-  bool sendBitmap(int number, MWAWBasicListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
+  bool sendBitmap(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
@@ -119,7 +119,7 @@ protected:
   // interface with main parser
 
   //! ask the main parser to send a zone
-  void askToSend(int number, MWAWBasicListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
+  void askToSend(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
 
   //
   // Intermediate level
@@ -195,7 +195,7 @@ protected:
   bool sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosition pos);
 
   //! sends a bitmap graphic zone
-  bool sendBitmap(ClarisWksGraphInternal::Bitmap &pict, MWAWBasicListener &listener, MWAWPosition pos);
+  bool sendBitmap(ClarisWksGraphInternal::Bitmap &pict, MWAWListener &listener, MWAWPosition pos);
 
 private:
   ClarisWksGraph(ClarisWksGraph const &orig);

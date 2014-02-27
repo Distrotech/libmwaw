@@ -219,7 +219,7 @@ protected:
   // interface with the text parser
 
   //! send a text zone
-  bool sendText(long id, long subId, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr());
+  bool sendText(long id, long subId, MWAWListenerPtr listener=MWAWListenerPtr());
 
   //! check if we can send a textzone as graphic
   bool canSendTextAsGraphic(long id, long subId);

@@ -404,7 +404,7 @@ bool HanMacWrdKText::canSendTextAsGraphic(long id, long subId)
   return false;
 }
 
-bool HanMacWrdKText::sendText(long id, long subId, MWAWBasicListenerPtr listener)
+bool HanMacWrdKText::sendText(long id, long subId, MWAWListenerPtr listener)
 {
   std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt
     =m_state->m_IdTextMaps.lower_bound(id);
@@ -496,7 +496,7 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
   return true;
 }
 
-bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWBasicListenerPtr listener)
+bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
 {
   if (!zone.valid()) {
     MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: called without any zone\n"));

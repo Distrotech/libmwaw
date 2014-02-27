@@ -111,7 +111,7 @@ struct Token {
   //! returns a field format
   std::string getDTFormat() const;
   //! try to send the token to the listener
-  bool sendTo(MWAWBasicListener &listener) const;
+  bool sendTo(MWAWListener &listener) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Token const &tkn);
   //! the token type
@@ -130,7 +130,7 @@ struct Token {
   std::string m_extra;
 };
 
-bool Token::sendTo(MWAWBasicListener &listener) const
+bool Token::sendTo(MWAWListener &listener) const
 {
   switch (m_type) {
   case 2:
@@ -485,7 +485,7 @@ bool GreatWksText::canSendTextBoxAsGraphic(MWAWEntry const &entry)
   return ok;
 }
 
-bool GreatWksText::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
+bool GreatWksText::sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener)
 {
   if (!listener && !m_parserState->getMainListener()) {
     MWAW_DEBUG_MSG(("GreatWksText::sendTextbox: can not find a listener\n"));
@@ -1174,7 +1174,7 @@ void GreatWksText::flushExtra()
   }
 }
 
-bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
+bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, MWAWListenerPtr listener)
 {
   if (!listener)
     listener=m_parserState->getMainListener();
@@ -1328,7 +1328,7 @@ bool GreatWksText::sendSimpleTextbox(MWAWEntry const &entry, MWAWBasicListenerPt
   return true;
 }
 
-bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWBasicListenerPtr listener)
+bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListenerPtr listener)
 {
   bool inLocalZone=false;
   if (listener)
@@ -1450,7 +1450,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWBasicLis
         break;
       }
       if (actCol < numCol-1 && numCol > 1) {
-        listener->insertBreak(MWAWBasicListener::ColumnBreak);
+        listener->insertBreak(MWAWListener::ColumnBreak);
         actCol++;
       }
       else {

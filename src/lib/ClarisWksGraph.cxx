@@ -628,7 +628,7 @@ public:
     parse(listener, type, true);
   }
   //! the main parser function
-  void parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
+  void parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
   /** the graph parser */
   ClarisWksGraph *m_graphParser;
 
@@ -642,7 +642,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWBasicListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
+void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
 {
   if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
     MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: no listener\n"));
@@ -721,7 +721,7 @@ int ClarisWksGraph::numPages() const
   return nPages;
 }
 
-void ClarisWksGraph::askToSend(int number, MWAWBasicListenerPtr listener, MWAWPosition const &pos)
+void ClarisWksGraph::askToSend(int number, MWAWListenerPtr listener, MWAWPosition const &pos)
 {
   m_document.sendZone(number, listener, pos);
 }
@@ -2282,7 +2282,7 @@ bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
   return canSendAsGraphic(*iter->second);
 }
 
-bool ClarisWksGraph::sendGroup(int number, MWAWBasicListenerPtr listener, MWAWPosition const &position)
+bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &position)
 {
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.find(number);
@@ -2607,7 +2607,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   if (!isLinked && isGroup && canSendGroupAsGraphic(zId))
     return sendGroup(zId, MWAWListenerPtr(), pos);
   if (!isLinked && dset && dset->m_fileType==4)
-    return sendBitmap(zId, MWAWBasicListenerPtr(), pos);
+    return sendBitmap(zId, MWAWListenerPtr(), pos);
   if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) &&
       (dset && dset->m_fileType==1) && m_document.canSendZoneAsGraphic(zId)) {
     Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
@@ -2698,7 +2698,7 @@ bool ClarisWksGraph::canSendBitmapAsGraphic(int number) const
   return true;
 }
 
-bool ClarisWksGraph::sendBitmap(int number, MWAWBasicListenerPtr listener, MWAWPosition const &pos)
+bool ClarisWksGraph::sendBitmap(int number, MWAWListenerPtr listener, MWAWPosition const &pos)
 {
   std::map<int, shared_ptr<ClarisWksGraphInternal::Bitmap> >::iterator iter
     = m_state->m_bitmapMap.find(number);
@@ -2715,7 +2715,7 @@ bool ClarisWksGraph::sendBitmap(int number, MWAWBasicListenerPtr listener, MWAWP
   return sendBitmap(*iter->second, *listener, pos);
 }
 
-bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWBasicListener &listener, MWAWPosition pos)
+bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWListener &listener, MWAWPosition pos)
 {
   if (!bitmap.m_entry.valid() || !bitmap.m_numBytesPerPixel)
     return false;

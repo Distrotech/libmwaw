@@ -362,7 +362,6 @@ class MWAWParser;
 class MWAWPosition;
 class MWAWSection;
 
-class MWAWBasicListener;
 class MWAWFontConverter;
 class MWAWGraphicListener;
 class MWAWInputStream;
@@ -373,8 +372,6 @@ class MWAWRSRCParser;
 class MWAWSpreadsheetListener;
 class MWAWSubDocument;
 class MWAWTextListener;
-//! a smart pointer of MWAWBasicListener
-typedef shared_ptr<MWAWBasicListener> MWAWBasicListenerPtr;
 //! a smart pointer of MWAWFontConverter
 typedef shared_ptr<MWAWFontConverter> MWAWFontConverterPtr;
 //! a smart pointer of MWAWGraphicListener

@@ -400,7 +400,7 @@ public:
 
 protected:
   //! the parser function
-  void parse(MWAWBasicListenerPtr listener);
+  void parse(MWAWListenerPtr listener);
   /** the graph parser */
   GreatWksGraph *m_graphParser;
 
@@ -409,7 +409,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWBasicListenerPtr listener)
+void SubDocument::parse(MWAWListenerPtr listener)
 {
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no listener\n"));
@@ -464,7 +464,7 @@ int GreatWksGraph::numPages() const
   return nPages;
 }
 
-bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener)
+bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener)
 {
   return m_callback.m_sendTextbox && (m_mainParser->*m_callback.m_sendTextbox)(entry, listener);
 }

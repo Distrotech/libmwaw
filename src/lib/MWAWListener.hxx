@@ -45,14 +45,12 @@
 class MWAWCell;
 class MWAWTable;
 
-/** This class contains a virtual interface to all listener
-
- \note actually contains mainly code for adding text */
-class MWAWBasicListener
+/** This class contains a virtual interface to all listener */
+class MWAWListener
 {
 public:
   //! destructor
-  virtual ~MWAWBasicListener() {}
+  virtual ~MWAWListener() {}
 
   //! the listener type
   enum Type { Graphic, Spreadsheet, Text };
@@ -191,14 +189,6 @@ public:
   virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
   /** returns true if a subdocument is open  */
   virtual bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const = 0;
-};
-
-/** This class contains a virtual interface to text listener and the spreadsheet listener */
-class MWAWListener : public MWAWBasicListener
-{
-public:
-  //! destructor
-  virtual ~MWAWListener() {}
 };
 
 #endif

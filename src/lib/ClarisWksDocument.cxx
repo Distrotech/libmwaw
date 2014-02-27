@@ -267,7 +267,7 @@ bool ClarisWksDocument::canSendZoneAsGraphic(int zoneId) const
   return false;
 }
 
-bool ClarisWksDocument::sendZone(int zoneId, MWAWBasicListenerPtr listener, MWAWPosition position)
+bool ClarisWksDocument::sendZone(int zoneId, MWAWListenerPtr listener, MWAWPosition position)
 {
   shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
   if (!zMap) return false;

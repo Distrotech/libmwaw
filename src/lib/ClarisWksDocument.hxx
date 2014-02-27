@@ -102,7 +102,7 @@ public:
   //! check if we can send a zone as a graphic
   bool canSendZoneAsGraphic(int number) const;
   //! try to send a zone
-  bool sendZone(int zoneId, MWAWBasicListenerPtr listener=MWAWBasicListenerPtr(), MWAWPosition pos=MWAWPosition());
+  bool sendZone(int zoneId, MWAWListenerPtr listener=MWAWListenerPtr(), MWAWPosition pos=MWAWPosition());
   /** ask the main parser to create a document to send a footnote */
   void sendFootnote(int zoneId);
 

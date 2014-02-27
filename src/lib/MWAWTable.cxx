@@ -156,7 +156,7 @@ void MWAWTable::addTablePropertiesTo(librevenge::RVNGPropertyList &propList) con
 
 ////////////////////////////////////////////////////////////
 // send extra line
-void MWAWTable::sendExtraLines(MWAWBasicListenerPtr listener) const
+void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("MWAWTable::sendExtraLines: called without listener\n"));
@@ -459,7 +459,7 @@ bool MWAWTable::updateTable()
   return true;
 }
 
-bool MWAWTable::sendTable(MWAWBasicListenerPtr listener, bool inFrame)
+bool MWAWTable::sendTable(MWAWListenerPtr listener, bool inFrame)
 {
   if (!updateTable())
     return false;
@@ -490,7 +490,7 @@ bool MWAWTable::sendTable(MWAWBasicListenerPtr listener, bool inFrame)
 
 ////////////////////////////////////////////////////////////
 // try to send the table
-bool MWAWTable::sendAsText(MWAWBasicListenerPtr listener)
+bool MWAWTable::sendAsText(MWAWListenerPtr listener)
 {
   if (!listener) return true;
 

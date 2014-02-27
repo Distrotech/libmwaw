@@ -369,7 +369,7 @@ struct Cell : public MWAWCell {
   }
 
   //! send the content
-  bool sendContent(MWAWBasicListenerPtr listener, MWAWTable &)
+  bool sendContent(MWAWListenerPtr listener, MWAWTable &)
   {
     if (m_blockId > 0)
       m_parser.send(m_blockId);

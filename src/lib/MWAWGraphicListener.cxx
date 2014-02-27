@@ -158,14 +158,14 @@ State::State() : m_origin(0,0),
 }
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface) : MWAWBasicListener(),
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface) : MWAWListener(),
   m_ds(new MWAWGraphicListenerInternal::GraphicState(pageList)), m_ps(new MWAWGraphicListenerInternal::State),
   m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
   MWAW_DEBUG_MSG(("MWAWGraphicListener::MWAWGraphicListener: general constructor is not implemented\n"));
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWBasicListener(),
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWListener(),
   m_ds(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
   MWAWPageSpan pageSpan;
@@ -1081,7 +1081,7 @@ void MWAWGraphicListener::insertTable
   _startSubDocument();
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
-  shared_ptr<MWAWBasicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
+  shared_ptr<MWAWListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
   try {
     table.sendTable(listen);
   }

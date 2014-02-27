@@ -123,7 +123,7 @@ protected:
   //! try to send a textbox via a graphiclistener
   bool sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text, MWAWGraphicStyle const &style, MWAWGraphicListenerPtr listener);
   //! try to send the textbox text (via the mainParser)
-  bool sendTextbox(MWAWEntry const &entry, MWAWBasicListenerPtr listener);
+  bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener);
 
   //! try to send a picture
   bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
@@ -168,7 +168,7 @@ protected:
     //! callback used check if a textbox can be send in a graphic zone, ie. does not contains any graphic
     typedef bool (MWAWParser:: *CanSendTextBoxAsGraphic)(MWAWEntry const &entry);
     //! callback used to send textbox
-    typedef bool (MWAWParser:: *SendTextbox)(MWAWEntry const &entry, MWAWBasicListenerPtr listener);
+    typedef bool (MWAWParser:: *SendTextbox)(MWAWEntry const &entry, MWAWListenerPtr listener);
 
     /** constructor */
     Callback() : m_canSendTextBoxAsGraphic(0), m_sendTextbox(0) { }
