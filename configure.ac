@@ -62,7 +62,7 @@ AS_CASE([$host],
 		AC_CHECK_TOOL(WINDRES, windres)
 		LIBMWAW_WIN32_RESOURCE=libmwaw-win32res.lo
 		LIBMWAW_STREAM_WIN32_RESOURCE=libmwaw-stream-win32res.lo
-		MWAW2CSV_WIN32_RESOURCE=mwaw2cvg-win32res.lo
+		MWAW2CSV_WIN32_RESOURCE=mwaw2csv-win32res.lo
 		MWAW2HTML_WIN32_RESOURCE=mwaw2html-win32res.lo
 		MWAW2RAW_WIN32_RESOURCE=mwaw2raw-win32res.lo
 		MWAW2TEXT_WIN32_RESOURCE=mwaw2text-win32res.lo

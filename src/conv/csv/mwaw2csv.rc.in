@@ -14,11 +14,11 @@ VS_VERSION_INFO VERSIONINFO
       BLOCK "040904B0"
       BEGIN
 	VALUE "CompanyName", "The libmwaw developer community"
-	VALUE "FileDescription", "mwaw2text"
+	VALUE "FileDescription", "mwaw2csv"
 	VALUE "FileVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@.BUILDNUMBER"
-	VALUE "InternalName", "mwaw2text"
+	VALUE "InternalName", "mwaw2csv"
 	VALUE "LegalCopyright", "Copyright (C) 2002-2012 Laurent Alonso, William Lachance, Marc Maurer, Fridrich Strba, other contributers"
-	VALUE "OriginalFilename", "mwaw2text.exe"
+	VALUE "OriginalFilename", "mwaw2csv.exe"
 	VALUE "ProductName", "libmwaw"
 	VALUE "ProductVersion", "@MWAW_MAJOR_VERSION@.@MWAW_MINOR_VERSION@.@MWAW_MICRO_VERSION@"
       END
