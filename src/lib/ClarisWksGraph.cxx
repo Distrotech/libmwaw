@@ -618,17 +618,7 @@ public:
     return !operator!=(doc);
   }
   //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
-  {
-    parse(listener, type, false);
-  }
-  //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type)
-  {
-    parse(listener, type, true);
-  }
-  //! the main parser function
-  void parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic);
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
   /** the graph parser */
   ClarisWksGraph *m_graphParser;
 
@@ -642,7 +632,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type, bool asGraphic)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
     MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: no listener\n"));
@@ -650,12 +640,7 @@ void SubDocument::parse(MWAWListenerPtr listener, libmwaw::SubDocumentType type,
   }
   assert(m_graphParser);
   long pos = m_input->tell();
-  if ((asGraphic && (type==libmwaw::DOC_TEXT_BOX || type==libmwaw::DOC_GRAPHIC_GROUP))
-      || (!asGraphic && type==libmwaw::DOC_TEXT_BOX))
-    m_graphParser->askToSend(m_id,listener,m_position);
-  else {
-    MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: find unexpected type\n"));
-  }
+  m_graphParser->askToSend(m_id,listener,m_position);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 

@@ -7,6 +7,7 @@ EXTRA_DIST = \
 	mwaw2csv.dsp		\
 	mwaw2html.dsp		\
 	mwaw2raw.dsp		\
+	mwaw2svg.dsp		\
 	mwaw2text.dsp		\
 	mwawFile.dsp		\
 	mwawZip.dsp		\
@@ -16,6 +17,7 @@ EXTRA_DIST = \
 	mwaw2csv.vcproj		\
 	mwaw2html.vcproj	\
 	mwaw2raw.vcproj		\
+	mwaw2svg.vcproj		\
 	mwaw2text.vcproj	\
 	mwawFile.vcproj 	\
 	mwawZip.vcproj 		\
@@ -25,6 +27,7 @@ EXTRA_DIST = \
 	mwaw2csv.vcxproj	\
 	mwaw2html.vcxproj	\
 	mwaw2raw.vcxproj	\
+	mwaw2svg.vcxproj	\
 	mwaw2text.vcxproj	\
 	mwawFile.vcxproj	\
 	mwawZip.vcxproj

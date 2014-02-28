@@ -49,12 +49,6 @@ MWAWSubDocument::~MWAWSubDocument()
 {
 }
 
-void MWAWSubDocument::parseGraphic(MWAWGraphicListenerPtr &, libmwaw::SubDocumentType)
-{
-  MWAW_DEBUG_MSG(("MWAWSubDocument::parseGraphic: must not be called\n"));
-}
-
-
 MWAWSubDocument &MWAWSubDocument::operator=(MWAWSubDocument const &doc)
 {
   if (&doc != this) {

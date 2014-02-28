@@ -388,19 +388,9 @@ public:
   }
 
   //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
-  {
-    parse(listener);
-  }
-  //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType)
-  {
-    parse(listener);
-  }
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType);
 
 protected:
-  //! the parser function
-  void parse(MWAWListenerPtr listener);
   /** the graph parser */
   GreatWksGraph *m_graphParser;
 
@@ -409,7 +399,7 @@ private:
   SubDocument &operator=(SubDocument const &orig);
 };
 
-void SubDocument::parse(MWAWListenerPtr listener)
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no listener\n"));

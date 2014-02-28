@@ -49,7 +49,7 @@
 
 int printUsage()
 {
-  printf("Usage: mwaw2raw [OPTION] <Text Mac Document>\n");
+  printf("Usage: mwaw2raw [OPTION] <Text Document>\n");
   printf("\n");
   printf("Options:\n");
   printf("\t--callgraph:   Display the call graph nesting level\n");
@@ -103,7 +103,11 @@ int main(int argc, char *argv[])
 
   MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
+    if (kind == MWAWDocument::MWAW_K_DRAW || kind == MWAWDocument::MWAW_K_PAINT) {
+      librevenge::RVNGRawDrawingGenerator documentGenerator(printIndentLevel);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
+    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
       librevenge::RVNGRawSpreadsheetGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);
     }

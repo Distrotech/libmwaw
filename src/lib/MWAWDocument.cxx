@@ -35,8 +35,6 @@
  * libmwaw API: implementation of main interface functions
  */
 
-#include <string.h>
-
 #include "MWAWHeader.hxx"
 #include "MWAWGraphicDecoder.hxx"
 #include "MWAWParser.hxx"
@@ -79,6 +77,7 @@
 /** small namespace use to define private class/method used by MWAWDocument */
 namespace MWAWDocumentInternal
 {
+shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
 MWAWHeader *getHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, bool strict);
@@ -181,7 +180,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
   }
 }
 
-MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const */*password*/)
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGDrawingInterface *documentInterface, char const *)
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
@@ -200,7 +199,7 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
 
     if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getTextParserFromHeader(ip, rsrcParser, header.get());
+    shared_ptr<MWAWGraphicParser> parser=MWAWDocumentInternal::getGraphicParserFromHeader(ip, rsrcParser, header.get());
     if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
   }
@@ -219,12 +218,6 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
   }
 
   return error;
-}
-
-MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGDrawingInterface *, char const *)
-{
-  MWAW_DEBUG_MSG(("MWAWDocument::parse[Drawing]: unimplemented\n"));
-  return MWAW_R_UNKNOWN_ERROR;
 }
 
 MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *, librevenge::RVNGPresentationInterface *, char const *)
@@ -253,6 +246,46 @@ MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, lib
     if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
     shared_ptr<MWAWSpreadsheetParser> parser=MWAWDocumentInternal::getSpreadsheetParserFromHeader(ip, rsrcParser, header.get());
+    if (!parser) return MWAW_R_UNKNOWN_ERROR;
+    parser->parse(documentInterface);
+  }
+  catch (libmwaw::FileException) {
+    MWAW_DEBUG_MSG(("File exception trapped\n"));
+    error = MWAW_R_FILE_ACCESS_ERROR;
+  }
+  catch (libmwaw::ParseException) {
+    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
+    error = MWAW_R_PARSE_ERROR;
+  }
+  catch (...) {
+    //fixme: too generic
+    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
+    error = MWAW_R_UNKNOWN_ERROR;
+  }
+
+  return error;
+}
+
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const */*password*/)
+{
+  if (!input)
+    return MWAW_R_UNKNOWN_ERROR;
+  Result error = MWAW_R_OK;
+
+  try {
+    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+    shared_ptr<MWAWRSRCParser> rsrcParser;
+    if (rsrc) {
+      rsrcParser.reset(new MWAWRSRCParser(rsrc));
+      rsrcParser->setAsciiName("RSRC");
+      rsrcParser->parse();
+    }
+    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+
+    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+
+    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getTextParserFromHeader(ip, rsrcParser, header.get());
     if (!parser) return MWAW_R_UNKNOWN_ERROR;
     parser->parse(documentInterface);
   }
@@ -347,6 +380,79 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
   return 0L;
 }
 
+shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &/*input*/, MWAWRSRCParserPtr /*rsrcParser*/, MWAWHeader *header)
+{
+  shared_ptr<MWAWGraphicParser> parser;
+  if (!header)
+    return parser;
+  if (header->getKind()!=MWAWDocument::MWAW_K_DRAW && header->getKind()!=MWAWDocument::MWAW_K_PAINT)
+    return parser;
+  if (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS || header->getType()!=MWAWDocument::MWAW_T_GREATWORKS)
+    return parser;
+
+  try {
+    switch (header->getType()) {
+    // TODO
+    case MWAWDocument::MWAW_T_ACTA:
+    case MWAWDocument::MWAW_T_BEAGLEWORKS:
+    case MWAWDocument::MWAW_T_CLARISRESOLVE:
+    case MWAWDocument::MWAW_T_CLARISWORKS:
+    case MWAWDocument::MWAW_T_DOCMAKER:
+    case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_FULLIMPACT:
+    case MWAWDocument::MWAW_T_FULLPAINT:
+    case MWAWDocument::MWAW_T_FULLWRITE:
+    case MWAWDocument::MWAW_T_GREATWORKS:
+    case MWAWDocument::MWAW_T_KALEIDAGRAPH:
+    case MWAWDocument::MWAW_T_HANMACWORDJ:
+    case MWAWDocument::MWAW_T_HANMACWORDK:
+    case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
+    case MWAWDocument::MWAW_T_MACDOC:
+    case MWAWDocument::MWAW_T_MACDRAFT:
+    case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACPAINT:
+    case MWAWDocument::MWAW_T_MACWRITE:
+    case MWAWDocument::MWAW_T_MACWRITEPRO:
+    case MWAWDocument::MWAW_T_MARINERWRITE:
+    case MWAWDocument::MWAW_T_MINDWRITE:
+    case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
+    case MWAWDocument::MWAW_T_MICROSOFTWORD:
+    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
+    case MWAWDocument::MWAW_T_MORE:
+    case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_READYSETGO:
+    case MWAWDocument::MWAW_T_SUPERPAINT:
+    case MWAWDocument::MWAW_T_TEACHTEXT:
+    case MWAWDocument::MWAW_T_TEXEDIT:
+    case MWAWDocument::MWAW_T_TRAPEZE:
+    case MWAWDocument::MWAW_T_WINGZ:
+    case MWAWDocument::MWAW_T_WRITENOW:
+    case MWAWDocument::MWAW_T_WRITERPLUS:
+    case MWAWDocument::MWAW_T_XPRESS:
+    case MWAWDocument::MWAW_T_ZWRITE:
+
+    case MWAWDocument::MWAW_T_RESERVED1:
+    case MWAWDocument::MWAW_T_RESERVED2:
+    case MWAWDocument::MWAW_T_RESERVED3:
+    case MWAWDocument::MWAW_T_RESERVED4:
+    case MWAWDocument::MWAW_T_RESERVED5:
+    case MWAWDocument::MWAW_T_RESERVED6:
+    case MWAWDocument::MWAW_T_RESERVED7:
+    case MWAWDocument::MWAW_T_RESERVED8:
+    case MWAWDocument::MWAW_T_RESERVED9:
+    case MWAWDocument::MWAW_T_UNKNOWN:
+    default:
+      break;
+    }
+  }
+  catch (...) {
+  }
+  return parser;
+}
+
 /** Factory wrapper to construct a parser corresponding to an spreadsheet header */
 shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
@@ -386,34 +492,33 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_DOCMAKER:
     case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FRAMEMAKER:
     case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FULLWRITE:
     case MWAWDocument::MWAW_T_HANMACWORDJ:
     case MWAWDocument::MWAW_T_HANMACWORDK:
     case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
     case MWAWDocument::MWAW_T_MACDOC:
+    case MWAWDocument::MWAW_T_MACDRAFT:
+    case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:
     case MWAWDocument::MWAW_T_MARINERWRITE:
+    case MWAWDocument::MWAW_T_MICROSOFTWORD:
     case MWAWDocument::MWAW_T_MINDWRITE:
     case MWAWDocument::MWAW_T_MORE:
-    case MWAWDocument::MWAW_T_MICROSOFTWORD:
     case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_RAGTIME:
+    case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_SUPERPAINT:
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
     case MWAWDocument::MWAW_T_WRITENOW:
     case MWAWDocument::MWAW_T_WRITERPLUS:
-    case MWAWDocument::MWAW_T_ZWRITE:
-
-    case MWAWDocument::MWAW_T_FRAMEMAKER:
-    case MWAWDocument::MWAW_T_MACDRAFT:
-    case MWAWDocument::MWAW_T_MACDRAW:
-    case MWAWDocument::MWAW_T_MACPAINT:
-    case MWAWDocument::MWAW_T_PAGEMAKER:
-    case MWAWDocument::MWAW_T_READYSETGO:
-    case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_XPRESS:
+    case MWAWDocument::MWAW_T_ZWRITE:
 
     case MWAWDocument::MWAW_T_RESERVED1:
     case MWAWDocument::MWAW_T_RESERVED2:
@@ -441,6 +546,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
   if (!header)
     return parser;
   if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET || header->getKind()==MWAWDocument::MWAW_K_DATABASE)
+    return parser;
+  // removeme: actually ClarisWorks and GreatWorks file are exported as text file
+  if ((header->getKind()==MWAWDocument::MWAW_K_DRAW || header->getKind()==MWAWDocument::MWAW_K_PAINT) &&
+      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS && header->getType()!=MWAWDocument::MWAW_T_GREATWORKS)
     return parser;
   try {
     switch (header->getType()) {

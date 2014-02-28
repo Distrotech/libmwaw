@@ -33,6 +33,7 @@
 * instead of those above.
 */
 
+#include <string.h>
 
 #include <librevenge/librevenge.h>
 #include <libmwaw/libmwaw.hxx>

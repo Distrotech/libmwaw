@@ -506,7 +506,7 @@ MWAWPageSpan const &MWAWGraphicListener::getPageSpan()
   return m_ps->m_pageSpan;
 }
 
-void MWAWGraphicListener::_openPageSpan(bool /*sendHeaderFooters*/)
+void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
 {
   if (m_ps->m_isPageSpanOpened)
     return;
@@ -544,13 +544,9 @@ void MWAWGraphicListener::_openPageSpan(bool /*sendHeaderFooters*/)
   m_ps->m_isPageSpanOpened = true;
   m_ps->m_pageSpan = currentPage;
 
-#if 0
-  // fixme
-
   // we insert the header footer
   if (sendHeaderFooters)
-    currentPage.sendHeaderFooters(this);
-#endif
+    currentPage.sendHeaderFooters(this, (m_ps->m_currentPage%2) ? MWAWHeaderFooter::EVEN : MWAWHeaderFooter::ODD);
 
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;
@@ -1461,9 +1457,9 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
   if (sendDoc) {
     if (subDocument) {
       m_ds->m_subDocuments.push_back(subDocument);
-      shared_ptr<MWAWGraphicListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
+      shared_ptr<MWAWListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWListener>());
       try {
-        subDocument->parseGraphic(listen, subDocumentType);
+        subDocument->parse(listen, subDocumentType);
       }
       catch (...) {
         MWAW_DEBUG_MSG(("Works: MWAWGraphicListener::handleSubDocument exception catched \n"));

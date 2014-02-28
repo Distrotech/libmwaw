@@ -246,6 +246,8 @@ public:
   void getPageProperty(librevenge::RVNGPropertyList &pList) const;
   //! send the page's headers/footers if some exists
   void sendHeaderFooters(MWAWListener *listener) const;
+  //! send the page's headers/footers corresponding to an occurrence if some exists
+  void sendHeaderFooters(MWAWListener *listener, MWAWHeaderFooter::Occurrence occurrence) const;
 
 protected:
   //! return the header footer positions in m_headerFooterList

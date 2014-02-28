@@ -1,5 +1,10 @@
 CHANGES:
 
+2/28/2014:
+- transform MWAWGraphicListener into a listener able to export draw files
+
+-------- version 0.3.1 (start)  -------------
+
 2/21/2014:
 - Claris Resolve: add a spreadsheet parser (only export spreadsheet's content
   but not the frames)

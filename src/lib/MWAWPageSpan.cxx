@@ -282,6 +282,21 @@ void MWAWPageSpan::sendHeaderFooters(MWAWListener *listener) const
   }
 }
 
+void MWAWPageSpan::sendHeaderFooters(MWAWListener *listener, MWAWHeaderFooter::Occurrence occurrence) const
+{
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MWAWPageSpan::sendHeaderFooters: no listener\n"));
+    return;
+  }
+
+  for (size_t i = 0; i < m_headerFooterList.size(); i++) {
+    MWAWHeaderFooter const &hf = m_headerFooterList[i];
+    if (!hf.isDefined()) continue;
+    if (hf.m_occurrence==occurrence || hf.m_occurrence==MWAWHeaderFooter::ALL)
+      hf.send(listener);
+  }
+}
+
 void MWAWPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("librevenge:num-pages", getPageSpan());

@@ -772,8 +772,6 @@ public:
 
   //! the parser function
   void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-  //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 
 protected:
   /** the graph parser */
@@ -801,45 +799,38 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  switch (m_type) {
-  case FrameInFrame:
-    m_graphParser->sendFrame(m_id, m_pos);
-    break;
-  case Group:
-    m_graphParser->sendGroup(m_id, m_pos);
-    break;
-  case Picture:
-    m_graphParser->sendPicture(m_id, m_pos);
-    break;
-  case UnformattedTable:
-    m_graphParser->sendTableUnformatted(m_id);
-    break;
-  case Text:
-    m_graphParser->sendText(m_id, m_subId);
-    break;
-  case EmptyPicture:
-    m_graphParser->sendEmptyPicture(m_pos);
-    break;
-  default:
-    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
-    break;
+  if (listener->getType()==MWAWListener::Graphic) {
+    if (m_type!=Text) {
+      MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: unexpected type\n"));
+      return;
+    }
+    m_graphParser->sendText(m_id, m_subId, listener);
   }
-  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-}
-
-void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: no listener\n"));
-    return;
+  else {
+    switch (m_type) {
+    case FrameInFrame:
+      m_graphParser->sendFrame(m_id, m_pos);
+      break;
+    case Group:
+      m_graphParser->sendGroup(m_id, m_pos);
+      break;
+    case Picture:
+      m_graphParser->sendPicture(m_id, m_pos);
+      break;
+    case UnformattedTable:
+      m_graphParser->sendTableUnformatted(m_id);
+      break;
+    case Text:
+      m_graphParser->sendText(m_id, m_subId);
+      break;
+    case EmptyPicture:
+      m_graphParser->sendEmptyPicture(m_pos);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: send type %d is not implemented\n", m_type));
+      break;
+    }
   }
-  assert(m_graphParser);
-  if (m_type!=Text) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraphInternal::SubDocument::parse: unexpected type\n"));
-    return;
-  }
-  long pos = m_input->tell();
-  m_graphParser->sendText(m_id, m_subId, listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 

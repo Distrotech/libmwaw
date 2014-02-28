@@ -162,7 +162,7 @@ protected:
   //! try to read a text zone
   bool readText(MsWksGraphInternal::TextBox &textBox);
   //! try to send a text box zone v1-3
-  void sendTextBox(int zId, MWAWGraphicListenerPtr listener);
+  void sendTextBox(int zId, MWAWListenerPtr listener);
   /** check the text box link v4 */
   void checkTextBoxLinks(int zId);
 

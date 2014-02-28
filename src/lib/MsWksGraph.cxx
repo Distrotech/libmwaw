@@ -842,8 +842,6 @@ public:
 
   //! the parser function
   void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-  //! the graphic parser function
-  void parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType type);
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -868,55 +866,47 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  switch (m_type) {
-  case Empty:
-    break;
-  case Chart:
-    m_graphParser->sendChart(m_id);
-    break;
-  case Group: {
-    MWAWPosition gPos;
-    gPos.setRelativePosition(MWAWPosition::Frame,
-                             MWAWPosition::XLeft, MWAWPosition::YTop);
-    m_graphParser->sendGroupChild(m_id, gPos);
-    break;
+  if (listener->getType()==MWAWListener::Graphic) {
+    if (m_type != TextBox) {
+      MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
+      return;
+    }
+    m_graphParser->sendTextBox(m_id, listener);
   }
-  case Table:
-    m_graphParser->sendTable(m_id);
-    break;
-  case TextBoxv4:
-    m_graphParser->sendFrameText(m_zone, m_frame);
-    break;
-  case RBILZone: {
-    MsWksGraph::SendData sendData;
-    sendData.m_type = MsWksGraph::SendData::RBIL;
-    sendData.m_id = m_id;
-    sendData.m_anchor =  MWAWPosition::Frame;
-    m_graphParser->sendObjects(sendData);
-    break;
+  else {
+    switch (m_type) {
+    case Empty:
+      break;
+    case Chart:
+      m_graphParser->sendChart(m_id);
+      break;
+    case Group: {
+      MWAWPosition gPos;
+      gPos.setRelativePosition(MWAWPosition::Frame,
+                               MWAWPosition::XLeft, MWAWPosition::YTop);
+      m_graphParser->sendGroupChild(m_id, gPos);
+      break;
+    }
+    case Table:
+      m_graphParser->sendTable(m_id);
+      break;
+    case TextBoxv4:
+      m_graphParser->sendFrameText(m_zone, m_frame);
+      break;
+    case RBILZone: {
+      MsWksGraph::SendData sendData;
+      sendData.m_type = MsWksGraph::SendData::RBIL;
+      sendData.m_id = m_id;
+      sendData.m_anchor =  MWAWPosition::Frame;
+      m_graphParser->sendObjects(sendData);
+      break;
+    }
+    case TextBox:
+    default:
+      MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
+      break;
+    }
   }
-  case TextBox:
-  default:
-    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
-    break;
-  }
-  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-}
-
-void SubDocument::parseGraphic(MWAWGraphicListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: no listener\n"));
-    return;
-  }
-  if (m_type != TextBox) {
-    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parseGraphic: unexpected zone type\n"));
-    return;
-  }
-  assert(m_graphParser);
-
-  long pos = m_input->tell();
-  m_graphParser->sendTextBox(m_id, listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -2597,7 +2587,7 @@ bool MsWksGraph::readFont(MWAWFont &font)
   return true;
 }
 
-void MsWksGraph::sendTextBox(int zoneId, MWAWGraphicListenerPtr listener)
+void MsWksGraph::sendTextBox(int zoneId, MWAWListenerPtr listener)
 {
   if (!listener || !listener->canWriteText()) {
     MWAW_DEBUG_MSG(("MsWksGraph::sendTextBox: can not find get access to the graphicListener\n"));

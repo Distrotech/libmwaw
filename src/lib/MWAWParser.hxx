@@ -50,7 +50,7 @@ class MWAWParserState
 {
 public:
   //! the parser state type
-  enum Type { Spreadsheet, Text };
+  enum Type { Graphic, Spreadsheet, Text };
   //! Constructor
   MWAWParserState(Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
@@ -193,6 +193,10 @@ protected:
   {
     m_parserState->m_version = vers;
   }
+  //! sets the graphic listener
+  void setGraphicListener(MWAWGraphicListenerPtr &listener);
+  //! resets the listener
+  void resetGraphicListener();
   //! sets the spreadsheet listener
   void setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener);
   //! resets the listener
@@ -226,18 +230,17 @@ private:
   std::string m_asciiName;
 };
 
-
-/** virtual class which defines the ancestor of all text zone parser */
-class MWAWTextParser : public MWAWParser
+/** virtual class which defines the ancestor of all graphic zone parser */
+class MWAWGraphicParser : public MWAWParser
 {
 public:
   //! virtual function used to parse the input
-  virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
+  virtual void parse(librevenge::RVNGDrawingInterface *documentInterface) = 0;
 protected:
   //! constructor (protected)
-  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Text, input, rsrcParser, header) {}
+  MWAWGraphicParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Graphic, input, rsrcParser, header) {}
   //! constructor using a state
-  MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
+  MWAWGraphicParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 /** virtual class which defines the ancestor of all spreadsheet zone parser */
@@ -251,6 +254,19 @@ protected:
   MWAWSpreadsheetParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Spreadsheet, input, rsrcParser, header) {}
   //! constructor using a state
   MWAWSpreadsheetParser(MWAWParserStatePtr state) : MWAWParser(state) {}
+};
+
+/** virtual class which defines the ancestor of all text zone parser */
+class MWAWTextParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGTextInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWTextParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Text, input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWTextParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 #endif /* MWAWPARSER_H */

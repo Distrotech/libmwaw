@@ -1,4 +1,5 @@
 /* -*- Mode: C++; c-default-style: "k&r"; indent-tabs-mode: nil; tab-width: 2; c-basic-offset: 2 -*- */
+
 /* libmwaw
 * Version: MPL 2.0 / LGPLv2+
 *
@@ -34,6 +35,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <cstring>
+#include <fstream>
+#include <iostream>
+
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
 #include <librevenge-stream/librevenge-stream.h>
@@ -50,20 +55,19 @@
 
 int printUsage()
 {
-  printf("Usage: mwaw2text [OPTION] <Mac Document>\n");
+  printf("Usage: mwaw2svg [OPTION] <Mac Graphic Document>\n");
   printf("\n");
   printf("Options:\n");
-  printf(" -i                Display document metadata instead of the text\n");
   printf(" -h                Shows this help message\n");
-  printf(" -o file.txt       Define the output[default stdout]\n");
-  printf(" -v:               Output mwaw2text version \n");
+  printf(" -o file.svg       Define the output[default stdout]\n");
+  printf(" -v:               Output mwaw2svg version \n");
   printf("\n");
   return -1;
 }
 
 int printVersion()
 {
-  printf("mwaw2text %s\n", VERSION);
+  printf("mwaw2svg %s\n", VERSION);
   return 0;
 }
 
@@ -73,15 +77,11 @@ int main(int argc, char *argv[])
     return printUsage();
 
   char const *output = 0;
-  bool isInfo = false;
   bool printHelp=false;
   int ch;
 
-  while ((ch = getopt(argc, argv, "hio:v")) != -1) {
+  while ((ch = getopt(argc, argv, "ho:v")) != -1) {
     switch (ch) {
-    case 'i':
-      isInfo=true;
-      break;
     case 'o':
       output=optarg;
       break;
@@ -112,46 +112,25 @@ int main(int argc, char *argv[])
     printf("ERROR: can not determine the type of file!\n");
     return 1;
   }
+  if (kind != MWAWDocument::MWAW_K_DRAW && kind != MWAWDocument::MWAW_K_PAINT) {
+    fprintf(stderr,"ERROR: not a graphic document!\n");
+    return 1;
+  }
+  MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
+  librevenge::RVNGStringVector vec;
 
-  librevenge::RVNGString document;
-  librevenge::RVNGStringVector pages;
-  bool useStringVector=false;
-  MWAWDocument::Result error = MWAWDocument::MWAW_R_OK;
   try {
-    if (kind == MWAWDocument::MWAW_K_DRAW || kind == MWAWDocument::MWAW_K_PAINT) {
-      if (isInfo) {
-        printf("ERROR: can not print info concerning a graphic document!\n");
-        return 1;
-      }
-      librevenge::RVNGTextDrawingGenerator documentGenerator(pages);
-      error=MWAWDocument::parse(&input, &documentGenerator);
-      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
-        printf("ERROR: find no graphics!\n");
-        return 1;
-      }
-      useStringVector=true;
-    }
-    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
-      librevenge::RVNGTextSpreadsheetGenerator documentGenerator(pages, isInfo);
-      error=MWAWDocument::parse(&input, &documentGenerator);
-      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
-        printf("ERROR: find no sheets!\n");
-        return 1;
-      }
-      useStringVector=true;
-    }
-    else {
-      librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
-      error=MWAWDocument::parse(&input, &documentGenerator);
-    }
+    librevenge::RVNGSVGDrawingGenerator listener(vec, "");
+    error = MWAWDocument::parse(&input, &listener);
+    if (error==MWAWDocument::MWAW_R_OK && (vec.empty() || vec[0].empty()))
+      error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
   }
   catch (MWAWDocument::Result const &err) {
     error=err;
   }
   catch (...) {
-    error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
+    error=MWAWDocument::MWAW_R_UNKNOWN_ERROR;
   }
-
   if (error == MWAWDocument::MWAW_R_FILE_ACCESS_ERROR)
     fprintf(stderr, "ERROR: File Exception!\n");
   else if (error == MWAWDocument::MWAW_R_PARSE_ERROR)
@@ -165,28 +144,18 @@ int main(int argc, char *argv[])
     return 1;
 
   if (!output) {
-    if (!useStringVector)
-      printf("%s", document.cstr());
-    else {
-      for (unsigned i=0; i < pages.size(); ++i)
-        printf("%s\n", pages[i].cstr());
-    }
+    std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+    std::cout << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
+    std::cout << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+    std::cout << vec[0].cstr() << std::endl;
   }
   else {
-    FILE *out=fopen(output, "wb");
-    if (!out) {
-      fprintf(stderr, "ERROR: can not open file %s!\n", output);
-      return 1;
-    }
-    if (!useStringVector)
-      fprintf(out, "%s", document.cstr());
-    else {
-      for (unsigned i=0; i < pages.size(); ++i)
-        fprintf(out, "%s\n", pages[i].cstr());
-    }
-    fclose(out);
+    std::ofstream out(output);
+    out << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+    out << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
+    out << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+    out << vec[0].cstr() << std::endl;
   }
-
   return 0;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

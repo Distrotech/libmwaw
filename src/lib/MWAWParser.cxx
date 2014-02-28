@@ -76,10 +76,12 @@ MWAWParserState::~MWAWParserState()
 MWAWListenerPtr MWAWParserState::getMainListener()
 {
   switch (m_type) {
-  case Text:
-    return m_textListener;
+  case Graphic:
+    return m_graphicListener;
   case Spreadsheet:
     return m_spreadsheetListener;
+  case Text:
+    return m_textListener;
   default:
     MWAW_DEBUG_MSG(("MWAWParserState:::getMainListener unexpected document type\n"));
   }
@@ -96,14 +98,30 @@ MWAWParser::~MWAWParser()
 {
 }
 
-void MWAWParser::setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener)
+void MWAWParser::setFontConverter(MWAWFontConverterPtr fontConverter)
 {
-  m_parserState->m_spreadsheetListener=listener;
+  m_parserState->m_fontConverter=fontConverter;
 }
 
 MWAWListenerPtr MWAWParser::getMainListener()
 {
   return m_parserState->getMainListener();
+}
+
+void MWAWParser::setGraphicListener(MWAWGraphicListenerPtr &listener)
+{
+  m_parserState->m_graphicListener=listener;
+}
+
+void MWAWParser::resetGraphicListener()
+{
+  if (getGraphicListener()) getGraphicListener()->endDocument();
+  m_parserState->m_graphicListener.reset();
+}
+
+void MWAWParser::setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener)
+{
+  m_parserState->m_spreadsheetListener=listener;
 }
 
 void MWAWParser::resetSpreadsheetListener()
@@ -121,11 +139,6 @@ void MWAWParser::resetTextListener()
 {
   if (getTextListener()) getTextListener()->endDocument();
   m_parserState->m_textListener.reset();
-}
-
-void MWAWParser::setFontConverter(MWAWFontConverterPtr fontConverter)
-{
-  m_parserState->m_fontConverter=fontConverter;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

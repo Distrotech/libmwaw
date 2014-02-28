@@ -1,3 +1,3 @@
 if BUILD_CONVERTISSORS
-SUBDIRS = csv html raw text
+SUBDIRS = csv html raw svg text
 endif
