@@ -199,6 +199,10 @@ SOURCE=..\..\src\lib\GreatWksParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GreatWksBMParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\GreatWksSSParser.cxx
 # End Source File
 # Begin Source File
@@ -620,6 +624,10 @@ SOURCE=..\..\src\lib\GreatWksGraph.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\GreatWksParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GreatWksBMParser.hxx
 # End Source File
 # Begin Source File
 

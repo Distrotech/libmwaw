@@ -312,6 +312,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
+      if (type=="PNTG"||type=="ZPNT") {
+        /* the ZPNT(v2) are basic pct files with some resources, but
+           as we treat PNTG(v1) file, let treat them...
+
+           More because of the extension, such file are no longer
+           recognized as a pct file by the Finder or LibreOffice, so
+           let treat it... */
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
       if (type=="ZCAL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
         return res;

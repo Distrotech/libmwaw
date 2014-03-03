@@ -438,9 +438,9 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="ZEBR") {
     checkFInfoType("ZWRT","GreatWorks") || checkFInfoType("ZTRM","GreatWorks[comm]") ||
     checkFInfoType("ZDBS","GreatWorks[database]") || checkFInfoType("ZCAL","GreatWorks[spreadsheet]") ||
-    checkFInfoType("ZOLN","GreatWorks[outline]") || checkFInfoType("PNTG","GreatWorks[paint]") ||
-    checkFInfoType("ZOBJ","GreatWorks[draw]") || checkFInfoType("ZCHT","GreatWorks[chart]") ||
-    checkFInfoType("GreatWorks");
+    checkFInfoType("ZOLN","GreatWorks[outline]") || checkFInfoType("PNTG","GreatWorks v1[paint]") ||
+    checkFInfoType("ZPNT","GreatWorks v2[paint]") || checkFInfoType("ZOBJ","GreatWorks[draw]") ||
+    checkFInfoType("ZCHT","GreatWorks[chart]") || checkFInfoType("GreatWorks");
   }
   else if (m_fInfoCreator=="ZWRT") {
     checkFInfoType("Zart","Z-Write") || checkFInfoType("Z-Write");

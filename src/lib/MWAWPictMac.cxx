@@ -51,7 +51,7 @@
 // to parse the picture
 #define DEBUG_PICT 0
 // and then to save the read bitmap/pixmap
-#define DEBUG_BITMAP 1
+#define DEBUG_BITMAP 0
 
 MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
 (MWAWInputStreamPtr input, int size, Box2f &box, MWAWPictData **result)

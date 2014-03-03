@@ -154,6 +154,7 @@ FullWrtParser: parser of FullWrite : v1.0 v2.0
 -   FullWrtText : class which reads the text
 
 GreatWksParser : parser of GreatWorks text file(and draw): v1-v2
+GreatWksBMParser : parser of GreatWorks paint file: v1-v2
 GreatWksSSParser : parser of GreatWorks spreadsheet file: v1-v2
 -   GreatWksGraph : class which reads the picture/graph/frame
 -   GreatWksText : class which reads the text

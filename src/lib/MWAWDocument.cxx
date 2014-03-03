@@ -53,6 +53,7 @@
 #include "EDocParser.hxx"
 #include "FullWrtParser.hxx"
 #include "GreatWksParser.hxx"
+#include "GreatWksBMParser.hxx"
 #include "GreatWksSSParser.hxx"
 #include "HanMacWrdJParser.hxx"
 #include "HanMacWrdKParser.hxx"
@@ -388,7 +389,8 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     return parser;
   if (header->getKind()!=MWAWDocument::MWAW_K_DRAW && header->getKind()!=MWAWDocument::MWAW_K_PAINT)
     return parser;
-  if (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS || header->getType()==MWAWDocument::MWAW_T_GREATWORKS)
+  if (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS ||
+      (header->getKind()==MWAWDocument::MWAW_K_DRAW && header->getType()==MWAWDocument::MWAW_T_GREATWORKS))
     return parser;
 
   try {
@@ -396,6 +398,10 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
         parser.reset(new BeagleWksBMParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_GREATWORKS:
+      if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
+        parser.reset(new GreatWksBMParser(input, rsrcParser, header));
       break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
@@ -407,7 +413,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_FULLIMPACT:
     case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FULLWRITE:
-    case MWAWDocument::MWAW_T_GREATWORKS:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_HANMACWORDJ:
     case MWAWDocument::MWAW_T_HANMACWORDK:
@@ -551,9 +556,10 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     return parser;
   if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET || header->getKind()==MWAWDocument::MWAW_K_DATABASE)
     return parser;
-  // removeme: actually ClarisWorks and GreatWorks file are exported as text file
+  // removeme: actually ClarisWorks draw/paint files and GreatWorks draw file are exported as text file
   if ((header->getKind()==MWAWDocument::MWAW_K_DRAW || header->getKind()==MWAWDocument::MWAW_K_PAINT) &&
-      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS && header->getType()!=MWAWDocument::MWAW_T_GREATWORKS)
+      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS &&
+      !(header->getKind()==MWAWDocument::MWAW_K_DRAW && header->getType()==MWAWDocument::MWAW_T_GREATWORKS))
     return parser;
   try {
     switch (header->getType()) {

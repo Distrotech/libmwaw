@@ -1,7 +1,9 @@
 CHANGES:
 
+3/4/2014:
+- GreatWorks: add parser of paint documents
 3/3/2014:
-- BeagleWorks/WordPerfect Work: add code to paint documents
+- BeagleWorks/WordPerfect Work: add parser of paint documents
 2/28/2014:
 - transform MWAWGraphicListener into a listener able to export draw files
 

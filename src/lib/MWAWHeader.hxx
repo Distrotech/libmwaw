@@ -44,9 +44,15 @@
 #include <libmwaw/libmwaw.hxx>
 #include "MWAWInputStream.hxx"
 
-/** \brief a function used by MWAWDocument to store the version of document and the input
+/** \brief a function used by MWAWDocument to store the version of document
  *
- * This class is mainly used to maintain a symetry with the libwpd library */
+ * This class is responsible for finding a list of potential formats
+ * corresponding to a file, this list will latter be checked by
+ * calling the corresponding parser's function checkHeader via
+ * MWAWDocument.
+ *
+ * This class also allows to store the document type, king and version.
+ */
 class MWAWHeader
 {
 public:
