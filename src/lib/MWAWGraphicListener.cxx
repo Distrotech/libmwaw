@@ -65,7 +65,8 @@ namespace MWAWGraphicListenerInternal
 struct GraphicState {
   //! constructor
   GraphicState(std::vector<MWAWPageSpan> const &pageList) :
-    m_pageList(pageList), m_metaData(), m_isDocumentStarted(false), m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
+    m_pageList(pageList), m_metaData(), m_isDocumentStarted(false), m_isAtLeastOnePageOpened(false),
+    m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
   {
   }
   //! destructor
@@ -76,7 +77,12 @@ struct GraphicState {
   std::vector<MWAWPageSpan> m_pageList;
   //! the document meta data
   librevenge::RVNGPropertyList m_metaData;
-  bool m_isDocumentStarted /** a flag to know if the document is open */, m_isHeaderFooterStarted /** a flag to know if the header footer is started */;
+  /** a flag to know if the document is open */
+  bool m_isDocumentStarted;
+  /** true if the first page has been open */
+  bool m_isAtLeastOnePageOpened;
+  /** a flag to know if the header footer is started */
+  bool m_isHeaderFooterStarted;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   //! the list of actual subdocument
@@ -162,7 +168,6 @@ MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vect
   m_ds(new MWAWGraphicListenerInternal::GraphicState(pageList)), m_ps(new MWAWGraphicListenerInternal::State),
   m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
-  MWAW_DEBUG_MSG(("MWAWGraphicListener::MWAWGraphicListener: general constructor is not implemented\n"));
 }
 
 MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWListener(),
@@ -460,15 +465,18 @@ void MWAWGraphicListener::startDocument()
 
 void MWAWGraphicListener::endDocument(bool /*delayed*/)
 {
-  if (m_ps->m_isPageSpanOpened)
-    _closePageSpan();
-
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::endDocument: the document is not started\n"));
     return;
   }
+  if (!m_ds->m_isAtLeastOnePageOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::endDocument: no data have been send\n"));
+    _openPageSpan();
+  }
+  if (m_ps->m_isPageSpanOpened)
+    _closePageSpan();
   m_documentInterface->endDocument();
-  m_ds->m_isDocumentStarted=true;
+  m_ds->m_isDocumentStarted=false;
   *m_ds=MWAWGraphicListenerInternal::GraphicState(std::vector<MWAWPageSpan>());
 }
 
@@ -518,6 +526,7 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find any page\n"));
     throw libmwaw::ParseException();
   }
+  m_ds->m_isAtLeastOnePageOpened=true;
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
   while (actPage < m_ps->m_currentPage) {

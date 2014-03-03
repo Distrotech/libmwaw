@@ -261,7 +261,7 @@ bool File::readFileInformation()
     checkFInfoType("BWwp","BeagleWorks/WordPerfect Works") ||
     checkFInfoType("BWdb","BeagleWorks/WordPerfect Works[Database]") ||
     checkFInfoType("BWss","BeagleWorks/WordPerfect Works[SpreadSheet]") ||
-    checkFInfoType("BWpt","BeagleWorks/WordPerfect Works[Presentation]") ||
+    checkFInfoType("BWpt","BeagleWorks/WordPerfect Works[Paint]") ||
     checkFInfoType("BWdr","BeagleWorks/WordPerfect Works[Draw]") ||
     checkFInfoType("BeagleWorks/WordPerfect Works");
   }
@@ -522,7 +522,7 @@ bool File::readDataInformation()
     else if (val[3]==0x6472)
       m_dataResult.push_back("BeagleWorks/WordPerfect Works[Draw]");
     else if (val[3]==0x7074)
-      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Presentation]");
+      m_dataResult.push_back("BeagleWorks/WordPerfect Works[Paint]");
     else if (val[3]==0x7373)
       m_dataResult.push_back("BeagleWorks/WordPerfect Works[Spreadsheet]");
     else if (val[3]==0x7770)

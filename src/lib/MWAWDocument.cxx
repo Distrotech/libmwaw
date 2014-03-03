@@ -45,6 +45,7 @@
 
 #include "ActaParser.hxx"
 #include "BeagleWksParser.hxx"
+#include "BeagleWksBMParser.hxx"
 #include "BeagleWksSSParser.hxx"
 #include "ClarisWksParser.hxx"
 #include "ClarisWksSSParser.hxx"
@@ -380,21 +381,24 @@ MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
   return 0L;
 }
 
-shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &/*input*/, MWAWRSRCParserPtr /*rsrcParser*/, MWAWHeader *header)
+shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
   shared_ptr<MWAWGraphicParser> parser;
   if (!header)
     return parser;
   if (header->getKind()!=MWAWDocument::MWAW_K_DRAW && header->getKind()!=MWAWDocument::MWAW_K_PAINT)
     return parser;
-  if (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS || header->getType()!=MWAWDocument::MWAW_T_GREATWORKS)
+  if (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS || header->getType()==MWAWDocument::MWAW_T_GREATWORKS)
     return parser;
 
   try {
     switch (header->getType()) {
-    // TODO
-    case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
+      if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
+        parser.reset(new BeagleWksBMParser(input, rsrcParser, header));
+      break;
+    // TODO: first separate graphic format to other formats, then implement parser...
+    case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
     case MWAWDocument::MWAW_T_CLARISWORKS:
     case MWAWDocument::MWAW_T_DOCMAKER:
@@ -673,6 +677,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
     shared_ptr<MWAWParser> parser=getTextParserFromHeader(input, rsrcParser, &header);
     if (!parser)
       parser=getSpreadsheetParserFromHeader(input, rsrcParser, &header);
+    if (!parser)
+      parser=getGraphicParserFromHeader(input, rsrcParser, &header);
     if (!parser)
       return false;
     return parser->checkHeader(&header, strict);

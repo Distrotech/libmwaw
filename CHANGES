@@ -1,5 +1,7 @@
 CHANGES:
 
+3/3/2014:
+- BeagleWorks/WordPerfect Work: add code to paint documents
 2/28/2014:
 - transform MWAWGraphicListener into a listener able to export draw files
 

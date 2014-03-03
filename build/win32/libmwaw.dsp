@@ -99,6 +99,10 @@ SOURCE=..\..\src\lib\BeagleWksParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\BeagleWksBMParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\BeagleWksSSParser.cxx
 # End Source File
 # Begin Source File
@@ -516,6 +520,10 @@ SOURCE=..\..\src\lib\ActaText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\BeagleWksParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\BeagleWksBMParser.hxx
 # End Source File
 # Begin Source File
 

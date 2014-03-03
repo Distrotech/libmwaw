@@ -1514,14 +1514,14 @@ bool BeagleWksSSParser::sendPicture
 {
   MWAWSpreadsheetListenerPtr listener=getSpreadsheetListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("BeagleWksSSParser::sendPicture: can not find the listener\n"));
     return false;
   }
   MWAWRSRCParserPtr rsrcParser = getRSRCParser();
   if (!rsrcParser) {
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("BeagleWksParser::sendPicture: need access to resource fork to retrieve picture content\n"));
+      MWAW_DEBUG_MSG(("BeagleWksSSParser::sendPicture: need access to resource fork to retrieve picture content\n"));
       first=false;
     }
     return true;
