@@ -115,6 +115,10 @@ SOURCE=..\..\src\lib\BeagleWksText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ClarisWksBMParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\ClarisWksDatabase.cxx
 # End Source File
 # Begin Source File
@@ -540,6 +544,10 @@ SOURCE=..\..\src\lib\BeagleWksStructManager.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\BeagleWksText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisWksBMParser.hxx
 # End Source File
 # Begin Source File
 

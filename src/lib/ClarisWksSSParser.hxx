@@ -59,7 +59,7 @@ class SubDocument;
 
 class ClarisWksDocument;
 
-/** \brief the main class to read a Claris Works file
+/** \brief the main class to read a AppleWorks/ClarisWorks spreadsheet file
  *
  *
  *

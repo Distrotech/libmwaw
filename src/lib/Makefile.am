@@ -32,6 +32,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	BeagleWksStructManager.hxx	\
 	BeagleWksText.cxx		\
 	BeagleWksText.hxx		\
+	ClarisWksBMParser.cxx		\
+	ClarisWksBMParser.hxx		\
 	ClarisWksDatabase.cxx		\
 	ClarisWksDatabase.hxx		\
 	ClarisWksDbaseContent.cxx	\
@@ -70,12 +72,12 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FullWrtStruct.hxx		\
 	FullWrtText.cxx			\
 	FullWrtText.hxx			\
+	GreatWksBMParser.cxx		\
+	GreatWksBMParser.hxx		\
 	GreatWksGraph.cxx		\
 	GreatWksGraph.hxx		\
 	GreatWksParser.cxx		\
 	GreatWksParser.hxx		\
-	GreatWksBMParser.cxx		\
-	GreatWksBMParser.hxx		\
 	GreatWksSSParser.cxx		\
 	GreatWksSSParser.hxx		\
 	GreatWksText.cxx		\

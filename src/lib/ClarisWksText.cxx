@@ -1414,6 +1414,11 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
           ClarisWksTextInternal::Token const &token = zone.m_tokenList[size_t(plc.m_id)];
           switch (token.m_type) {
           case ClarisWksTextInternal::TKN_FOOTNOTE:
+            if (m_parserState->m_kind==MWAWDocument::MWAW_K_PAINT) {
+              MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not send footnote in a paint file\n"));
+              f << "###";
+              break;
+            }
             if (zone.okChildId(token.m_zoneId))
               m_document.sendFootnote(token.m_zoneId);
             else
@@ -1438,6 +1443,11 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
             }
             break;
           case ClarisWksTextInternal::TKN_GRAPHIC:
+            if (m_parserState->m_kind==MWAWDocument::MWAW_K_PAINT) {
+              MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not send graphic in a paint file\n"));
+              f << "###";
+              break;
+            }
             if (zone.okChildId(token.m_zoneId)) {
               // fixme
               MWAWPosition tPos;

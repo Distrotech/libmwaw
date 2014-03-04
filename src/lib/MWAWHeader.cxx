@@ -92,12 +92,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
         return res;
       }
-      if (type=="CWWP" || type=="CWW2" || type=="sWPP") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_TEXT));
-        return res;
-      }
       if (type=="CWPR") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_PRESENTATION));
+        return res;
+      }
+      if (type=="CWPT") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
+      if (type=="CWWP" || type=="CWW2" || type=="sWPP") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISWORKS, 1, MWAWDocument::MWAW_K_TEXT));
         return res;
       }
     }

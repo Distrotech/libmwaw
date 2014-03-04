@@ -130,6 +130,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\ClarisWksBMParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\ClarisWksDatabase.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -537,6 +541,7 @@
     <ClInclude Include="..\..\src\lib\BeagleWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksStructManager.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksText.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksBMParser.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksDatabase.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksDbaseContent.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksDocument.hxx" />

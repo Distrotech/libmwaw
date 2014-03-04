@@ -53,10 +53,12 @@ namespace ClarisWksDocumentInternal
 struct State;
 }
 
+class ClarisWksParser;
+class ClarisWksBMParser;
+class ClarisWksSSParser;
+
 class ClarisWksDatabase;
 class ClarisWksGraph;
-class ClarisWksParser;
-class ClarisWksSSParser;
 class ClarisWksStyleManager;
 class ClarisWksPresentation;
 class ClarisWksSpreadsheet;
@@ -68,6 +70,7 @@ class ClarisWksDocument
 {
 public:
   friend class ClarisWksParser;
+  friend class ClarisWksBMParser;
   friend class ClarisWksSSParser;
   //! constructor
   ClarisWksDocument(MWAWParser &parser);

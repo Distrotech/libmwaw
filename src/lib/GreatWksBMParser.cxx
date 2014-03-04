@@ -248,7 +248,7 @@ bool GreatWksBMParser::sendPicture()
   return true;
 }
 
-bool GreatWksBMParser::readBitmap()
+bool GreatWksBMParser::readBitmap(bool onlyCheck)
 {
   MWAWInputStreamPtr input = getInput();
   long endPos=input->size();
@@ -256,11 +256,14 @@ bool GreatWksBMParser::readBitmap()
 
   libmwaw::DebugStream f;
   // a bitmap is composed of 720 rows of (72x8bytes)
-  shared_ptr<MWAWPictBitmapIndexed> pict(new MWAWPictBitmapIndexed(Vec2f(576,720)));
-  std::vector<MWAWColor> colors(2);
-  colors[0]=MWAWColor::white();
-  colors[1]=MWAWColor::black();
-  pict->setColors(colors);
+  shared_ptr<MWAWPictBitmapIndexed> pict;
+  if (!onlyCheck) {
+    pict.reset(new MWAWPictBitmapIndexed(Vec2f(576,720)));
+    std::vector<MWAWColor> colors(2);
+    colors[0]=MWAWColor::white();
+    colors[1]=MWAWColor::black();
+    pict->setColors(colors);
+  }
 
   for (int r=0; r<720; ++r) {
     long rowPos=input->tell();
@@ -278,6 +281,10 @@ bool GreatWksBMParser::readBitmap()
       int wh=(int) input->readULong(1);
       if (wh>=0x81) {
         int color=(int) input->readULong(1);
+        if (onlyCheck) {
+          col+=8*(wh+1);
+          continue;
+        }
         for (int j=0; j < 0x101-wh; ++j) {
           if (col>=72*8) {
             MWAW_DEBUG_MSG(("GreatWksBMParser::readBitmap: can not read row %d\n", r));
@@ -307,6 +314,10 @@ bool GreatWksBMParser::readBitmap()
             ascii().addNote(f.str().c_str());
             return false;
           }
+          if (onlyCheck) {
+            col+=8;
+            continue;
+          }
           for (int b=7; b>=0; --b)
             pict->set(col++, r, (color>>b)&1);
         }
@@ -315,7 +326,8 @@ bool GreatWksBMParser::readBitmap()
     ascii().addPos(rowPos);
     ascii().addNote(f.str().c_str());
   }
-  m_state->m_bitmap=pict;
+  if (!onlyCheck)
+    m_state->m_bitmap=pict;
   return true;
 }
 
@@ -343,12 +355,14 @@ bool GreatWksBMParser::checkHeader(MWAWHeader *header, bool strict)
     vers=2;
   else return false;
   if (strict) {
+    input->seek(512, librevenge::RVNG_SEEK_SET);
     if (vers==2) {
-      input->seek(512, librevenge::RVNG_SEEK_SET);
       Box2f box;
       if (MWAWPictData::check(input, (int)(input->size()-512), box)==MWAWPict::MWAW_R_BAD)
         return false;
     }
+    else if (!readBitmap(true))
+      return false;
   }
   setVersion(vers);
   if (header)

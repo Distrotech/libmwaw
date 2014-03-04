@@ -200,6 +200,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisWksBMParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksDatabase.cxx"
 				>
 			</File>
@@ -626,6 +630,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\BeagleWksText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisWksBMParser.hxx"
 				>
 			</File>
 			<File

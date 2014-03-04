@@ -31,36 +31,47 @@
 * instead of those above.
 */
 
-#ifndef GREAT_WKS_BM_PARSER
-#  define GREAT_WKS_BM_PARSER
+/*
+ * Parser to Claris Works bitmap document
+ *
+ */
+#ifndef CLARIS_WKS_BM_PARSER
+#  define CLARIS_WKS_BM_PARSER
 
 #include <string>
 #include <vector>
 
 #include <librevenge/librevenge.h>
 
-#include "MWAWDebug.hxx"
-#include "MWAWInputStream.hxx"
+#include "MWAWEntry.hxx"
+#include "MWAWPosition.hxx"
 
 #include "MWAWParser.hxx"
 
-namespace GreatWksBMParserInternal
+#include "ClarisWksStruct.hxx"
+
+namespace ClarisWksBMParserInternal
 {
+class SubDocument;
 struct State;
 }
 
-/** \brief the main class to read a GreatWorks paint file
+class ClarisWksDocument;
+
+/** \brief the main class to read a bitmap AppleWorks/ClarisWorks file
  *
- * v1: specific structure
- * v2: this is mainly a picture file with some application resources
+ *
+ *
  */
-class GreatWksBMParser : public MWAWGraphicParser
+class ClarisWksBMParser : public MWAWGraphicParser
 {
+  friend class ClarisWksBMParserInternal::SubDocument;
+  friend class ClarisWksDocument;
 public:
   //! constructor
-  GreatWksBMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  ClarisWksBMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~GreatWksBMParser();
+  virtual ~ClarisWksBMParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -76,23 +87,15 @@ protected:
   void createDocument(librevenge::RVNGDrawingInterface *documentInterface);
 
 protected:
-  //! finds the different objects zones
-  bool createZones();
-
-  // Intermediate level
-
-  //! try to read a bitmap(v1): 576*720
-  bool readBitmap(bool onlyCheck=false);
-  //! try to send the main picture
-  bool sendPicture();
-  //! try to send a bitmap(v1)
-  bool sendBitmap();
 
   //
   // data
   //
   //! the state
-  shared_ptr<GreatWksBMParserInternal::State> m_state;
+  shared_ptr<ClarisWksBMParserInternal::State> m_state;
+
+  //! the style manager
+  shared_ptr<ClarisWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

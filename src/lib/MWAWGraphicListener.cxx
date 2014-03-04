@@ -1036,6 +1036,12 @@ void MWAWGraphicListener::insertTextBox
   }
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
+  float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
+  if (m_ps->m_isTextBoxOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::insertTextBox: can not insert a textbox in a textbox\n"));
+    handleSubDocument(pointFactor*pos.origin(), subDocument, libmwaw::DOC_TEXT_BOX);
+    return;
+  }
   if (!openFrame(pos))
     return;
   librevenge::RVNGPropertyList propList;
@@ -1043,7 +1049,6 @@ void MWAWGraphicListener::insertTextBox
   float rotate = style.m_rotate;
   // flip does not works on text, so we ignore it...
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
-  float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
   if (rotate<0||rotate>0) {
     propList.insert("librevenge:rotate", rotate);
     Vec2f size=pointFactor*pos.size();
@@ -1084,6 +1089,7 @@ void MWAWGraphicListener::insertTable
 
   _pushParsingState();
   _startSubDocument();
+  m_ps->m_isPageSpanOpened = true;
   m_ps->m_subDocumentType = libmwaw::DOC_TABLE;
 
   shared_ptr<MWAWListener> listen(this, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
@@ -1102,6 +1108,13 @@ void MWAWGraphicListener::insertTable
 void MWAWGraphicListener::openTable(MWAWTable const &table)
 {
   if (!m_ps->m_isFrameOpened) {
+    if (m_ps->m_isTextBoxOpened) {
+      MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: must not be called inside a textbox\n"));
+      MWAWPosition pos(m_ps->m_origin, Vec2f(400,100), librevenge::RVNG_POINT);
+      pos.m_anchorTo=MWAWPosition::Page;
+      openTable(pos, table, MWAWGraphicStyle::emptyStyle());
+      return;
+    }
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: called outside openFrame\n"));
     return;
   }
@@ -1110,7 +1123,7 @@ void MWAWGraphicListener::openTable(MWAWTable const &table)
 
 void MWAWGraphicListener::openTable(MWAWPosition const &pos, MWAWTable const &table, MWAWGraphicStyle const &style)
 {
-  if (m_ps->m_isFrameOpened || m_ps->m_isTableOpened) {
+  if ((m_ps->m_isFrameOpened&&!m_ps->m_isTextBoxOpened) || m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: no frame is already open...\n"));
     return;
   }
@@ -1170,7 +1183,7 @@ void MWAWGraphicListener::openTableRow(float h, librevenge::RVNGUnit unit, bool 
 void MWAWGraphicListener::closeTableRow()
 {
   if (!m_ps->m_isTableRowOpened) {
-    MWAW_DEBUG_MSG(("MWAWGraphicListener::openTableRow: called with m_isTableRowOpened=false\n"));
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::closeTableRow: called with m_isTableRowOpened=false\n"));
     return;
   }
   m_ps->m_isTableRowOpened = false;
@@ -1224,8 +1237,8 @@ void MWAWGraphicListener::closeTableCell()
   m_ps->m_paragraph.m_listLevelIndex=0;
   _changeList(); // flush the list exterior
 
-  m_ps->m_isTableCellOpened = false;
   m_documentInterface->closeTableCell();
+  m_ps->m_isTableCellOpened = false;
 }
 
 ///////////////////

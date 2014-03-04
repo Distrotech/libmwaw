@@ -252,6 +252,7 @@ bool File::readFileInformation()
     checkFInfoType("CWS2","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
     checkFInfoType("sWSS","ClarisWorks/AppleWorks 2.0-3.0[SpreadSheet]")||
     checkFInfoType("CWPR","ClarisWorks/AppleWorks[Presentation]")||
+    checkFInfoType("CWPT","ClarisWorks/AppleWorks[Paint]")||
     checkFInfoType("CWWP","ClarisWorks/AppleWorks")||
     checkFInfoType("CWW2","ClarisWorks/AppleWorks 2.0-3.0")||
     checkFInfoType("sWWP","ClarisWorks/AppleWorks 2.0-3.0")||

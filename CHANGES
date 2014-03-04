@@ -1,5 +1,8 @@
 CHANGES:
 
+3/5/2014:
+- AppleWorks/ClarisWorks: make the parser of the paint documents
+   a parser which creates graphic (instead of a text document).
 3/4/2014:
 - GreatWorks: add parser of paint documents
 3/3/2014:

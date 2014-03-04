@@ -2642,12 +2642,8 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   if (createFrame) {
     group.addFrameName(zId, childZone.m_subId, style);
     shared_ptr<MWAWSubDocument> doc;
-    if (!isLinked || childZone.m_subId==0) {
-      MWAWPosition lPos;
-      if (0 && (cType == ClarisWksStruct::DSET::T_Frame || cType == ClarisWksStruct::DSET::T_Table))
-        lPos.m_anchorTo=MWAWPosition::Frame;
-      doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId, lPos));
-    }
+    if (!isLinked || childZone.m_subId==0)
+      doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
     if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
       pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
     listener->insertTextBox(pos, doc, style);
@@ -2778,13 +2774,18 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWList
   std::string type;
   if (!bmap->getBinary(data,type)) return false;
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
-    if (m_parserState->m_kind==MWAWDocument::MWAW_K_PAINT) // fixme
+    pos.m_anchorTo=MWAWPosition::Char;
+    if (m_parserState->m_kind==MWAWDocument::MWAW_K_PAINT)// fixme
       pos.setSize(Vec2f(0.9f*float(m_mainParser->getPageWidth()),
                         0.9f*float(m_mainParser->getPageLength())));
     else {
       MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not find bitmap size\n"));
       pos.setSize(Vec2f(1,1));
     }
+  }
+  if (pos.m_anchorTo==MWAWPosition::Unknown) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: anchor is not set, revert to char\n"));
+    pos.m_anchorTo=MWAWPosition::Char;
   }
   listener.insertPicture(pos, data, "image/pict");
   return true;
