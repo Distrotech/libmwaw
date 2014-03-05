@@ -225,7 +225,7 @@ bool MacPaintParser::readBitmap(bool onlyCheck)
       if (wh>=0x81) {
         int color=(int) input->readULong(1);
         if (onlyCheck) {
-          col+=8*(wh+1);
+          col+=8*(0x101-wh);
           continue;
         }
         for (int j=0; j < 0x101-wh; ++j) {
