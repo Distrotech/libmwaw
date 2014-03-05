@@ -112,8 +112,8 @@ These files defined basic structures which must be used by the parsers :
 
 ------------------------------------------------------------------------
 ---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
----  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacWrt/MarinerWrt/MindWrt ---
----  More/MsWks/MsWrd/NisusWrt/TeachTxt                              ---
+---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacPaint/MacWrt/          ---
+---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/TeachTxt           ---
 ---  Wingz/WriteNow/WriterPls/ZWrt                                   ---
 ------------------------------------------------------------------------
 
@@ -173,6 +173,8 @@ LightWayTxtParser : parser of LightWay Text v4.5
 -   LightWayTxtText : class which reads the text
 
 MacDocParser : parser of MacDoc document: v1.3
+
+MacPaintParser: parser of MacPaint v1-2 files (ie. of PNTG mac file)
 
 MacWrtParser : parser of MacWrite document : v1.0-5.01
 

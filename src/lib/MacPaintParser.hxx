@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef GREAT_WKS_BM_PARSER
-#  define GREAT_WKS_BM_PARSER
+#ifndef MACPAINT_PARSER
+#  define MACPAINT_PARSER
 
 #include <string>
 #include <vector>
@@ -44,23 +44,21 @@
 
 #include "MWAWParser.hxx"
 
-namespace GreatWksBMParserInternal
+namespace MacPaintParserInternal
 {
 struct State;
 }
 
-/** \brief the main class to read a GreatWorks paint file
+/** \brief the main class to read a MacPaint file or a PNTG file
  *
- * v1: file are PNTG files, so there are parsed via the MacPaint parser
- * v2: this is mainly a picture file with some application resources
  */
-class GreatWksBMParser : public MWAWGraphicParser
+class MacPaintParser : public MWAWGraphicParser
 {
 public:
   //! constructor
-  GreatWksBMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MacPaintParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~GreatWksBMParser();
+  virtual ~MacPaintParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -81,14 +79,16 @@ protected:
 
   // Intermediate level
 
-  //! try to send the main picture
-  bool sendPicture();
+  //! try to read a bitmap(v1): 576*720
+  bool readBitmap(bool onlyCheck=false);
+  //! try to send a bitmap(v1)
+  bool sendBitmap();
 
   //
   // data
   //
   //! the state
-  shared_ptr<GreatWksBMParserInternal::State> m_state;
+  shared_ptr<MacPaintParserInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -60,6 +60,7 @@
 #include "HanMacWrdKParser.hxx"
 #include "LightWayTxtParser.hxx"
 #include "MacDocParser.hxx"
+#include "MacPaintParser.hxx"
 #include "MacWrtParser.hxx"
 #include "MacWrtProParser.hxx"
 #include "MarinerWrtParser.hxx"
@@ -130,6 +131,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_HANMACWORDK:
     case MWAW_T_LIGHTWAYTEXT:
     case MWAW_T_MACDOC:
+    case MWAW_T_MACPAINT:
     case MWAW_T_MACWRITE:
     case MWAW_T_MACWRITEPRO:
     case MWAW_T_MARINERWRITE:
@@ -152,9 +154,9 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
-    case MWAW_T_MACPAINT:
     case MWAW_T_MICROSOFTMULTIPLAN:
     case MWAW_T_PAGEMAKER:
+    case MWAW_T_PIXELPAINT:
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
     case MWAW_T_SUPERPAINT:
@@ -408,6 +410,9 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
         parser.reset(new GreatWksBMParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_MACPAINT:
+      parser.reset(new MacPaintParser(input, rsrcParser, header));
+      break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
@@ -424,7 +429,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACDOC:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
-    case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:
     case MWAWDocument::MWAW_T_MARINERWRITE:
@@ -435,6 +439,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_NISUSWRITER:
     case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_SUPERPAINT:
@@ -523,6 +528,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_NISUSWRITER:
     case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_SUPERPAINT:
@@ -654,6 +660,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_PAGEMAKER:
+    case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_SUPERPAINT:

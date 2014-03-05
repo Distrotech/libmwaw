@@ -261,6 +261,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
       // "edtt": empty file, probably created when the file is edited
     }
+    else if (creator=="MPNT") {
+      if (type=="PNTG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
+    }
     else if (creator=="PSIP") {
       if (type=="AWWP") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 1));
@@ -316,14 +322,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
-      if (type=="PNTG"||type=="ZPNT") {
+      if (type=="PNTG") {
+        // same as MacPaint format, so use the MacPaint parser
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
+      if (type=="ZPNT") {
         /* the ZPNT(v2) are basic pct files with some resources, but
-           as we treat PNTG(v1) file, let treat them...
-
-           More because of the extension, such file are no longer
-           recognized as a pct file by the Finder or LibreOffice, so
-           let treat it... */
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 1, MWAWDocument::MWAW_K_PAINT));
+           we treat them to be complete */
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_GREATWORKS, 2, MWAWDocument::MWAW_K_PAINT));
         return res;
       }
       if (type=="ZCAL") {
@@ -617,7 +624,52 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Writerplus file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITERPLUS, 1));
   }
+  //
+  // middle of file
+  //
+  if (input->size()>=512+720*2) {
+    // check for a MacPaint file
+    input->seek(512, librevenge::RVNG_SEEK_SET);
+    bool ok=true;
+    // check the first 3 row
+    for (int row=0; row<3; ++row) {
+      int lastColor=-1;
+      int col=0;
+      while (col<72) {
+        if (input->tell()+2>input->size()) {
+          ok=false;
+          break;
+        }
+        int wh=(int) input->readULong(1);
+        if (wh>=0x81) {
+          int color=(int) input->readULong(1);
+          // consider that repeat color is anormal...
+          if (col+(0x101-wh)>72 || (lastColor>=0 && color==lastColor)) {
+            ok=false;
+            break;
+          }
+          col+=(0x101-wh);
+          lastColor=color;
+          continue;
+        }
+        if (col+1+wh>72) {
+          ok=false;
+          break;
+        }
+        lastColor=-1;
+        col += wh+1;
+        input->seek(wh+1, librevenge::RVNG_SEEK_CUR);
+      }
+      if (!ok) break;
+    }
+    if (ok) {
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacPaint file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+    }
+  }
+  //
   //ok now look at the end of file
+  //
   if (input->seek(-4, librevenge::RVNG_SEEK_END))
     return res;
   int lVal[2];

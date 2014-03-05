@@ -259,6 +259,10 @@ SOURCE=..\..\src\lib\MacDocParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MacPaintParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MindWrtParser.cxx
 # End Source File
 # Begin Source File
@@ -692,6 +696,10 @@ SOURCE=..\..\src\lib\LightWayTxtText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDocParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacPaintParser.hxx
 # End Source File
 # Begin Source File
 

@@ -41,23 +41,24 @@
 
 #include "MWAWGraphicListener.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWPictBitmap.hxx"
 #include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 
-#include "GreatWksBMParser.hxx"
+#include "MacPaintParser.hxx"
 
-/** Internal: the structures of a GreatWksBMParser */
-namespace GreatWksBMParserInternal
+/** Internal: the structures of a MacPaintParser */
+namespace MacPaintParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a GreatWksBMParser
+//! Internal: the state of a MacPaintParser
 struct State {
   //! constructor
-  State() : m_picture()
+  State() : m_bitmap()
   {
   }
-  //! the picture entry (v2)
-  MWAWEntry m_picture;
+  /// the bitmap (v1)
+  shared_ptr<MWAWPict> m_bitmap;
 };
 
 }
@@ -65,22 +66,22 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksBMParser::GreatWksBMParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MacPaintParser::MacPaintParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWGraphicParser(input, rsrcParser, header), m_state()
 {
   init();
 }
 
-GreatWksBMParser::~GreatWksBMParser()
+MacPaintParser::~MacPaintParser()
 {
 }
 
-void GreatWksBMParser::init()
+void MacPaintParser::init()
 {
   resetGraphicListener();
   setAsciiName("main-1");
 
-  m_state.reset(new GreatWksBMParserInternal::State);
+  m_state.reset(new MacPaintParserInternal::State);
 
   getPageSpan().setMargins(0.1);
 }
@@ -88,7 +89,7 @@ void GreatWksBMParser::init()
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void GreatWksBMParser::parse(librevenge::RVNGDrawingInterface *docInterface)
+void MacPaintParser::parse(librevenge::RVNGDrawingInterface *docInterface)
 {
   assert(getInput().get() != 0);
 
@@ -102,12 +103,12 @@ void GreatWksBMParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      sendPicture();
+      sendBitmap();
     }
     ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MacPaintParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -118,11 +119,11 @@ void GreatWksBMParser::parse(librevenge::RVNGDrawingInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void GreatWksBMParser::createDocument(librevenge::RVNGDrawingInterface *documentInterface)
+void MacPaintParser::createDocument(librevenge::RVNGDrawingInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getGraphicListener()) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MacPaintParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -141,7 +142,7 @@ void GreatWksBMParser::createDocument(librevenge::RVNGDrawingInterface *document
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool GreatWksBMParser::createZones()
+bool MacPaintParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
   if (input->size()<512) return false;
@@ -149,7 +150,7 @@ bool GreatWksBMParser::createZones()
   libmwaw::DebugStream f;
   f << "FileHeader:";
   input->seek(0, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<256; i++) { // normally 0
+  for (int i=0; i<256; i++) { // normally 0, but can be a list of patter
     int val=(int) input->readLong(2);
     if (val)
       f << "f" << i << "=" << val << ",";
@@ -157,90 +158,141 @@ bool GreatWksBMParser::createZones()
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
 #endif
-  m_state->m_picture.setBegin(512);
-  m_state->m_picture.setEnd(input->size());
+  if (!readBitmap()) return false;
+  if (!input->isEnd()) {
+    MWAW_DEBUG_MSG(("MacPaintParser::createZones: find some extra data\n"));
+    ascii().addPos(input->tell());
+    ascii().addNote("Entries(End):###");
+  }
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////
-// the picture
-bool GreatWksBMParser::sendPicture()
+bool MacPaintParser::sendBitmap()
 {
-  MWAWListenerPtr listener=getGraphicListener();
+  MWAWGraphicListenerPtr listener=getGraphicListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::sendPicture: can not find the listener\n"));
-    return false;
-  }
-  MWAWEntry const &entry=m_state->m_picture;
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::sendPicture: can not find the picture entry\n"));
+    MWAW_DEBUG_MSG(("MacPaintParser::sendBitmap: can not find the listener\n"));
     return false;
   }
 
-  MWAWInputStreamPtr input = getInput();
-  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)entry.length()));
-  if (!thePict) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::sendPicture: can not retrieve the picture\n"));
-    return false;
-  }
   librevenge::RVNGBinaryData data;
   std::string type;
-  if (!thePict->getBinary(data,type)) {
-    MWAW_DEBUG_MSG(("GreatWksBMParser::sendPicture: can not retrieve the picture data\n"));
-    return false;
-  }
+  if (!m_state->m_bitmap || !m_state->m_bitmap->getBinary(data,type)) return false;
+
   MWAWPageSpan const &page=getPageSpan();
   MWAWPosition pos(Vec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
                    Vec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping = MWAWPosition::WNone;
   listener->insertPicture(pos, data, "image/pict");
+  return true;
+}
 
-#ifdef DEBUG_WITH_FILES
-  ascii().skipZone(entry.begin(), entry.end()-1);
-  librevenge::RVNGBinaryData file;
-  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  input->readDataBlock(entry.length(), file);
-  static int volatile pictName = 0;
+bool MacPaintParser::readBitmap(bool onlyCheck)
+{
+  MWAWInputStreamPtr input = getInput();
+  long endPos=input->size();
+  input->seek(512, librevenge::RVNG_SEEK_SET);
+
   libmwaw::DebugStream f;
-  f << "PICT-" << ++pictName;
-  libmwaw::Debug::dumpFile(file, f.str().c_str());
-#endif
+  // a bitmap is composed of 720 rows of (72x8bytes)
+  shared_ptr<MWAWPictBitmapIndexed> pict;
+  if (!onlyCheck) {
+    pict.reset(new MWAWPictBitmapIndexed(Vec2f(576,720)));
+    std::vector<MWAWColor> colors(2);
+    colors[0]=MWAWColor::white();
+    colors[1]=MWAWColor::black();
+    pict->setColors(colors);
+  }
+
+  for (int r=0; r<720; ++r) {
+    long rowPos=input->tell();
+    f.str("");
+    f << "Entries(Bitmap)-" << r << ":";
+    int col=0;
+    while (col<72*8) {
+      if (input->tell()+2>endPos) {
+        MWAW_DEBUG_MSG(("MacPaintParser::readBitmap: can not read row %d\n", r));
+        f << "###";
+        ascii().addPos(rowPos);
+        ascii().addNote(f.str().c_str());
+        return false;
+      }
+      int wh=(int) input->readULong(1);
+      if (wh>=0x81) {
+        int color=(int) input->readULong(1);
+        if (onlyCheck) {
+          col+=8*(wh+1);
+          continue;
+        }
+        for (int j=0; j < 0x101-wh; ++j) {
+          if (col>=72*8) {
+            MWAW_DEBUG_MSG(("MacPaintParser::readBitmap: can not read row %d\n", r));
+            f << "###";
+            ascii().addPos(rowPos);
+            ascii().addNote(f.str().c_str());
+            return false;
+          }
+          for (int b=7; b>=0; --b)
+            pict->set(col++, r, (color>>b)&1);
+        }
+      }
+      else {
+        if (input->tell()+wh+1>endPos) {
+          MWAW_DEBUG_MSG(("MacPaintParser::readBitmap: can not read row %d\n", r));
+          f << "###";
+          ascii().addPos(rowPos);
+          ascii().addNote(f.str().c_str());
+          return false;
+        }
+        for (int j=0; j < wh+1; ++j) {
+          int color=(int) input->readULong(1);
+          if (col>=72*8) {
+            MWAW_DEBUG_MSG(("MacPaintParser::readBitmap: can not read row %d\n", r));
+            f << "###";
+            ascii().addPos(rowPos);
+            ascii().addNote(f.str().c_str());
+            return false;
+          }
+          if (onlyCheck) {
+            col+=8;
+            continue;
+          }
+          for (int b=7; b>=0; --b)
+            pict->set(col++, r, (color>>b)&1);
+        }
+      }
+    }
+    ascii().addPos(rowPos);
+    ascii().addNote(f.str().c_str());
+  }
+  if (!onlyCheck)
+    m_state->m_bitmap=pict;
   return true;
 }
 
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool GreatWksBMParser::checkHeader(MWAWHeader *header, bool strict)
+bool MacPaintParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = GreatWksBMParserInternal::State();
+  *m_state = MacPaintParserInternal::State();
   MWAWInputStreamPtr input = getInput();
-  if (!input || !input->hasDataFork() || !input->checkPosition(512+10))
+  if (!input || !input->hasDataFork() || !input->checkPosition(512+720*2))
     return false;
 
-  std::string type, creator;
-  /** no finder info, may be ok, but this means
-      that we may have a basic pict file, so... */
-  if (!input->getFinderInfo(type, creator))
-    return false;
-  if (creator!="ZEBR")
-    return false;
-  int vers=2;
-  if (type!="ZPNT")
-    return false;
+  int const vers=1;
   if (strict) {
     input->seek(512, librevenge::RVNG_SEEK_SET);
-    Box2f box;
-    if (MWAWPictData::check(input, (int)(input->size()-512), box)==MWAWPict::MWAW_R_BAD)
+    if (!readBitmap(true))
       return false;
   }
   setVersion(vers);
   if (header)
-    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers, MWAWDocument::MWAW_K_PAINT);
+    header->reset(MWAWDocument::MWAW_T_MACPAINT, vers, MWAWDocument::MWAW_K_PAINT);
 
   return true;
 }

@@ -123,6 +123,7 @@ public:
     MWAW_T_MACWRITEPRO /** MacWrite II/Pro*/,
     MWAW_T_NISUSWRITER /** Nisus Writer (v3.4-v6.5)*/,
     MWAW_T_PAGEMAKER /** PageMaker: TODO*/,
+    MWAW_T_PIXELPAINT /** PixelPaint: TODO*/,
     MWAW_T_RAGTIME /** RagTime: TODO*/,
     MWAW_T_READYSETGO /** Ready,Set,Go!: TODO*/,
     MWAW_T_SUPERPAINT /** SuperPaint: TODO*/,
