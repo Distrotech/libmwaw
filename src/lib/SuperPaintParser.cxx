@@ -414,7 +414,6 @@ bool SuperPaintParser::checkHeader(MWAWHeader *header, bool strict)
     f << "paint,";
     break;
   case 2: // not yet implemented
-    if (strict) return false;
 #ifdef DEBUG
     f << "draw,";
     break;
@@ -433,6 +432,12 @@ bool SuperPaintParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
 
+  if (strict) {
+    if (m_state->m_kind==MWAWDocument::MWAW_K_PAINT) {
+      if (!readBitmap(true))
+        return false;
+    }
+  }
 
   setVersion(vers);
   if (header)
