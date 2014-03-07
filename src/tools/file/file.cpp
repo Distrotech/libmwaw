@@ -407,6 +407,14 @@ bool File::readFileInformation()
     checkFInfoType("SITD", "archive SIT") ||
     checkFInfoType("SIT!", "archive SIT") || checkFInfoType("SIT");
   }
+  else if (m_fInfoCreator=="SPNT") {
+    checkFInfoType("SPTG","SuperPaint 1.") || checkFInfoType("PICT","SuperPaint 2.[pict]") ||
+    checkFInfoType("DTXR","SuperPaint 3.[texture,pict]") || /* pict without 512 header*/
+    checkFInfoType("PNTG","SuperPaint 3.[macpaint]") || /* MacPaint format*/
+    checkFInfoType("PTXR","SuperPaint 3.[texture,pict]") || /* pict without 512 header*/
+    checkFInfoType("SPn3","SuperPaint 3.[pict]") || checkFInfoType("SPSt","SuperPaint 3.[pict,stationary]") ||
+    checkFInfoType("SuperPaint");
+  }
   else if (m_fInfoCreator=="SSIW") {   // check me
     checkFInfoType("WordPerfect 1.0");
   }

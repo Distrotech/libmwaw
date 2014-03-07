@@ -491,6 +491,10 @@ SOURCE=..\..\src\lib\NisusWrtText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\SuperPaintParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\TeachTxtParser.cxx
 # End Source File
 # Begin Source File
@@ -944,6 +948,10 @@ SOURCE=..\..\src\lib\NisusWrtStruct.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\NisusWrtText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\SuperPaintParser.hxx
 # End Source File
 # Begin Source File
 

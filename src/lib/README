@@ -22,6 +22,7 @@
 - MsWks*        : parser of Microsoft Works documents
 - MsWrd*        : parser of Microsoft Word documents
 - NisusWrt*     : parser of Nisus Writer documents,
+- SuperPaint*   : parser of SuperPaint document,
 - TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
 - Wingz*        : parser of Claris Resolve/Wingz documents
 - WriteNow*     : parser of WriteNow documents
@@ -113,8 +114,8 @@ These files defined basic structures which must be used by the parsers :
 ------------------------------------------------------------------------
 ---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
 ---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacPaint/MacWrt/          ---
----  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/TeachTxt           ---
----  Wingz/WriteNow/WriterPls/ZWrt                                   ---
+---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt                    ---
+---  SuperPaint/TeachTxt/Wingz/WriteNow/WriterPls/ZWrt               ---
 ------------------------------------------------------------------------
 
 Specific files which depends on the type of file which is converted
@@ -198,7 +199,7 @@ MoreParser: parser of More document : v2.0 v3.0 ( organization part )
 - MsWks4Parser : parser of Microsoft Works document : v4.0
 -   MsWks4Zone : parser of the text ole 
 -   MsWks4Text : class which reads the text
-- MsWksSSParser : parser of Microsoft Works spreadsheet document : v1.0-4.0, not functional
+- MsWksSSParser : parser of Microsoft Works spreadsheet document : v1.0-4.0
 
 MsWrd1Parser : parser of Microsoft Word document : v1.0 
 
@@ -211,6 +212,8 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 -   NisusWrtGraph : class which reads the picture/graph
 -   NisusWrtStruct : class which defines the different structures used by the parsed
 -   NisusWrtText : class which reads the text
+
+SuperPaintParser: parser of SuperPaint v1 files : only paint files
 
 TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
 

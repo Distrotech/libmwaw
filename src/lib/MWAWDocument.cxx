@@ -72,6 +72,7 @@
 #include "MsWrd1Parser.hxx"
 #include "MsWrdParser.hxx"
 #include "NisusWrtParser.hxx"
+#include "SuperPaintParser.hxx"
 #include "TeachTxtParser.hxx"
 #include "WingzParser.hxx"
 #include "WriteNowParser.hxx"
@@ -140,6 +141,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_MICROSOFTWORD:
     case MWAW_T_MICROSOFTWORKS:
     case MWAW_T_NISUSWRITER:
+    case MWAW_T_SUPERPAINT:
     case MWAW_T_TEACHTEXT:
     case MWAW_T_TEXEDIT:
     case MWAW_T_WINGZ:
@@ -159,7 +161,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_PIXELPAINT:
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
-    case MWAW_T_SUPERPAINT:
     case MWAW_T_TRAPEZE:
     case MWAW_T_XPRESS:
     case MWAW_T_RESERVED1:
@@ -413,6 +414,14 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACPAINT:
       parser.reset(new MacPaintParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_SUPERPAINT:
+#ifndef DEBUG
+      if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
+        parser.reset(new SuperPaintParser(input, rsrcParser, header));
+#else
+      parser.reset(new SuperPaintParser(input, rsrcParser, header));
+#endif
+      break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
@@ -442,7 +451,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_READYSETGO:
-    case MWAWDocument::MWAW_T_SUPERPAINT:
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
     case MWAWDocument::MWAW_T_TRAPEZE:

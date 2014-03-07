@@ -502,6 +502,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\SuperPaintParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\TeachTxtParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -641,6 +645,7 @@
     <ClInclude Include="..\..\src\lib\NisusWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\NisusWrtStruct.hxx" />
     <ClInclude Include="..\..\src\lib\NisusWrtText.hxx" />
+    <ClInclude Include="..\..\src\lib\SuperPaintParser.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />
     <ClInclude Include="..\..\src\lib\WingzParser.hxx" />
     <ClInclude Include="..\..\src\lib\WriteNowEntry.hxx" />

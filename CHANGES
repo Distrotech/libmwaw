@@ -1,5 +1,8 @@
 CHANGES:
 
+3/7/2014
+- SuperPaint: add a parser of Paint SuperPaint v1 document
+
 3/5/2014:
 - AppleWorks/ClarisWorks: make the parser of the paint documents
    a parser which creates graphic (instead of a text document).

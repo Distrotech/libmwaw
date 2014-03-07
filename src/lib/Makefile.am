@@ -221,6 +221,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	NisusWrtStruct.hxx		\
 	NisusWrtText.cxx		\
 	NisusWrtText.hxx		\
+	SuperPaintParser.cxx		\
+	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\
 	TeachTxtParser.hxx		\
 	WingzParser.cxx			\

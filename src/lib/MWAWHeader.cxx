@@ -295,6 +295,18 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="SPNT") {
+      if (type=="SPTG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_SUPERPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
+      if (type=="PNTG") {
+        // same as MacPaint format, so use the MacPaint parser
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+        return res;
+      }
+      // other type seems to correspond to basic picture file, so we do not accept them
+    }
     else if (creator=="TBB5") {
       if (type=="TEXT" || type=="ttro") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_TEXEDIT, 1));
@@ -623,6 +635,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0] == 0x110) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Writerplus file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITERPLUS, 1));
+  }
+  if (val[0] == 0x1000) {
+    input->seek(10, librevenge::RVNG_SEEK_SET);
+    int value=(int) input->readULong(2);
+    // 1: bitmap, 2: vectorized graphic
+    if (value==1)
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_SUPERPAINT, 1, MWAWDocument::MWAW_K_PAINT));
+    else if (value==2)
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_SUPERPAINT, 1, MWAWDocument::MWAW_K_DRAW));
   }
   //
   // middle of file

@@ -576,6 +576,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\SuperPaintParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\TeachTxtParser.cxx"
 				>
 			</File>
@@ -1030,6 +1034,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NisusWrtText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\SuperPaintParser.hxx"
 				>
 			</File>
 			<File
