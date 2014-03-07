@@ -414,8 +414,8 @@ bool SuperPaintParser::checkHeader(MWAWHeader *header, bool strict)
     f << "paint,";
     break;
   case 2: // not yet implemented
-#ifdef DEBUG
     if (strict) return false;
+#ifdef DEBUG
     f << "draw,";
     break;
 #else
