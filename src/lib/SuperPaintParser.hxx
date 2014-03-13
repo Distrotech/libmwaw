@@ -46,7 +46,10 @@
 
 namespace SuperPaintParserInternal
 {
+struct Shape;
 struct State;
+
+class SubDocument;
 }
 
 /** \brief the main class to read a SuperPaint v1 file (SPTG)
@@ -54,6 +57,7 @@ struct State;
  */
 class SuperPaintParser : public MWAWGraphicParser
 {
+  friend class SuperPaintParserInternal::SubDocument;
 public:
   //! constructor
   SuperPaintParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -84,12 +88,23 @@ protected:
   //! try to the header zone
   bool readHeader();
 
-  //! try to read a picture(draw):
-  bool readPicture();
+  //! try to read the main picture zone(draw):
+  bool readPictures();
+  //! try to send the different pictures
+  bool sendPictures();
   //! try to read a bitmap(paint): 576*720
   bool readBitmap(bool onlyCheck=false);
   //! try to send a bitmap(paint)
   bool sendBitmap();
+
+  //
+  // low level
+  //
+
+  //! try to read a shape(draw):
+  bool readShape();
+  //! try to send a text box content
+  bool sendText(int id);
 
   //
   // data

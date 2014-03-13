@@ -213,7 +213,7 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 -   NisusWrtStruct : class which defines the different structures used by the parsed
 -   NisusWrtText : class which reads the text
 
-SuperPaintParser: parser of SuperPaint v1 files : only paint files
+SuperPaintParser: parser of drawing and paint SuperPaint files : v1 
 
 TeachTxtParser : parser of TeachText/SimpleText document : v1.2, Tex-Edit v2.7
 

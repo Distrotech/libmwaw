@@ -415,12 +415,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       parser.reset(new MacPaintParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_SUPERPAINT:
-#ifndef DEBUG
-      if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
-        parser.reset(new SuperPaintParser(input, rsrcParser, header));
-#else
       parser.reset(new SuperPaintParser(input, rsrcParser, header));
-#endif
       break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:

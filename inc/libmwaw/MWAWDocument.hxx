@@ -126,7 +126,11 @@ public:
     MWAW_T_PIXELPAINT /** PixelPaint: TODO*/,
     MWAW_T_RAGTIME /** RagTime: TODO*/,
     MWAW_T_READYSETGO /** Ready,Set,Go!: TODO*/,
-    MWAW_T_SUPERPAINT /** SuperPaint: paint v1 document */,
+    /** SuperPaint: export drawing and paint v1 document
+
+     \note the other documents v2-v3 seems to be basic MacPaint/Pict
+     files */
+    MWAW_T_SUPERPAINT,
     MWAW_T_TEACHTEXT /** TeachText/SimpleText*/,
     MWAW_T_TEXEDIT /** Tex-Edit (v2)*/,
     MWAW_T_TRAPEZE /** Trapeze spreadsheet: TODO*/,

@@ -1,5 +1,8 @@
 CHANGES:
 
+3/13/2014
+- SuperPaint: add a parser of drawing SuperPaint v1 document
+
 3/7/2014
 - SuperPaint: add a parser of Paint SuperPaint v1 document
 

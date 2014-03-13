@@ -42,7 +42,6 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWFont.hxx"
-#include "MWAWFontConverter.hxx"
 #include "MWAWGraphicEncoder.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
