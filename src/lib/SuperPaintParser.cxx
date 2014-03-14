@@ -576,7 +576,7 @@ bool SuperPaintParser::readShape()
     }
     MWAWFont font;
     font.setId((int)input->readULong(2));
-    font.setSize((int)input->readULong(2));
+    font.setSize((float)input->readULong(2));
     font.setColor(fontColor);
     val=(int) input->readULong(2);
     switch (val&3) {
@@ -607,6 +607,8 @@ bool SuperPaintParser::readShape()
     case 2:
       m_state->m_shapeList.back().m_interline=2;
       f << "interline=200%,";
+      break;
+    default:
       break;
     }
     if ((val&0xFFFC)!=0xc) f << "#fl1=" << std::hex << (val&0xFFFC) << std::dec << ",";
