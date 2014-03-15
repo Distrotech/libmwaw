@@ -118,6 +118,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\BeagleWksDRParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\BeagleWksSSParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -546,6 +550,7 @@
     <ClInclude Include="..\..\src\lib\ActaText.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksBMParser.hxx" />
+    <ClInclude Include="..\..\src\lib\BeagleWksDRParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksStructManager.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksText.hxx" />

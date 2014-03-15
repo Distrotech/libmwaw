@@ -26,6 +26,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	BeagleWksParser.hxx		\
 	BeagleWksBMParser.cxx		\
 	BeagleWksBMParser.hxx		\
+	BeagleWksDRParser.cxx		\
+	BeagleWksDRParser.hxx		\
 	BeagleWksSSParser.cxx		\
 	BeagleWksSSParser.hxx		\
 	BeagleWksStructManager.cxx	\
