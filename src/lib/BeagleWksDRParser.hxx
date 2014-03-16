@@ -48,7 +48,7 @@
 
 namespace BeagleWksDRParserInternal
 {
-struct Bitmap;
+struct Shape;
 
 struct State;
 }
@@ -113,6 +113,15 @@ protected:
   //! try to read an unknown zone (arrow?)
   bool readZoneA();
 
+  //! try to read the shape position
+  bool readShapePositions();
+  //! try to read the shape definition
+  bool readShapeDefinitions();
+  //! try to read the shape data
+  bool readShapeDatas();
+
+  //! try to read a style of a shape
+  bool readStyle(BeagleWksDRParserInternal::Shape &shape);
   //! read the print info zone
   bool readPrintInfo();
 

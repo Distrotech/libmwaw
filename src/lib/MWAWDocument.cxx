@@ -157,6 +157,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
+    case MWAW_T_MACDRAWPRO:
     case MWAW_T_MICROSOFTMULTIPLAN:
     case MWAW_T_PAGEMAKER:
     case MWAW_T_PIXELPAINT:
@@ -438,6 +439,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACDOC:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACDRAWPRO:
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:
     case MWAWDocument::MWAW_T_MARINERWRITE:
@@ -527,6 +529,7 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MACDOC:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACDRAWPRO:
     case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:
@@ -665,6 +668,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
+    case MWAWDocument::MWAW_T_MACDRAWPRO:
     case MWAWDocument::MWAW_T_MACPAINT:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_PAGEMAKER:
