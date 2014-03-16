@@ -778,20 +778,54 @@ bool BeagleWksDRParser::readShapeDatas()
       continue;
     long pos = input->tell();
     f.str("");
-    f << "Entries(ShapeData)[" << i << "]:";
-    if (shape.m_type==7) {
-      if (dataSize<4) {
-        MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapeDatas: the text header seems too short\n"));
-        f << "###";
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-        return false;
-      }
-      input->seek(2, librevenge::RVNG_SEEK_CUR);
-      dataSize+=(long) input->readULong(2);
+    f << "Entries(ShapeData)[" << i << "]:type=" << shape.m_type << ",";
+    bool ok=false;
+    switch (shape.m_type) {
+    case 6:
+    case 10: {
+      if (dataSize<2)
+        break;
+      int N=(int) input->readULong(2);
+      if (dataSize!=2+N*8) break;
+      f << "pts=[";
+      ok=true;
+      for (int pt=0; pt<N; ++pt)
+        f << float(input->readLong(4))/65536.f << "x" << float(input->readLong(4))/65536.f << ",";
+      f << "],";
+      break;
     }
-    if (!input->checkPosition(pos+dataSize)) {
-      MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapeDatas: the data zone seems too short\n"));
+    case 7: {
+      if (dataSize<10) break;
+      int N=(int) input->readULong(2);
+      if (10+N*2!=dataSize) break;
+      f << "begPos=[";
+      for (int line=0; line<N; ++line)
+        f << input->readULong(2) << ",";
+      f << "],";
+      f << "height=" << input->readLong(2) << ","; // checkme
+      f << "unkn=" << std::hex << input->readULong(2) << std::dec << ",";
+      int val = (int) input->readULong(2);
+      if (val) f<< "f0=" << val << ","; // checkme: dataSize can also be a 32int
+      int len=(int) input->readULong(2);
+      dataSize+=len;
+      if (!input->checkPosition(pos+dataSize)) break;
+      ok=true;
+      for (int c=0; c<len; ++c) {
+        char ch=(char) input->readULong(1);
+        f << ch;
+      }
+      break;
+    }
+    case 11:
+      if (dataSize<2) break;
+      ok=long(input->readULong(2))==dataSize;
+      ascii().skipZone(pos,pos+dataSize-1);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapeDatas: find unexpected type\n"));
+    }
+    if (!ok || !input->checkPosition(pos+dataSize)) {
+      MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapeDatas: the data seems bad\n"));
       f << "###";
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
