@@ -40,8 +40,11 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWGraphicShape.hxx"
+#include "MWAWGraphicStyle.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWPictBitmap.hxx"
+#include "MWAWParagraph.hxx"
+#include "MWAWPictData.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWRSRCParser.hxx"
@@ -58,12 +61,9 @@ namespace BeagleWksDRParserInternal
 //! Internal: the shape of BeagleWksDRParser
 struct Shape {
   //! constructor
-  Shape() : m_type(-1), m_box(), m_dataSize(0), m_penSize(1,1), m_rotation(0), m_extra("")
+  Shape() : m_type(-1), m_box(), m_shape(), m_entry(), m_dataSize(0),
+    m_style(), m_font(), m_justify(MWAWParagraph::JustificationLeft), m_interline(1), m_extra("")
   {
-    // default pattern
-    m_patterns[0]=2;
-    m_patterns[1]=1;
-    for (int i=0; i<4; ++i) m_colors[i]=1-(i%2);
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Shape const &shape);
@@ -72,19 +72,24 @@ struct Shape {
   int m_type;
   //! the shape bdbox
   Box2f m_box;
+
+  //! the graphic shape ( for line, rect, ...)
+  MWAWGraphicShape m_shape;
+  //! the textbox or picture entry
+  MWAWEntry m_entry;
   //! the data size
   long m_dataSize;
 
   // style part
 
-  //! the penSize
-  Vec2i m_penSize;
-  //! the patterns (line, surface)
-  int m_patterns[2];
-  //! the colors (line front, back, surface front, back)
-  int m_colors[4];
-  //! the rotation
-  int m_rotation;
+  //! the style
+  MWAWGraphicStyle m_style;
+  //! the textbox font
+  MWAWFont m_font;
+  //! the textbox justification
+  MWAWParagraph::Justification m_justify;
+  //! the interline in percent
+  double m_interline;
 
   //! extra data
   std::string m_extra;
@@ -120,7 +125,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
     o << "group,";
     break;
   case 0xa:
-    o << "spline,";
+    o << "poly[hand],";
     break;
   case 0xb:
     o << "picture,";
@@ -131,21 +136,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
   }
   if (shape.m_box.size()[0]>0 || shape.m_box.size()[1]>0)
     o << "box=" << shape.m_box << ",";
-  if (shape.m_penSize!=Vec2i(1,1))
-    o << "penSize=" << shape.m_penSize << ",";
-  if (shape.m_patterns[0]!=2)
-    o << "pattern[line]=" << shape.m_patterns[0] << ",";
-  for (int i=0; i<2; ++i) {
-    if (shape.m_colors[i]==1-i) continue;
-    o << "line" << i << "[color]=" << shape.m_colors[i] << ",";
-  }
-  if (shape.m_patterns[1]!=1)
-    o << "pattern[surf]=" << shape.m_patterns[1] << ",";
-  for (int i=2; i<4; ++i) {
-    if (shape.m_colors[i]==3-i) continue;
-    o << "surf" << i-2 << "[color]=" << shape.m_colors[i] << ",";
-  }
-  if (shape.m_rotation) o << "rot=" << shape.m_rotation << ",";
+  o << shape.m_style << ",";
   if (shape.m_dataSize) o << "size[data]=" << shape.m_dataSize << ",";
   o << shape.m_extra;
   return o;
@@ -155,7 +146,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 //! Internal: the state of a BeagleWksDRParser
 struct State {
   //! constructor
-  State() :  m_graphicBegin(-1), m_typeEntryMap(), m_shapeList(),
+  State() :  m_graphicBegin(-1), m_typeEntryMap(), m_colorList(), m_patternList(), m_shapeList(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
     m_numShapes[0]=m_numShapes[1]=0;
@@ -168,6 +159,10 @@ struct State {
   long m_shapesBegin[2];
   /** the type entry map */
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
+  /** the colors list */
+  std::vector<MWAWColor> m_colorList;
+  /** the pattern list */
+  std::vector<MWAWGraphicStyle::Pattern> m_patternList;
   /** the number of shapes: positions and definitions */
   int m_numShapes[2];
   /** the list of shapes */
@@ -178,6 +173,56 @@ struct State {
       m_footerHeight /** the footer height if known */;
 };
 
+////////////////////////////////////////
+//! Internal: the subdocument of a BeagleWksDRParser
+class SubDocument : public MWAWSubDocument
+{
+public:
+  SubDocument(BeagleWksDRParser &pars, MWAWInputStreamPtr input, int zoneId) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
+    if (MWAWSubDocument::operator!=(doc)) return true;
+    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+    if (!sDoc) return true;
+    if (m_id != sDoc->m_id) return true;
+    return false;
+  }
+
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  //! the subdocument id
+  int m_id;
+private:
+  SubDocument(SubDocument const &orig);
+  SubDocument &operator=(SubDocument const &orig);
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
+{
+  if (!listener || !listener->canWriteText()) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParserInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  if (!m_parser) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
+  long pos = m_input->tell();
+  static_cast<BeagleWksDRParser *>(m_parser)->sendText(m_id);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
 }
 
 
@@ -259,6 +304,7 @@ void BeagleWksDRParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       sendPageFrames();
+      sendPictures();
     }
     ascii().reset();
   }
@@ -397,7 +443,7 @@ bool BeagleWksDRParser::createZones()
     MWAW_DEBUG_MSG(("BeagleWksDRParser::createZones: can not find the shape data pointer\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(ShapeData):###");
-    return false;
+    return true;
   }
   if (pos!=m_state->m_shapesBegin[1]) {
     ascii().addPos(pos);
@@ -409,7 +455,7 @@ bool BeagleWksDRParser::createZones()
     ascii().addPos(input->tell());
     ascii().addNote("Entries(ZoneEnd)");
   }
-  return false;
+  return true;
 }
 
 bool BeagleWksDRParser::readRSRCZones()
@@ -476,7 +522,7 @@ bool BeagleWksDRParser::readGraphicHeader()
     m_state->m_shapesBegin[i]= pos+input->readLong(4);
     f << "ptr" << i << "=" << std::hex << m_state->m_shapesBegin[i] << std::dec << ",";
     if (!input->checkPosition(m_state->m_shapesBegin[i])) {
-      MWAW_DEBUG_MSG(("BeagleWksDRParser::readColors: the shapes pointers seems bad\n"));
+      MWAW_DEBUG_MSG(("BeagleWksDRParser::readGraphicHeader: the shapes pointers seems bad\n"));
       f << "###";
       m_state->m_shapesBegin[i]=0;
     }
@@ -505,7 +551,7 @@ bool BeagleWksDRParser::readGraphicHeader()
   ascii().addNote(f.str().c_str());
   input->seek(pos+50, librevenge::RVNG_SEEK_SET);
 
-  if (!readPatterns() || !readColors() || !readZoneA() || !readShapePositions()) return false;
+  if (!readPatterns() || !readColors() || !readArrows() || !readShapePositions()) return false;
   return true;
 }
 
@@ -549,6 +595,7 @@ bool BeagleWksDRParser::readColors()
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  m_state->m_colorList.resize(size_t(maxN));
   for (int i=0; i<N; ++i) {
     pos=input->tell();
     if (i>=maxN) {
@@ -565,7 +612,8 @@ bool BeagleWksDRParser::readColors()
     }
     unsigned char color[3];
     for (int c=0; c < 3; c++) color[c] = (unsigned char)(input->readULong(2)/256);
-    f << "col=" <<  MWAWColor(color[0], color[1],color[2]) << ",";
+    m_state->m_colorList[size_t(i)]=MWAWColor(color[0], color[1],color[2]);
+    f << "col=" << m_state->m_colorList[size_t(i)] << ",";
 
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -612,6 +660,7 @@ bool BeagleWksDRParser::readPatterns()
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  m_state->m_patternList.resize(size_t(maxN));
   for (int i=0; i<N; ++i) {
     pos=input->tell();
     if (i>=maxN) {
@@ -628,6 +677,7 @@ bool BeagleWksDRParser::readPatterns()
     pat.m_dim=Vec2i(8,8);
     pat.m_data.resize(8);
     for (size_t j=0; j<8; ++j) pat.m_data[j]=(unsigned char) input->readULong(1);
+    m_state->m_patternList[size_t(i)]=pat;
     f << "pat=[" << pat << "],";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -637,15 +687,15 @@ bool BeagleWksDRParser::readPatterns()
 }
 
 //  read a unknown zone: maybe the arrow definition
-bool BeagleWksDRParser::readZoneA()
+bool BeagleWksDRParser::readArrows()
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
-  f << "Entries(ZoneA):";
+  f << "Entries(Arrows):";
   if (!input->checkPosition(pos+16)) {
     f << "###";
-    MWAW_DEBUG_MSG(("BeagleWksDRParser::readZoneA: the header size seems too short\n"));
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::readArrows: the header size seems too short\n"));
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
@@ -667,7 +717,7 @@ bool BeagleWksDRParser::readZoneA()
   long dSz=(long) input->readULong(4);
   if (!input->checkPosition(pos+16+dSz) || fSz<0x3c || dSz!=fSz*N) {
     f << "###";
-    MWAW_DEBUG_MSG(("BeagleWksDRParser::readZoneA: the pattern size seems bad\n"));
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::readArrows: the pattern size seems bad\n"));
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
@@ -683,7 +733,7 @@ bool BeagleWksDRParser::readZoneA()
       continue;
     }
     f.str("");
-    f << "ZoneA-" << i << ":";
+    f << "Arrows-" << i << ":";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
@@ -699,7 +749,7 @@ bool BeagleWksDRParser::readShapePositions()
   libmwaw::DebugStream f;
   pos=input->tell();
   if (m_state->m_numShapes[0]<0 || !input->checkPosition(pos+m_state->m_numShapes[0]*20)) {
-    MWAW_DEBUG_MSG(("BeagleWksDRParser::createZones: can not read the shape positions\n"));
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapePositions: can not read the shape positions\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(ShapePos):###");
     return false;
@@ -750,10 +800,64 @@ bool BeagleWksDRParser::readShapeDefinitions()
     shape.m_type=(int) input->readULong(2);
     int val=(int)input->readLong(2); // always 0 ?
     if (val) f << "f0=" << val << ",";
-    val=(int)input->readULong(2); // 00[0-3][0-4] some flag ?
-    if (val&1) f << "arrow[end],";
-    if (val&2) f << "arrow[start],";
-    if (val&0xFFFC) f << "f1=" << std::hex << (val&0xFFFC) << std::dec << ",";
+    int lineFlags=0;
+    val=(int)input->readULong(2);
+    if (shape.m_type==3) {
+      lineFlags=val;
+      if (lineFlags&1) {
+        shape.m_style.m_arrows[1]=true;
+        f << "arrow[end],";
+      }
+      if (lineFlags&2) {
+        shape.m_style.m_arrows[0]=true;
+        f << "arrow[start],";
+      }
+      val &= 0xFFCC;
+    }
+    if (val & 0x10) {
+      shape.m_style.m_flip[0] = true;
+      f << "flip[hori],";
+    }
+    if (val & 0x20) {
+      shape.m_style.m_flip[1] = true;
+      f << "flip[verti],";
+    }
+    val &= 0xFFCF;
+    if (val) f << "fl=" << std::hex << val << std::dec << ",";
+    switch (shape.m_type) {
+    case 1:
+      shape.m_shape = MWAWGraphicShape::rectangle(shape.m_box);
+      break;
+    case 2:
+      shape.m_shape = MWAWGraphicShape::circle(shape.m_box);
+      break;
+    case 3:
+      switch ((lineFlags>>4)&3) {
+      case 1:
+        shape.m_shape = MWAWGraphicShape::line(shape.m_box[0], shape.m_box[1]);
+        break;
+      case 2:
+        shape.m_shape = MWAWGraphicShape::line(shape.m_box[1], shape.m_box[0]);
+        break;
+      default:
+      case 0:
+        shape.m_shape = MWAWGraphicShape::line(Vec2f(shape.m_box[1][0],shape.m_box[0][1]), Vec2f(shape.m_box[0][0],shape.m_box[1][1]));
+        break;
+      case 3:
+        shape.m_shape = MWAWGraphicShape::line(Vec2f(shape.m_box[0][0],shape.m_box[1][1]), Vec2f(shape.m_box[1][0],shape.m_box[0][1]));
+        break;
+      }
+      break;
+    case 4:
+      shape.m_shape = MWAWGraphicShape::rectangle(shape.m_box, Vec2f(25,25));
+      break;
+    case 6:
+    case 10:
+      shape.m_shape = MWAWGraphicShape::polygon(shape.m_box);
+      break;
+    default:
+      break;
+    }
     // now the style
     if (!readStyle(shape))
       f << "##";
@@ -789,8 +893,15 @@ bool BeagleWksDRParser::readShapeDatas()
       if (dataSize!=2+N*8) break;
       f << "pts=[";
       ok=true;
-      for (int pt=0; pt<N; ++pt)
-        f << float(input->readLong(4))/65536.f << "x" << float(input->readLong(4))/65536.f << ",";
+      std::vector<Vec2f> &vertices=shape.m_shape.m_vertices;
+      vertices.resize(size_t(N));
+      for (int pt=0; pt<N; ++pt) {
+        float position[2];
+        for (int j=0; j<2; ++j) position[j]=float(input->readLong(4))/65536.f;
+        Vec2f point(position[1],position[0]);
+        vertices[size_t(pt)]=point;
+        f << point << ",";
+      }
       f << "],";
       break;
     }
@@ -810,6 +921,8 @@ bool BeagleWksDRParser::readShapeDatas()
       dataSize+=len;
       if (!input->checkPosition(pos+dataSize)) break;
       ok=true;
+      shape.m_entry.setBegin(input->tell());
+      shape.m_entry.setLength(len);
       for (int c=0; c<len; ++c) {
         char ch=(char) input->readULong(1);
         f << ch;
@@ -819,6 +932,8 @@ bool BeagleWksDRParser::readShapeDatas()
     case 11:
       if (dataSize<2) break;
       ok=long(input->readULong(2))==dataSize;
+      shape.m_entry.setBegin(pos);
+      shape.m_entry.setLength(dataSize);
       ascii().skipZone(pos,pos+dataSize-1);
       break;
     default:
@@ -849,54 +964,176 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
   libmwaw::DebugStream f;
   int val=(int)input->readLong(2); // always 8 ?
   if (val!=8) f << "f0=" << val << ",";
+  int penSize[2];
   for (int p=0; p<2; ++p) {
-    shape.m_penSize[p]=(int) input->readLong(2);
+    penSize[p]=(int) input->readLong(2);
     val=(int)input->readLong(2); // always 0 ?
     if (val) f << "f" << p+1 << "=" << val << ",";
   }
-  for (int p=0; p<2; ++p) shape.m_patterns[p]=(int) input->readLong(2);
-  for (int p=0; p<4; ++p) shape.m_colors[p]=(int) input->readLong(2);
-  shape.m_rotation=(int)input->readLong(2);
+  if (penSize[0]!=penSize[1]) f << "penSize=" << penSize[1] << "x" << penSize[0] << ",";
+  shape.m_style.m_lineWidth=float(penSize[0]+penSize[1])/2.f;
+  int patternIds[2], colorIds[4];
+  for (int p=0; p<2; ++p) patternIds[p]=(int) input->readLong(2);
+  for (int p=0; p<4; ++p) colorIds[p]=(int) input->readLong(2);
+  // set some default value
+  if (patternIds[1]) shape.m_style.setSurfaceColor(MWAWColor::white());
+  for (int i=0; i<2; ++i) {
+    if (shape.m_type==-1) {
+      // data are not yet initialised, so...
+      if (i==0) f << "line=";
+      else f << "surf=";
+      f << "[pat=" << patternIds[i] << ",col0=" << colorIds[2*i] << ",col0=" << colorIds[2*i] << "],";
+      continue;
+    }
+    if (patternIds[i]<0||patternIds[i]>=int(m_state->m_patternList.size())) {
+      MWAW_DEBUG_MSG(("BeagleWksDRParser::readStyle: can not find a pattern\n"));
+      f << "#pattern[" << i << "]=" << patternIds[i] << ",";
+      continue;
+    }
+    if (patternIds[i]==0) { // no pattern
+      if (i==0)
+        shape.m_style.m_lineWidth=0;
+      else
+        shape.m_style.setSurfaceColor(MWAWColor::white(), 0);
+      continue;
+    }
+    MWAWGraphicStyle::Pattern pattern=m_state->m_patternList[size_t(patternIds[i])];
+    for (int j=0; j<2; ++j) {
+      if (colorIds[2*i+j]<0||colorIds[2*i+j]>int(m_state->m_colorList.size())) {
+        MWAW_DEBUG_MSG(("BeagleWksDRParser::readStyle: can not find a pattern\n"));
+        f << "#color[" << i << "," << j << "]=" << colorIds[2*i+j] << ",";
+        continue;
+      }
+      pattern.m_colors[1-j]=m_state->m_colorList[size_t(colorIds[2*i+j])];
+    }
+    MWAWColor color;
+    if (i==0) {
+      if (pattern.getAverageColor(color))
+        shape.m_style.m_lineColor=color;
+    }
+    else if (pattern.getUniqueColor(color))
+      shape.m_style.setSurfaceColor(color);
+    else
+      shape.m_style.m_pattern=pattern;
+  }
+  shape.m_style.m_rotate=(float)-input->readLong(2);
   int dim[2];
   for (int p=0; p<2; ++p) dim[p]=(int) input->readLong(2);
-  if (dim[0]!=25 || dim[1]!=25) {
-    if (shape.m_type==4) f << "corner=" << dim[1] << "x" << dim[0] << ",";
-    else if (shape.m_type==5) f << "angle=" << dim[0] << "x" << dim[0]+dim[1] << ",";
-    else f << "#dim=" << dim[1] << "x" << dim[0] << ",";
+  bool defaultDim=dim[0]==25 && dim[1]==25;
+  switch (shape.m_type) {
+  case 4:
+    shape.m_shape.m_cornerWidth=Vec2f(float(dim[1]), float(dim[0]));
+    if (!defaultDim) f << "corner=" << dim[1] << "x" << dim[0] << ",";
+    break;
+  case 5: {
+    f << "angle=" << dim[0] << "x" << dim[0]+dim[1] << ",";
+    int angle[2] = { 90-dim[0]-dim[1], 90-dim[0] };
+    while (angle[1] > 360) {
+      angle[0]-=360;
+      angle[1]-=360;
+    }
+    while (angle[0] < -360) {
+      angle[0]+=360;
+      angle[1]+=360;
+    }
+    Box2f box=shape.m_box;
+    Vec2f center = box.center();
+    Vec2f axis = 0.5*Vec2f(box.size());
+    // we must compute the real bd box
+    float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
+    int limitAngle[2];
+    for (int j = 0; j < 2; j++)
+      limitAngle[j] = (angle[j] < 0) ? int(angle[j]/90)-1 : int(angle[j]/90);
+    for (int bord = limitAngle[0]; bord <= limitAngle[1]+1; bord++) {
+      float ang = (bord == limitAngle[0]) ? float(angle[0]) :
+                  (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
+      ang *= float(M_PI/180.);
+      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
+      else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
+      if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
+      else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
+    }
+    Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                  Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    shape.m_box=realBox;
+    shape.m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+    break;
   }
-  // find 0-3 for line, 0-1 for arc
-  val=(int) input->readLong(2);
-  if (val) {
-    if (shape.m_type==3 || shape.m_type==5) f << "g0=" << val << ",";
-    else f << "fId=" << val << ",";
+  default:
+    if (!defaultDim) f << "#dim=" << dim[1] << "x" << dim[0] << ",";
+    break;
   }
-  val=(int) input->readLong(2);
-  if (val) {
-    if (shape.m_type==3) f << "arrowId=" << val << ",";
-    else if (shape.m_type==5) f << "g1=" << val << ","; // find 0 or 1
-    else if (val!=12) f << "fSz=" << val << ",";
+  if (shape.m_type==3 || shape.m_type==5) { // g0:find 0-1 for arc
+    for (int j=0; j<5; ++j) {
+      val=(int) input->readLong(2);
+      if (!val) continue;
+      if (j==1 && shape.m_type==3) f << "arrowId=" << val << ",";
+      else f << "g" << j << "=" << val << ",";
+    }
   }
-  val=(int) input->readULong(2);
-  if (val) {
-    if (shape.m_type==3 || shape.m_type==5) f << "g2=" << val << ",";
-    else if (shape.m_type==7) f << "fFlags=" << std::hex << val << std::dec << ",";
-  }
-  val=(int) input->readULong(2); // 0
-  if (val) f << "g3=" << val << ",";
-  val=(int) input->readULong(2);
-  if (val) {
-    if (shape.m_type==3 || shape.m_type==5) f << "g4=" << val << ",";
-    // beware: does not use the standart color map: probably front=(val>>4), back=(val&f)
-    else if (shape.m_type==7 && val!=33) f << "fColor=" << std::hex << val << std::dec << ",";
+  else {
+    MWAWFont &font=shape.m_font;
+    if (shape.m_type==-1) // not initialized
+      f << "fId=" << input->readULong(2) << ",";
+    else
+      font.setId(m_structureManager->getFontId((int) input->readULong(2)));
+    font.setSize((float) input->readULong(2));
+    int flag=(int) input->readULong(2);
+    uint32_t flags=0;
+    if (flag&0x1) flags |= MWAWFont::boldBit;
+    if (flag&0x2) flags |= MWAWFont::italicBit;
+    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (flag&0x8) flags |= MWAWFont::embossBit;
+    if (flag&0x10) flags |= MWAWFont::shadowBit;
+    font.setFlags(flags);
+    f << "font=[" << font.getDebugString(getParserState()->m_fontConverter) << "],";
+    if (flag&0xFFE0) f << "fFlags=" << std::hex << (flag&0xFFE0) << std::dec << ",";
+    val=(int) input->readULong(2); // 0
+    if (val) f << "g0=" << val << ",";
+    val=(int) input->readULong(2); // 0
+    if (shape.m_type==7) {
+      switch (val) { // what is the logic ?
+      case 0x1e:
+        font.setColor(MWAWColor(255,255,255));
+        break;
+      case 0x21:
+        break;
+      case 0x199:
+        font.setColor(MWAWColor(0,0,255));
+        break;
+      case 0x155:
+        font.setColor(MWAWColor(0,255,0));
+        break;
+      case 0xcd:
+        font.setColor(MWAWColor(255,0,0));
+        break;
+      case 0x111:
+        font.setColor(MWAWColor(0,255,255));
+        break;
+      case 0x89:
+        font.setColor(MWAWColor(255,0,255));
+        break;
+      case 0x45:
+        font.setColor(MWAWColor(255,255,0));
+        break;
+      default:
+        MWAW_DEBUG_MSG(("BeagleWksDRParser::readStyle: find unknown font color\n"));
+        f << "#fColor=" << std::hex << val << std::dec << ",";
+      }
+    }
+    else if (val) f << "g1=" << val << ",";
   }
   val=(int) input->readLong(2);
   switch (val) {
   case 0:
     break;
   case 1:
+    shape.m_justify=MWAWParagraph::JustificationCenter;
     f << "center,";
     break;
   case -1:
+    shape.m_justify=MWAWParagraph::JustificationRight;
     f << "right,";
     break;
   default:
@@ -907,16 +1144,18 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
   case -1:
     break;
   case -2:
+    shape.m_interline=2;
     f << "spacing=200%,";
     break;
   case -3:
+    shape.m_interline=1.5;
     f << "spacing=150%,";
     break;
   default:
     f << "#spacing=" << val << ",";
   }
   val=(int) input->readLong(2);
-  if (val) f << "g5=" << val << ",";
+  if (val) f << "h0=" << val << ",";
   shape.m_dataSize=(long) input->readULong(2);
   shape.m_extra=f.str();
   ascii().addDelimiter(input->tell(),'|');
@@ -981,7 +1220,121 @@ bool BeagleWksDRParser::readPrintInfo()
 }
 
 ////////////////////////////////////////////////////////////
-// send data
+// send shapes: vector graphic document
+////////////////////////////////////////////////////////////
+bool BeagleWksDRParser::sendPictures()
+{
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::sendPictures: can not find the listener\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input = getInput();
+
+  for (size_t i=0; i<m_state->m_shapeList.size(); i++) {
+    BeagleWksDRParserInternal::Shape const &shape=m_state->m_shapeList[i];
+    Box2f box=shape.m_box;
+    /* if m_rotate!=0, the box is the rotate box, so we need to rotate
+       it back Normally, ok because the angle is a multiple of 90,
+       but, in pratical, the new center is not good...
+     */
+    if (shape.m_style.m_rotate<0 || shape.m_style.m_rotate>0)
+      box=libmwaw::rotateBoxFromCenter(box, -shape.m_style.m_rotate);
+
+    MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
+    pos.setPage(1);
+    pos.m_anchorTo=MWAWPosition::Page;
+    switch (shape.m_type) {
+    case 8: // group
+      break;
+    case 7: {
+      shared_ptr<MWAWSubDocument> doc(new BeagleWksDRParserInternal::SubDocument(*this, input, (int) i));
+      MWAWGraphicStyle style=shape.m_style;
+      style.m_lineWidth=0;
+      listener->insertTextBox(pos, doc, style);
+      break;
+    }
+    case 0xb:
+      if (!shape.m_entry.valid()) {
+        MWAW_DEBUG_MSG(("BeagleWksDRParser::sendPictures: the picture entry seems bad\n"));
+        break;
+      }
+      else {
+        input->seek(shape.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+        shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)shape.m_entry.length()));
+        librevenge::RVNGBinaryData data;
+        std::string type;
+        if (thePict && thePict->getBinary(data,type)) {
+          MWAWGraphicStyle style;
+          style.m_lineWidth=0;
+          style.setSurfaceColor(MWAWColor::white());
+          listener->insertPicture(pos, data, type, style);
+        }
+        else {
+          MWAW_DEBUG_MSG(("BeagleWksDRParser::sendPictures: can not check the picture data\n"));
+          break;
+        }
+      }
+      break;
+    default:
+      if (shape.m_type >= 1 && shape.m_type<=10 && shape.m_type != 9)
+        listener->insertPicture(pos, shape.m_shape, shape.m_style);
+      else {
+        MWAW_DEBUG_MSG(("BeagleWksDRParser::sendPictures: find unknown shape type\n"));
+      }
+      break;
+    }
+  }
+  return true;
+}
+
+bool BeagleWksDRParser::sendText(int id)
+{
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener || !listener->canWriteText()) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::sendText: can not find the listener\n"));
+    return false;
+  }
+  if (id<0 || id>=(int)m_state->m_shapeList.size()) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::sendText: can not find the textbox\n"));
+    return false;
+  }
+  BeagleWksDRParserInternal::Shape const &shape=m_state->m_shapeList[size_t(id)];
+  if (!shape.m_entry.valid() || shape.m_type != 7) {
+    MWAW_DEBUG_MSG(("BeagleWksDRParser::sendText: the textbox seems invalid\n"));
+    return false;
+  }
+  MWAWParagraph para;
+  para.setInterline(shape.m_interline, librevenge::RVNG_PERCENT);
+  para.m_justify=shape.m_justify;
+  listener->setParagraph(para);
+  MWAWFont font=shape.m_font;
+  listener->setFont(font);
+
+  MWAWInputStreamPtr input = getInput();
+  input->seek(shape.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  for (long i = 0; i < shape.m_entry.length(); i++) {
+    unsigned char c = (unsigned char) input->readULong(1);
+    switch (c) {
+    case 0x9:
+      listener->insertTab();
+      break;
+    case 0xd:
+      if (i+1==shape.m_entry.length()) break;
+      // this is marks the end of a paragraph
+      listener->insertEOL();
+      break;
+    default:
+      listener->insertCharacter(c);
+      break;
+    }
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// send other data
 ////////////////////////////////////////////////////////////
 bool BeagleWksDRParser::sendPageFrames()
 {
@@ -1047,7 +1400,6 @@ bool BeagleWksDRParser::checkHeader(MWAWHeader *header, bool strict)
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !input->checkPosition(66))
     return false;
-  if (strict) return false;
 
   libmwaw::DebugStream f;
   f << "FileHeader:";

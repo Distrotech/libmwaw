@@ -127,6 +127,7 @@ ActaParser: parser of Acta : v2 and Classic v1
 
 BeagleWksParser: word document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 BeagleWksBMParser: paint document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
+BeagleWksDRParser: vector graphic document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 -   BeagleWksText : class which reads the text in a word document
 -   BeagleWksStructManager : class to read structure partaged between different type of document

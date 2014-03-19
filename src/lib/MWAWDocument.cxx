@@ -404,10 +404,8 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
         parser.reset(new BeagleWksBMParser(input, rsrcParser, header));
-#ifdef DEBUG
       else
         parser.reset(new BeagleWksDRParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_CLARISWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)

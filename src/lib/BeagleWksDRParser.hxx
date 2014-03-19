@@ -48,8 +48,9 @@
 
 namespace BeagleWksDRParserInternal
 {
-struct Shape;
+class SubDocument;
 
+struct Shape;
 struct State;
 }
 
@@ -59,6 +60,7 @@ class BeagleWksStructManager;
  */
 class BeagleWksDRParser : public MWAWGraphicParser
 {
+  friend class BeagleWksDRParserInternal::SubDocument;
 public:
   //! constructor
   BeagleWksDRParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -92,6 +94,11 @@ protected:
 
   // send data
 
+  //! try to send the different pictures
+  bool sendPictures();
+  //! try to send a text box content
+  bool sendText(int id);
+
   //! try to send the page graphic
   bool sendPageFrames();
   //! try to send a frame
@@ -110,8 +117,8 @@ protected:
   bool readPatterns();
   //! try to read the colors zone
   bool readColors();
-  //! try to read an unknown zone (arrow?)
-  bool readZoneA();
+  //! try to read the arrows zone (unknown format)
+  bool readArrows();
 
   //! try to read the shape position
   bool readShapePositions();

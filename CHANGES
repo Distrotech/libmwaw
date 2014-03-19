@@ -1,5 +1,8 @@
 CHANGES:
 
+3/19/2014
+- BeagleWorks/WordPerfect Work: add parser of vector graphic documents
+
 3/13/2014
 - SuperPaint: add a parser of drawing SuperPaint v1 document
 
