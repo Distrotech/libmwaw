@@ -76,6 +76,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	FullWrtText.hxx			\
 	GreatWksBMParser.cxx		\
 	GreatWksBMParser.hxx		\
+	GreatWksDocument.cxx		\
+	GreatWksDocument.hxx		\
 	GreatWksGraph.cxx		\
 	GreatWksGraph.hxx		\
 	GreatWksParser.cxx		\

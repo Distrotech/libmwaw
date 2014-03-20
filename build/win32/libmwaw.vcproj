@@ -284,6 +284,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GreatWksDocument.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\GreatWksGraph.cxx"
 				>
 			</File>
@@ -726,6 +730,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FullWrtText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GreatWksDocument.hxx"
 				>
 			</File>
 			<File

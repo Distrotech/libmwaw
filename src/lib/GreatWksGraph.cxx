@@ -47,13 +47,13 @@
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWListener.hxx"
+#include "MWAWParser.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "GreatWksParser.hxx"
-
+#include "GreatWksDocument.hxx"
 #include "GreatWksGraph.hxx"
 
 /** Internal: the structures of a GreatWksGraph */
@@ -425,9 +425,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksGraph::GreatWksGraph(MWAWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new GreatWksGraphInternal::State),
-  m_mainParser(&parser), m_callback()
+GreatWksGraph::GreatWksGraph(GreatWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new GreatWksGraphInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -456,7 +456,7 @@ int GreatWksGraph::numPages() const
 
 bool GreatWksGraph::sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener)
 {
-  return m_callback.m_sendTextbox && (m_mainParser->*m_callback.m_sendTextbox)(entry, listener);
+  return m_document.sendTextbox(entry, listener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -1751,7 +1751,7 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
-      m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry)) {
+      m_document.canSendTextboxAsGraphic(text.m_entry)) {
     Box2f box(Vec2f(0,0),newSz);
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener
@@ -1873,7 +1873,7 @@ bool GreatWksGraph::canCreateGraphic(GreatWksGraphInternal::FrameGroup const &gr
       break;
     case GreatWksGraphInternal::Frame::T_TEXT: {
       GreatWksGraphInternal::FrameText const &text=static_cast<GreatWksGraphInternal::FrameText const &>(*frame);
-      if (!m_callback.m_canSendTextBoxAsGraphic || !(m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry))
+      if (!m_document.canSendTextboxAsGraphic(text.m_entry))
         return false;
       break;
     }
@@ -1959,7 +1959,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         break;
       case GreatWksGraphInternal::Frame::T_TEXT: {
         GreatWksGraphInternal::FrameText const &text=static_cast<GreatWksGraphInternal::FrameText const &>(*frame);
-        canMerge=m_callback.m_canSendTextBoxAsGraphic && (m_mainParser->*m_callback.m_canSendTextBoxAsGraphic)(text.m_entry);
+        canMerge=m_document.canSendTextboxAsGraphic(text.m_entry);
         break;
       }
       case GreatWksGraphInternal::Frame::T_PICTURE:

@@ -49,16 +49,13 @@ struct State;
 class SubDocument;
 }
 
-class GreatWksGraph;
-class GreatWksText;
+class GreatWksDocument;
 
 /** \brief the main class to read a GreatWorks text file
  */
 class GreatWksParser : public MWAWTextParser
 {
   friend class GreatWksParserInternal::SubDocument;
-  friend class GreatWksGraph;
-  friend class GreatWksText;
 public:
   //! constructor
   GreatWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -87,15 +84,6 @@ protected:
   MWAWSection getMainSection() const;
   //! try to send the i^th header/footer
   bool sendHF(int id);
-  //! check if a textbox can be send in a graphic zone, ie. does not contains any graphic
-  bool canSendTextBoxAsGraphic(MWAWEntry const &entry);
-  //! try to  textbox's text
-  bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener=MWAWListenerPtr());
-
-  // interface with the graph parser
-
-  //! try to send a picture
-  bool sendPicture(MWAWEntry const &entry, MWAWPosition pos);
 
 protected:
   //! finds the different objects zones
@@ -103,35 +91,12 @@ protected:
   //! finds the different objects zones ( for a draw file)
   bool createDrawZones();
 
-  //! read the resource fork zone
-  bool readRSRCZones();
-
   //
   // low level
   //
 
-  //! read a PrintInfo block ( PRNT resource block )
-  bool readPrintInfo(MWAWEntry const &entry);
-
-  //! read the windows positions ( WPSN resource block )
-  bool readWPSN(MWAWEntry const &entry);
-
   //! read the DocInfo block ( many unknown data )
   bool readDocInfo();
-  //! read a unknown zone ( ARRs resource block: v2 )
-  bool readARRs(MWAWEntry const &entry);
-  //! read a unknown zone ( DaHS resource block: v2 )
-  bool readDaHS(MWAWEntry const &entry);
-  //! read a unknown zone ( GrDS resource block: v2 )
-  bool readGrDS(MWAWEntry const &entry);
-  //! read a unknown zone ( NxED resource block: v2 )
-  bool readNxEd(MWAWEntry const &entry);
-
-  //! return the input input
-  MWAWInputStreamPtr rsrcInput();
-
-  //! a DebugFile used to write what we recognize when we parse the document in rsrc
-  libmwaw::DebugFile &rsrcAscii();
 
   //
   // data
@@ -140,10 +105,8 @@ protected:
   //! the state
   shared_ptr<GreatWksParserInternal::State> m_state;
 
-  //! the graph parser
-  shared_ptr<GreatWksGraph> m_graphParser;
-  //! the text parser
-  shared_ptr<GreatWksText> m_textParser;
+  //! the main document
+  shared_ptr<GreatWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

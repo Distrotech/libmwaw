@@ -199,6 +199,10 @@ SOURCE=..\..\src\lib\FullWrtText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GreatWksDocument.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\GreatWksGraph.cxx
 # End Source File
 # Begin Source File
@@ -640,6 +644,10 @@ SOURCE=..\..\src\lib\FullWrtStruct.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\FullWrtText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GreatWksDocument.hxx
 # End Source File
 # Begin Source File
 

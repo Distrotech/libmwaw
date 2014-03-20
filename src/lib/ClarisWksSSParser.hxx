@@ -103,7 +103,7 @@ protected:
   //! the state
   shared_ptr<ClarisWksSSParserInternal::State> m_state;
 
-  //! the style manager
+  //! the main document manager
   shared_ptr<ClarisWksDocument> m_document;
 };
 #endif

@@ -46,11 +46,12 @@
 #include "MWAWGraphicListener.hxx"
 #include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
+#include "MWAWParser.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWSection.hxx"
 #include "MWAWRSRCParser.hxx"
 
-#include "GreatWksParser.hxx"
+#include "GreatWksDocument.hxx"
 
 #include "GreatWksText.hxx"
 
@@ -421,9 +422,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-GreatWksText::GreatWksText(MWAWParser &parser) :
-  m_parserState(parser.getParserState()), m_state(new GreatWksTextInternal::State),
-  m_mainParser(&parser), m_callback()
+GreatWksText::GreatWksText(GreatWksDocument &document) :
+  m_document(document), m_parserState(document.m_parserState), m_state(new GreatWksTextInternal::State),
+  m_mainParser(&document.getMainParser())
 {
 }
 
@@ -1346,11 +1347,8 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListener
     isMain = false;
   }
   else if (isMain) {
-    if (m_callback.m_newPage)
-      (m_mainParser->*m_callback.m_newPage)(1);
-    MWAWSection sec;
-    if (m_callback.m_mainSection)
-      sec=(m_mainParser->*m_callback.m_mainSection)();
+    m_document.newPage(1);
+    MWAWSection sec=m_document.getMainSection();
     numCol = sec.numColumns();
     if (numCol>1) {
       if (listener->isSectionOpened())
@@ -1432,12 +1430,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListener
       }
       MWAWPosition pictPos(Vec2f(0,0), token.m_dim, librevenge::RVNG_POINT);
       pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
-      if (m_callback.m_sendPicture)
-        (m_mainParser->*m_callback.m_sendPicture)(token.m_pictEntry, pictPos);
-      else {
-        MWAW_DEBUG_MSG(("GreatWksText::sendZone: oops, can not send the send picture callback\n"));
-        break;
-      }
+      m_document.sendPicture(token.m_pictEntry, pictPos);
       break;
     }
     case 0x9:
@@ -1455,9 +1448,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListener
       }
       else {
         actCol = 0;
-        ++actPage;
-        if (m_callback.m_newPage)
-          (m_mainParser->*m_callback.m_newPage)(actPage);
+        m_document.newPage(++actPage);
       }
       break;
     case 0xc:
@@ -1467,9 +1458,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListener
         MWAW_DEBUG_MSG(("GreatWksText::sendZone: find page break in auxilliary zone\n"));
         break;
       }
-      ++actPage;
-      if (m_callback.m_newPage)
-        (m_mainParser->*m_callback.m_newPage)(actPage);
+      m_document.newPage(++actPage);
       actCol = 0;
       break;
     case 0xd:
