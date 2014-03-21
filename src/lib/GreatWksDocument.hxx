@@ -48,6 +48,7 @@ struct State;
 
 class GreatWksGraph;
 class GreatWksParser;
+class GreatWksDRParser;
 class GreatWksSSParser;
 class GreatWksText;
 
@@ -56,6 +57,7 @@ class GreatWksText;
 class GreatWksDocument
 {
   friend class GreatWksParser;
+  friend class GreatWksDRParser;
   friend class GreatWksSSParser;
 public:
   //! constructor
@@ -126,6 +128,10 @@ protected:
 
   //! a DebugFile used to write what we recognize when we parse the document in rsrc
   libmwaw::DebugFile &rsrcAscii();
+
+private:
+  GreatWksDocument(GreatWksDocument const &orig);
+  GreatWksDocument &operator=(GreatWksDocument const &orig);
 
   //
   // data

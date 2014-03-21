@@ -203,6 +203,10 @@ SOURCE=..\..\src\lib\GreatWksDocument.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\GreatWksDRParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\GreatWksGraph.cxx
 # End Source File
 # Begin Source File
@@ -648,6 +652,10 @@ SOURCE=..\..\src\lib\FullWrtText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\GreatWksDocument.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\GreatWksDRParser.hxx
 # End Source File
 # Begin Source File
 

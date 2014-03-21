@@ -534,8 +534,7 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
   ascFile.addNote("FileHeader-II:");
 
   if (header)
-    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers,
-                  isSheet ? MWAWDocument::MWAW_K_SPREADSHEET : MWAWDocument::MWAW_K_TEXT);
+    header->reset(MWAWDocument::MWAW_T_GREATWORKS, vers,m_parserState->m_kind);
   return true;
 }
 

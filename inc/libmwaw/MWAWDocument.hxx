@@ -104,7 +104,7 @@ public:
     MWAW_T_FULLIMPACT /** FullImpact: TODO*/,
     MWAW_T_FULLPAINT /** FullPaint: TODO*/,
     MWAW_T_FULLWRITE /** FullWrite Professional: basic*/,
-    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): export text, drawing(as text), paint and spreadsheet document.*/,
+    MWAW_T_GREATWORKS /** GreatWorks (v1-v2): export text, drawing, paint and spreadsheet document.*/,
     MWAW_T_HANMACWORDJ /** HanMac Word-J (v2.0.4) */,
     MWAW_T_HANMACWORDK /** HanMac Word-K (v2.0.5-2.0.6) */,
     MWAW_T_KALEIDAGRAPH /** Kaleida Graph: TODO*/,

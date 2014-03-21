@@ -1526,8 +1526,6 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
       angle[0]+=360;
       angle[1]+=360;
     }
-    Vec2f center = zone.m_box.center();
-    Vec2f axis = 0.5*Vec2f(zone.m_box.size());
     // we must compute the real bd box
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
     int limitAngle[2];
@@ -1537,15 +1535,26 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
       float ang = (bord == limitAngle[0]) ? float(angle[0]) :
                   (bord == limitAngle[1]+1) ? float(angle[1]) : float(90 * bord);
       ang *= float(M_PI/180.);
-      float actVal[2] = { axis[0] *std::cos(ang), -axis[1] *std::sin(ang)};
+      float actVal[2] = { std::cos(ang), -std::sin(ang)};
       if (actVal[0] < minVal[0]) minVal[0] = actVal[0];
       else if (actVal[0] > maxVal[0]) maxVal[0] = actVal[0];
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2i realBox(Vec2i(int(center[0]+minVal[0]),int(center[1]+minVal[1])),
-                  Vec2i(int(center[0]+maxVal[0]),int(center[1]+maxVal[1])));
-    graph->m_shape = MWAWGraphicShape::arc(realBox, zone.m_box, Vec2f(float(angle[0]), float(angle[1])));
+    Box2f circleBox=zone.m_box;
+    // we have the shape box, we need to reconstruct the circle box
+    if (maxVal[0]>minVal[0] && maxVal[1]>minVal[1]) {
+      float scaling[2]= { (zone.m_box[1][0]-zone.m_box[0][0])/(maxVal[0]-minVal[0]),
+                          (zone.m_box[1][1]-zone.m_box[0][1])/(maxVal[1]-minVal[1])
+                        };
+      float constant[2]= { zone.m_box[0][0]-minVal[0] *scaling[0], zone.m_box[0][1]-minVal[1] *scaling[1]};
+      circleBox=Box2f(Vec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
+                      Vec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
+    }
+    if (type==1)
+      graph->m_shape = MWAWGraphicShape::pie(zone.m_box, circleBox, Vec2f(float(angle[0]), float(angle[1])));
+    else
+      graph->m_shape = MWAWGraphicShape::arc(zone.m_box, circleBox, Vec2f(float(angle[0]), float(angle[1])));
     break;
   }
   case 3: // rect: no data
@@ -1747,9 +1756,11 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   Vec2f fSz=pos.size();
   // increase slightly x and set y to atleast
   Vec2f newSz(fSz[0]+3,fSz[1]);
+  if (listener->getType()==MWAWListener::Graphic)
+    return sendTextboxAsGraphic(Box2f(pos.origin(),pos.origin()+newSz), text, style, listener);
+
   MWAWPosition finalPos(pos);
   finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
-  shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
       m_document.canSendTextboxAsGraphic(text.m_entry)) {
     Box2f box(Vec2f(0,0),newSz);
@@ -1767,6 +1778,7 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
     return true;
   }
 
+  shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
   MWAWGraphicStyle frameStyle;
   if (style.hasSurfaceColor())
     frameStyle.setBackgroundColor(style.m_surfaceColor);
@@ -1775,7 +1787,7 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
 }
 
 bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text,
-    MWAWGraphicStyle const &style, MWAWGraphicListenerPtr listener)
+    MWAWGraphicStyle const &style, MWAWListenerPtr listener)
 {
   libmwaw::SubDocumentType subdocType;
   if (!listener || !listener->isDocumentStarted() || listener->isSubDocumentOpened(subdocType)) {
@@ -1937,6 +1949,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
   size_t numChilds=group.m_childList.size(), childNotSent=0;
   if (!numChilds) return;
 
+  bool isDraw=listener->getType()==MWAWListener::Graphic;
   int numDataToMerge=0;
   int numFrames=(int) zone.m_frameList.size();
   Box2f partialBdBox;
@@ -1949,7 +1962,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
     if (!frame) continue;
 
     bool canMerge=false;
-    if (frame->m_page==group.m_page) {
+    if (!isDraw && frame->m_page==group.m_page) {
       switch (frame->getType()) {
       case GreatWksGraphInternal::Frame::T_BASIC:
         canMerge=true;

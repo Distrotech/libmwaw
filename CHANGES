@@ -1,5 +1,9 @@
 CHANGES:
 
+3/21/2014
+- GreatWorks: replace the parser of vector graphic documents by a parser
+  which generates graphic documents + correct to code to reconstruct arc/pie
+
 3/19/2014
 - BeagleWorks/WordPerfect Work: add parser of vector graphic documents
 

@@ -56,6 +56,7 @@
 #include "FullWrtParser.hxx"
 #include "GreatWksParser.hxx"
 #include "GreatWksBMParser.hxx"
+#include "GreatWksDRParser.hxx"
 #include "GreatWksSSParser.hxx"
 #include "HanMacWrdJParser.hxx"
 #include "HanMacWrdKParser.hxx"
@@ -395,8 +396,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     return parser;
   if (header->getKind()!=MWAWDocument::MWAW_K_DRAW && header->getKind()!=MWAWDocument::MWAW_K_PAINT)
     return parser;
-  if (header->getKind()==MWAWDocument::MWAW_K_DRAW &&
-      (header->getType()==MWAWDocument::MWAW_T_CLARISWORKS ||header->getType()==MWAWDocument::MWAW_T_GREATWORKS))
+  if (header->getKind()==MWAWDocument::MWAW_K_DRAW && header->getType()==MWAWDocument::MWAW_T_CLARISWORKS)
     return parser;
 
   try {
@@ -414,6 +414,8 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_GREATWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
         parser.reset(new GreatWksBMParser(input, rsrcParser, header));
+      else
+        parser.reset(new GreatWksDRParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACPAINT:
       parser.reset(new MacPaintParser(input, rsrcParser, header));
@@ -576,9 +578,8 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
   if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET || header->getKind()==MWAWDocument::MWAW_K_DATABASE ||
       header->getKind()==MWAWDocument::MWAW_K_PAINT)
     return parser;
-  // removeme: actually ClarisWorks and GreatWorks draw file are exported as text file
-  if (header->getKind()==MWAWDocument::MWAW_K_DRAW  &&
-      header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS && header->getType()!=MWAWDocument::MWAW_T_GREATWORKS)
+  // removeme: actually ClarisWorks draw file are exported as text file
+  if (header->getKind()==MWAWDocument::MWAW_K_DRAW  && header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS)
     return parser;
   try {
     switch (header->getType()) {

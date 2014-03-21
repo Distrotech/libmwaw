@@ -50,6 +50,7 @@ struct Zone;
 
 class GreatWksDocument;
 class GreatWksParser;
+class GreatWksDRParser;
 class GreatWksSSParser;
 
 /** \brief the main class to read the text part of GreatWorks Text file
@@ -61,6 +62,7 @@ class GreatWksText
 {
   friend class GreatWksDocument;
   friend class GreatWksParser;
+  friend class GreatWksDRParser;
   friend class GreatWksSSParser;
 public:
   //! constructor

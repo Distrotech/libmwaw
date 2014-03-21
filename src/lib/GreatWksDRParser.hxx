@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef GREAT_WKS_PARSER
-#  define GREAT_WKS_PARSER
+#ifndef GREAT_WKS_DR_PARSER
+#  define GREAT_WKS_DR_PARSER
 
 #include <string>
 #include <vector>
@@ -43,47 +43,35 @@
 
 #include "MWAWParser.hxx"
 
-namespace GreatWksParserInternal
+namespace GreatWksDRParserInternal
 {
 struct State;
-class SubDocument;
 }
 
 class GreatWksDocument;
 
-/** \brief the main class to read a GreatWorks text file
+/** \brief the main class to read a GreatWorks graphic file
  */
-class GreatWksParser : public MWAWTextParser
+class GreatWksDRParser : public MWAWGraphicParser
 {
-  friend class GreatWksParserInternal::SubDocument;
 public:
   //! constructor
-  GreatWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  GreatWksDRParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~GreatWksParser();
+  virtual ~GreatWksDRParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
   // the main parse function
-  void parse(librevenge::RVNGTextInterface *documentInterface);
+  void parse(librevenge::RVNGDrawingInterface *documentInterface);
 
 protected:
   //! inits all internal variables
   void init();
 
   //! creates the listener which will be associated to the document
-  void createDocument(librevenge::RVNGTextInterface *documentInterface);
-
-  //! adds a new page
-  void newPage(int number);
-
-  // interface with the text parser
-
-  //! return the main section
-  MWAWSection getMainSection() const;
-  //! try to send the i^th header/footer
-  bool sendHF(int id);
+  void createDocument(librevenge::RVNGDrawingInterface *documentInterface);
 
 protected:
   //! finds the different objects zones
@@ -93,15 +81,12 @@ protected:
   // low level
   //
 
-  //! read the DocInfo block ( many unknown data )
-  bool readDocInfo();
-
   //
   // data
   //
 
   //! the state
-  shared_ptr<GreatWksParserInternal::State> m_state;
+  shared_ptr<GreatWksDRParserInternal::State> m_state;
 
   //! the main document
   shared_ptr<GreatWksDocument> m_document;

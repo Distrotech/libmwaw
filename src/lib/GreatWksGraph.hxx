@@ -63,6 +63,7 @@ class SubDocument;
 
 class GreatWksDocument;
 class GreatWksParser;
+class GreatWksDRParser;
 class GreatWksSSParser;
 
 /** \brief the main class to read the graphic part of a HanMac Word-J file
@@ -74,6 +75,7 @@ class GreatWksGraph
 {
   friend class GreatWksDocument;
   friend class GreatWksParser;
+  friend class GreatWksDRParser;
   friend class GreatWksSSParser;
   friend class GreatWksGraphInternal::SubDocument;
 
@@ -123,7 +125,7 @@ protected:
   //! try to send a textbox
   bool sendTextbox(GreatWksGraphInternal::FrameText const &text, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos);
   //! try to send a textbox via a graphiclistener
-  bool sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text, MWAWGraphicStyle const &style, MWAWGraphicListenerPtr listener);
+  bool sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text, MWAWGraphicStyle const &style, MWAWListenerPtr listener);
   //! try to send the textbox text (via the mainParser)
   bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener);
 

@@ -330,9 +330,6 @@ void GreatWksParser::createDocument(librevenge::RVNGTextInterface *documentInter
 bool GreatWksParser::createZones()
 {
   m_document->readRSRCZones();
-  if (getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW)
-    return createDrawZones();
-
   MWAWInputStreamPtr input = getInput();
   long pos=36;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -358,32 +355,6 @@ bool GreatWksParser::createZones()
     ascii().addNote("_");
   }
 
-  return ok;
-}
-
-bool GreatWksParser::createDrawZones()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos;
-  ascii().addPos(40);
-  ascii().addNote("Entries(GZoneHeader)");
-  ascii().addDelimiter(68,'|');
-  pos = 74;
-  input->seek(74, librevenge::RVNG_SEEK_SET);
-  if (!m_document->getTextParser()->readFontNames())
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-  else
-    pos = input->tell();
-
-  bool ok=m_document->getGraphParser()->readGraphicZone();
-  if (!input->isEnd()) {
-    pos = input->tell();
-    MWAW_DEBUG_MSG(("GreatWksParser::createZones: find some extra data\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Loose):");
-    ascii().addPos(pos+200);
-    ascii().addNote("_");
-  }
   return ok;
 }
 
@@ -528,8 +499,7 @@ bool GreatWksParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = GreatWksParserInternal::State();
   if (!m_document->checkHeader(header,strict)) return false;
-  return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW;
+  return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT;
 }
 
 

@@ -169,7 +169,7 @@ void MWAWGraphicDecoder::insertElement(const char *psName, const librevenge::RVN
       ok=false;
     break;
   case 'S':
-    if (strcmp(psName,"SetMetaData")==0)
+    if (strcmp(psName,"SetDocumentMetaData")==0)
       m_output->setDocumentMetaData(propList);
     else if (strcmp(psName,"SetStyle")==0)
       m_output->setStyle(propList);
