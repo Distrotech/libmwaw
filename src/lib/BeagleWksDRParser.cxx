@@ -747,7 +747,6 @@ bool BeagleWksDRParser::readShapePositions()
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
-  pos=input->tell();
   if (m_state->m_numShapes[0]<0 || !input->checkPosition(pos+m_state->m_numShapes[0]*20)) {
     MWAW_DEBUG_MSG(("BeagleWksDRParser::readShapePositions: can not read the shape positions\n"));
     ascii().addPos(pos);
