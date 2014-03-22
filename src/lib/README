@@ -196,7 +196,7 @@ MoreParser: parser of More document : v2.0 v3.0 ( organization part )
 
 - MsWksGraph : class which reads the picture/graph 
 - MsWksTable : class which reads a table
-- MsWksZone  : class which defines a file zone (main or ole)
+- MsWksDocument  : class which defines a file zone (main or ole)
 - MsWks3Parser : parser of Microsoft Works document : v1.0-3.0
 -   MsWks3Text : class which reads the text
 - MsWks4Parser : parser of Microsoft Works document : v4.0

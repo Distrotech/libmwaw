@@ -46,7 +46,7 @@
 #include "MWAWSubDocument.hxx"
 
 #include "MsWksGraph.hxx"
-#include "MsWksZone.hxx"
+#include "MsWksDocument.hxx"
 
 #include "MsWks4Parser.hxx"
 #include "MsWks4Text.hxx"
@@ -167,9 +167,9 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                        MsWks4Parser &parser, std::string const &oleName) :
-  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_graphParser(), m_zone()
+  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_document()
 {
-  m_zone.reset(new MsWksZone(input, *this));
+  m_document.reset(new MsWksDocument(input, *this));
   setAscii(oleName);
   setVersion(4);
   init();
@@ -185,22 +185,24 @@ MsWks4Zone::~MsWks4Zone()
 void MsWks4Zone::init()
 {
   m_state.reset(new MsWks4ZoneInternal::State);
-  m_textParser.reset(new MsWks4Text(*this));
+  m_textParser.reset(new MsWks4Text(*this,*m_document));
   m_textParser->setDefault(m_state->m_defFont);
-  m_graphParser.reset(new MsWksGraph(*this, *m_zone));
-  m_graphParser->setCallbacks(static_cast<MsWksGraph::FrameCallback>(&MsWks4Zone::sendFrameText),
-                              static_cast<MsWksGraph::OLECallback>(&MsWks4Zone::sendOLE));
+  m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks4Zone::newPage);
+  m_document->m_sendFootnote=static_cast<MsWksDocument::SendFootnote>(&MsWks4Zone::sendFootNote);
+  m_document->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWks4Zone::sendFrameText);
+  m_document->m_sendOLE=static_cast<MsWksDocument::SendOLE>(&MsWks4Zone::sendOLE);
+  m_document->m_sendRBIL=static_cast<MsWksDocument::SendRBIL>(&MsWks4Zone::sendRBIL);
 }
 
 void MsWks4Zone::setAscii(std::string const &oleName)
 {
   std::string fName = libmwaw::Debug::flattenFileName(oleName);
-  m_zone->initAsciiFile(fName);
+  m_document->initAsciiFile(fName);
 }
 
 libmwaw::DebugFile &MsWks4Zone::ascii()
 {
-  return m_zone->ascii();
+  return m_document->ascii();
 }
 
 void MsWks4Zone::sendFootNote(int id)
@@ -209,7 +211,7 @@ void MsWks4Zone::sendFootNote(int id)
 }
 void MsWks4Zone::readFootNote(int id)
 {
-  m_textParser->readFootNote(m_zone->getInput(), id);
+  m_textParser->readFootNote(m_document->getInput(), id);
 }
 
 void MsWks4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -224,7 +226,7 @@ void MsWks4Zone::sendRBIL(int id, Vec2i const &sz)
   sendData.m_id = id;
   sendData.m_anchor =  MWAWPosition::Char;
   sendData.m_size = sz;
-  m_graphParser->sendObjects(sendData);
+  m_document->getGraphParser()->sendObjects(sendData);
 }
 
 void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle)
@@ -243,12 +245,12 @@ double MsWks4Zone::getTextHeight() const
 ////////////////////////////////////////////////////////////
 // new page/text positions
 ////////////////////////////////////////////////////////////
-void MsWks4Zone::newPage(int number)
+void MsWks4Zone::newPage(int number, bool /*soft*/)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
 
-  long pos = m_zone->getInput()->tell();
+  long pos = m_document->getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
     if (!getTextListener() || m_state->m_actPage == 1)
@@ -261,9 +263,9 @@ void MsWks4Zone::newPage(int number)
     sendData.m_type = MsWksGraph::SendData::RBDR;
     sendData.m_anchor =  MWAWPosition::Page;
     sendData.m_page = m_state->m_actPage;
-    m_graphParser->sendObjects(sendData);
+    m_document->getGraphParser()->sendObjects(sendData);
   }
-  m_zone->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
+  m_document->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 MWAWEntry MsWks4Zone::getTextPosition() const
@@ -291,14 +293,14 @@ MWAWTextListenerPtr MsWks4Zone::createListener
   }
 
   int numPages = m_textParser->numPages();
-  int graphPages = m_graphParser->numPages(-1);
+  int graphPages = m_document->getGraphParser()->numPages(-1);
   if (graphPages>numPages) numPages = graphPages;
 
   // ok, now we can update the page position
   std::vector<int> linesH, pagesH;
   pagesH.resize(size_t(numPages)+1, int(72.*getTextHeight()));
-  m_graphParser->computePositions(-1, linesH, pagesH);
-  m_graphParser->setPageLeftTop
+  m_document->getGraphParser()->computePositions(-1, linesH, pagesH);
+  m_document->getGraphParser()->setPageLeftTop
   (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
          72.f*float(getPageSpan().getMarginTop())+float(m_state->m_headerHeight)));
 
@@ -318,7 +320,7 @@ MWAWTextListenerPtr MsWks4Zone::createListener
 bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 {
   long pos = input->tell();
-  m_zone->ascii().addPos(pos);
+  m_document->ascii().addPos(pos);
 
   libmwaw::DebugStream f;
 
@@ -328,7 +330,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
   if (input->tell() != pos+cch) {
     MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry error: incomplete entry\n"));
-    m_zone->ascii().addNote("###IndexEntry incomplete (ignored)");
+    m_document->ascii().addNote("###IndexEntry incomplete (ignored)");
     return false;
   }
   input->seek(pos + 2, librevenge::RVNG_SEEK_SET);
@@ -336,7 +338,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   if (0x18 != cch) {
     if (cch < 0x18) {
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
-      m_zone->ascii().addNote("MsWks4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
+      m_document->ascii().addNote("MsWks4Zone:parseHeaderIndexEntry: ###IndexEntry too short(ignored)");
       if (cch < 10) throw libmwaw::ParseException();
       return true;
     }
@@ -352,7 +354,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
         (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90)) {
       MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
                       (uint8_t)name[i], (uint8_t)name[i]));
-      m_zone->ascii().addNote("###IndexEntry bad name(ignored)");
+      m_document->ascii().addNote("###IndexEntry bad name(ignored)");
 
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
       return true;
@@ -383,14 +385,14 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   f << ", offset=" << std::hex << hie.begin() << ", length=" << hie.length();
 
   if (cch != 0x18) {
-    m_zone->ascii().addDelimiter(pos+0x18, '|');
+    m_document->ascii().addDelimiter(pos+0x18, '|');
     f << ",#extraData";
   }
 
   input->seek(hie.end(), librevenge::RVNG_SEEK_SET);
   if (input->tell() != hie.end()) {
     f << ", ###ignored";
-    m_zone->ascii().addNote(f.str().c_str());
+    m_document->ascii().addNote(f.str().c_str());
     input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -398,18 +400,18 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 
   m_entryMap.insert(std::multimap<std::string, MWAWEntry>::value_type(name, hie));
 
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
-  m_zone->ascii().addPos(hie.begin());
+  m_document->ascii().addPos(hie.begin());
   f.str("");
   f << name;
   if (name != name2) f << "/" << name2;
   f << ":" << std::dec << id;
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addNote(f.str().c_str());
 
-  m_zone->ascii().addPos(hie.end());
-  m_zone->ascii().addNote("_");
+  m_document->ascii().addPos(hie.end());
+  m_document->ascii().addNote("_");
 
   input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
   return true;
@@ -434,8 +436,8 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
   f << "), ";
   f << "end=" << std::hex << input->readLong(2);
 
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
   input->seek(0x18, librevenge::RVNG_SEEK_SET);
   bool readSome = false;
@@ -461,8 +463,8 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
       return readSome;
     }
 
-    m_zone->ascii().addPos(pos);
-    m_zone->ascii().addNote(f.str().c_str());
+    m_document->ascii().addPos(pos);
+    m_document->ascii().addNote(f.str().c_str());
 
     do {
       if (!parseHeaderIndexEntry(input)) return readSome;
@@ -494,13 +496,13 @@ bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
 
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   m_state->m_parsed = true;
 
   m_entryMap.clear();
 
-  m_zone->ascii().addPos(0);
-  m_zone->ascii().addNote("FileHeader");
+  m_document->ascii().addPos(0);
+  m_document->ascii().addNote("FileHeader");
   /* header index */
   if (!parseHeaderIndex(input)) return false;
   // the text structure
@@ -557,7 +559,7 @@ bool MsWks4Zone::createZones(bool mainOle)
     if (!entry.hasName("RBDR")) break;
     if (!entry.hasType("RBDR")) continue;
 
-    m_graphParser->readRB(input, entry);
+    m_document->getGraphParser()->readRB(input, entry);
   }
   pos = m_entryMap.lower_bound("RBIL");
   while (pos != m_entryMap.end()) {
@@ -565,7 +567,7 @@ bool MsWks4Zone::createZones(bool mainOle)
     if (!entry.hasName("RBIL")) break;
     if (!entry.hasType("RBIL")) continue;
 
-    m_graphParser->readRB(input, entry);
+    m_document->getGraphParser()->readRB(input, entry);
   }
 
   /* read the pictures */
@@ -576,7 +578,7 @@ bool MsWks4Zone::createZones(bool mainOle)
   while (pos != m_entryMap.end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("PICT")) break;
-    m_graphParser->readPictureV4(input, entry);
+    m_document->getGraphParser()->readPictureV4(input, entry);
   }
   return true;
 }
@@ -586,7 +588,7 @@ bool MsWks4Zone::createZones(bool mainOle)
 ////////////////////////////////////////////////////////////
 void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 {
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   bool oldMain = m_state->m_mainOle;
   m_state->m_mainOle = mainOle;
 
@@ -594,7 +596,7 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   sendData.m_type = MsWksGraph::SendData::RBDR;
   sendData.m_anchor = mainOle ? MWAWPosition::Page : MWAWPosition::Paragraph;
   sendData.m_page = 0;
-  m_graphParser->sendObjects(sendData);
+  m_document->getGraphParser()->sendObjects(sendData);
 
   if (mainOle && getTextListener() && m_state->m_numColumns > 1) {
     if (getTextListener()->isSectionOpened())
@@ -622,7 +624,7 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 
   sendData.m_type = MsWksGraph::SendData::ALL;
   sendData.m_anchor = MWAWPosition::Char;
-  m_graphParser->sendObjects(sendData);
+  m_document->getGraphParser()->sendObjects(sendData);
 #endif
   m_state->m_mainOle = oldMain;
 
@@ -688,8 +690,8 @@ bool MsWks4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAW
     libmwaw::DebugStream f;
     f << info;
 
-    m_zone->ascii().addPos(debPos);
-    m_zone->ascii().addNote(f.str().c_str());
+    m_document->ascii().addPos(debPos);
+    m_document->ascii().addNote(f.str().c_str());
   }
   return true;
 }
@@ -847,8 +849,8 @@ bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWP
     if (ok) continue;
 
     if (!ok) {
-      m_zone->ascii().addPos(debPos);
-      m_zone->ascii().addNote("DOP ###");
+      m_document->ascii().addPos(debPos);
+      m_document->ascii().addNote("DOP ###");
 
       break;
     }
@@ -886,8 +888,8 @@ bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWP
     f << "),";
   }
   f << f2.str();
-  m_zone->ascii().addPos(debPage);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(debPage);
+  m_document->ascii().addNote(f.str().c_str());
 
   return dimOk;
 }
@@ -912,10 +914,10 @@ bool MsWks4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   for (int i = 0; i < 2; i++)
     f << input->readLong(1) << ", ";
 
-  m_zone->ascii().addPos(debPos);
-  m_zone->ascii().addNote(f.str().c_str());
-  m_zone->ascii().addPos(input->tell());
-  m_zone->ascii().addNote("RLRB(2)");
+  m_document->ascii().addPos(debPos);
+  m_document->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(input->tell());
+  m_document->ascii().addNote("RLRB(2)");
 
 
   debPos = entry.end()-32;
@@ -942,8 +944,8 @@ bool MsWks4Zone::readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     f << input->readLong(2) << ", ";
   f << "), ";
 
-  m_zone->ascii().addPos(debPos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(debPos);
+  m_document->ascii().addNote(f.str().c_str());
 
   return true;
 }
@@ -963,8 +965,8 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
   f << "N=" << numFram;
 
-  m_zone->ascii().addPos(debPage);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(debPage);
+  m_document->ascii().addNote(f.str().c_str());
 
   for (int i = 0; i < numFram; i++) {
     long debPos = input->tell();
@@ -1112,11 +1114,11 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
     m_state->m_framesList.push_back(frame);
 
     f << "FRAM(" << size << "):" << frame;
-    m_zone->ascii().addPos(debPos);
-    m_zone->ascii().addNote(f.str().c_str());
+    m_document->ascii().addPos(debPos);
+    m_document->ascii().addNote(f.str().c_str());
     if (!ok) {
-      m_zone->ascii().addPos(input->tell());
-      m_zone->ascii().addNote("FRAM###");
+      m_document->ascii().addPos(input->tell());
+      m_document->ascii().addNote("FRAM###");
     }
 
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -1174,12 +1176,12 @@ bool MsWks4Zone::readSELN(MWAWInputStreamPtr input, MWAWEntry const &entry)
     if (val) f << ",f" << i << "=" << val;
   }
 
-  m_zone->ascii().addPos(debPage);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(debPage);
+  m_document->ascii().addNote(f.str().c_str());
 
   if (long(input->tell()) != endPage) {
-    m_zone->ascii().addPos(input->tell());
-    m_zone->ascii().addNote("SELN###");
+    m_document->ascii().addPos(input->tell());
+    m_document->ascii().addNote("SELN###");
   }
   return true;
 }

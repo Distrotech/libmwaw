@@ -47,7 +47,7 @@
 #include "MWAWParser.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "MsWksZone.hxx"
+#include "MsWksDocument.hxx"
 
 #include "MsWks3Text.hxx"
 
@@ -252,10 +252,10 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWks3Text::MsWks3Text(MWAWParser &parser, MsWksZone &zone) :
-  m_parserState(parser.getParserState()), m_state(new MsWks3TextInternal::State),
-  m_mainParser(&parser), m_zone(zone), m_newPageCallback(0)
+MsWks3Text::MsWks3Text(MsWksDocument &document) : m_parserState(), m_state(new MsWks3TextInternal::State),
+  m_mainParser(&document.getMainParser()), m_document(document)
 {
+  m_parserState=m_mainParser->getParserState();
 }
 
 MsWks3Text::~MsWks3Text()
@@ -333,7 +333,7 @@ int MsWks3Text::createZones(int numLines, bool mainZone)
     actualZone.m_type = MsWks3TextInternal::TextZone::Main;
   bool hasNote=false;
   int firstNote=0;
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   while (!input->isEnd()) {
     if (numLines==0) break;
     if (numLines>0) numLines--;
@@ -393,7 +393,7 @@ void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
     return;
   }
 
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   MsWks3TextInternal::Font font;
   int noteId = -1;
   long lastIndentPos = -1;
@@ -451,7 +451,7 @@ void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
 bool MsWks3Text::readZoneHeader(MsWks3TextInternal::LineZone &zone) const
 {
   zone = MsWks3TextInternal::LineZone();
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   long pos = input->tell();
   if (!input->checkPosition(pos+6)) return false;
   zone.m_pos.setBegin(pos);
@@ -475,10 +475,10 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
     MWAW_DEBUG_MSG(("MsWks3Text::sendText: can not find the listener\n"));
     return true;
   }
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
   int vers = version();
-  libmwaw::DebugFile &ascFile = m_zone.ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
   f << "Entries(TextZone):" << zone << ",";
   MsWks3TextInternal::Font font;
@@ -534,7 +534,7 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
         case 0x14:
           if (!zone.isNote()) {
             MWAWSubDocumentPtr subdoc
-            (new MsWks3TextInternal::SubDocument(*this, m_zone.getInput(), zoneId, id));
+            (new MsWks3TextInternal::SubDocument(*this, m_document.getInput(), zoneId, id));
             listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
           }
           break;
@@ -610,7 +610,7 @@ bool MsWks3Text::readFont(MsWks3TextInternal::Font &font, long endPos)
 {
   int vers = version();
   font = MsWks3TextInternal::Font();
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   long pos  = input->tell();
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
   int type = (int) input->readLong(1);
@@ -657,7 +657,7 @@ bool MsWks3Text::readFont(MsWks3TextInternal::Font &font, long endPos)
   }
   if (color != 1) {
     MWAWColor col;
-    if (m_zone.getColor(color,col,vers))
+    if (m_document.getColor(color,col,vers))
       font.m_font.setColor(col);
     else
       f << "#fColor=" << color << ",";
@@ -673,11 +673,11 @@ bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph
 {
   int dataSize = int(zone.m_pos.length())-6;
   if (dataSize < 15) return false;
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   input->seek(zone.m_pos.begin()+6, librevenge::RVNG_SEEK_SET);
 
   parag = MWAWParagraph();
-  libmwaw::DebugFile &ascFile = m_zone.ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
 
   int fl[2];
@@ -801,7 +801,7 @@ bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph
 std::string MsWks3Text::readHeaderFooterString(bool header)
 {
   std::string res("");
-  MWAWInputStreamPtr input=m_zone.getInput();
+  MWAWInputStreamPtr input=m_document.getInput();
   int numChar = (int) input->readULong(1);
   if (!numChar) return res;
   for (int i = 0; i < numChar; i++) {
@@ -887,11 +887,7 @@ void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
     }
     if (isMain && zone.m_pagesPosition.find(i) != zone.m_pagesPosition.end()) {
       ++m_state->m_actualPage;
-      if (!m_newPageCallback) {
-        MWAW_DEBUG_MSG(("MsWks3Text::send: can not find the page callback\n"));
-      }
-      else
-        (m_mainParser->*m_newPageCallback)(m_state->m_actualPage, zone.m_pagesPosition[i]);
+      m_document.newPage(m_state->m_actualPage, zone.m_pagesPosition[i]);
     }
     MsWks3TextInternal::LineZone &z = zone.m_zonesList[(size_t)i];
     if (z.m_type & 0x80) {

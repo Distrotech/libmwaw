@@ -49,7 +49,7 @@
 #include "MWAWTable.hxx"
 
 #include "MsWksGraph.hxx"
-#include "MsWksZone.hxx"
+#include "MsWksDocument.hxx"
 
 #include "MsWksTable.hxx"
 
@@ -146,7 +146,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWksTable::MsWksTable(MWAWParser &parser, MsWksZone(&zone), MsWksGraph &graph) :
+MsWksTable::MsWksTable(MWAWParser &parser, MsWksDocument(&zone), MsWksGraph &graph) :
   m_parserState(parser.getParserState()), m_state(new MsWksTableInternal::State),
   m_mainParser(&parser), m_graphParser(&graph), m_zone(zone)
 {

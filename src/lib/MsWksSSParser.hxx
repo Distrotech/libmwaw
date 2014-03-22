@@ -56,7 +56,7 @@ class SubDocument;
 
 class MsWksGraph;
 class MsWks3Text;
-class MsWksZone;
+class MsWksDocument;
 
 /** \brief the main class to read a Microsoft Works spreadsheet file
  *
@@ -148,14 +148,8 @@ protected:
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;
 
-  //! the graph parser
-  shared_ptr<MsWksGraph> m_graphParser;
-
-  //! the text parser
-  shared_ptr<MsWks3Text> m_textParser;
-
   //! the actual zone
-  shared_ptr<MsWksZone> m_zone;
+  shared_ptr<MsWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

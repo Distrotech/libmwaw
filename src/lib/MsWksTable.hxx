@@ -52,7 +52,7 @@ struct Table;
 struct State;
 }
 
-class MsWksZone;
+class MsWksDocument;
 
 /** \brief the main class to read the table ( or a chart ) of a Microsoft Works file */
 class MsWksTable
@@ -60,7 +60,7 @@ class MsWksTable
   friend class MsWksGraph;
 public:
   //! constructor
-  MsWksTable(MWAWParser &parser, MsWksZone &zone, MsWksGraph &graph);
+  MsWksTable(MWAWParser &parser, MsWksDocument &zone, MsWksGraph &graph);
   //! destructor
   virtual ~MsWksTable();
 
@@ -98,7 +98,7 @@ protected:
   //! the graph parser;
   MsWksGraph *m_graphParser;
   //! the input zone
-  MsWksZone &m_zone;
+  MsWksDocument &m_zone;
 };
 
 #endif

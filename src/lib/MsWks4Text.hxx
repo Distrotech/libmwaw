@@ -47,6 +47,7 @@ struct Paragraph;
 struct State;
 }
 
+class MsWksDocument;
 class MsWks4Zone;
 
 /** The class which parses text zones in a mac MS Works document v4
@@ -74,7 +75,7 @@ protected:
                                          int &id, std::string &mess);
 public:
   //! constructor
-  MsWks4Text(MsWks4Zone &parser);
+  MsWks4Text(MsWks4Zone &parser, MsWksDocument &document);
 
   //! destructor
   ~MsWks4Text();
@@ -249,6 +250,8 @@ protected:
 
   //! the main parser
   MsWks4Zone *m_mainParser;
+  //! the main document
+  MsWksDocument &m_document;
 
   //! an entry which corresponds to the complete text zone
   MWAWEntry m_textPositions;

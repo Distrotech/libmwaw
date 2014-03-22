@@ -50,8 +50,7 @@ class SubDocument;
 }
 
 class MsWksGraph;
-class MsWksZone;
-class MsWks3Text;
+class MsWksDocument;
 
 /** \brief the main class to read a Microsoft Works file
  *
@@ -61,7 +60,6 @@ class MsWks3Text;
 class MsWks3Parser : public MWAWTextParser
 {
   friend class MsWks3ParserInternal::SubDocument;
-  friend class MsWks3Text;
 public:
   //! constructor
   MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -123,14 +121,8 @@ protected:
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;
 
-  //! the graph parser
-  shared_ptr<MsWksGraph> m_graphParser;
-
-  //! the text parser
-  shared_ptr<MsWks3Text> m_textParser;
-
-  //! the actual zone
-  shared_ptr<MsWksZone> m_zone;
+  //! the actual document
+  shared_ptr<MsWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

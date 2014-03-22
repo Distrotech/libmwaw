@@ -56,6 +56,7 @@
 #include "MWAWParagraph.hxx"
 
 #include "MsWks4Zone.hxx"
+#include "MsWksDocument.hxx"
 
 #include "MsWks4Text.hxx"
 
@@ -444,8 +445,8 @@ protected:
 ////////////////////////////////////////////////////////////
 // constructor/destructor
 ////////////////////////////////////////////////////////////
-MsWks4Text::MsWks4Text(MsWks4Zone &parser) :
-  m_parserState(parser.getParserState()), m_mainParser(&parser), m_textPositions(),
+MsWks4Text::MsWks4Text(MsWks4Zone &parser, MsWksDocument &document) :
+  m_parserState(parser.getParserState()), m_mainParser(&parser), m_document(document), m_textPositions(),
   m_state(), m_FODsList(), m_FDPCs(), m_FDPPs()
 {
   m_state.reset(new MsWks4TextInternal::State);
@@ -661,7 +662,7 @@ bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
   MsWks4TextInternal::Font::FieldType fType = MsWks4TextInternal::Font::None;
   bool pageBreak = false;
   int page=1;
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   for (; FODs_iter!= m_FODsList.end(); ++FODs_iter) {
     DataFOD const &fod = *(FODs_iter);
     uint32_t actPos = uint32_t(first ? zone.begin() : fod.m_pos), lastPos;
@@ -723,7 +724,7 @@ bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
             MWAW_DEBUG_MSG(("MsWks4Text::readText: can not find object\n"));
           }
           else {
-            m_mainParser->sendRBIL(eobjIt->second.m_id, eobjIt->second.m_dim);
+            m_document.sendRBIL(eobjIt->second.m_id, eobjIt->second.m_dim);
             isObject = true;
           }
         }
@@ -741,7 +742,7 @@ bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
     if (len) {
       if (pageBreak) {
         pageBreak = false;
-        mainParser()->newPage(++page);
+        m_document.newPage(++page);
       }
     }
 
@@ -765,10 +766,10 @@ bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
 
         if (m_state->m_ftntMap.find(long(actPos)) == m_state->m_ftntMap.end()) {
           MWAW_DEBUG_MSG(("MsWks4Text::readText: warning: can not find footnote for entry at %x\n", actPos));
-          mainParser()->sendFootNote(-1);
+          m_document.sendFootnote(-1);
         }
         else
-          mainParser()->sendFootNote(m_state->m_ftntMap[long(actPos)].m_id);
+          m_document.sendFootnote(m_state->m_ftntMap[long(actPos)].m_id);
         continue;
       }
 
@@ -842,7 +843,7 @@ bool MsWks4Text::readPLC(MWAWInputStreamPtr input,
   int dataSz = (int) input->readLong(2);
   bool ok = true;
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f, f2;
 
   MsWks4PLCInternal::PLC plcType = m_state->m_knownPLC.get(entry.name());
@@ -1032,7 +1033,7 @@ bool MsWks4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
   input->seek(debPos, librevenge::RVNG_SEEK_SET);
   uint32_t len = (uint32_t) input->readULong(2);
   uint32_t n_fonts = (uint32_t) input->readULong(2);
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
 
   f << "N=" << n_fonts;
@@ -1293,7 +1294,7 @@ bool MsWks4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
 {
   MsWks4TextInternal::Paragraph parag;
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
 
   bool customSpacing = false;
@@ -1607,7 +1608,7 @@ bool MsWks4Text::toknDataParser(MWAWInputStreamPtr input, long endPos,
                                 long bot, long, int id, std::string &mess)
 {
   mess = "";
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
 
   long actPos = input->tell();
@@ -1818,7 +1819,7 @@ bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     return false;
   }
 
-  libmwaw::DebugFile &ascFile = m_mainParser->ascii();
+  libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
   input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
   uint16_t cfod = (uint16_t) input->readULong(deplSize);

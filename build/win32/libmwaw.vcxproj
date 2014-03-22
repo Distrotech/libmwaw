@@ -342,7 +342,7 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MsWksZone.cxx">
+    <ClCompile Include="..\..\src\lib\MsWksDocument.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -614,7 +614,7 @@
     <ClInclude Include="..\..\src\lib\MsWksGraph.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksTable.hxx" />
-    <ClInclude Include="..\..\src\lib\MsWksZone.hxx" />
+    <ClInclude Include="..\..\src\lib\MsWksDocument.hxx" />
     <ClInclude Include="..\..\src\lib\MsWrd1Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWrdParser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWrdStruct.hxx" />

@@ -48,7 +48,7 @@
 #include "MWAWSubDocument.hxx"
 
 #include "MsWksGraph.hxx"
-#include "MsWksZone.hxx"
+#include "MsWksDocument.hxx"
 #include "MsWks3Text.hxx"
 
 #include "MsWks3Parser.hxx"
@@ -179,9 +179,9 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MsWks3Parser::MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_listZones(), m_graphParser(), m_textParser(), m_zone()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_listZones(), m_document()
 {
-  m_zone.reset(new MsWksZone(input, *this));
+  m_document.reset(new MsWksDocument(input, *this));
   init();
 }
 
@@ -199,9 +199,7 @@ void MsWks3Parser::init()
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_graphParser.reset(new MsWksGraph(*this, *m_zone));
-  m_textParser.reset(new MsWks3Text(*this, *m_zone));
-  m_textParser->setCallbacks(static_cast<MsWks3Text::NewPageCallback>(&MsWks3Parser::newPage));
+  m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks3Parser::newPage);
 }
 
 ////////////////////////////////////////////////////////////
@@ -228,23 +226,23 @@ void MsWks3Parser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(m_zone && m_zone->getInput());
+  assert(m_document && m_document->getInput());
 
   if (!checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
-    m_zone->initAsciiFile(asciiName());
+    m_document->initAsciiFile(asciiName());
 
     checkHeader(0L);
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
       sendZone(MsWks3ParserInternal::Zone::MAIN);
-      m_textParser->flushExtra();
-      m_graphParser->flushExtra();
+      m_document->getTextParser3()->flushExtra();
+      m_document->getGraphParser()->flushExtra();
     }
-    m_zone->ascii().reset();
+    m_document->ascii().reset();
   }
   catch (...) {
     MWAW_DEBUG_MSG(("MsWks3Parser::parse: exception catched when parsing\n"));
@@ -258,9 +256,9 @@ void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
 void MsWks3Parser::sendText(int id, int noteId)
 {
   if (noteId < 0)
-    m_textParser->sendZone(id);
+    m_document->getTextParser3()->sendZone(id);
   else
-    m_textParser->sendNote(id, noteId);
+    m_document->getTextParser3()->sendNote(id, noteId);
 }
 
 void MsWks3Parser::sendZone(int zoneType)
@@ -268,9 +266,9 @@ void MsWks3Parser::sendZone(int zoneType)
   if (!getTextListener()) return;
   MsWks3ParserInternal::Zone zone=m_state->get(MsWks3ParserInternal::Zone::Type(zoneType));
   if (zone.m_zoneId >= 0)
-    m_graphParser->sendAll(zone.m_zoneId, zoneType==MsWks3ParserInternal::Zone::MAIN);
+    m_document->getGraphParser()->sendAll(zone.m_zoneId, zoneType==MsWks3ParserInternal::Zone::MAIN);
   if (zone.m_textId >= 0)
-    m_textParser->sendZone(zone.m_textId);
+    m_document->getTextParser3()->sendZone(zone.m_textId);
 }
 
 ////////////////////////////////////////////////////////////
@@ -289,45 +287,45 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
   MsWks3ParserInternal::Zone mainZone=m_state->get(MsWks3ParserInternal::Zone::MAIN);
   // update the page
   int numPage = 1;
-  if (mainZone.m_textId >= 0 && m_textParser->numPages(mainZone.m_textId) > numPage)
-    numPage = m_textParser->numPages(mainZone.m_textId);
-  if (mainZone.m_zoneId >= 0 && m_graphParser->numPages(mainZone.m_zoneId) > numPage)
-    numPage = m_graphParser->numPages(mainZone.m_zoneId);
+  if (mainZone.m_textId >= 0 && m_document->getTextParser3()->numPages(mainZone.m_textId) > numPage)
+    numPage = m_document->getTextParser3()->numPages(mainZone.m_textId);
+  if (mainZone.m_zoneId >= 0 && m_document->getGraphParser()->numPages(mainZone.m_zoneId) > numPage)
+    numPage = m_document->getGraphParser()->numPages(mainZone.m_zoneId);
   m_state->m_numPages = numPage;
   m_state->m_actPage = 0;
 
   // create the page list
   MWAWPageSpan ps(getPageSpan());
-  int id = m_textParser->getHeader();
+  int id = m_document->getTextParser3()->getHeader();
   if (id >= 0) {
     if (vers <= 2) m_state->m_headerHeight = 12;
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
     header.m_subDocument.reset
     (new MsWks3ParserInternal::SubDocument
-     (*this, m_zone->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
+     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
     ps.setHeaderFooter(header);
   }
   else if (m_state->get(MsWks3ParserInternal::Zone::HEADER).m_zoneId >= 0) {
     MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
     header.m_subDocument.reset
     (new MsWks3ParserInternal::SubDocument
-     (*this, m_zone->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWks3ParserInternal::Zone::HEADER)));
+     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWks3ParserInternal::Zone::HEADER)));
     ps.setHeaderFooter(header);
   }
-  id = m_textParser->getFooter();
+  id = m_document->getTextParser3()->getFooter();
   if (id >= 0) {
     if (vers <= 2) m_state->m_footerHeight = 12;
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
     footer.m_subDocument.reset
     (new MsWks3ParserInternal::SubDocument
-     (*this, m_zone->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
+     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
     ps.setHeaderFooter(footer);
   }
   else if (m_state->get(MsWks3ParserInternal::Zone::FOOTER).m_zoneId >= 0) {
     MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
     footer.m_subDocument.reset
     (new MsWks3ParserInternal::SubDocument
-     (*this, m_zone->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWks3ParserInternal::Zone::FOOTER)));
+     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWks3ParserInternal::Zone::FOOTER)));
     ps.setHeaderFooter(footer);
   }
   ps.setPageSpan(m_state->m_numPages+1);
@@ -337,7 +335,7 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
   setTextListener(listen);
   listen->startDocument();
   // time to send page information the graph parser and the text parser
-  m_graphParser->setPageLeftTop
+  m_document->getGraphParser()->setPageLeftTop
   (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
          72.f*float(getPageSpan().getMarginTop())+float(m_state->m_headerHeight)));
 }
@@ -349,7 +347,7 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
 ////////////////////////////////////////////////////////////
 bool MsWks3Parser::createZones()
 {
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
 
   if (version()>=3) {
@@ -376,21 +374,21 @@ bool MsWks3Parser::createZones()
     }
   }
 
-  mainZone.m_textId = m_textParser->createZones(-1, true);
+  mainZone.m_textId = m_document->getTextParser3()->createZones(-1, true);
 
   pos = input->tell();
 
   if (!input->isEnd())
-    m_zone->ascii().addPos(input->tell());
-  m_zone->ascii().addNote("Entries(End)");
-  m_zone->ascii().addPos(pos+100);
-  m_zone->ascii().addNote("_");
+    m_document->ascii().addPos(input->tell());
+  m_document->ascii().addNote("Entries(End)");
+  m_document->ascii().addPos(pos+100);
+  m_document->ascii().addNote("_");
 
   // ok, prepare the data
   m_state->m_numPages = 1;
   std::vector<int> linesH, pagesH;
-  if (m_textParser->getLinesPagesHeight(mainZone.m_textId, linesH, pagesH))
-    m_graphParser->computePositions(mainZone.m_zoneId, linesH, pagesH);
+  if (m_document->getTextParser3()->getLinesPagesHeight(mainZone.m_textId, linesH, pagesH))
+    m_document->getGraphParser()->computePositions(mainZone.m_zoneId, linesH, pagesH);
 
   return true;
 }
@@ -407,7 +405,7 @@ bool MsWks3Parser::createZones()
 ////////////////////////////////////////////////////////////
 bool MsWks3Parser::readZone(MsWks3ParserInternal::Zone &zone)
 {
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   if (input->isEnd()) return false;
   long pos = input->tell();
   MWAWEntry pict;
@@ -415,14 +413,14 @@ bool MsWks3Parser::readZone(MsWks3ParserInternal::Zone &zone)
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
   switch (val) {
   case 0: {
-    if (m_graphParser->getEntryPicture(zone.m_zoneId, pict)>=0) {
+    if (m_document->getGraphParser()->getEntryPicture(zone.m_zoneId, pict)>=0) {
       input->seek(pict.end(), librevenge::RVNG_SEEK_SET);
       return true;
     }
     break;
   }
   case 1: {
-    if (m_graphParser->getEntryPictureV1(zone.m_zoneId, pict)>=0) {
+    if (m_document->getGraphParser()->getEntryPictureV1(zone.m_zoneId, pict)>=0) {
       input->seek(pict.end(), librevenge::RVNG_SEEK_SET);
       return true;
     }
@@ -452,7 +450,7 @@ bool MsWks3Parser::readZone(MsWks3ParserInternal::Zone &zone)
 bool MsWks3Parser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MsWks3ParserInternal::State();
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   if (!input || !input->hasDataFork())
     return false;
 
@@ -601,9 +599,9 @@ bool MsWks3Parser::checkHeader(MWAWHeader *header, bool strict)
   if (header)
     header->reset(MWAWDocument::MWAW_T_MICROSOFTWORKS, version(), m_state->m_docType);
 
-  m_zone->ascii().addPos(0);
-  m_zone->ascii().addNote(f.str().c_str());
-  m_zone->ascii().addPos(headerSize);
+  m_document->ascii().addPos(0);
+  m_document->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(headerSize);
 
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   return strict ? (numError==0) : (numError < 3);
@@ -614,7 +612,7 @@ bool MsWks3Parser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 bool MsWks3Parser::readDocumentInfo()
 {
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
 
@@ -643,8 +641,8 @@ bool MsWks3Parser::readDocumentInfo()
   if (docId) f << "id=0x"<< std::hex << docId << ",";
   if (docExtra) f << "unk=" << docExtra << ","; // in v3: find 3, 7, 1x
   if (flag) f << "fl=" << flag << ","; // in v3: find 80, 84, e0
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
   if (!readPrintInfo()) {
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -669,7 +667,7 @@ bool MsWks3Parser::readDocumentInfo()
     for (int wh = 0; wh < 2; wh++) {
       long debPos = input->tell();
       std::string name(wh==0 ? "header" : "footer");
-      std::string text = m_textParser->readHeaderFooterString(wh==0);
+      std::string text = m_document->getTextParser3()->readHeaderFooterString(wh==0);
       if (text.size()) f << name << "="<< text << ",";
 
       long remain = debPos+100 - input->tell();
@@ -687,8 +685,8 @@ bool MsWks3Parser::readDocumentInfo()
     for (int i = 0; i < 2; i++) dim[i] = (int) input->readULong(2);
     f << "dim=" << dim[0] << "x" << dim[1] << ",";
     /* followed by 0 (v1) or 0|0x21|0* (v2)*/
-    m_zone->ascii().addPos(pos);
-    m_zone->ascii().addNote(f.str().c_str());
+    m_document->ascii().addPos(pos);
+    m_document->ascii().addNote(f.str().c_str());
     pos = input->tell();
     f.str("");
     f << "DocInfo-2:";
@@ -711,8 +709,8 @@ bool MsWks3Parser::readDocumentInfo()
       break;
     }
   }
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
 
@@ -725,7 +723,7 @@ bool MsWks3Parser::readDocumentInfo()
 bool MsWks3Parser::readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry, int check)
 {
   entry = MWAWEntry();
-  MWAWInputStreamPtr input=m_zone->getInput();
+  MWAWInputStreamPtr input=m_document->getInput();
   if (input->isEnd()) return false;
 
   long pos = input->tell();
@@ -773,8 +771,8 @@ bool MsWks3Parser::readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry,
       f << ",";
     }
   }
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
   pos = pos+blockSize;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -782,21 +780,21 @@ bool MsWks3Parser::readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry,
 
   f.str("");
   f << "GroupHeader:N=" << N << ",";
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
 
   MWAWEntry pictZone;
   for (int i = 0; i < N; i++) {
     pos = input->tell();
-    if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone)>=0)
+    if (m_document->getGraphParser()->getEntryPicture(zone.m_zoneId, pictZone)>=0)
       continue;
     MWAW_DEBUG_MSG(("MsWks3Parser::readGroup: can not find the end of group \n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     break;
   }
   if (input->tell() < entry.end()) {
-    m_zone->ascii().addPos(input->tell());
-    m_zone->ascii().addNote("Entries(GroupData)");
+    m_document->ascii().addPos(input->tell());
+    m_document->ascii().addNote("Entries(GroupData)");
     input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   }
 
@@ -810,7 +808,7 @@ bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
 {
   if (version() < 3) return false;
 
-  MWAWInputStreamPtr input=m_zone->getInput();
+  MWAWInputStreamPtr input=m_document->getInput();
   long debPos = input->tell();
 
   long ptr = (long) input->readULong(2);
@@ -861,9 +859,9 @@ bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
     header ? MsWks3ParserInternal::Zone::HEADER : MsWks3ParserInternal::Zone::FOOTER;
   MsWks3ParserInternal::Zone zone(type, int(m_state->m_zoneMap.size()));
 
-  m_zone->ascii().addPos(debPos);
-  m_zone->ascii().addNote(f.str().c_str());
-  m_zone->ascii().addPos(input->tell());
+  m_document->ascii().addPos(debPos);
+  m_document->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(input->tell());
 
   input->seek(debPos+realSize, librevenge::RVNG_SEEK_SET);
   input->pushLimit(debPos+size);
@@ -876,7 +874,7 @@ bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
     }
     if (readZone(zone)) continue;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    zone.m_textId = m_textParser->createZones(N-i, false);
+    zone.m_textId = m_document->getTextParser3()->createZones(N-i, false);
     if (zone.m_textId >= 0)
       break;
     MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderFooter: can not find end of group\n"));
@@ -884,15 +882,15 @@ bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
   }
   if (limitSet) input->popLimit();
   if (long(input->tell()) < debPos+size) {
-    m_zone->ascii().addPos(input->tell());
-    m_zone->ascii().addNote("GroupHInfo-II");
+    m_document->ascii().addPos(input->tell());
+    m_document->ascii().addNote("GroupHInfo-II");
 
     input->seek(debPos+size, librevenge::RVNG_SEEK_SET);
 
-    m_zone->ascii().addPos(debPos + size);
-    m_zone->ascii().addNote("_");
+    m_document->ascii().addPos(debPos + size);
+    m_document->ascii().addNote("_");
   }
-  //  m_graphParser->addDeltaToPositions(zone.m_zoneId, -1*box[0]);
+  //  m_document->getGraphParser()->addDeltaToPositions(zone.m_zoneId, -1*box[0]);
   if (m_state->m_zoneMap.find(int(type)) != m_state->m_zoneMap.end()) {
     MWAW_DEBUG_MSG(("MsWks3Parser::readGroupHeaderFooter: the zone already exists\n"));
   }
@@ -906,7 +904,7 @@ bool MsWks3Parser::readGroupHeaderFooter(bool header, int check)
 ////////////////////////////////////////////////////////////
 bool MsWks3Parser::readPrintInfo()
 {
-  MWAWInputStreamPtr input = m_zone->getInput();
+  MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
   libmwaw::DebugStream f;
   // print info
@@ -960,8 +958,8 @@ bool MsWks3Parser::readPrintInfo()
   getPageSpan().setFormLength(paperSize.y()/72.);
   getPageSpan().setFormWidth(paperSize.x()/72.);
 
-  m_zone->ascii().addPos(pos);
-  m_zone->ascii().addNote(f.str().c_str());
+  m_document->ascii().addPos(pos);
+  m_document->ascii().addNote(f.str().c_str());
   input->seek(pos+0x78+8, librevenge::RVNG_SEEK_SET);
 
   return true;

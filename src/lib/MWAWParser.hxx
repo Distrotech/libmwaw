@@ -188,7 +188,7 @@ protected:
   //! constructor using a state
   MWAWParser(MWAWParserStatePtr state) : m_parserState(state), m_asciiName("") { }
 
-  //! sets the works version
+  //! sets the document's version
   void setVersion(int vers)
   {
     m_parserState->m_version = vers;

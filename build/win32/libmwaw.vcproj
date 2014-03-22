@@ -416,7 +416,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWksZone.cxx"
+				RelativePath="..\..\src\lib\MsWksDocument.cxx"
 				>
 			</File>
 			<File
@@ -873,7 +873,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWksZone.hxx"
+				RelativePath="..\..\src\lib\MsWksDocument.hxx"
 				>
 			</File>
 			<File

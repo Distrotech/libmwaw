@@ -134,8 +134,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MsWksSSParser.hxx		\
 	MsWksTable.cxx			\
 	MsWksTable.hxx			\
-	MsWksZone.cxx			\
-	MsWksZone.hxx			\
+	MsWksDocument.cxx			\
+	MsWksDocument.hxx			\
 	MsWks3Parser.cxx		\
 	MsWks3Parser.hxx		\
 	MsWks3Text.cxx			\

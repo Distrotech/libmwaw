@@ -43,8 +43,7 @@
 
 #include "MWAWParser.hxx"
 
-class MsWksGraph;
-class MsWksZone;
+class MsWksDocument;
 
 class MsWks4Parser;
 class MsWks4Text;
@@ -79,7 +78,6 @@ class MsWks4Zone : public MWAWTextParser
 {
   friend class MsWks4ParserInternal::SubDocument;
   friend class MsWks4Parser;
-  friend class MsWksGraph;
   friend class MsWks4Text;
 
 public:
@@ -119,7 +117,7 @@ protected:
   double getTextHeight() const;
 
   //! adds a new page
-  void newPage(int number);
+  void newPage(int number, bool soft=false);
 
   /** creates a document for a footnote which some id (via MsWks4Parser )
    *
@@ -171,7 +169,7 @@ protected:
 
   /** parses the RLRB zone which seems to contain some position in the page ?
    *
-   * \note this zone is only parsed, maybe MsWks4Graph must parse this zone ? */
+   * \note this zone is only parsed, maybe MsWksGraph must parse this zone ? */
   bool readRLRB(MWAWInputStreamPtr input, MWAWEntry const &entry);
 
   /** parses the SELN zone which seems to contain some information about the actual
@@ -204,11 +202,8 @@ protected:
   //! the text parser
   shared_ptr<MsWks4Text> m_textParser;
 
-  //! the graph parser
-  shared_ptr<MsWksGraph> m_graphParser;
-
   //! the zone data
-  shared_ptr<MsWksZone> m_zone;
+  shared_ptr<MsWksDocument> m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

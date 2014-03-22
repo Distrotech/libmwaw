@@ -331,7 +331,7 @@ SOURCE=..\..\src\lib\MsWksTable.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksZone.cxx
+SOURCE=..\..\src\lib\MsWksDocument.cxx
 # End Source File
 # Begin Source File
 
@@ -787,7 +787,7 @@ SOURCE=..\..\src\lib\MsWksTable.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWksZone.hxx
+SOURCE=..\..\src\lib\MsWksDocument.hxx
 # End Source File
 # Begin Source File
 

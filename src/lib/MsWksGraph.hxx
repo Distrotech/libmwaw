@@ -61,7 +61,7 @@ class SubDocument;
 
 class MsWksSSParser;
 class MsWksTable;
-class MsWksZone;
+class MsWksDocument;
 
 class MsWks3Parser;
 class MsWks4Zone;
@@ -77,24 +77,13 @@ class MsWksGraph
 public:
   struct Style;
 
-  /** callback used to send a frame */
-  typedef void (MWAWParser::* FrameCallback)(MWAWEntry const &entry, std::string const &frame);
-  /** callback used to send a OLE */
-  typedef void (MWAWParser::* OLECallback)(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
-
   //! constructor
-  MsWksGraph(MWAWParser &parser, MsWksZone &zone);
+  MsWksGraph(MsWksDocument &document);
   //! destructor
   virtual ~MsWksGraph();
 
   //! define the page left top dimension in point
   void setPageLeftTop(Vec2f const &leftTop);
-  //! set the frame and the OLE callback
-  void setCallbacks(FrameCallback frameCallback, OLECallback oleCallback)
-  {
-    m_frameCallback=frameCallback;
-    m_oleCallback=oleCallback;
-  }
 
   /** returns the file version */
   int version() const;
@@ -240,12 +229,8 @@ protected:
 
   //! the main parser;
   MWAWParser *m_mainParser;
-  //! the input zone
-  MsWksZone &m_zone;
-  //! the frame
-  FrameCallback m_frameCallback;
-  //! the OLE callback
-  OLECallback m_oleCallback;
+  //! the main document
+  MsWksDocument &m_document;
 
   //! the table manager
   shared_ptr<MsWksTable> m_tableParser;

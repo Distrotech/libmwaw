@@ -57,7 +57,7 @@ class SubDocument;
 }
 
 class MsWksSSParser;
-class MsWksZone;
+class MsWksDocument;
 class MsWks3Parser;
 
 /** \brief the main class to read the text part of Microsoft Works file
@@ -72,19 +72,10 @@ class MsWks3Text
 
   friend class MsWks3TextInternal::SubDocument;
 public:
-  /** callback used to send a page break */
-  typedef void (MWAWParser::* NewPageCallback)(int page, bool softBreak);
-
   //! constructor
-  MsWks3Text(MWAWParser &parser, MsWksZone &zone);
+  MsWks3Text(MsWksDocument &zone);
   //! destructor
   virtual ~MsWks3Text();
-
-  //! set the new page callback
-  void setCallbacks(NewPageCallback newPageCallback)
-  {
-    m_newPageCallback=newPageCallback;
-  }
 
   /** returns the file version */
   int version() const;
@@ -165,10 +156,7 @@ protected:
   //! the main parser;
   MWAWParser *m_mainParser;
   //! the input zone
-  MsWksZone &m_zone;
-
-  //! the newPage
-  NewPageCallback m_newPageCallback;
+  MsWksDocument &m_document;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
