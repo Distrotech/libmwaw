@@ -88,8 +88,6 @@ struct State {
       res = m_zoneMap[int(type)];
     return res;
   }
-  //! the type of document
-  MWAWDocument::Kind m_docType;
   //! the list of zone
   std::map<int, Zone> m_zoneMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;

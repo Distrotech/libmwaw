@@ -630,7 +630,8 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
 
 #ifdef DEBUG
   // check if we have parsed all zones
-  std::multimap<std::string, MWAWEntry>::iterator pos;
+  std::multimap<std::string, MWAWEntry> const &entryMap=m_document->getEntryMap();
+  std::multimap<std::string, MWAWEntry>::const_iterator pos;
 
   pos = entryMap.begin();
   while (entryMap.end() != pos) {
