@@ -75,7 +75,7 @@ protected:
                                          int &id, std::string &mess);
 public:
   //! constructor
-  MsWks4Text(MsWks4Zone &parser, MsWksDocument &document);
+  MsWks4Text(MsWksDocument &document);
 
   //! destructor
   ~MsWks4Text();
@@ -178,17 +178,6 @@ protected:
   void flushNote(int noteId);
 
 protected:
-  //! returns the main parser
-  MsWks4Zone const *mainParser() const
-  {
-    return m_mainParser;
-  }
-  //! returns the main parser
-  MsWks4Zone *mainParser()
-  {
-    return m_mainParser;
-  }
-
   /** function which takes two sorted list of attribute (by text position).
       \return a list of attribute */
   std::vector<DataFOD> mergeSortedLists
@@ -245,11 +234,11 @@ private:
   MsWks4Text(MsWks4Text const &orig);
   MsWks4Text &operator=(MsWks4Text const &orig);
 protected:
+  //! the main parser;
+  MWAWParser *m_mainParser;
   //! the parser state
   MWAWParserStatePtr m_parserState;
 
-  //! the main parser
-  MsWks4Zone *m_mainParser;
   //! the main document
   MsWksDocument &m_document;
 

@@ -35,6 +35,7 @@
 #  define MS_WKS_DOCUMENT
 
 #include <string>
+#include <map>
 #include <vector>
 
 #include <librevenge/librevenge.h>
@@ -54,6 +55,7 @@ class MsWks4Zone;
 
 class MsWksGraph;
 class MsWks3Text;
+class MsWks4Text;
 
 /** \brief the main class to read/store generic data of a MsWorks document v1-v3
  */
@@ -95,6 +97,8 @@ public:
   }
   //! returns the text parser (for v1-v3 document)
   shared_ptr<MsWks3Text> getTextParser3();
+  //! returns the text parser (for v4 document)
+  shared_ptr<MsWks4Text> getTextParser4();
   //! a DebugFile used to write what we recognize when we parse the document
   libmwaw::DebugFile &ascii()
   {
@@ -107,11 +111,12 @@ public:
 
   //! checks if the file header corresponds to a v1-v3 document (or not)
   bool checkHeader3(MWAWHeader *header, bool strict=false);
-  //! return the color which correspond to an index
+  //! returns the color which correspond to an index
   static bool getColor(int id, MWAWColor &col, int vers);
-  //! return a list of color corresponding to a version
+  //! returns a list of color corresponding to a version
   static std::vector<MWAWColor> const &getPalette(int vers);
-
+  //! returns the document entry map of a v4 document
+  std::multimap<std::string, MWAWEntry> &getEntryMap();
   // interface with the text parser
 
   //! tries to create a new page
@@ -163,8 +168,10 @@ protected:
 
   //! the graph document
   shared_ptr<MsWksGraph> m_graphParser;
-  //! the text document
+  //! the text document (for v1-3 document)
   shared_ptr<MsWks3Text> m_textParser3;
+  //! the text document (for v4 document)
+  shared_ptr<MsWks4Text> m_textParser4;
 
   /** callback used to send a page break */
   typedef void (MWAWParser::* NewPage)(int page, bool softBreak);

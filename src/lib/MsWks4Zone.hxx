@@ -46,7 +46,6 @@
 class MsWksDocument;
 
 class MsWks4Parser;
-class MsWks4Text;
 
 namespace MsWks4ZoneInternal
 {
@@ -195,12 +194,6 @@ protected:
 
   //! the internal state
   shared_ptr<MsWks4ZoneInternal::State> m_state;
-
-  //! the list of entries, name->entry
-  std::multimap<std::string, MWAWEntry> m_entryMap;
-
-  //! the text parser
-  shared_ptr<MsWks4Text> m_textParser;
 
   //! the zone data
   shared_ptr<MsWksDocument> m_document;

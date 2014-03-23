@@ -50,6 +50,7 @@
 
 #include "MsWksGraph.hxx"
 #include "MsWks3Text.hxx"
+#include "MsWks4Text.hxx"
 
 #include "MsWksDocument.hxx"
 
@@ -61,13 +62,15 @@ namespace MsWksDocumentInternal
 //! Internal: the state of a MsWksDocument
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_hasHeader(false), m_hasFooter(false),
+  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
 
   //! the type of document
   MWAWDocument::Kind m_kind;
+  //! the list of entries, name->entry ( for v4 document)
+  std::multimap<std::string, MWAWEntry> m_entryMap;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
@@ -82,7 +85,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWksDocument::MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser) :
   m_state(), m_parserState(parser.getParserState()), m_input(input), m_parser(&parser), m_asciiFile(),
-  m_graphParser(), m_textParser3(),
+  m_graphParser(), m_textParser3(), m_textParser4(),
   m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0), m_sendRBIL(0)
 {
   m_state.reset(new MsWksDocumentInternal::State);
@@ -106,6 +109,12 @@ shared_ptr<MsWks3Text> MsWksDocument::getTextParser3()
   return m_textParser3;
 }
 
+shared_ptr<MsWks4Text> MsWksDocument::getTextParser4()
+{
+  if (!m_textParser4) m_textParser4.reset(new MsWks4Text(*this));
+  return m_textParser4;
+}
+
 void MsWksDocument::setVersion(int vers)
 {
   m_parserState->m_version=vers;
@@ -124,6 +133,11 @@ MWAWDocument::Kind MsWksDocument::getKind() const
 void MsWksDocument::setKind(MWAWDocument::Kind kind)
 {
   m_state->m_kind=kind;
+}
+
+std::multimap<std::string, MWAWEntry> &MsWksDocument::getEntryMap()
+{
+  return m_state->m_entryMap;
 }
 
 ////////////////////////////////////////////////////////////

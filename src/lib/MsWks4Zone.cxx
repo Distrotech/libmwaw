@@ -167,7 +167,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                        MsWks4Parser &parser, std::string const &oleName) :
-  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_entryMap(), m_textParser(), m_document()
+  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_document()
 {
   m_document.reset(new MsWksDocument(input, *this));
   setAscii(oleName);
@@ -185,8 +185,7 @@ MsWks4Zone::~MsWks4Zone()
 void MsWks4Zone::init()
 {
   m_state.reset(new MsWks4ZoneInternal::State);
-  m_textParser.reset(new MsWks4Text(*this,*m_document));
-  m_textParser->setDefault(m_state->m_defFont);
+  m_document->getTextParser4()->setDefault(m_state->m_defFont);
   m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks4Zone::newPage);
   m_document->m_sendFootnote=static_cast<MsWksDocument::SendFootnote>(&MsWks4Zone::sendFootNote);
   m_document->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWks4Zone::sendFrameText);
@@ -211,7 +210,7 @@ void MsWks4Zone::sendFootNote(int id)
 }
 void MsWks4Zone::readFootNote(int id)
 {
-  m_textParser->readFootNote(m_document->getInput(), id);
+  m_document->getTextParser4()->readFootNote(m_document->getInput(), id);
 }
 
 void MsWks4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -270,7 +269,7 @@ void MsWks4Zone::newPage(int number, bool /*soft*/)
 
 MWAWEntry MsWks4Zone::getTextPosition() const
 {
-  return m_textParser->m_textPositions;
+  return m_document->getTextParser4()->m_textPositions;
 }
 
 ////////////////////////////////////////////////////////////
@@ -292,7 +291,7 @@ MWAWTextListenerPtr MsWks4Zone::createListener
     ps.setHeaderFooter(hF);
   }
 
-  int numPages = m_textParser->numPages();
+  int numPages = m_document->getTextParser4()->numPages();
   int graphPages = m_document->getGraphParser()->numPages(-1);
   if (graphPages>numPages) numPages = graphPages;
 
@@ -398,7 +397,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
   }
 
 
-  m_entryMap.insert(std::multimap<std::string, MWAWEntry>::value_type(name, hie));
+  m_document->getEntryMap().insert(std::multimap<std::string, MWAWEntry>::value_type(name, hie));
 
   m_document->ascii().addPos(pos);
   m_document->ascii().addNote(f.str().c_str());
@@ -419,7 +418,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
 
 bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 {
-  m_entryMap.clear();
+  m_document->getEntryMap().clear();
   input->seek(0x08, librevenge::RVNG_SEEK_SET);
 
   long pos = input->tell();
@@ -496,36 +495,37 @@ bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
 
+  std::multimap<std::string, MWAWEntry> &entryMap=m_document->getEntryMap();
   MWAWInputStreamPtr input = m_document->getInput();
   m_state->m_parsed = true;
 
-  m_entryMap.clear();
+  entryMap.clear();
 
   m_document->ascii().addPos(0);
   m_document->ascii().addNote("FileHeader");
   /* header index */
   if (!parseHeaderIndex(input)) return false;
   // the text structure
-  if (!m_textParser->readStructures(input, mainOle)) return !mainOle;
+  if (!m_document->getTextParser4()->readStructures(input, mainOle)) return !mainOle;
 
   std::multimap<std::string, MWAWEntry>::iterator pos;
 
   // DOP, PRNT
-  pos = m_entryMap.find("PRNT");
-  if (m_entryMap.end() != pos) {
+  pos = entryMap.find("PRNT");
+  if (entryMap.end() != pos) {
     pos->second.setParsed(true);
     MWAWPageSpan page;
     if (readPRNT(input, pos->second, page) && mainOle) getPageSpan() = page;
   }
-  pos = m_entryMap.find("DOP ");
-  if (m_entryMap.end() != pos) {
+  pos = entryMap.find("DOP ");
+  if (entryMap.end() != pos) {
     MWAWPageSpan page;
     if (readDOP(input, pos->second, page) && mainOle) getPageSpan() = page;
   }
 
   // RLRB
-  pos = m_entryMap.lower_bound("RLRB");
-  while (pos != m_entryMap.end()) {
+  pos = entryMap.lower_bound("RLRB");
+  while (pos != entryMap.end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RLRB")) break;
     if (!entry.hasType("RLRB")) continue;
@@ -534,8 +534,8 @@ bool MsWks4Zone::createZones(bool mainOle)
   }
 
   // SELN
-  pos = m_entryMap.lower_bound("SELN");
-  while (m_entryMap.end() != pos) {
+  pos = entryMap.lower_bound("SELN");
+  while (entryMap.end() != pos) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("SELN")) break;
     if (!entry.hasType("SELN")) continue;
@@ -544,8 +544,8 @@ bool MsWks4Zone::createZones(bool mainOle)
 
   // FRAM
   m_state->m_framesList.resize(0);
-  pos = m_entryMap.lower_bound("FRAM");
-  while (m_entryMap.end() != pos) {
+  pos = entryMap.lower_bound("FRAM");
+  while (entryMap.end() != pos) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("FRAM")) break;
     if (!entry.hasType("FRAM")) continue;
@@ -553,16 +553,16 @@ bool MsWks4Zone::createZones(bool mainOle)
   }
 
   /* Graph data */
-  pos = m_entryMap.lower_bound("RBDR");
-  while (pos != m_entryMap.end()) {
+  pos = entryMap.lower_bound("RBDR");
+  while (pos != entryMap.end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RBDR")) break;
     if (!entry.hasType("RBDR")) continue;
 
     m_document->getGraphParser()->readRB(input, entry);
   }
-  pos = m_entryMap.lower_bound("RBIL");
-  while (pos != m_entryMap.end()) {
+  pos = entryMap.lower_bound("RBIL");
+  while (pos != entryMap.end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("RBIL")) break;
     if (!entry.hasType("RBIL")) continue;
@@ -574,8 +574,8 @@ bool MsWks4Zone::createZones(bool mainOle)
   // in the main block, pict are used to representant the
   // header/footer, so we skip it.
   // In the others block, maybe there can be interesting, so, we read them
-  pos = m_entryMap.lower_bound("PICT");
-  while (pos != m_entryMap.end()) {
+  pos = entryMap.lower_bound("PICT");
+  while (pos != entryMap.end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName("PICT")) break;
     m_document->getGraphParser()->readPictureV4(input, entry);
@@ -609,8 +609,8 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   }
 
   MWAWEntry ent(entry);
-  if (!ent.valid()) ent = m_textParser->m_textPositions;
-  m_textParser->readText(input, ent, mainOle);
+  if (!ent.valid()) ent = m_document->getTextParser4()->m_textPositions;
+  m_document->getTextParser4()->readText(input, ent, mainOle);
 
   if (!mainOle) {
     m_state->m_mainOle = oldMain;
@@ -620,7 +620,7 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   // send the final data
 #ifdef DEBUG
   newPage(m_state->m_numPages);
-  m_textParser->flushExtra(input);
+  m_document->getTextParser4()->flushExtra(input);
 
   sendData.m_type = MsWksGraph::SendData::ALL;
   sendData.m_anchor = MWAWPosition::Char;
@@ -632,8 +632,8 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   // check if we have parsed all zones
   std::multimap<std::string, MWAWEntry>::iterator pos;
 
-  pos = m_entryMap.begin();
-  while (m_entryMap.end() != pos) {
+  pos = entryMap.begin();
+  while (entryMap.end() != pos) {
     MWAWEntry const &zone = pos++->second;
     if (zone.isParsed() ||
         zone.hasName("TEXT") || // TEXT entries are managed directly by MsWks4Text

@@ -445,10 +445,11 @@ protected:
 ////////////////////////////////////////////////////////////
 // constructor/destructor
 ////////////////////////////////////////////////////////////
-MsWks4Text::MsWks4Text(MsWks4Zone &parser, MsWksDocument &document) :
-  m_parserState(parser.getParserState()), m_mainParser(&parser), m_document(document), m_textPositions(),
+MsWks4Text::MsWks4Text(MsWksDocument &document) :
+  m_mainParser(&document.getMainParser()), m_parserState(), m_document(document), m_textPositions(),
   m_state(), m_FODsList(), m_FDPCs(), m_FDPPs()
 {
+  m_parserState=m_mainParser->getParserState();
   m_state.reset(new MsWks4TextInternal::State);
 }
 
@@ -496,7 +497,7 @@ bool MsWks4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
   m_state->m_ftntMap.clear();
   m_state->m_pgdList.resize(0);
 
-  std::multimap<std::string, MWAWEntry> &entryMap = mainParser()->m_entryMap;
+  std::multimap<std::string, MWAWEntry> &entryMap = m_document.getEntryMap();
   std::multimap<std::string, MWAWEntry>::iterator pos;
 
   /* the text limit */
@@ -1710,9 +1711,9 @@ bool MsWks4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
   char const *sIndexName = which ? "FDPC" : "FDPP";
 
   std::multimap<std::string, MWAWEntry>::iterator pos =
-    mainParser()->m_entryMap.lower_bound(indexName);
+    m_document.getEntryMap().lower_bound(indexName);
   std::vector<MWAWEntry const *> listIndexed;
-  while (pos != mainParser()->m_entryMap.end()) {
+  while (pos != m_document.getEntryMap().end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(indexName)) break;
     if (!entry.hasType("PLC ")) continue;
@@ -1741,8 +1742,8 @@ bool MsWks4Text::findFDPStructures(MWAWInputStreamPtr &input, int which)
   // create a map offset -> entry
   std::map<long, MWAWEntry const *> offsetMap;
   std::map<long, MWAWEntry const *>::iterator offsIt;
-  pos = mainParser()->m_entryMap.lower_bound(sIndexName);
-  while (pos != mainParser()->m_entryMap.end()) {
+  pos = m_document.getEntryMap().lower_bound(sIndexName);
+  while (pos != m_document.getEntryMap().end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(sIndexName)) break;
     offsetMap.insert(std::map<long, MWAWEntry const *>::value_type
@@ -1782,8 +1783,8 @@ bool MsWks4Text::findFDPStructuresByHand(MWAWInputStreamPtr &/*input*/, int whic
   std::vector<MWAWEntry const *> &zones = which ? m_FDPCs : m_FDPPs;
   zones.resize(0);
 
-  std::multimap<std::string, MWAWEntry>::iterator pos = mainParser()->m_entryMap.lower_bound(indexName);
-  while (pos != mainParser()->m_entryMap.end()) {
+  std::multimap<std::string, MWAWEntry>::iterator pos = m_document.getEntryMap().lower_bound(indexName);
+  while (pos != m_document.getEntryMap().end()) {
     MWAWEntry const &entry = pos++->second;
     if (!entry.hasName(indexName)) break;
     if (!entry.hasType(indexName)) continue;
