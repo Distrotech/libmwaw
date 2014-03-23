@@ -108,9 +108,6 @@ protected:
   // low level
   //
 
-  //! read the print info zone
-  bool readPrintInfo();
-
 protected:
   //
   // data

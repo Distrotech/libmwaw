@@ -152,8 +152,8 @@ protected:
 //! Internal: the state of a MsWksSSParser
 struct State {
   //! constructor
-  State() : m_docType(MWAWDocument::MWAW_K_SPREADSHEET), m_sheetHeaderSize(0x56c), m_spreadsheet(), m_zoneMap(), m_actPage(0), m_numPages(0),
-    m_headerText(""), m_footerText(""), m_hasHeader(false), m_hasFooter(false),
+  State() : m_spreadsheet(), m_zoneMap(), m_actPage(0), m_numPages(0),
+    m_headerText(""), m_footerText(""),
     m_pageLength(-1), m_headerHeight(0), m_footerHeight(0)
   {
   }
@@ -166,10 +166,6 @@ struct State {
       res = m_zoneMap[int(type)];
     return res;
   }
-  //! the type of document
-  MWAWDocument::Kind m_docType;
-  //! the beginning of the spreadsheet data
-  long m_sheetHeaderSize;
   /** the spreadsheet */
   Spreadsheet m_spreadsheet;
   //! the list of zone
@@ -177,7 +173,6 @@ struct State {
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   std::string m_headerText /**header string v1-2*/, m_footerText /**footer string v1-2*/;
-  bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
   //! the page length in point (if known)
   int m_pageLength;
   int m_headerHeight /** the header height if known */,
@@ -305,7 +300,7 @@ void MsWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
   assert(m_document && m_document->getInput());
 
-  if (!checkHeader(0L) || !m_document)  throw(libmwaw::ParseException());
+  if (!m_document || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
 #ifdef DEBUG
@@ -501,10 +496,10 @@ bool MsWksSSParser::createZones()
     if (!readDocumentInfo(0x9a))
       m_document->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
     pos = input->tell();
-    if (m_state->m_hasHeader && !readGroupHeaderFooter(true))
+    if (m_document->hasHeader() && !readGroupHeaderFooter(true))
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     pos = input->tell();
-    if (m_state->m_hasFooter && !readGroupHeaderFooter(false))
+    if (m_document->hasFooter() && !readGroupHeaderFooter(false))
       input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
   readSSheetZone();
@@ -748,13 +743,13 @@ bool MsWksSSParser::readSSheetZone()
   for (int i = 0; i < 2; i++)
     f << input->readLong(2) << ",";
   f << "]";
-  int numRemain=int(sheetDebPos+m_state->m_sheetHeaderSize-input->tell())/2;
+  int numRemain=int(sheetDebPos+m_document->getLengthOfFileHeader3()-input->tell())/2;
   for (int i = 0; i < numRemain; i++) {
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   ascFile.addNote(f.str().c_str());
-  input->seek(sheetDebPos+m_state->m_sheetHeaderSize, librevenge::RVNG_SEEK_SET);
+  input->seek(sheetDebPos+m_document->getLengthOfFileHeader3(), librevenge::RVNG_SEEK_SET);
 
   // part E
   Vec2i cellPos(0,0);
@@ -1331,163 +1326,14 @@ bool MsWksSSParser::readZone(MsWksSSParserInternal::Zone &zone)
 bool MsWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MsWksSSParserInternal::State();
-  MWAWInputStreamPtr input = m_document->getInput();
-  if (!input || !input->hasDataFork())
-    return false;
-
-  int numError = 0, val;
-
-  const int headerSize = 0x20;
-
-  libmwaw::DebugFile &ascFile=m_document->ascii();
-  libmwaw::DebugStream f;
-
-  input->seek(0,librevenge::RVNG_SEEK_SET);
-
-  m_state->m_hasHeader = m_state->m_hasFooter = false;
-  int vers = (int) input->readULong(4);
-  switch (vers) {
-  case 11:
-    setVersion(4);
-    break;
-  case 9:
-    setVersion(3);
-    break;
-  case 8:
-    setVersion(2);
-    break;
-  case 4:
-    // fixme: never see a version 1: does it exists ?
-    setVersion(1);
-    break;
-  default:
-    if (strict) return false;
-
-    MWAW_DEBUG_MSG(("MsWksSSParser::checkHeader: find unknown version 0x%x\n", vers));
-    // must we stop in this case, or can we continue ?
-    if (vers < 0 || vers > 14) {
-      MWAW_DEBUG_MSG(("MsWksSSParser::checkHeader: version too big, we stop\n"));
-      return false;
-    }
-    setVersion((vers < 4) ? 1 : (vers < 8) ? 2 : (vers < 11) ? 3 : 4);
-  }
-  if (input->seek(headerSize,librevenge::RVNG_SEEK_SET) != 0 || input->isEnd())
-    return false;
-
-  if (input->seek(12,librevenge::RVNG_SEEK_SET) != 0) return false;
-
-  for (int i = 0; i < 3; i++) {
-    val = (int)(int) input->readLong(1);
-    if (val < -10 || val > 10) {
-      MWAW_DEBUG_MSG(("MsWksSSParser::checkHeader: find odd val%d=0x%x: not implemented\n", i, val));
-      numError++;
-    }
-  }
-  input->seek(1,librevenge::RVNG_SEEK_CUR);
-  int type = (int) input->readLong(2);
-  switch (type) {
-  // Text document
-  case 1:
-    break;
-  case 2:
-    m_state->m_docType = MWAWDocument::MWAW_K_DATABASE;
-    break;
-  case 3:
-    m_state->m_docType = MWAWDocument::MWAW_K_SPREADSHEET;
-    break;
-  case 12:
-    m_state->m_docType = MWAWDocument::MWAW_K_DRAW;
-    break;
-  default:
-    MWAW_DEBUG_MSG(("MsWksSSParser::checkHeader: find odd type=%d: not implemented\n", type));
-    return false;
-  }
-
-  if (m_state->m_docType != MWAWDocument::MWAW_K_SPREADSHEET)
+  if (!m_document->checkHeader3(header, strict)) return false;
+  if (m_document->getKind() != MWAWDocument::MWAW_K_SPREADSHEET)
     return false;
 #ifndef DEBUG
   if (version() == 1)
     return false;
 #endif
-
-  // ok, we can finish initialization
-  MWAWEntry headerZone;
-  headerZone.setBegin(0);
-  headerZone.setEnd(headerSize);
-  headerZone.setType("FileHeader");
-  m_listZones.push_back(headerZone);
-
-  //
-  input->seek(0,librevenge::RVNG_SEEK_SET);
-  f << "FileHeader: ";
-  f << "version= " << input->readULong(4);
-  long dim[4];
-  for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
-  if (dim[2] <= dim[0] || dim[3] <= dim[1]) {
-    MWAW_DEBUG_MSG(("MsWksSSParser::checkHeader: find odd bdbox\n"));
-    numError++;
-  }
-  f << ", windowdbdbox?=(";
-  for (int i = 0; i < 4; i++) f << dim[i]<<",";
-  f << "),";
-  long sheetHSize=(long) input->readULong(4); // checkme
-  if (sheetHSize!=0x56c) {
-    /* CHECKME: normally 0x56c, but find one time 0x56a in a v2 file
-       which seems to imply that the spreadsheet begins earlier */
-    f << "#sheet[hSize]=" << std::hex << std::hex << sheetHSize << std::dec << ",";
-    if (sheetHSize > (long) 0x550 && input->checkPosition(sheetHSize+0x20))
-      m_state->m_sheetHeaderSize=sheetHSize;
-  }
-  type = (int) input->readULong(2);
-  f << std::dec;
-  switch (type) {
-  case 1:
-    f << "doc,";
-    break;
-  case 2:
-    f << "database,";
-    break; // with ##v3=50
-  case 3:
-    f << "spreadsheet,";
-    break; // with ##v2=5,##v3=6c
-  case 12:
-    f << "draw,";
-    break;
-  default:
-    f << "###type=" << type << ",";
-    break;
-  }
-  f << "numlines?=" << input->readLong(2) << ",";
-  val = (int) input->readLong(1); // 0, v2: 0, 4 or -4
-  if (val)  f << "f0=" << val << ",";
-  val = (int) input->readLong(1); // almost always 1
-  if (val != 1) f << "f1=" << val << ",";
-  for (int i = 11; i < headerSize/2; i++) { // v1: 0, 0, v2: 0, 0|1
-    val = (int) input->readULong(2);
-    if (!val) continue;
-    f << "f" << i << "=" << std::hex << val << std::dec;
-    if (version() >= 3 && i == 12) {
-      if (val & 0x100) {
-        m_state->m_hasHeader = true;
-        f << "(Head)";
-      }
-      if (val & 0x200) {
-        m_state->m_hasFooter = true;
-        f << "(Foot)";
-      }
-    }
-    f << ",";
-  }
-
-  if (header)
-    header->reset(MWAWDocument::MWAW_T_MICROSOFTWORKS, version(), m_state->m_docType);
-
-  ascFile.addPos(0);
-  ascFile.addNote(f.str().c_str());
-  ascFile.addPos(headerSize);
-
-  input->seek(headerSize,librevenge::RVNG_SEEK_SET);
-  return strict ? (numError==0) : (numError < 3);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1531,7 +1377,7 @@ bool MsWksSSParser::readDocumentInfo(long sz)
   if (docExtra) f << "unk=" << docExtra << ","; // in v3: find 3, 7, 1x
   if (flag) f << "fl=" << flag << ","; // in v3: find 80, 84, e0
 
-  if (!readPrintInfo()) {
+  if (!m_document->readPrintInfo()) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -1775,73 +1621,6 @@ bool MsWksSSParser::readGroupHeaderFooter(bool header)
   }
   else
     m_state->m_zoneMap.insert(std::map<int,MsWksSSParserInternal::Zone>::value_type(int(type),zone));
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read the print info
-////////////////////////////////////////////////////////////
-bool MsWksSSParser::readPrintInfo()
-{
-  MWAWInputStreamPtr input = m_document->getInput();
-  long pos = input->tell();
-  libmwaw::DebugStream f;
-  libmwaw::DebugFile &ascFile=m_document->ascii();
-  // print info
-  libmwaw::PrinterInfo info;
-  long endPos=pos+0x80;
-  if (!input->checkPosition(endPos) || !info.read(input)) return false;
-  f << "Entries(PrintInfo):"<< info;
-
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
-  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
-      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
-
-  // now read the margin
-  int margin[4];
-  int maxSize = paperSize.x() > paperSize.y() ? paperSize.x() : paperSize.y();
-  f << ", margin=(";
-  for (int i = 0; i < 4; i++) {
-    margin[i] = int(72.f/120.f*(float)input->readLong(2));
-    if (margin[i] <= -maxSize || margin[i] >= maxSize) return false;
-    f << margin[i];
-    if (i != 3) f << ", ";
-  }
-  f << ")";
-
-  // fixme: compute the real page length here...
-  // define margin from print info
-  Vec2i lTopMargin(margin[0],margin[1]), rBotMargin(margin[2],margin[3]);
-  lTopMargin += paperSize - pageSize;
-
-  int leftMargin = lTopMargin.x();
-  int topMargin = lTopMargin.y();
-
-  // decrease a little right and bottom margins Margin
-  int rightMarg = rBotMargin.x()-50;
-  if (rightMarg < 0) {
-    leftMargin -= (-rightMarg);
-    if (leftMargin < 0) leftMargin=0;
-    rightMarg=0;
-  }
-  int botMarg = rBotMargin.y()-50;
-  if (botMarg < 0) {
-    topMargin -= (-botMarg);
-    if (topMargin < 0) topMargin=0;
-    botMarg=0;
-  }
-
-  getPageSpan().setMarginTop(topMargin/72.0);
-  getPageSpan().setMarginBottom(botMarg/72.0);
-  getPageSpan().setMarginLeft(leftMargin/72.0);
-  getPageSpan().setMarginRight(rightMarg/72.0);
-  getPageSpan().setFormLength(paperSize.y()/72.);
-  getPageSpan().setFormWidth(paperSize.x()/72.);
-
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 

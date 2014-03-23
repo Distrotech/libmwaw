@@ -111,12 +111,23 @@ public:
 
   //! checks if the file header corresponds to a v1-v3 document (or not)
   bool checkHeader3(MWAWHeader *header, bool strict=false);
+  //! returns the length of the file header of a v1-v3 document (if know)
+  long getLengthOfFileHeader3() const;
+  //! read the print info zone (v1-v3)
+  bool readPrintInfo();
+
+  //! returns true if the document has some header ( found by checkHeader3)
+  bool hasHeader() const;
+  //! returns true if the document has some footer ( found by checkHeader3)
+  bool hasFooter() const;
   //! returns the color which correspond to an index
   static bool getColor(int id, MWAWColor &col, int vers);
   //! returns a list of color corresponding to a version
   static std::vector<MWAWColor> const &getPalette(int vers);
+
   //! returns the document entry map of a v4 document
   std::multimap<std::string, MWAWEntry> &getEntryMap();
+
   // interface with the text parser
 
   //! tries to create a new page

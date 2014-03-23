@@ -62,13 +62,15 @@ namespace MsWksDocumentInternal
 //! Internal: the state of a MsWksDocument
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
+  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_fileHeaderSize(0), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
 
   //! the type of document
   MWAWDocument::Kind m_kind;
+  //! the file header size
+  long m_fileHeaderSize;
   //! the list of entries, name->entry ( for v4 document)
   std::multimap<std::string, MWAWEntry> m_entryMap;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
@@ -81,7 +83,7 @@ struct State {
 }
 
 ////////////////////////////////////////////////////////////
-// constructor/destructor, ...
+// constructor/destructor, accessor functions...
 ////////////////////////////////////////////////////////////
 MsWksDocument::MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser) :
   m_state(), m_parserState(parser.getParserState()), m_input(input), m_parser(&parser), m_asciiFile(),
@@ -140,6 +142,20 @@ std::multimap<std::string, MWAWEntry> &MsWksDocument::getEntryMap()
   return m_state->m_entryMap;
 }
 
+long MsWksDocument::getLengthOfFileHeader3() const
+{
+  return m_state->m_fileHeaderSize;
+}
+
+bool MsWksDocument::hasHeader() const
+{
+  return m_state->m_hasHeader;
+}
+
+bool MsWksDocument::hasFooter() const
+{
+  return m_state->m_hasFooter;
+}
 ////////////////////////////////////////////////////////////
 // interface via callback
 ////////////////////////////////////////////////////////////
@@ -189,14 +205,6 @@ void MsWksDocument::sendTextbox(MWAWEntry const &entry, std::string const &frame
   }
   (m_parser->*m_sendTextbox)(entry,frame);
 }
-
-////////////////////////////////////////////////////////////
-// interface with the text document
-////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-// interface with the graph document
-////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
 //
@@ -325,10 +333,68 @@ bool MsWksDocument::getColor(int id, MWAWColor &col, int vers)
 ////////////////////////////////////////////////////////////
 // read the print info
 ////////////////////////////////////////////////////////////
+bool MsWksDocument::readPrintInfo()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos = input->tell();
+  libmwaw::DebugStream f;
+  // print info
+  libmwaw::PrinterInfo info;
+  if (!input->checkPosition(pos+0x78+8) || !info.read(input)) return false;
+  f << "Entries(PrintInfo):"<< info;
 
-////////////////////////////////////////////////////////////
-// read some unknown zone
-////////////////////////////////////////////////////////////
+  Vec2i paperSize = info.paper().size();
+  Vec2i pageSize = info.page().size();
+  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
+      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
+
+  // now read the margin
+  int margin[4];
+  int maxSize = paperSize.x() > paperSize.y() ? paperSize.x() : paperSize.y();
+  f << ", margin=(";
+  for (int i = 0; i < 4; i++) {
+    margin[i] = int(72.f/120.f*(float)input->readLong(2));
+    if (margin[i] < -maxSize || margin[i] > maxSize) return false;
+    f << margin[i];
+    if (i != 3) f << ", ";
+  }
+  f << ")";
+
+  // fixme: compute the real page length here...
+  // define margin from print info
+  Vec2i lTopMargin(margin[0],margin[1]), rBotMargin(margin[2],margin[3]);
+  lTopMargin += paperSize - pageSize;
+
+  int leftMargin = lTopMargin.x();
+  int topMargin = lTopMargin.y();
+
+  // decrease a little right and bottom margins Margin
+  int rightMarg = rBotMargin.x()-50;
+  if (rightMarg < 0) {
+    leftMargin -= (-rightMarg);
+    if (leftMargin < 0) leftMargin=0;
+    rightMarg=0;
+  }
+  int botMarg = rBotMargin.y()-50;
+  if (botMarg < 0) {
+    topMargin -= (-botMarg);
+    if (topMargin < 0) topMargin=0;
+    botMarg=0;
+  }
+
+  m_parserState->m_pageSpan.setMarginTop(topMargin/72.0);
+  m_parserState->m_pageSpan.setMarginBottom(botMarg/72.0);
+  m_parserState->m_pageSpan.setMarginLeft(leftMargin/72.0);
+  m_parserState->m_pageSpan.setMarginRight(rightMarg/72.0);
+  m_parserState->m_pageSpan.setFormLength(paperSize.y()/72.);
+  m_parserState->m_pageSpan.setFormWidth(paperSize.x()/72.);
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+0x78+8, librevenge::RVNG_SEEK_SET);
+
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read the header
@@ -352,12 +418,8 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
   int vers = (int) input->readULong(4);
   switch (vers) {
   case 11:
-#ifndef DEBUG
-    return false;
-#else
     setVersion(4);
-    break; // no-text Works4 file have classic header
-#endif
+    break;
   case 9:
     setVersion(3);
     break;
@@ -426,10 +488,17 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
   f << ", windowdbdbox?=(";
   for (int i = 0; i < 4; i++) f << dim[i]<<",";
   f << "),";
-  for (int i = 0; i < 4; i++) {
-    val = (int) input->readULong(1);
-    if (!val) continue;
-    f << "##v" << i << "=" << std::hex << val <<",";
+  long fileHeaderSize=(long) input->readULong(4);
+  if (fileHeaderSize)
+    f << "headerSize=" << std::hex << fileHeaderSize << std::dec << ",";
+
+  if (m_state->m_kind==MWAWDocument::MWAW_K_SPREADSHEET) {
+    /* CHECKME: normally 0x56c, but find one time 0x56a in a v2 file
+       which seems to imply that the spreadsheet begins earlier */
+    if (fileHeaderSize!=0x56c && fileHeaderSize > (long) 0x550 && input->checkPosition(fileHeaderSize+0x20))
+      m_state->m_fileHeaderSize=fileHeaderSize;
+    else
+      m_state->m_fileHeaderSize=0x56c;
   }
   type = (int) input->readULong(2);
   f << std::dec;
@@ -459,7 +528,8 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
     val = (int) input->readULong(2);
     if (!val) continue;
     f << "f" << i << "=" << std::hex << val << std::dec;
-    if (m_state->m_kind==MWAWDocument::MWAW_K_TEXT && version() >= 3 && i == 12) {
+    if ((m_state->m_kind==MWAWDocument::MWAW_K_TEXT || m_state->m_kind==MWAWDocument::MWAW_K_SPREADSHEET) &&
+        version() >= 3 && i == 12) {
       if (val & 0x100) {
         m_state->m_hasHeader = true;
         f << "(Head)";

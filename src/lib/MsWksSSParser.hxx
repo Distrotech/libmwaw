@@ -120,8 +120,6 @@ protected:
   // low level
   //
 
-  //! read the print info zone
-  bool readPrintInfo();
   //!reads the end of the header
   bool readEndHeader();
   //!reads a cell content data
