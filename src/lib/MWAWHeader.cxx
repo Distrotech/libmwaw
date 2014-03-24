@@ -213,15 +213,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-    else if (creator=="MWII") {   // MacWriteII
-      if (type=="MW2D") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 0));
-        return res;
-      }
-    }
-    else if (creator=="MWPR") {
-      if (type=="MWPd") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 1));
+    else if (creator=="MPNT") {
+      if (type=="PNTG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
         return res;
       }
     }
@@ -240,6 +234,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3));
         return res;
       }
+      if (type=="AWDR") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, input->isStructured() ? 104: 3,
+                                 MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
       if (type=="AWSS") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, input->isStructured() ? 104: 3,
                                  MWAWDocument::MWAW_K_SPREADSHEET));
@@ -247,6 +246,18 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
       if (type=="RLRB" || type=="sWRB") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
+        return res;
+      }
+    }
+    else if (creator=="MWII") {   // MacWriteII
+      if (type=="MW2D") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 0));
+        return res;
+      }
+    }
+    else if (creator=="MWPR") {
+      if (type=="MWPd") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACWRITEPRO, 1));
         return res;
       }
     }
@@ -260,12 +271,6 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       // "edtt": empty file, probably created when the file is edited
-    }
-    else if (creator=="MPNT") {
-      if (type=="PNTG") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACPAINT, 1, MWAWDocument::MWAW_K_PAINT));
-        return res;
-      }
     }
     else if (creator=="PSIP") {
       if (type=="AWWP") {
@@ -535,7 +540,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       case 3:
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104, MWAWDocument::MWAW_K_SPREADSHEET));
         break;
-      // case 12: draw
+      case 12:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104, MWAWDocument::MWAW_K_DRAW));
+        break;
       default:
         break;
       }
@@ -622,7 +629,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       case 3:
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers, MWAWDocument::MWAW_K_SPREADSHEET));
         break;
-      // case 12: draw
+      case 12:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers, MWAWDocument::MWAW_K_DRAW));
+        break;
       default:
         break;
       }

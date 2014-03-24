@@ -130,6 +130,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MoreText.hxx			\
 	MsWksDocument.cxx		\
 	MsWksDocument.hxx		\
+	MsWksDRParser.cxx		\
+	MsWksDRParser.hxx		\
 	MsWksGraph.cxx			\
 	MsWksGraph.hxx			\
 	MsWksSSParser.cxx		\

@@ -404,6 +404,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MsWksDRParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MsWksGraph.cxx"
 				>
 			</File>
@@ -858,6 +862,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MsWks4Zone.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MsWksDRParser.hxx"
 				>
 			</File>
 			<File

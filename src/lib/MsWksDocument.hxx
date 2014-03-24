@@ -52,6 +52,7 @@ class SubDocument;
 
 class MsWks3Parser;
 class MsWks4Parser;
+class MsWksDRParser;
 class MsWksSSParser;
 class MsWks4Zone;
 
@@ -67,6 +68,7 @@ class MsWksDocument
   friend class MsWks3Parser;
   friend class MsWks4Parser;
   friend class MsWks4Zone;
+  friend class MsWksDRParser;
   friend class MsWksSSParser;
 public:
   //! the different type of zone (v1-v3)

@@ -59,12 +59,13 @@ struct State;
 class SubDocument;
 }
 
-class MsWksSSParser;
 class MsWksTable;
 class MsWksDocument;
 
 class MsWks3Parser;
 class MsWks4Zone;
+class MsWksDRParser;
+class MsWksSSParser;
 
 /** \brief the main class to read the graphic of a Microsoft Works file */
 class MsWksGraph
@@ -72,9 +73,10 @@ class MsWksGraph
   friend class MsWksDocument;
   friend class MsWksTable;
 
-  friend class MsWksSSParser;
   friend class MsWks3Parser;
   friend class MsWks4Zone;
+  friend class MsWksDRParser;
+  friend class MsWksSSParser;
   friend class MsWksGraphInternal::SubDocument;
 public:
   struct Style;

@@ -70,6 +70,7 @@
 #include "MoreParser.hxx"
 #include "MsWks3Parser.hxx"
 #include "MsWks4Parser.hxx"
+#include "MsWksDRParser.hxx"
 #include "MsWksSSParser.hxx"
 #include "MsWrd1Parser.hxx"
 #include "MsWrdParser.hxx"
@@ -420,6 +421,11 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACPAINT:
       parser.reset(new MacPaintParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
+#ifdef DEBUG
+      parser.reset(new MsWksDRParser(input, rsrcParser, header));
+#endif
+      break;
     case MWAWDocument::MWAW_T_SUPERPAINT:
       parser.reset(new SuperPaintParser(input, rsrcParser, header));
       break;
@@ -446,7 +452,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MINDWRITE:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
-    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_NISUSWRITER:
     case MWAWDocument::MWAW_T_PAGEMAKER:

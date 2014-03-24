@@ -319,6 +319,10 @@ SOURCE=..\..\src\lib\MsWks4Zone.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MsWksDRParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MsWksGraph.cxx
 # End Source File
 # Begin Source File
@@ -772,6 +776,10 @@ SOURCE=..\..\src\lib\MsWks4Text.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MsWks4Zone.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MsWksDRParser.hxx
 # End Source File
 # Begin Source File
 

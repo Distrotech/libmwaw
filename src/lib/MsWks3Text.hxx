@@ -57,8 +57,9 @@ class SubDocument;
 }
 
 class MsWksDocument;
-class MsWksSSParser;
 class MsWks3Parser;
+class MsWksDRParser;
+class MsWksSSParser;
 
 /** \brief the main class to read the text part of Microsoft Works file
  *
@@ -69,6 +70,7 @@ class MsWks3Text
 {
   friend class MsWksDocument;
   friend class MsWks3Parser;
+  friend class MsWksDRParser;
   friend class MsWksSSParser;
 
   friend class MsWks3TextInternal::SubDocument;
