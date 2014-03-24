@@ -69,8 +69,10 @@ class MsWks4Zone;
 /** \brief the main class to read the graphic of a Microsoft Works file */
 class MsWksGraph
 {
-  friend class MsWksSSParser;
+  friend class MsWksDocument;
   friend class MsWksTable;
+
+  friend class MsWksSSParser;
   friend class MsWks3Parser;
   friend class MsWks4Zone;
   friend class MsWksGraphInternal::SubDocument;

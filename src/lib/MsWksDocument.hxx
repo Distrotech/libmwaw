@@ -66,6 +66,22 @@ class MsWksDocument
   friend class MsWks4Zone;
   friend class MsWksSSParser;
 public:
+  //! the different type of zone (v1-v3)
+  enum ZoneType { Z_MAIN, Z_HEADER, Z_FOOTER, Z_NONE };
+  //! a zone of a MsWksDocument ( main, header, footer )
+  struct Zone {
+    //! the constructor
+    Zone(ZoneType type=Z_NONE, int zoneId=-1) : m_type(type), m_zoneId(zoneId), m_textId(-1) {}
+    //! the zone type
+    ZoneType m_type;
+    //! the parser zone id
+    int m_zoneId;
+    //! the text internal id
+    int m_textId;
+  };
+
+public:
+
   //! constructor
   MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser);
   //! destructor
@@ -106,7 +122,7 @@ public:
   }
 
   //
-  // utilities functions
+  // read some v3 structure
   //
 
   //! checks if the file header corresponds to a v1-v3 document (or not)
@@ -115,16 +131,34 @@ public:
   long getLengthOfFileHeader3() const;
   //! read the print info zone (v1-v3)
   bool readPrintInfo();
+  //! try to read the documentinfo ( v1-v3)
+  bool readDocumentInfo(long sz=-1);
+  //! try to read a generic zone
+  bool readZone(Zone &zone);
+  //! try to read a header/footer group
+  bool readGroupHeaderFooter(bool header, int check);
+  //! try to read a group zone (zone3)
+  bool readGroup(Zone &zone, MWAWEntry &entry, int check);
+
+  //
+  // utilities functions
+  //
 
   //! returns true if the document has some header ( found by checkHeader3)
   bool hasHeader() const;
   //! returns true if the document has some footer ( found by checkHeader3)
   bool hasFooter() const;
+  //! returns the header/footer height (found by readGroupHeaderFooter)
+  float getHeaderFooterHeight(bool header) const;
   //! returns the color which correspond to an index
   static bool getColor(int id, MWAWColor &col, int vers);
   //! returns a list of color corresponding to a version
   static std::vector<MWAWColor> const &getPalette(int vers);
 
+  //! returns the document entry map of a v1-v3 document
+  std::map<int, Zone> &getTypeZoneMap();
+  //! returns the zone corresponding to a zoneType (v1-v3 document)
+  Zone getZone(ZoneType type) const;
   //! returns the document entry map of a v4 document
   std::multimap<std::string, MWAWEntry> &getEntryMap();
 

@@ -40,17 +40,17 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
+#include "MsWksDocument.hxx"
+
 #include "MWAWParser.hxx"
 
 namespace MsWks3ParserInternal
 {
 struct State;
-struct Zone;
 class SubDocument;
 }
 
 class MsWksGraph;
-class MsWksDocument;
 
 /** \brief the main class to read a Microsoft Works file
  *
@@ -88,15 +88,6 @@ protected:
   //
   // intermediate level
   //
-
-  //! try to read a generic zone
-  bool readZone(MsWks3ParserInternal::Zone &zone);
-  //! try to read the documentinfo ( zone2)
-  bool readDocumentInfo();
-  //! try to read a group zone (zone3)
-  bool readGroup(MsWks3ParserInternal::Zone &zone, MWAWEntry &entry, int check);
-  //! try to read a header/footer group
-  bool readGroupHeaderFooter(bool header, int check);
 
   /** try to send a text entry */
   void sendText(int id, int noteId=-1);

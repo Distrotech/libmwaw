@@ -43,19 +43,18 @@
 #include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
+#include "MsWksDocument.hxx"
+
 #include "MWAWParser.hxx"
 
 namespace MsWksSSParserInternal
 {
 struct State;
-struct Zone;
 
 class Cell;
 class SubDocument;
 }
 
-class MsWksGraph;
-class MsWks3Text;
 class MsWksDocument;
 
 /** \brief the main class to read a Microsoft Works spreadsheet file
@@ -66,7 +65,6 @@ class MsWksDocument;
 class MsWksSSParser : public MWAWSpreadsheetParser
 {
   friend class MsWksSSParserInternal::SubDocument;
-  friend class MsWksGraph;
 public:
   //! constructor
   MsWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -95,14 +93,6 @@ protected:
 
   //! try to read the spreadsheet data zone
   bool readSSheetZone();
-  //! try to read a generic zone
-  bool readZone(MsWksSSParserInternal::Zone &zone);
-  //! try to read the documentinfo ( zone2)
-  bool readDocumentInfo(long sz=-1);
-  //! try to read a group zone (zone3)
-  bool readGroup(MsWksSSParserInternal::Zone &zone, MWAWEntry &entry, int check);
-  //! try to read a header/footer group (v>=3)
-  bool readGroupHeaderFooter(bool header);
 
   /** try to send a note */
   void sendNote(int id);

@@ -56,8 +56,8 @@ struct State;
 class SubDocument;
 }
 
-class MsWksSSParser;
 class MsWksDocument;
+class MsWksSSParser;
 class MsWks3Parser;
 
 /** \brief the main class to read the text part of Microsoft Works file
@@ -67,6 +67,7 @@ class MsWks3Parser;
  */
 class MsWks3Text
 {
+  friend class MsWksDocument;
   friend class MsWks3Parser;
   friend class MsWksSSParser;
 
