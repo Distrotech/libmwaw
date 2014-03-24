@@ -46,6 +46,8 @@
 namespace MsWksDocumentInternal
 {
 struct State;
+
+class SubDocument;
 }
 
 class MsWks3Parser;
@@ -61,6 +63,7 @@ class MsWks4Text;
  */
 class MsWksDocument
 {
+  friend class MsWksDocumentInternal::SubDocument;
   friend class MsWks3Parser;
   friend class MsWks4Parser;
   friend class MsWks4Zone;
@@ -150,6 +153,8 @@ public:
   bool hasFooter() const;
   //! returns the header/footer height (found by readGroupHeaderFooter)
   float getHeaderFooterHeight(bool header) const;
+  //! get the page span list and the number of page for a v1-v3 document
+  void getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &numPages);
   //! returns the color which correspond to an index
   static bool getColor(int id, MWAWColor &col, int vers);
   //! returns a list of color corresponding to a version
@@ -162,12 +167,19 @@ public:
   //! returns the document entry map of a v4 document
   std::multimap<std::string, MWAWEntry> &getEntryMap();
 
+  // general interface
+
+  /** try to send a zone (v1-v3 document) */
+  void sendZone(int zoneType);
+
   // interface with the text parser
 
   //! tries to create a new page
   void newPage(int page, bool softBreak=false);
   //! tries to send a footnote
   void sendFootnote(int id);
+  /** try to send a text zone  (v1-v3 document) */
+  void sendText(int id);
 
   // interface with the graph parser
 

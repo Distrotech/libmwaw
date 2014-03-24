@@ -47,7 +47,6 @@
 namespace MsWks3ParserInternal
 {
 struct State;
-class SubDocument;
 }
 
 class MsWksGraph;
@@ -59,7 +58,6 @@ class MsWksGraph;
  */
 class MsWks3Parser : public MWAWTextParser
 {
-  friend class MsWks3ParserInternal::SubDocument;
 public:
   //! constructor
   MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -84,16 +82,6 @@ protected:
 
   //! adds a new page
   void newPage(int number, bool softBreak=false);
-
-  //
-  // intermediate level
-  //
-
-  /** try to send a text entry */
-  void sendText(int id, int noteId=-1);
-
-  /** try to send a zone */
-  void sendZone(int zoneType);
 
   //
   // low level

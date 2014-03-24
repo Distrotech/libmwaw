@@ -66,74 +66,6 @@ struct State {
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a MsWks3Parser
-class SubDocument : public MWAWSubDocument
-{
-public:
-  enum Type { Zone, Text };
-  SubDocument(MsWks3Parser &pars, MWAWInputStreamPtr input, Type type,
-              int zoneId, int noteId=-1) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_type(type), m_id(zoneId), m_noteId(noteId) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const
-  {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  /** the type */
-  Type m_type;
-  /** the subdocument id*/
-  int m_id;
-  /** the note id */
-  int m_noteId;
-};
-
-void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWks3Parser::SubDocument::parse: no listener\n"));
-    return;
-  }
-  assert(m_parser);
-
-  long pos = m_input->tell();
-  MsWks3Parser *parser = static_cast<MsWks3Parser *>(m_parser);
-  switch (m_type) {
-  case Text:
-    parser->sendText(m_id, m_noteId);
-    break;
-  case Zone:
-    parser->sendZone(m_id);
-    break;
-  default:
-    MWAW_DEBUG_MSG(("MsWks3Parser::SubDocument::parse: unexpected zone type\n"));
-    break;
-  }
-  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-}
-
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_id != sDoc->m_id) return true;
-  if (m_type != sDoc->m_type) return true;
-  if (m_noteId != sDoc->m_noteId) return true;
-  return false;
-}
 }
 
 
@@ -200,7 +132,7 @@ void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      sendZone(MsWksDocument::Z_MAIN);
+      m_document->sendZone(MsWksDocument::Z_MAIN);
       m_document->getTextParser3()->flushExtra();
       m_document->getGraphParser()->flushExtra();
     }
@@ -215,24 +147,6 @@ void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
   if (!ok) throw(libmwaw::ParseException());
 }
 
-void MsWks3Parser::sendText(int id, int noteId)
-{
-  if (noteId < 0)
-    m_document->getTextParser3()->sendZone(id);
-  else
-    m_document->getTextParser3()->sendNote(id, noteId);
-}
-
-void MsWks3Parser::sendZone(int zoneType)
-{
-  if (!getTextListener()) return;
-  MsWksDocument::Zone zone=m_document->getZone(MsWksDocument::ZoneType(zoneType));
-  if (zone.m_zoneId >= 0)
-    m_document->getGraphParser()->sendAll(zone.m_zoneId, zoneType==MsWksDocument::Z_MAIN);
-  if (zone.m_textId >= 0)
-    m_document->getTextParser3()->sendZone(zone.m_textId);
-}
-
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
@@ -244,51 +158,9 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
     return;
   }
 
-  MsWksDocument::Zone mainZone=m_document->getZone(MsWksDocument::Z_MAIN);
-  // update the page
-  int numPage = 1;
-  if (mainZone.m_textId >= 0 && m_document->getTextParser3()->numPages(mainZone.m_textId) > numPage)
-    numPage = m_document->getTextParser3()->numPages(mainZone.m_textId);
-  if (mainZone.m_zoneId >= 0 && m_document->getGraphParser()->numPages(mainZone.m_zoneId) > numPage)
-    numPage = m_document->getGraphParser()->numPages(mainZone.m_zoneId);
-  m_state->m_numPages = numPage;
+  std::vector<MWAWPageSpan> pageList;
   m_state->m_actPage = 0;
-
-  // create the page list
-  MWAWPageSpan ps(getPageSpan());
-  int id = m_document->getTextParser3()->getHeader();
-  if (id >= 0) {
-    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset
-    (new MsWks3ParserInternal::SubDocument
-     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
-    ps.setHeaderFooter(header);
-  }
-  else if (m_document->getZone(MsWksDocument::Z_HEADER).m_zoneId >= 0) {
-    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument.reset
-    (new MsWks3ParserInternal::SubDocument
-     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWksDocument::Z_HEADER)));
-    ps.setHeaderFooter(header);
-  }
-  id = m_document->getTextParser3()->getFooter();
-  if (id >= 0) {
-    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset
-    (new MsWks3ParserInternal::SubDocument
-     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Text, id));
-    ps.setHeaderFooter(footer);
-  }
-  else if (m_document->getZone(MsWksDocument::Z_FOOTER).m_zoneId >= 0) {
-    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument.reset
-    (new MsWks3ParserInternal::SubDocument
-     (*this, m_document->getInput(), MsWks3ParserInternal::SubDocument::Zone, int(MsWksDocument::Z_FOOTER)));
-    ps.setHeaderFooter(footer);
-  }
-  ps.setPageSpan(m_state->m_numPages+1);
-  std::vector<MWAWPageSpan> pageList(1,ps);
-  //
+  m_document->getPageSpanList(pageList, m_state->m_numPages);
   MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
   setTextListener(listen);
   listen->startDocument();

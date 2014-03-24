@@ -46,6 +46,7 @@
 #include "MWAWPosition.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSection.hxx"
+#include "MWAWSubDocument.hxx"
 #include "MWAWRSRCParser.hxx"
 
 #include "MsWksGraph.hxx"
@@ -82,6 +83,72 @@ struct State {
       m_footerHeight /** the footer height if known */;
 };
 
+////////////////////////////////////////
+//! Internal: the subdocument of a MsWksDocument
+class SubDocument : public MWAWSubDocument
+{
+public:
+  enum Type { Zone, Text };
+  SubDocument(MsWksDocument &document, MWAWInputStreamPtr input, Type type,
+              int zoneId) :
+    MWAWSubDocument(document.m_parser, input, MWAWEntry()), m_document(document), m_type(type), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  /** the main document */
+  MsWksDocument &m_document;
+  /** the type */
+  Type m_type;
+  /** the subdocument id*/
+  int m_id;
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("MsWksDocument::SubDocument::parse: no listener\n"));
+    return;
+  }
+  assert(m_parser);
+
+  long pos = m_input->tell();
+  switch (m_type) {
+  case Text:
+    m_document.sendText(m_id);
+    break;
+  case Zone:
+    m_document.sendZone(m_id);
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MsWksDocument::SubDocument::parse: unexpected zone type\n"));
+    break;
+  }
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
+
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
+{
+  if (MWAWSubDocument::operator!=(doc)) return true;
+  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+  if (!sDoc) return true;
+  if (&m_document != &sDoc->m_document) return true;
+  if (m_id != sDoc->m_id) return true;
+  if (m_type != sDoc->m_type) return true;
+  return false;
+}
 }
 
 ////////////////////////////////////////////////////////////
@@ -162,6 +229,22 @@ long MsWksDocument::getLengthOfFileHeader3() const
   return m_state->m_fileHeaderSize;
 }
 
+void MsWksDocument::sendText(int id)
+{
+  if (m_textParser3) m_textParser3->sendZone(id);
+}
+
+void MsWksDocument::sendZone(int zoneType)
+{
+  Zone zone=getZone(ZoneType(zoneType));
+  if (zone.m_zoneId >= 0)
+    m_graphParser->sendAll(zone.m_zoneId, zoneType==MsWksDocument::Z_MAIN);
+  if (zone.m_textId >= 0) sendText(zone.m_textId);
+}
+
+////////////////////////////////////////////////////////////
+// page span function
+////////////////////////////////////////////////////////////
 bool MsWksDocument::hasHeader() const
 {
   return m_state->m_hasHeader;
@@ -174,11 +257,54 @@ bool MsWksDocument::hasFooter() const
 
 float MsWksDocument::getHeaderFooterHeight(bool header) const
 {
-  if (version()<=2 && m_textParser3) {
-    if ((header && m_textParser3->getHeader()>=0) || (!header && m_textParser3->getFooter()>=0))
-      return 12;
-  }
   return header ? float(m_state->m_headerHeight) : float(m_state->m_footerHeight);
+}
+
+void MsWksDocument::getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &numPages)
+{
+  Zone mainZone=getZone(Z_MAIN);
+  // first count the page
+  numPages = 1;
+  if (mainZone.m_textId >= 0 && m_textParser3 && m_textParser3->numPages(mainZone.m_textId) > numPages)
+    numPages = m_textParser3->numPages(mainZone.m_textId);
+  if (mainZone.m_zoneId >= 0 && m_graphParser->numPages(mainZone.m_zoneId) > numPages)
+    numPages = m_graphParser->numPages(mainZone.m_zoneId);
+  // now update the page list
+  MWAWPageSpan ps(m_parserState->m_pageSpan);
+  int id = m_textParser3 ? m_textParser3->getHeader() : -1;
+  if (id >= 0) {
+    m_state->m_headerHeight=12;
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::Text, id));
+    ps.setHeaderFooter(header);
+  }
+  else if (getZone(MsWksDocument::Z_HEADER).m_zoneId >= 0) {
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::Zone, int(MsWksDocument::Z_HEADER)));
+    ps.setHeaderFooter(header);
+  }
+  id = m_textParser3 ? m_textParser3->getFooter() : -1;
+  if (id >= 0) {
+    m_state->m_footerHeight=12;
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::Text, id));
+    ps.setHeaderFooter(footer);
+  }
+  else if (getZone(MsWksDocument::Z_FOOTER).m_zoneId >= 0) {
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::Zone, int(MsWksDocument::Z_FOOTER)));
+    ps.setHeaderFooter(footer);
+  }
+  ps.setPageSpan(numPages+1);
+  pagesList=std::vector<MWAWPageSpan>(1,ps);
 }
 
 ////////////////////////////////////////////////////////////

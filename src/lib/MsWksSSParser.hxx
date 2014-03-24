@@ -97,12 +97,6 @@ protected:
   /** try to send a note */
   void sendNote(int id);
 
-  /** try to send a text zone */
-  void sendText(int id);
-
-  /** try to send a zone */
-  void sendZone(int zoneType);
-
   //! try to send the main spreadsheet
   bool sendSpreadsheet();
 
