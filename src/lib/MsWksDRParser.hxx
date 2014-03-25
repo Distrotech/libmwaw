@@ -79,6 +79,8 @@ protected:
 
   //! finds the different objects zones
   bool createZones();
+  //! finds the different OLE zones
+  bool createOLEZones();
 
   //! adds a new page
   void newPage(int number, bool softBreak=false);

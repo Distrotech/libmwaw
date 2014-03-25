@@ -43,6 +43,7 @@
 #include "MWAWHeader.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
+#include "MWAWOLEParser.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
@@ -50,6 +51,7 @@
 #include "MsWksGraph.hxx"
 #include "MsWksDocument.hxx"
 #include "MsWks3Text.hxx"
+#include "MsWks4Zone.hxx"
 
 #include "MsWksDRParser.hxx"
 
@@ -60,11 +62,20 @@ namespace MsWksDRParserInternal
 //! Internal: the state of a MsWksDRParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0)
+  State() : m_actPage(0), m_numPages(0), m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName()
   {
   }
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
+
+  /** the ole parser */
+  shared_ptr<MWAWOLEParser> m_oleParser;
+  shared_ptr<MsWks4Zone> m_headerParser /**parser of the header ole*/, m_footerParser /**parser of the footer ole*/,
+             m_footnoteParser /**parser of the footnote ole*/;
+  /**the frame parsers: name-> parser*/
+  std::map<std::string, shared_ptr<MsWks4Zone> > m_frameParserMap;
+  //! the list of unparsed OLEs
+  std::vector<std::string> m_unparsedOlesName;
 };
 }
 
@@ -78,10 +89,8 @@ MsWksDRParser::MsWksDRParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcPar
   MWAWInputStreamPtr mainInput=input;
   if (input->isStructured()) {
     MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
-    if (mainOle) {
-      MWAW_DEBUG_MSG(("MsWksSSParser::MsWksSSParser: only the MN0 block will be parsed\n"));
+    if (mainOle)
       mainInput=mainOle;
-    }
   }
   m_document.reset(new MsWksDocument(mainInput, *this));
   init();
@@ -185,39 +194,51 @@ void MsWksDRParser::createDocument(librevenge::RVNGDrawingInterface *documentInt
 ////////////////////////////////////////////////////////////
 bool MsWksDRParser::createZones()
 {
+  if (getInput()->isStructured())
+    createOLEZones();
   MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
   if (!m_document->readDocumentInfo(0x9a))
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-  if (!readDrawHeader()) return false;
+  if (m_document->hasHeader() && !m_document->readGroupHeaderFooter(true,99))
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
-  if (version()>=3) {
-    bool ok = true;
-    if (m_document->hasHeader())
-      ok = m_document->readGroupHeaderFooter(true,99);
-    if (ok) pos = input->tell();
-    else input->seek(pos, librevenge::RVNG_SEEK_SET);
-    if (ok && m_document->hasFooter())
-      ok = m_document->readGroupHeaderFooter(false,99);
-    if (ok) pos = input->tell();
-    else input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (m_document->hasFooter() && !m_document->readGroupHeaderFooter(false,99))
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+
+  if (!readDrawHeader()) return false;
+
+  if (version()==4) {
+    MWAWEntry group;
+    pos = input->tell();
+    MsWksDocument::Zone unknownZone(MsWksDocument::Z_NONE, -1);
+    if (!m_document->readGroup(unknownZone, group, 2))
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
+  // now the main group of draw shape
   std::map<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
   MsWksDocument::ZoneType const type = MsWksDocument::Z_MAIN;
   typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
                      (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
   MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
-  while (!input->isEnd()) {
-    pos = input->tell();
-    if (!m_document->readZone(mainZone)) {
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      break;
-    }
-  }
+  MWAWEntry group;
+  pos = input->tell();
+  if (!m_document->readGroup(mainZone, group, 2))
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   if (!input->isEnd()) {
     MWAW_DEBUG_MSG(("MsWksDRParser::createZones: find some extra data\n"));
+    while (!input->isEnd()) {
+      pos = input->tell();
+      if (!m_document->readZone(mainZone)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+    }
+  }
+  if (!input->isEnd()) {
+    pos = input->tell();
     m_document->ascii().addPos(pos);
     m_document->ascii().addNote("Entries(End)");
     m_document->ascii().addPos(pos+100);
@@ -227,6 +248,91 @@ bool MsWksDRParser::createZones()
   return false;
 }
 
+////////////////////////////////////////////////////////////
+// create the ole structures
+////////////////////////////////////////////////////////////
+bool MsWksDRParser::createOLEZones()
+{
+  MWAWInputStreamPtr &input= getInput();
+  assert(input.get());
+  if (!checkHeader(getHeader()))
+    throw libmwaw::ParseException();
+
+  m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
+
+  if (!m_state->m_oleParser->parse(input)) return false;
+
+  // normally,
+  // MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes, MacWorks/QFrm<number>
+  // MN0 (the main header)
+  std::vector<std::string> unparsed = m_state->m_oleParser->getNotParse();
+
+  size_t numUnparsed = unparsed.size();
+  unparsed.push_back("MN0");
+
+  for (size_t i = 0; i <= numUnparsed; i++) {
+    std::string const &name = unparsed[i];
+
+    // separated the directory and the name
+    //    MatOST/MatadorObject1/Ole10Native
+    //      -> dir="MatOST/MatadorObject1", base="Ole10Native"
+    std::string::size_type pos = name.find_last_of('/');
+    std::string dir, base;
+    if (pos == std::string::npos) base = name;
+    else if (pos == 0) base = name.substr(1);
+    else {
+      dir = name.substr(0,pos);
+      base = name.substr(pos+1);
+    }
+
+    if (dir == "" && base == "MN0") continue;
+    bool ok = false;
+    bool isFrame = false;
+    if (!ok && dir == "MacWorks") {
+      ok = (base == "QHdr" || base == "QFtr" || base == "QFootnotes");
+      if (!ok && strncmp(base.c_str(),"QFrm",4)==0)
+        ok = isFrame = true;
+    }
+    if (!ok) {
+      m_state->m_unparsedOlesName.push_back(name);
+      continue;
+    }
+
+    MWAWInputStreamPtr ole = input->getSubStreamByName(name.c_str());
+    if (!ole.get()) {
+      MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: can not find OLE part: \"%s\"\n", name.c_str()));
+      continue;
+    }
+
+    shared_ptr<MsWks4Zone> newParser(new MsWks4Zone(ole, getParserState(), *this, name));
+    try {
+      ok = newParser->createZones(false);
+    }
+    catch (...) {
+      ok = false;
+    }
+
+    if (!ok) {
+      MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: can not parse OLE: \"%s\"\n", name.c_str()));
+      continue;
+    }
+
+    if (base == "QHdr") m_state->m_headerParser = newParser;
+    else if (base == "QFtr") m_state->m_footerParser = newParser;
+    else if (isFrame) {
+      std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
+        m_state->m_frameParserMap.find(base);
+      if (frameIt != m_state->m_frameParserMap.end()) {
+        MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: oops, I already find a frame zone %s\n", base.c_str()));
+      }
+      else
+        m_state->m_frameParserMap[base] = newParser;
+    }
+    else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
+  }
+
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 //
@@ -242,13 +348,6 @@ bool MsWksDRParser::readDrawHeader()
   MWAWInputStreamPtr input=m_document->getInput();
 
   int const vers=version();
-  for (int st=0; st<2; ++st) {
-    long pos = input->tell();
-    bool ok=m_document->readGroupHeaderFooter(st==0,49);
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    if (!ok) break;
-    m_document->readGroupHeaderFooter(st==0,99);
-  }
   long pos = input->tell();
   int N = (int) input->readULong(2);
   int headerSize = vers == 3 ? 4 : 88;
@@ -322,40 +421,6 @@ bool MsWksDRParser::readDrawHeader()
     input->seek(pos+dataSize, librevenge::RVNG_SEEK_SET);
   }
 
-  if (vers==4) {
-    pos = input->tell();
-    long dSz=(long) input->readULong(4);
-    f.str("");
-    f << "FileHeader(Follow:B): size=" << std::hex << dSz << std::dec;
-    if (!input->checkPosition(pos+dSz+4)) {
-      MWAW_DEBUG_MSG(("MsWksDRParser::readDrawHeader: bad separator\n"));
-      f << "###";
-      m_document->ascii().addPos(pos);
-      m_document->ascii().addNote(f.str().c_str());
-
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    input->seek(pos+dSz+4, librevenge::RVNG_SEEK_SET);
-    m_document->ascii().addPos(pos);
-    m_document->ascii().addNote(f.str().c_str());
-  }
-
-  pos = input->tell();
-  long dSz=(long) input->readULong(4);
-  f.str("");
-  f << "FileHeader(Follow:C): size=" << std::hex << dSz << std::dec;
-  if (dSz<0x164 || !input->checkPosition(pos+dSz+4)) {
-    MWAW_DEBUG_MSG(("MsWksDRParser::readDrawHeader: bad separator\n"));
-    f << "###";
-    m_document->ascii().addPos(pos);
-    m_document->ascii().addNote(f.str().c_str());
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return false;
-  }
-  input->seek(pos+0x168, librevenge::RVNG_SEEK_SET);
-  m_document->ascii().addPos(pos);
-  m_document->ascii().addNote(f.str().c_str());
   return true;
 }
 

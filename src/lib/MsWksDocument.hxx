@@ -240,8 +240,6 @@ protected:
   typedef void (MWAWParser::* SendFootnote)(int id);
   /** callback used to send a OLE */
   typedef void (MWAWParser::* SendOLE)(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
-  /** callback used to send a RBIL */
-  typedef void (MWAWParser::* SendRBIL)(int id, Vec2i const &sz);
 
   /** the new page callback */
   NewPage m_newPage;
@@ -251,8 +249,6 @@ protected:
   SendTextbox m_sendTextbox;
   /** the send ole callback */
   SendOLE m_sendOLE;
-  /** the send rbil callback */
-  SendRBIL m_sendRBIL;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

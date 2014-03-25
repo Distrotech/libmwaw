@@ -166,12 +166,13 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
-                       MsWks4Parser &parser, std::string const &oleName) :
-  MWAWTextParser(parserState), m_mainParser(&parser), m_state(), m_document()
+                       MWAWParser &parser, std::string const &oleName) :
+  m_mainParser(&parser), m_parserState(parserState), m_state(), m_document(),
+  m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0)
 {
-  m_document.reset(new MsWksDocument(input, *this));
+  m_document.reset(new MsWksDocument(input, parser));
   setAscii(oleName);
-  setVersion(4);
+  m_parserState->m_version=4;
   init();
 }
 
@@ -186,11 +187,11 @@ void MsWks4Zone::init()
 {
   m_state.reset(new MsWks4ZoneInternal::State);
   m_document->getTextParser4()->setDefault(m_state->m_defFont);
-  m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks4Zone::newPage);
-  m_document->m_sendFootnote=static_cast<MsWksDocument::SendFootnote>(&MsWks4Zone::sendFootNote);
-  m_document->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWks4Zone::sendFrameText);
-  m_document->m_sendOLE=static_cast<MsWksDocument::SendOLE>(&MsWks4Zone::sendOLE);
-  m_document->m_sendRBIL=static_cast<MsWksDocument::SendRBIL>(&MsWks4Zone::sendRBIL);
+}
+
+MWAWInputStreamPtr MsWks4Zone::getInput()
+{
+  return m_document->m_input;
 }
 
 void MsWks4Zone::setAscii(std::string const &oleName)
@@ -204,33 +205,9 @@ libmwaw::DebugFile &MsWks4Zone::ascii()
   return m_document->ascii();
 }
 
-void MsWks4Zone::sendFootNote(int id)
-{
-  m_mainParser->sendFootNote(id);
-}
 void MsWks4Zone::readFootNote(int id)
 {
   m_document->getTextParser4()->readFootNote(m_document->getInput(), id);
-}
-
-void MsWks4Zone::sendFrameText(MWAWEntry const &entry, std::string const &frame)
-{
-  return m_mainParser->sendFrameText(entry, frame);
-}
-
-void MsWks4Zone::sendRBIL(int id, Vec2i const &sz)
-{
-  MsWksGraph::SendData sendData;
-  sendData.m_type = MsWksGraph::SendData::RBIL;
-  sendData.m_id = id;
-  sendData.m_anchor =  MWAWPosition::Char;
-  sendData.m_size = sz;
-  m_document->getGraphParser()->sendObjects(sendData);
-}
-
-void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle)
-{
-  m_mainParser->sendOLE(id, pos, frameStyle);
 }
 
 ////////////////////////////////////////////////////////////
@@ -238,11 +215,11 @@ void MsWks4Zone::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const
 ////////////////////////////////////////////////////////////
 double MsWks4Zone::getTextHeight() const
 {
-  return getPageSpan().getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
+  return m_parserState->m_pageSpan.getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
 ////////////////////////////////////////////////////////////
-// new page/text positions
+// text positions
 ////////////////////////////////////////////////////////////
 void MsWks4Zone::newPage(int number, bool /*soft*/)
 {
@@ -252,11 +229,11 @@ void MsWks4Zone::newPage(int number, bool /*soft*/)
   long pos = m_document->getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
-    if (!getTextListener() || m_state->m_actPage == 1)
+    if (!m_parserState->getMainListener() || m_state->m_actPage == 1)
       continue;
     // FIXME: find a way to force the page break to happen
     //    ie. graphParser must add a space to force it :-~
-    if (m_state->m_mainOle) getTextListener()->insertBreak(MWAWTextListener::PageBreak);
+    if (m_state->m_mainOle) m_parserState->getMainListener()->insertBreak(MWAWTextListener::PageBreak);
 
     MsWksGraph::SendData sendData;
     sendData.m_type = MsWksGraph::SendData::RBDR;
@@ -278,7 +255,7 @@ MWAWEntry MsWks4Zone::getTextPosition() const
 MWAWTextListenerPtr MsWks4Zone::createListener
 (librevenge::RVNGTextInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
 {
-  MWAWPageSpan ps(getPageSpan());
+  MWAWPageSpan ps(m_parserState->m_pageSpan);
 
   if (header) {
     MWAWHeaderFooter hF(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
@@ -300,14 +277,14 @@ MWAWTextListenerPtr MsWks4Zone::createListener
   pagesH.resize(size_t(numPages)+1, int(72.*getTextHeight()));
   m_document->getGraphParser()->computePositions(-1, linesH, pagesH);
   m_document->getGraphParser()->setPageLeftTop
-  (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
-         72.f*float(getPageSpan().getMarginTop())+float(m_state->m_headerHeight)));
+  (Vec2f(72.f*float(m_parserState->m_pageSpan.getMarginLeft()),
+         72.f*float(m_parserState->m_pageSpan.getMarginTop())+float(m_state->m_headerHeight)));
 
   // create all the pages + an empty page, if we have some remaining data...
   ps.setPageSpan(numPages+1);
   std::vector<MWAWPageSpan> pageList(1,ps);
   m_state->m_numPages=numPages+1;
-  MWAWTextListenerPtr res(new MWAWTextListener(*getParserState(), pageList, interface));
+  MWAWTextListenerPtr res(new MWAWTextListener(*m_parserState, pageList, interface));
   return res;
 }
 
@@ -494,6 +471,11 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
+  // time to add the different callback to the documents
+  m_document->m_newPage=m_newPage;
+  m_document->m_sendFootnote=m_sendFootnote;
+  m_document->m_sendTextbox=m_sendTextbox;
+  m_document->m_sendOLE=m_sendOLE;
 
   std::multimap<std::string, MWAWEntry> &entryMap=m_document->getEntryMap();
   MWAWInputStreamPtr input = m_document->getInput();
@@ -515,12 +497,12 @@ bool MsWks4Zone::createZones(bool mainOle)
   if (entryMap.end() != pos) {
     pos->second.setParsed(true);
     MWAWPageSpan page;
-    if (readPRNT(input, pos->second, page) && mainOle) getPageSpan() = page;
+    if (readPRNT(input, pos->second, page) && mainOle) m_parserState->m_pageSpan = page;
   }
   pos = entryMap.find("DOP ");
   if (entryMap.end() != pos) {
     MWAWPageSpan page;
-    if (readDOP(input, pos->second, page) && mainOle) getPageSpan() = page;
+    if (readDOP(input, pos->second, page) && mainOle) m_parserState->m_pageSpan = page;
   }
 
   // RLRB
@@ -598,14 +580,14 @@ void MsWks4Zone::readContentZones(MWAWEntry const &entry, bool mainOle)
   sendData.m_page = 0;
   m_document->getGraphParser()->sendObjects(sendData);
 
-  if (mainOle && getTextListener() && m_state->m_numColumns > 1) {
-    if (getTextListener()->isSectionOpened())
-      getTextListener()->closeSection();
+  if (mainOle && m_parserState->getMainListener() && m_state->m_numColumns > 1) {
+    if (m_parserState->getMainListener()->isSectionOpened())
+      m_parserState->getMainListener()->closeSection();
     MWAWSection sec;
-    sec.setColumns(m_state->m_numColumns, getPageWidth()/double(m_state->m_numColumns), librevenge::RVNG_INCH);
+    sec.setColumns(m_state->m_numColumns, m_mainParser->getPageWidth()/double(m_state->m_numColumns), librevenge::RVNG_INCH);
     if (m_state->m_hasColumnSep)
       sec.m_columnSeparator=MWAWBorder();
-    getTextListener()->openSection(sec);
+    m_parserState->getMainListener()->openSection(sec);
   }
 
   MWAWEntry ent(entry);

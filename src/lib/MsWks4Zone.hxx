@@ -43,9 +43,10 @@
 
 #include "MWAWParser.hxx"
 
-class MsWksDocument;
+#include "MsWksDocument.hxx"
 
 class MsWks4Parser;
+class MsWksDRParser;
 
 namespace MsWks4ZoneInternal
 {
@@ -73,22 +74,25 @@ class SubDocument;
  * - SELN : the actual text/... selection
  *
  */
-class MsWks4Zone : public MWAWTextParser
+class MsWks4Zone
 {
   friend class MsWks4ParserInternal::SubDocument;
+  friend class MsWksDRParser;
   friend class MsWks4Parser;
   friend class MsWks4Text;
 
 public:
   //! constructor
   MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
-             MsWks4Parser &parser, std::string const &oleName);
+             MWAWParser &parser, std::string const &oleName);
   //! destructor
   ~MsWks4Zone();
 
 protected:
   //! inits all internal variables
   void init();
+  //! returns the actual input
+  MWAWInputStreamPtr getInput();
 
   /** tries to find the beginning of the list of indices,
    * then try to find all entries in this list.
@@ -118,36 +122,11 @@ protected:
   //! adds a new page
   void newPage(int number, bool soft=false);
 
-  /** creates a document for a footnote which some id (via MsWks4Parser )
-   *
-   * \note if id==-1, the footnote will be empty */
-  void sendFootNote(int id);
   //! sends text corresponding to the footnote id to the listener (via MsWks4Text)
   void readFootNote(int id);
 
-  /** send the frame text */
-  void sendFrameText(MWAWEntry const &entry, std::string const &frame);
-
-  /** send a rbil zone */
-  void sendRBIL(int id, Vec2i const &sz);
-
-  //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
-
   /** return the text positions ( used for frame text) */
   MWAWEntry getTextPosition() const;
-
-  //! empty implementation of the parse function ( to make the class not virtual)
-  void parse(librevenge::RVNGTextInterface *)
-  {
-    MWAW_DEBUG_MSG(("MsWks4Zone::parse: must not be called\n"));
-  }
-  //! empty implementation of the checkHeader function ( to make the class not virtual)
-  bool checkHeader(MWAWHeader *, bool)
-  {
-    MWAW_DEBUG_MSG(("MsWks4Zone::checkHeader: must not be called\n"));
-    return false;
-  }
 
   //
   // low level
@@ -190,13 +169,25 @@ protected:
   //
 
   //! the main parser
-  MsWks4Parser *m_mainParser;
+  MWAWParser *m_mainParser;
+
+  //! the parser state
+  shared_ptr<MWAWParserState> m_parserState;
 
   //! the internal state
   shared_ptr<MsWks4ZoneInternal::State> m_state;
 
   //! the zone data
   shared_ptr<MsWksDocument> m_document;
+
+  /** the new page callback */
+  MsWksDocument::NewPage m_newPage;
+  /** the send footnote callback */
+  MsWksDocument::SendFootnote m_sendFootnote;
+  /** the send textbox callback */
+  MsWksDocument::SendTextbox m_sendTextbox;
+  /** the send ole callback */
+  MsWksDocument::SendOLE m_sendOLE;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

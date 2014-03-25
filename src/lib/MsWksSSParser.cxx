@@ -366,12 +366,6 @@ bool MsWksSSParser::createZones()
 {
   MWAWInputStreamPtr input = m_document->getInput();
 
-  std::map<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
-  MsWksDocument::ZoneType const type = MsWksDocument::Z_MAIN;
-  typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
-                     (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
-  MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
-
   long pos;
   if (version()>2) {
     pos = input->tell();
@@ -386,6 +380,11 @@ bool MsWksSSParser::createZones()
   }
   readSSheetZone();
 
+  std::map<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
+  MsWksDocument::ZoneType const type = MsWksDocument::Z_MAIN;
+  typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
+                     (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
+  MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
   MWAWEntry group;
   pos = input->tell();
   if (!m_document->readGroup(mainZone, group, 2))

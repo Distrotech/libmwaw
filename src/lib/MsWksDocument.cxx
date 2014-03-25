@@ -157,7 +157,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 MsWksDocument::MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser) :
   m_state(), m_parserState(parser.getParserState()), m_input(input), m_parser(&parser), m_asciiFile(),
   m_graphParser(), m_textParser3(), m_textParser4(),
-  m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0), m_sendRBIL(0)
+  m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0)
 {
   m_state.reset(new MsWksDocumentInternal::State);
 
@@ -339,11 +339,12 @@ void MsWksDocument::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle co
 
 void MsWksDocument::sendRBIL(int id, Vec2i const &sz)
 {
-  if (!m_sendRBIL) {
-    MWAW_DEBUG_MSG(("MsWksDocument::sendRBIL: can not find the sendRBIL callback\n"));
-    return;
-  }
-  (m_parser->*m_sendRBIL)(id, sz);
+  MsWksGraph::SendData sendData;
+  sendData.m_type = MsWksGraph::SendData::RBIL;
+  sendData.m_id = id;
+  sendData.m_anchor =  MWAWPosition::Char;
+  sendData.m_size = sz;
+  m_graphParser->sendObjects(sendData);
 }
 
 void MsWksDocument::sendTextbox(MWAWEntry const &entry, std::string const &frame)
@@ -771,18 +772,19 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
 
   long pos = input->tell();
   int val=(int) input->readULong(1);
-  // checkme is val==3 also ok for a spreadsheet
-  if (val!=3 && (m_state->m_kind!=MWAWDocument::MWAW_K_SPREADSHEET || val!=0))
+  // checkme is val==3 also ok for a draw/spreadsheet
+  if (val!=3 && (m_state->m_kind==MWAWDocument::MWAW_K_TEXT || val!=0))
     return false;
 
   libmwaw::DebugFile &ascFile=ascii();
   libmwaw::DebugStream f;
-  int docId = (int) input->readULong(1);
-  int docExtra = (int) input->readULong(1);
+  bool isDraw=m_state->m_kind==MWAWDocument::MWAW_K_DRAW;
+  int docId = isDraw ? 0 : (int) input->readULong(1);
+  int docExtra = isDraw ? 0 : (int) input->readULong(1);
   int flag = (int) input->readULong(1);
-  long size = (long) input->readULong(2)+6;
+  long size = (long) input->readULong(2)+(isDraw ? 4 : 6);
 
-  int blockSize = version() <= 2 ? 340 : 360;
+  int blockSize = isDraw ? 358 : version() <= 2 ? 340 : 360;
   if (size < blockSize) return false;
 
   f << "Entries(GroupHeader):";
@@ -1025,8 +1027,7 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
     val = (int) input->readULong(2);
     if (!val) continue;
     f << "f" << i << "=" << std::hex << val << std::dec;
-    if ((m_state->m_kind==MWAWDocument::MWAW_K_TEXT || m_state->m_kind==MWAWDocument::MWAW_K_SPREADSHEET) &&
-        version() >= 3 && i == 12) {
+    if (version() >= 3 && i == 12) {
       if (val & 0x100) {
         m_state->m_hasHeader = true;
         f << "(Head)";

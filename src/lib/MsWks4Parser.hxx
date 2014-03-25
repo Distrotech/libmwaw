@@ -84,9 +84,13 @@ protected:
   //! tries to parse the ole zones which have not yet been parsed
   void flushExtra();
 
+  //! adds a new page
+  void newPage(int number, bool soft=false);
+
   //
   // subdocument helper
   //
+
   /** creates a subdocument corresponding to a footnote (indicated by id)
    *
    * \note if \a id < 0 meaning that the text corresponding to the note was not
