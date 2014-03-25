@@ -50,7 +50,7 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWTextListener.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWParagraph.hxx"
@@ -593,7 +593,7 @@ bool MsWks4Text::readStructures(MWAWInputStreamPtr input, bool mainOle)
 ////////////////////////////////////////////////////////////
 bool MsWks4Text::readFootNote(MWAWInputStreamPtr input, int id)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return true;
   if (id < 0 || id >= int(m_state->m_ftntList.size())) {
     if (id >= 0) {
@@ -629,7 +629,7 @@ bool MsWks4Text::readFootNote(MWAWInputStreamPtr input, int id)
 bool MsWks4Text::readText(MWAWInputStreamPtr input,  MWAWEntry const &zone,
                           bool mainOle)
 {
-  MWAWTextListenerPtr listener=m_parserState->m_textListener;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
   if (zone.begin() < m_textPositions.begin() || zone.end() > m_textPositions.end()) {
     MWAW_DEBUG_MSG(("MsWks4Text::readText: invalid zone\n"));
     if (listener) listener->insertChar(' ');
@@ -1284,8 +1284,8 @@ bool MsWks4Text::readFont(MWAWInputStreamPtr &input, long endPos,
 ////////////////////////////////////////////////////////////
 void MsWks4Text::setProperty(MsWks4TextInternal::Paragraph const &p)
 {
-  if (!m_parserState->m_textListener) return;
-  m_parserState->m_textListener->setParagraph(p);
+  if (!m_parserState->getMainListener()) return;
+  m_parserState->getMainListener()->setParagraph(p);
   m_state->m_paragraph = p;
 }
 

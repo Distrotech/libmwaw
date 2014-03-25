@@ -158,6 +158,8 @@ protected:
   void sendTextBox(int zId, MWAWListenerPtr listener);
   /** check the text box link v4 */
   void checkTextBoxLinks(int zId);
+  //! define the group default frame v4
+  void setGroupDefaultFrameName(std::string const &name="");
 
   // interface function
 

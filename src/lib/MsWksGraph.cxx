@@ -701,7 +701,7 @@ struct Patterns {
 //! Internal: the state of a MsWksGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_leftTopPos(0,0), m_zonesList(), m_RBsMap(), m_font(20,12), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
+  State() : m_version(-1), m_leftTopPos(0,0), m_zonesList(), m_RBsMap(), m_font(20,12), m_frameName(""), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
   //! return the pattern corresponding to an id
   bool getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid=-1);
   //! return the percentage corresponding to a pattern
@@ -718,6 +718,8 @@ struct State {
   std::map<int, RBZone> m_RBsMap;
   //! the actual font
   MWAWFont m_font;
+  //! the default frame name
+  std::string m_frameName;
   //! an index used to store chart
   int m_chartId;
   //! an index used to store table
@@ -866,46 +868,39 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_graphParser);
 
   long pos = m_input->tell();
-  if (listener->getType()==MWAWListener::Graphic) {
-    if (m_type != TextBox) {
-      MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
-      return;
-    }
-    m_graphParser->sendTextBox(m_id, listener);
+  switch (m_type) {
+  case Empty:
+    break;
+  case Chart:
+    m_graphParser->sendChart(m_id);
+    break;
+  case Group: {
+    MWAWPosition gPos;
+    gPos.setRelativePosition(MWAWPosition::Frame,
+                             MWAWPosition::XLeft, MWAWPosition::YTop);
+    m_graphParser->sendGroupChild(m_id, gPos);
+    break;
   }
-  else {
-    switch (m_type) {
-    case Empty:
-      break;
-    case Chart:
-      m_graphParser->sendChart(m_id);
-      break;
-    case Group: {
-      MWAWPosition gPos;
-      gPos.setRelativePosition(MWAWPosition::Frame,
-                               MWAWPosition::XLeft, MWAWPosition::YTop);
-      m_graphParser->sendGroupChild(m_id, gPos);
-      break;
-    }
-    case Table:
-      m_graphParser->sendTable(m_id);
-      break;
-    case TextBoxv4:
-      m_graphParser->sendFrameText(m_zone, m_frame);
-      break;
-    case RBILZone: {
-      MsWksGraph::SendData sendData;
-      sendData.m_type = MsWksGraph::SendData::RBIL;
-      sendData.m_id = m_id;
-      sendData.m_anchor =  MWAWPosition::Frame;
-      m_graphParser->sendObjects(sendData);
-      break;
-    }
-    case TextBox:
-    default:
-      MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
-      break;
-    }
+  case Table:
+    m_graphParser->sendTable(m_id);
+    break;
+  case TextBox:
+    m_graphParser->sendTextBox(m_id, listener);
+    break;
+  case TextBoxv4:
+    m_graphParser->sendFrameText(m_zone, m_frame);
+    break;
+  case RBILZone: {
+    MsWksGraph::SendData sendData;
+    sendData.m_type = MsWksGraph::SendData::RBIL;
+    sendData.m_id = m_id;
+    sendData.m_anchor =  MWAWPosition::Frame;
+    m_graphParser->sendObjects(sendData);
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: unexpected zone type\n"));
+    break;
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
@@ -965,6 +960,11 @@ int MsWksGraph::numPages(int zoneId) const
   }
   m_state->m_numPages = maxPage+1;
   return m_state->m_numPages;
+}
+
+void MsWksGraph::setGroupDefaultFrameName(std::string const &name)
+{
+  m_state->m_frameName=name;
 }
 
 void MsWksGraph::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -1732,6 +1732,8 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     }
     textbox->m_text.setBegin(input->readLong(4));
     textbox->m_text.setEnd(input->readLong(4));
+    if (textbox->m_frame.empty())
+      textbox->m_frame=m_state->m_frameName;
 
     // always 0 ?
     val = (int) input->readLong(2);
@@ -2195,6 +2197,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
   int numDataToMerge=0;
   Box2f partialBdBox;
   MWAWPosition partialPos(pos);
+  bool isDraw=listener->getType()==MWAWListener::Graphic;
   for (size_t c=0; c < numChild; ++c) {
     int cId = group.m_childs[c];
     if (cId < 0 || cId >= int(numZones) || !m_state->m_zonesList[size_t(cId)])
@@ -2202,7 +2205,9 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
     MsWksGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
     bool isLast=false;
     bool canMerge=false;
-    if (child.type()==MsWksGraphInternal::Zone::Shape || child.type()==MsWksGraphInternal::Zone::Text) {
+    if (isDraw)
+      canMerge=false;
+    else if (child.type()==MsWksGraphInternal::Zone::Shape || child.type()==MsWksGraphInternal::Zone::Text) {
       Box2f origBdBox=child.getLocalBox();
       Vec2f decal = child.m_decal[0] + child.m_decal[1];
       Box2f localBdBox(origBdBox[0]+decal, origBdBox[1]+decal);
@@ -2278,6 +2283,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
 
 bool MsWksGraph::canCreateGraphic(MsWksGraphInternal::GroupZone const &group) const
 {
+  if (m_parserState->getMainListener()->getType()==MWAWListener::Graphic) return false;
   int numZones = int(m_state->m_zonesList.size());
   for (size_t c=0; c < group.m_childs.size(); ++c) {
     int cId = group.m_childs[c];

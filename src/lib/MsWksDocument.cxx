@@ -770,6 +770,7 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
   MWAWInputStreamPtr input=getInput();
   if (input->isEnd()) return false;
 
+  int const vers=version();
   long pos = input->tell();
   int val=(int) input->readULong(1);
   // checkme is val==3 also ok for a draw/spreadsheet
@@ -784,7 +785,7 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
   int flag = (int) input->readULong(1);
   long size = (long) input->readULong(2)+(isDraw ? 4 : 6);
 
-  int blockSize = isDraw ? 358 : version() <= 2 ? 340 : 360;
+  int blockSize = isDraw ? 358 : vers <= 2 ? 340 : 360;
   if (size < blockSize) return false;
 
   f << "Entries(GroupHeader):";
@@ -808,25 +809,51 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
 
   if (check <= 0) return true;
   input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-  for (int i = 0; i < 52; i++) {
+  // the first bytes seems dependent of the file kind
+  for (int i=0; i<(blockSize-340)/2; ++i) {
     int v = (int) input->readLong(2);
+    if (!v) continue;
     if (i < 8 && (v < -100 || v > 100)) return false;
-    if (v) {
-      f << "f" << i << "=";
-      if (v > 0 && v < 1000)
-        f << v;
-      else
-        f << std::hex << "X" << v << std::dec;
-      f << ",";
+    f << "f" << i << "=";
+    if (v > -100 && v < 1000)
+      f << v << ",";
+    else
+      f << std::hex << "X" << v << std::dec << ",";
+  }
+
+  for (int i = 0; i < 38; i++) {
+    int v = (int) input->readLong(2);
+    if (!v) continue;
+    f << "g" << i << "=";
+    if (v > -100 && v < 1000)
+      f << v << ",";
+    else
+      f << std::hex << "X" << v << std::dec << ",";
+  }
+  if (vers==4) {
+    std::string oleName("");
+    for (int l=0; l<16; ++l) { // what is the maximum length?
+      char c=(char) input->readULong(1);
+      if (!c) break;
+      oleName+=c;
+    }
+    if (!oleName.empty()) {
+      if (oleName[0]=='Q')
+        m_graphParser->setGroupDefaultFrameName(oleName);
+      else {
+        MWAW_DEBUG_MSG(("MsWksDocument::readGroup: the oleName seems bad\n"));
+        f << "###";
+      }
+      f << "oleName=" << oleName << ",";
     }
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  pos = pos+blockSize;
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  int N=(int) input->readLong(2);
+  input->seek(pos+blockSize, librevenge::RVNG_SEEK_SET);
 
+  pos = input->tell();
+  int N=(int) input->readLong(2);
   f.str("");
   f << "GroupHeader:N=" << N << ",";
   ascFile.addPos(pos);
@@ -837,10 +864,11 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
     pos = input->tell();
     if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone)>=0)
       continue;
-    MWAW_DEBUG_MSG(("MsWksDocument::readGroup: can not find the end of group \n"));
+    MWAW_DEBUG_MSG(("MsWksDocument::readGroup: can not find the end of group\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     break;
   }
+  m_graphParser->setGroupDefaultFrameName();
   if (input->tell() < entry.end()) {
     ascFile.addPos(input->tell());
     ascFile.addNote("Entries(GroupData)");

@@ -111,6 +111,8 @@ void MsWksDRParser::init()
   getPageSpan().setMargins(0.1);
 
   m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWksDRParser::newPage);
+  m_document->m_sendOLE=static_cast<MsWksDocument::SendOLE>(&MsWksDRParser::sendOLE);
+  m_document->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWksDRParser::sendTextbox);
 }
 
 ////////////////////////////////////////////////////////////
@@ -121,6 +123,7 @@ void MsWksDRParser::newPage(int number, bool softBreak)
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
 
+  long pos = m_document->getInput()->tell();
   while (m_state->m_actPage < number) {
     m_state->m_actPage++;
     if (!getGraphicListener() || m_state->m_actPage == 1)
@@ -129,7 +132,14 @@ void MsWksDRParser::newPage(int number, bool softBreak)
       getGraphicListener()->insertBreak(MWAWGraphicListener::SoftPageBreak);
     else
       getGraphicListener()->insertBreak(MWAWGraphicListener::PageBreak);
+
+    MsWksGraph::SendData sendData;
+    sendData.m_type = MsWksGraph::SendData::RBDR;
+    sendData.m_anchor =  MWAWPosition::Page;
+    sendData.m_page = m_state->m_actPage;
+    m_document->getGraphParser()->sendObjects(sendData);
   }
+  m_document->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
 ////////////////////////////////////////////////////////////
@@ -150,8 +160,10 @@ void MsWksDRParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       m_document->sendZone(MsWksDocument::Z_MAIN);
+#ifdef DEBUG
       m_document->getTextParser3()->flushExtra();
       m_document->getGraphParser()->flushExtra();
+#endif
     }
     m_document->ascii().reset();
   }
@@ -245,7 +257,10 @@ bool MsWksDRParser::createZones()
     m_document->ascii().addNote("_");
   }
 
-  return false;
+  std::vector<int> linesH, pagesH;
+  m_document->getGraphParser()->computePositions(mainZone.m_zoneId, linesH, pagesH);
+
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -332,6 +347,48 @@ bool MsWksDRParser::createOLEZones()
   }
 
   return true;
+}
+
+void MsWksDRParser::sendTextbox(MWAWEntry const &entry, std::string const &frame)
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) return;
+
+  if (entry.length()==0) {
+    listener->insertChar(' ');
+    return;
+  }
+
+  MsWks4Zone *parser = 0;
+  std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
+    m_state->m_frameParserMap.find(frame);
+  if (frameIt != m_state->m_frameParserMap.end())
+    parser = frameIt->second.get();
+  if (!parser || parser->getTextPosition().length() < entry.end()) {
+    MWAW_DEBUG_MSG(("MsWksDRParser::sendTextbox: can not find frame ole: %s\n", frame.c_str()));
+    listener->insertChar(' ');
+    return;
+  }
+
+  // ok, create the entry
+  MWAWEntry ent(entry);
+  ent.setBegin(entry.begin()+parser->getTextPosition().begin());
+  parser->createZones(false);
+  parser->readContentZones(ent, false);
+}
+
+void MsWksDRParser::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
+{
+  if (!getMainListener()) return;
+
+  librevenge::RVNGBinaryData data;
+  MWAWPosition pos;
+  std::string type;
+  if (!m_state->m_oleParser->getObject(id, data, pos, type)) {
+    MWAW_DEBUG_MSG(("MsWksDRParser::sendOLE: can not find OLE%d\n", id));
+    return;
+  }
+  getMainListener()->insertPicture(pictPos, data, type, style);
 }
 
 ////////////////////////////////////////////////////////////
