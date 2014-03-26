@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MS_WKS3_PARSER
-#  define MS_WKS3_PARSER
+#ifndef MS_WKS_PARSER
+#  define MS_WKS_PARSER
 
 #include <vector>
 
@@ -44,25 +44,25 @@
 
 #include "MWAWParser.hxx"
 
-namespace MsWks3ParserInternal
+namespace MsWksParserInternal
 {
 struct State;
 }
 
 class MsWksGraph;
 
-/** \brief the main class to read a Microsoft Works file
+/** \brief the main class to read a Microsoft Works file: v1-v4
  *
  *
  *
  */
-class MsWks3Parser : public MWAWTextParser
+class MsWksParser : public MWAWTextParser
 {
 public:
   //! constructor
-  MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MsWks3Parser();
+  virtual ~MsWksParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -92,7 +92,7 @@ protected:
   // data
   //
   //! the state
-  shared_ptr<MsWks3ParserInternal::State> m_state;
+  shared_ptr<MsWksParserInternal::State> m_state;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;

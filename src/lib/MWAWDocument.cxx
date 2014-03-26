@@ -68,7 +68,7 @@
 #include "MarinerWrtParser.hxx"
 #include "MindWrtParser.hxx"
 #include "MoreParser.hxx"
-#include "MsWks3Parser.hxx"
+#include "MsWksParser.hxx"
 #include "MsWks4Parser.hxx"
 #include "MsWksDRParser.hxx"
 #include "MsWksSSParser.hxx"
@@ -644,7 +644,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getMajorVersion() < 100)
-        parser.reset(new MsWks3Parser(input, rsrcParser, header));
+        parser.reset(new MsWksParser(input, rsrcParser, header));
       else
         parser.reset(new MsWks4Parser(input, rsrcParser, header));
       break;

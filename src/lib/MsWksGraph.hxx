@@ -62,7 +62,7 @@ class SubDocument;
 class MsWksTable;
 class MsWksDocument;
 
-class MsWks3Parser;
+class MsWksParser;
 class MsWks4Zone;
 class MsWksDRParser;
 class MsWksSSParser;
@@ -73,7 +73,7 @@ class MsWksGraph
   friend class MsWksDocument;
   friend class MsWksTable;
 
-  friend class MsWks3Parser;
+  friend class MsWksParser;
   friend class MsWks4Zone;
   friend class MsWksDRParser;
   friend class MsWksSSParser;

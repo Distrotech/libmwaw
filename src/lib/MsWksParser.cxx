@@ -51,13 +51,13 @@
 #include "MsWksDocument.hxx"
 #include "MsWks3Text.hxx"
 
-#include "MsWks3Parser.hxx"
+#include "MsWksParser.hxx"
 
-/** Internal: the structures of a MsWks3Parser */
-namespace MsWks3ParserInternal
+/** Internal: the structures of a MsWksParser */
+namespace MsWksParserInternal
 {
 ////////////////////////////////////////
-//! Internal: the state of a MsWks3Parser
+//! Internal: the state of a MsWksParser
 struct State {
   //! constructor
   State() : m_actPage(0), m_numPages(0)
@@ -72,34 +72,34 @@ struct State {
 ////////////////////////////////////////////////////////////
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
-MsWks3Parser::MsWks3Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
+MsWksParser::MsWksParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   MWAWTextParser(input, rsrcParser, header), m_state(), m_listZones(), m_document()
 {
   m_document.reset(new MsWksDocument(input, *this));
   init();
 }
 
-MsWks3Parser::~MsWks3Parser()
+MsWksParser::~MsWksParser()
 {
 }
 
-void MsWks3Parser::init()
+void MsWksParser::init()
 {
   resetTextListener();
   setAsciiName("main-1");
 
-  m_state.reset(new MsWks3ParserInternal::State);
+  m_state.reset(new MsWksParserInternal::State);
 
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
-  m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks3Parser::newPage);
+  m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWksParser::newPage);
 }
 
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void MsWks3Parser::newPage(int number, bool softBreak)
+void MsWksParser::newPage(int number, bool softBreak)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -118,7 +118,7 @@ void MsWks3Parser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
-void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
+void MsWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
   assert(m_document && m_document->getInput());
 
@@ -139,7 +139,7 @@ void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
     m_document->ascii().reset();
   }
   catch (...) {
-    MWAW_DEBUG_MSG(("MsWks3Parser::parse: exception catched when parsing\n"));
+    MWAW_DEBUG_MSG(("MsWksParser::parse: exception catched when parsing\n"));
     ok = false;
   }
 
@@ -150,11 +150,11 @@ void MsWks3Parser::parse(librevenge::RVNGTextInterface *docInterface)
 ////////////////////////////////////////////////////////////
 // create the document
 ////////////////////////////////////////////////////////////
-void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterface)
+void MsWksParser::createDocument(librevenge::RVNGTextInterface *documentInterface)
 {
   if (!documentInterface) return;
   if (getTextListener()) {
-    MWAW_DEBUG_MSG(("MsWks3Parser::createDocument: listener already exist\n"));
+    MWAW_DEBUG_MSG(("MsWksParser::createDocument: listener already exist\n"));
     return;
   }
 
@@ -175,7 +175,7 @@ void MsWks3Parser::createDocument(librevenge::RVNGTextInterface *documentInterfa
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-bool MsWks3Parser::createZones()
+bool MsWksParser::createZones()
 {
   MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
@@ -234,9 +234,9 @@ bool MsWks3Parser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool MsWks3Parser::checkHeader(MWAWHeader *header, bool strict)
+bool MsWksParser::checkHeader(MWAWHeader *header, bool strict)
 {
-  *m_state = MsWks3ParserInternal::State();
+  *m_state = MsWksParserInternal::State();
   if (!m_document->checkHeader3(header, strict)) return false;
   if (m_document->getKind() != MWAWDocument::MWAW_K_TEXT)
     return false;

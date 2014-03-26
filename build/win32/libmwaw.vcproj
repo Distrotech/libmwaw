@@ -384,7 +384,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWks3Parser.cxx"
+				RelativePath="..\..\src\lib\MsWksParser.cxx"
 				>
 			</File>
 			<File
@@ -845,7 +845,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWks3Parser.hxx"
+				RelativePath="..\..\src\lib\MsWksParser.hxx"
 				>
 			</File>
 			<File

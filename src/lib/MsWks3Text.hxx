@@ -57,7 +57,7 @@ class SubDocument;
 }
 
 class MsWksDocument;
-class MsWks3Parser;
+class MsWksParser;
 class MsWksDRParser;
 class MsWksSSParser;
 
@@ -69,7 +69,7 @@ class MsWksSSParser;
 class MsWks3Text
 {
   friend class MsWksDocument;
-  friend class MsWks3Parser;
+  friend class MsWksParser;
   friend class MsWksDRParser;
   friend class MsWksSSParser;
 

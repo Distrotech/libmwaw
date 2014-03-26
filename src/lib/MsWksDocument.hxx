@@ -50,7 +50,7 @@ struct State;
 class SubDocument;
 }
 
-class MsWks3Parser;
+class MsWksParser;
 class MsWks4Parser;
 class MsWksDRParser;
 class MsWksSSParser;
@@ -65,7 +65,7 @@ class MsWks4Text;
 class MsWksDocument
 {
   friend class MsWksDocumentInternal::SubDocument;
-  friend class MsWks3Parser;
+  friend class MsWksParser;
   friend class MsWks4Parser;
   friend class MsWks4Zone;
   friend class MsWksDRParser;

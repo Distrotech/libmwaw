@@ -299,7 +299,7 @@ SOURCE=..\..\src\lib\MarinerWrtText.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWks3Parser.cxx
+SOURCE=..\..\src\lib\MsWksParser.cxx
 # End Source File
 # Begin Source File
 
@@ -759,7 +759,7 @@ SOURCE=..\..\src\lib\MarinerWrtText.hxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWks3Parser.hxx
+SOURCE=..\..\src\lib\MsWksParser.hxx
 # End Source File
 # Begin Source File
 
