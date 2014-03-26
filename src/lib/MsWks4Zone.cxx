@@ -167,8 +167,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                        MWAWParser &parser, std::string const &oleName) :
-  m_mainParser(&parser), m_parserState(parserState), m_state(), m_document(),
-  m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0)
+  m_mainParser(&parser), m_parserState(parserState), m_state(), m_document(), m_newPage(0)
 {
   m_document.reset(new MsWksDocument(input, parser));
   setAscii(oleName);
@@ -455,9 +454,6 @@ bool MsWks4Zone::createZones(bool mainOle)
   if (m_state->m_parsed) return true;
   // time to add the different callback to the documents
   m_document->m_newPage=m_newPage;
-  m_document->m_sendFootnote=m_sendFootnote;
-  m_document->m_sendTextbox=m_sendTextbox;
-  m_document->m_sendOLE=m_sendOLE;
 
   std::multimap<std::string, MWAWEntry> &entryMap=m_document->getEntryMap();
   MWAWInputStreamPtr input = m_document->getInput();

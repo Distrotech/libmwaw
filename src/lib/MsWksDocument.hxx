@@ -246,21 +246,9 @@ protected:
 
   /** callback used to send a page break */
   typedef void (MWAWParser::* NewPage)(int page, bool softBreak);
-  /** callback used to send a textbox */
-  typedef void (MWAWParser::* SendTextbox)(MWAWEntry const &entry, std::string const &frame);
-  /** callback used to send a footnote */
-  typedef void (MWAWParser::* SendFootnote)(int id);
-  /** callback used to send a OLE */
-  typedef void (MWAWParser::* SendOLE)(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
 
   /** the new page callback */
   NewPage m_newPage;
-  /** the send footnote callback */
-  SendFootnote m_sendFootnote;
-  /** the send textbox callback */
-  SendTextbox m_sendTextbox;
-  /** the send ole callback */
-  SendOLE m_sendOLE;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

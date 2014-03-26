@@ -180,8 +180,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 ////////////////////////////////////////////////////////////
 MsWksDocument::MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser) :
   m_state(), m_parserState(parser.getParserState()), m_parser(&parser), m_parentDocument(0),
-  m_input(input), m_asciiFile(), m_graphParser(), m_textParser3(), m_textParser4(),
-  m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0)
+  m_input(input), m_asciiFile(), m_graphParser(), m_textParser3(), m_textParser4(), m_newPage(0)
 {
   m_state.reset(new MsWksDocumentInternal::State());
   m_graphParser.reset(new MsWksGraph(*this));
@@ -376,8 +375,6 @@ void MsWksDocument::sendFootnote(int id)
 {
   if (m_parentDocument)
     return m_parentDocument->sendFootnote(id);
-  if (m_sendFootnote)
-    return (m_parser->*m_sendFootnote)(id);
   if (!m_parserState->getMainListener()) return;
 
   MWAWSubDocumentPtr subdoc(new MsWksDocumentInternal::SubDocument
@@ -389,8 +386,6 @@ void MsWksDocument::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyl
 {
   if (m_parentDocument)
     return m_parentDocument->sendOLE(id, pictPos, style);
-  if (m_sendOLE)
-    return (m_parser->*m_sendOLE)(id, pictPos, style);
 
   if (!m_parserState->getMainListener()) return;
   librevenge::RVNGBinaryData data;
@@ -417,8 +412,6 @@ void MsWksDocument::sendTextbox(MWAWEntry const &entry, std::string const &frame
 {
   if (m_parentDocument)
     return m_parentDocument->sendTextbox(entry,frame);
-  if (m_sendTextbox)
-    return (m_parser->*m_sendTextbox)(entry,frame);
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) return;
 

@@ -181,12 +181,6 @@ protected:
 
   /** the new page callback */
   MsWksDocument::NewPage m_newPage;
-  /** the send footnote callback */
-  MsWksDocument::SendFootnote m_sendFootnote;
-  /** the send textbox callback */
-  MsWksDocument::SendTextbox m_sendTextbox;
-  /** the send ole callback */
-  MsWksDocument::SendOLE m_sendOLE;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
