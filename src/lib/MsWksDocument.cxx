@@ -31,6 +31,8 @@
 * instead of those above.
 */
 
+#include <string.h>
+
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -66,7 +68,7 @@ namespace MsWksDocumentInternal
 struct State {
   //! constructor
   State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_fileHeaderSize(0), m_typeZoneMap(), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
-    m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName(),
+    m_oleParser(), m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }

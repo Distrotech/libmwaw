@@ -43,7 +43,6 @@
 #include "MWAWHeader.hxx"
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
-#include "MWAWOLEParser.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSubDocument.hxx"
@@ -62,20 +61,11 @@ namespace MsWksDRParserInternal
 //! Internal: the state of a MsWksDRParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0), m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName()
+  State() : m_actPage(0), m_numPages(0)
   {
   }
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
-
-  /** the ole parser */
-  shared_ptr<MWAWOLEParser> m_oleParser;
-  shared_ptr<MsWks4Zone> m_headerParser /**parser of the header ole*/, m_footerParser /**parser of the footer ole*/,
-             m_footnoteParser /**parser of the footnote ole*/;
-  /**the frame parsers: name-> parser*/
-  std::map<std::string, shared_ptr<MsWks4Zone> > m_frameParserMap;
-  //! the list of unparsed OLEs
-  std::vector<std::string> m_unparsedOlesName;
 };
 }
 
