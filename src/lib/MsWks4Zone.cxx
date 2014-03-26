@@ -48,7 +48,6 @@
 #include "MsWksGraph.hxx"
 #include "MsWksDocument.hxx"
 
-#include "MsWks4Parser.hxx"
 #include "MsWks4Text.hxx"
 
 #include "MsWks4Zone.hxx"
@@ -167,7 +166,7 @@ struct State {
 ////////////////////////////////////////////////////////////
 MsWks4Zone::MsWks4Zone(MWAWInputStreamPtr input, MWAWParserStatePtr parserState,
                        MWAWParser &parser, std::string const &oleName) :
-  m_mainParser(&parser), m_parserState(parserState), m_state(), m_document(), m_newPage(0)
+  m_mainParser(&parser), m_parserState(parserState), m_state(), m_document()
 {
   m_document.reset(new MsWksDocument(input, parser));
   setAscii(oleName);
@@ -452,8 +451,6 @@ bool MsWks4Zone::parseHeaderIndex(MWAWInputStreamPtr &input)
 bool MsWks4Zone::createZones(bool mainOle)
 {
   if (m_state->m_parsed) return true;
-  // time to add the different callback to the documents
-  m_document->m_newPage=m_newPage;
 
   std::multimap<std::string, MWAWEntry> &entryMap=m_document->getEntryMap();
   MWAWInputStreamPtr input = m_document->getInput();

@@ -69,7 +69,6 @@
 #include "MindWrtParser.hxx"
 #include "MoreParser.hxx"
 #include "MsWksParser.hxx"
-#include "MsWks4Parser.hxx"
 #include "MsWksDRParser.hxx"
 #include "MsWksSSParser.hxx"
 #include "MsWrd1Parser.hxx"
@@ -643,10 +642,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
         parser.reset(new MsWrdParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
-      if (header->getMajorVersion() < 100)
-        parser.reset(new MsWksParser(input, rsrcParser, header));
-      else
-        parser.reset(new MsWks4Parser(input, rsrcParser, header));
+      parser.reset(new MsWksParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_NISUSWRITER:
       parser.reset(new NisusWrtParser(input, rsrcParser, header));

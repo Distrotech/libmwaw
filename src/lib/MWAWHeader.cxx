@@ -220,11 +220,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
     }
     else if (creator=="MSWD") {
-      if (type=="WDBN") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 3));
-        return res;
-      }
-      if (type=="GLOS") {
+      if (type=="WDBN" || type=="GLOS") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, 3));
         return res;
       }
@@ -235,17 +231,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
       if (type=="AWDR") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, input->isStructured() ? 104: 3,
-                                 MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
       if (type=="AWSS") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, input->isStructured() ? 104: 3,
-                                 MWAWDocument::MWAW_K_SPREADSHEET));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 2, MWAWDocument::MWAW_K_SPREADSHEET));
         return res;
       }
       if (type=="RLRB" || type=="sWRB") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4));
         return res;
       }
     }
@@ -531,17 +525,17 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1 && input->isStructured()) {
     MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
     if (mainOle && mainOle->readULong(4) == 0x43484e4b)
-      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4));
     else if (mainOle && mainOle->size()>18) {
       mainOle->seek(16, librevenge::RVNG_SEEK_SET);
       int value=(int) mainOle->readULong(2);
       switch (value) {
       // case 2: database
       case 3:
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104, MWAWDocument::MWAW_K_SPREADSHEET));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4, MWAWDocument::MWAW_K_SPREADSHEET));
         break;
       case 12:
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104, MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4, MWAWDocument::MWAW_K_DRAW));
         break;
       default:
         break;

@@ -318,10 +318,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\src\lib\MsWks4Parser.cxx">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="..\..\src\lib\MsWks4Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -612,7 +608,6 @@
     <ClInclude Include="..\..\src\lib\MarinerWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksParser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks3Text.hxx" />
-    <ClInclude Include="..\..\src\lib\MsWks4Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks4Text.hxx" />
     <ClInclude Include="..\..\src\lib\MsWks4Zone.hxx" />
     <ClInclude Include="..\..\src\lib\MsWksDRParser.hxx" />

@@ -45,21 +45,17 @@
 
 #include "MsWksDocument.hxx"
 
-class MsWks4Parser;
+class MsWksParser;
 class MsWksDRParser;
 
 namespace MsWks4ZoneInternal
 {
 struct State;
 }
-namespace MsWks4ParserInternal
-{
-class SubDocument;
-}
 
 /** The class which parses the main zones of a mac MS Works document v4
  *
- * This class must be associated with a MsWks4Parser, which gives it the oles to parse.
+ * This class must be associated with a MsWksParser or a MsWksDocument, which gives it the oles to parse.
  * This oles can be MN0, MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes
  * and  MacWorks/QFrm\<number\> .
  *
@@ -76,10 +72,9 @@ class SubDocument;
  */
 class MsWks4Zone
 {
-  friend class MsWks4ParserInternal::SubDocument;
   friend class MsWksDocument;
   friend class MsWksDRParser;
-  friend class MsWks4Parser;
+  friend class MsWksParser;
   friend class MsWks4Text;
 
 public:
@@ -178,9 +173,6 @@ protected:
 
   //! the zone data
   shared_ptr<MsWksDocument> m_document;
-
-  /** the new page callback */
-  MsWksDocument::NewPage m_newPage;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

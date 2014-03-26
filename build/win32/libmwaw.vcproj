@@ -392,10 +392,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\lib\MsWks4Parser.cxx"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\lib\MsWks4Text.cxx"
 				>
 			</File>
@@ -850,10 +846,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MsWks3Text.hxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\MsWks4Parser.hxx"
 				>
 			</File>
 			<File

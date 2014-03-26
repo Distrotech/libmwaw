@@ -87,6 +87,9 @@ protected:
   // low level
   //
 
+  //! tries to parse the ole zones which have not yet been parsed
+  void flushExtra();
+
 protected:
   //
   // data

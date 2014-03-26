@@ -51,7 +51,6 @@ class SubDocument;
 }
 
 class MsWksParser;
-class MsWks4Parser;
 class MsWksDRParser;
 class MsWksSSParser;
 class MsWks4Zone;
@@ -66,7 +65,6 @@ class MsWksDocument
 {
   friend class MsWksDocumentInternal::SubDocument;
   friend class MsWksParser;
-  friend class MsWks4Parser;
   friend class MsWks4Zone;
   friend class MsWksDRParser;
   friend class MsWksSSParser;

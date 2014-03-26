@@ -307,10 +307,6 @@ SOURCE=..\..\src\lib\MsWks3Text.cxx
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\lib\MsWks4Parser.cxx
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\src\lib\MsWks4Text.cxx
 # End Source File
 # Begin Source File
@@ -764,10 +760,6 @@ SOURCE=..\..\src\lib\MsWksParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MsWks3Text.hxx
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\src\lib\MsWks4Parser.hxx
 # End Source File
 # Begin Source File
 
