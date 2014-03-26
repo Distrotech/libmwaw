@@ -79,20 +79,9 @@ protected:
 
   //! finds the different objects zones
   bool createZones();
-  //! finds the different OLE zones
-  bool createOLEZones();
 
   //! adds a new page
   void newPage(int number, bool softBreak=false);
-
-  //
-  // interface with MsWksDocument
-  //
-
-  /** send the textbox content */
-  void sendTextbox(MWAWEntry const &entry, std::string const &frame);
-  //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle);
 
   //
   // low level

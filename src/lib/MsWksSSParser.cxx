@@ -209,6 +209,7 @@ MsWksSSParser::MsWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcPar
   MWAWSpreadsheetParser(input, rsrcParser, header), m_state(), m_listZones(), m_document()
 {
   MWAWInputStreamPtr mainInput=input;
+  if (!input) return;
   if (input->isStructured()) {
     MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
     if (mainOle) {
@@ -240,9 +241,7 @@ void MsWksSSParser::init()
 ////////////////////////////////////////////////////////////
 void MsWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
-  assert(m_document && m_document->getInput());
-
-  if (!m_document || !checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!m_document || !m_document->getInput() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
 #ifdef DEBUG
@@ -364,6 +363,8 @@ void MsWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documen
 ////////////////////////////////////////////////////////////
 bool MsWksSSParser::createZones()
 {
+  if (getInput()->isStructured())
+    m_document->createOLEZones(getInput());
   MWAWInputStreamPtr input = m_document->getInput();
   const int vers=version();
   long pos;
@@ -1188,7 +1189,7 @@ bool MsWksSSParser::sendSpreadsheet()
 bool MsWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = MsWksSSParserInternal::State();
-  if (!m_document->checkHeader3(header, strict)) return false;
+  if (!m_document || !m_document->checkHeader3(header, strict)) return false;
   if (m_document->getKind() != MWAWDocument::MWAW_K_SPREADSHEET)
     return false;
 #ifndef DEBUG

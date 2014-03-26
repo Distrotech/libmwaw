@@ -252,39 +252,21 @@ MWAWEntry MsWks4Zone::getTextPosition() const
 ////////////////////////////////////////////////////////////
 // create the main listener ( given a header and a footer document)
 ////////////////////////////////////////////////////////////
-MWAWTextListenerPtr MsWks4Zone::createListener
-(librevenge::RVNGTextInterface *interface, MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer)
+MWAWTextListenerPtr MsWks4Zone::createListener(librevenge::RVNGTextInterface *interface)
 {
-  MWAWPageSpan ps(m_parserState->m_pageSpan);
-
-  if (header) {
-    MWAWHeaderFooter hF(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument=header;
-    ps.setHeaderFooter(hF);
-  }
-  if (footer) {
-    MWAWHeaderFooter hF(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument=footer;
-    ps.setHeaderFooter(hF);
-  }
-
-  int numPages = m_document->getTextParser4()->numPages();
-  int graphPages = m_document->getGraphParser()->numPages(-1);
-  if (graphPages>numPages) numPages = graphPages;
+  std::vector<MWAWPageSpan> pageList;
+  m_state->m_actPage = 0;
+  m_document->getPageSpanList(pageList, m_state->m_numPages);
+  MWAWTextListenerPtr res(new MWAWTextListener(*m_parserState, pageList, interface));
 
   // ok, now we can update the page position
   std::vector<int> linesH, pagesH;
-  pagesH.resize(size_t(numPages)+1, int(72.*getTextHeight()));
+  pagesH.resize(size_t(m_state->m_numPages), int(72.*getTextHeight()));
   m_document->getGraphParser()->computePositions(-1, linesH, pagesH);
   m_document->getGraphParser()->setPageLeftTop
   (Vec2f(72.f*float(m_parserState->m_pageSpan.getMarginLeft()),
          72.f*float(m_parserState->m_pageSpan.getMarginTop())+float(m_state->m_headerHeight)));
 
-  // create all the pages + an empty page, if we have some remaining data...
-  ps.setPageSpan(numPages+1);
-  std::vector<MWAWPageSpan> pageList(1,ps);
-  m_state->m_numPages=numPages+1;
-  MWAWTextListenerPtr res(new MWAWTextListener(*m_parserState, pageList, interface));
   return res;
 }
 

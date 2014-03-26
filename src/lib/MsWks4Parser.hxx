@@ -47,7 +47,6 @@
 namespace MsWks4ParserInternal
 {
 struct State;
-class SubDocument;
 }
 
 class MsWks4Zone;
@@ -62,7 +61,6 @@ class MsWks4Zone;
  */
 class MsWks4Parser : public MWAWTextParser
 {
-  friend class MsWks4ParserInternal::SubDocument;
   friend class MsWks4Zone;
 public:
   //! construtor
@@ -86,22 +84,6 @@ protected:
 
   //! adds a new page
   void newPage(int number, bool soft=false);
-
-  //
-  // subdocument helper
-  //
-
-  /** creates a subdocument corresponding to a footnote (indicated by id)
-   *
-   * \note if \a id < 0 meaning that the text corresponding to the note was not
-   * found, an empty footnote will be created */
-  void sendFootNote(int id);
-
-  /** send the frame text */
-  void sendFrameText(MWAWEntry const &entry, std::string const &frame);
-
-  //! send an OLE zone
-  void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &frameStyle);
 
 private:
   MsWks4Parser(MsWks4Parser const &orig);

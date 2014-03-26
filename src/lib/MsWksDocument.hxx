@@ -146,6 +146,14 @@ public:
   bool readGroup(Zone &zone, MWAWEntry &entry, int check);
 
   //
+  // read some ole structures
+  //
+
+  //! finds the different OLE zones
+  bool createOLEZones(MWAWInputStreamPtr input);
+  //! returns the list of unparsed OLE zones
+  std::vector<std::string> const &getUnparsedOLEZones() const;
+  //
   // utilities functions
   //
 
@@ -178,6 +186,8 @@ public:
 
   //! tries to create a new page
   void newPage(int page, bool softBreak=false);
+  /** try to send a footnote content (v4 document) */
+  void sendFootnoteContent(int noteId);
   //! tries to send a footnote
   void sendFootnote(int id);
   /** try to send a text zone  (v1-v3 document) */
@@ -218,10 +228,12 @@ public:
   shared_ptr<MWAWParserState> m_parserState;
 
 protected:
-  //! the input which can be an OLE in MSWorks 4 file
-  MWAWInputStreamPtr m_input;
   //! the main parser
   MWAWParser *m_parser;
+  //! the parent document (if this is not the main document)
+  MsWksDocument *m_parentDocument;
+  //! the input which can be an OLE in MSWorks 4 file
+  MWAWInputStreamPtr m_input;
   //! the debug file of the actual input
   libmwaw::DebugFile m_asciiFile;
 

@@ -45,7 +45,6 @@
 #include "MWAWOLEParser.hxx"
 #include "MWAWPosition.hxx"
 #include "MWAWRSRCParser.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "MsWksGraph.hxx"
 #include "MsWks4Zone.hxx"
@@ -55,85 +54,6 @@
 /** Internal: the structures of a MsWks4Parser */
 namespace MsWks4ParserInternal
 {
-//! Internal: the subdocument of a MsWks4Parser
-class SubDocument : public MWAWSubDocument
-{
-public:
-  //! type of an entry stored in textId
-  enum Type { Unknown, MN };
-  //! constructor for a note with identificator \a ntId
-  SubDocument(MsWks4Parser *pars, MsWks4Zone *OLEZone, MWAWInputStreamPtr input, int ntId)
-    : MWAWSubDocument(pars, input, MWAWEntry()), m_OLEZone(OLEZone), m_noteId(ntId) { }
-  //! constructor for a text/frame entry
-  SubDocument(MsWks4Parser *pars, MsWks4Zone *OLEZone, MWAWInputStreamPtr input, MWAWEntry const &entry) :
-    MWAWSubDocument(pars, input, entry), m_OLEZone(OLEZone), m_noteId(-1) {}
-  //! destructor
-  ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const;
-  //! operator==
-  virtual bool operator==(MWAWSubDocument const &doc) const
-  {
-    return !operator!=(doc);
-  }
-
-  //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  //! the main zone
-  MsWks4Zone *m_OLEZone;
-  //! the note identificator
-  int m_noteId;
-};
-
-// implementation
-bool SubDocument::operator!=(MWAWSubDocument const &doc) const
-{
-  if (MWAWSubDocument::operator!=(doc)) return true;
-  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-  if (!sDoc) return true;
-  if (m_noteId != sDoc->m_noteId) return true;
-  if (m_OLEZone != sDoc->m_OLEZone) return true;
-  return false;
-}
-
-void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWks4Parser::SubDocument::parse: no listener\n"));
-    return;
-  }
-  if (!m_parser || !m_OLEZone) {
-    if (type != libmwaw::DOC_NOTE) {
-      MWAW_DEBUG_MSG(("SubDocument::parse: no zone\n"));
-    }
-    listener->insertChar(' ');
-    return;
-  }
-  // the foot note
-  if (type == libmwaw::DOC_NOTE) {
-    m_OLEZone->createZones(false);
-    m_OLEZone->readFootNote(m_noteId);
-    return;
-  }
-
-  if (m_zone.isParsed() && type != libmwaw::DOC_HEADER_FOOTER) {
-    listener->insertChar(' ');
-    MWAW_DEBUG_MSG(("SubDocument::parse: this zone is already parsed\n"));
-    return;
-  }
-  m_zone.setParsed(true);
-  if (m_zone.id() != MN) {
-    listener->insertChar(' ');
-    MWAW_DEBUG_MSG(("SubDocument::parse: send not MN entry is not implemented\n"));
-    return;
-  }
-  m_OLEZone->createZones(false);
-  m_OLEZone->readContentZones(m_zone, false);
-}
-
 //! Internal: the state of a MsWks4Parser
 struct State {
   //! constructor
@@ -157,6 +77,13 @@ struct State {
 MsWks4Parser::MsWks4Parser(MWAWInputStreamPtr inp, MWAWRSRCParserPtr rsrcParser, MWAWHeader *head) : MWAWTextParser(inp, rsrcParser, head), m_state()
 {
   m_state.reset(new MsWks4ParserInternal::State);
+  if (!getInput() || !getInput()->isStructured())
+    return;
+  MWAWInputStreamPtr mainOle = getInput()->getSubStreamByName("MN0");
+  if (!mainOle) return;
+
+  m_state->m_mn0Parser.reset(new MsWks4Zone(mainOle, getParserState(), *this, "MN0"));
+  m_state->m_mn0Parser->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks4Parser::newPage);
 }
 
 MsWks4Parser::~MsWks4Parser()
@@ -196,18 +123,8 @@ void MsWks4Parser::parse(librevenge::RVNGTextInterface *interface)
     throw (libmwaw::ParseException());
   }
 
-  // time to create the header, ...
-  MWAWEntry empty;
-  empty.setId(MsWks4ParserInternal::SubDocument::MN);
-  MWAWSubDocumentPtr header, footer;
-  if (m_state->m_headerParser.get() != 0)
-    header.reset(new MsWks4ParserInternal::SubDocument(this, m_state->m_headerParser.get(), m_state->m_headerParser->getInput(), empty));
-  if (m_state->m_footerParser.get() != 0)
-    footer.reset(new MsWks4ParserInternal::SubDocument(this, m_state->m_footerParser.get(), m_state->m_footerParser->getInput(), empty));
-
   // and the listener
-  MWAWTextListenerPtr listener
-    = m_state->m_mn0Parser->createListener(interface, header, footer);
+  MWAWTextListenerPtr listener = m_state->m_mn0Parser->createListener(interface);
   if (!listener) {
     MWAW_DEBUG_MSG(("MsWks4Parser::parse: does not have listener\n"));
     throw (libmwaw::ParseException());
@@ -230,92 +147,11 @@ void MsWks4Parser::parse(librevenge::RVNGTextInterface *interface)
 ////////////////////////////////////////////////////////////
 bool MsWks4Parser::createStructures()
 {
-  MWAWInputStreamPtr &input= getInput();
-  assert(input.get());
-  if (!checkHeader(getHeader()))
+  if (!checkHeader(getHeader()) || !m_state->m_mn0Parser || !m_state->m_mn0Parser->createZones(true))
     throw libmwaw::ParseException();
-
-  m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
-
-  if (!m_state->m_oleParser->parse(input)) return false;
-
-  // normally,
-  // MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes, MacWorks/QFrm<number>
-  // MN0 (the main header)
-  std::vector<std::string> unparsed = m_state->m_oleParser->getNotParse();
-
-  size_t numUnparsed = unparsed.size();
-  unparsed.push_back("MN0");
-
-  for (size_t i = 0; i <= numUnparsed; i++) {
-    std::string const &name = unparsed[i];
-
-    // separated the directory and the name
-    //    MatOST/MatadorObject1/Ole10Native
-    //      -> dir="MatOST/MatadorObject1", base="Ole10Native"
-    std::string::size_type pos = name.find_last_of('/');
-    std::string dir, base;
-    if (pos == std::string::npos) base = name;
-    else if (pos == 0) base = name.substr(1);
-    else {
-      dir = name.substr(0,pos);
-      base = name.substr(pos+1);
-    }
-
-    bool ok = (dir == "" && base == "MN0"), mainOle = true;
-    bool isFrame = false;
-    if (!ok && dir == "MacWorks") {
-      ok = (base == "QHdr" || base == "QFtr" || base == "QFootnotes");
-      if (!ok && strncmp(base.c_str(),"QFrm",4)==0)
-        ok = isFrame = true;
-      mainOle = false;
-    }
-    if (!ok) {
-      m_state->m_unparsedOlesName.push_back(name);
-      continue;
-    }
-
-    MWAWInputStreamPtr ole = input->getSubStreamByName(name.c_str());
-    if (!ole.get()) {
-      MWAW_DEBUG_MSG(("MsWks4Parser::createStructures: error: can not find OLE part: \"%s\"\n", name.c_str()));
-      continue;
-    }
-
-    shared_ptr<MsWks4Zone> newParser(new MsWks4Zone(ole, getParserState(), *this, name));
-    if (mainOle)
-      newParser->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWks4Parser::newPage);
-    newParser->m_sendFootnote=static_cast<MsWksDocument::SendFootnote>(&MsWks4Parser::sendFootNote);
-    newParser->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWks4Parser::sendFrameText);
-    newParser->m_sendOLE=static_cast<MsWksDocument::SendOLE>(&MsWks4Parser::sendOLE);
-
-    try {
-      ok = newParser->createZones(mainOle);
-    }
-    catch (...) {
-      ok = false;
-    }
-
-    if (!ok) {
-      MWAW_DEBUG_MSG(("MsWks4Parser::createStructures: error: can not parse OLE: \"%s\"\n", name.c_str()));
-      continue;
-    }
-
-    if (mainOle) m_state->m_mn0Parser = newParser;
-    else if (base == "QHdr") m_state->m_headerParser = newParser;
-    else if (base == "QFtr") m_state->m_footerParser = newParser;
-    else if (isFrame) {
-      std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
-        m_state->m_frameParserMap.find(base);
-      if (frameIt != m_state->m_frameParserMap.end()) {
-        MWAW_DEBUG_MSG(("MsWks4Parser::createStructures: error: oops, I already find a frame zone %s\n", base.c_str()));
-      }
-      else
-        m_state->m_frameParserMap[base] = newParser;
-    }
-    else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
-  }
-
-  return (m_state->m_mn0Parser.get() != 0);
+  if (getInput())
+    m_state->m_mn0Parser->m_document->createOLEZones(getInput());
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -326,12 +162,13 @@ void MsWks4Parser::flushExtra()
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) return;
 
-  size_t numUnparsed = m_state->m_unparsedOlesName.size();
+  std::vector<std::string> unparsedOLEs=m_state->m_mn0Parser->m_document->getUnparsedOLEZones();
+  size_t numUnparsed = unparsedOLEs.size();
   if (numUnparsed == 0) return;
 
   bool first = true;
   for (size_t i = 0; i < numUnparsed; i++) {
-    std::string const &name = m_state->m_unparsedOlesName[i];
+    std::string const &name = unparsedOLEs[i];
     MWAWInputStreamPtr ole = getInput()->getSubStreamByName(name.c_str());
     if (!ole.get()) {
       MWAW_DEBUG_MSG(("Works4: error: can not find OLE part: \"%s\"\n", name.c_str()));
@@ -382,69 +219,6 @@ bool MsWks4Parser::checkHeader(MWAWHeader *header, bool /*strict*/)
   if (header)
     header->reset(MWAWDocument::MWAW_T_MICROSOFTWORKS, 104);
   return true;
-}
-
-////////////////////////////////////////////////////////////
-// subdocument helper
-////////////////////////////////////////////////////////////
-void MsWks4Parser::sendFootNote(int id)
-{
-  MWAWTextListenerPtr listener=getTextListener();
-  if (!listener) return;
-
-  MsWks4Zone *parser = m_state->m_footnoteParser.get();
-
-  if (!parser) {
-    MWAW_DEBUG_MSG(("MsWks4Parser::sendFootNote: can not find footnote ole\n"));
-    MWAWSubDocumentPtr subdoc(new MsWks4ParserInternal::SubDocument(this, 0L, MWAWInputStreamPtr(), -1));
-    listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
-    return;
-  }
-
-  MWAWSubDocumentPtr subdoc(new MsWks4ParserInternal::SubDocument(this, parser, parser->getInput(), id));
-  listener->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
-}
-
-void MsWks4Parser::sendFrameText(MWAWEntry const &entry, std::string const &frame)
-{
-  MWAWTextListenerPtr listener=getTextListener();
-  if (!listener) return;
-
-  if (entry.length()==0) {
-    listener->insertChar(' ');
-    return;
-  }
-
-  MsWks4Zone *parser = 0;
-  std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
-    m_state->m_frameParserMap.find(frame);
-  if (frameIt != m_state->m_frameParserMap.end())
-    parser = frameIt->second.get();
-  if (!parser || parser->getTextPosition().length() < entry.end()) {
-    MWAW_DEBUG_MSG(("MsWks4Parser::sendFrameText: can not find frame ole: %s\n", frame.c_str()));
-    listener->insertChar(' ');
-    return;
-  }
-
-  // ok, create the entry
-  MWAWEntry ent(entry);
-  ent.setBegin(entry.begin()+parser->getTextPosition().begin());
-  parser->createZones(false);
-  parser->readContentZones(ent, false);
-}
-
-void MsWks4Parser::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
-{
-  if (!getTextListener()) return;
-
-  librevenge::RVNGBinaryData data;
-  MWAWPosition pos;
-  std::string type;
-  if (!m_state->m_oleParser->getObject(id, data, pos, type)) {
-    MWAW_DEBUG_MSG(("MsWks4Parser::sendOLE: can not find OLE%d\n", id));
-    return;
-  }
-  getTextListener()->insertPicture(pictPos, data, type, style);
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

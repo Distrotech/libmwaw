@@ -41,6 +41,7 @@
 
 #include "MWAWTextListener.hxx"
 #include "MWAWHeader.hxx"
+#include "MWAWOLEParser.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPosition.hxx"
@@ -52,6 +53,7 @@
 #include "MsWksGraph.hxx"
 #include "MsWks3Text.hxx"
 #include "MsWks4Text.hxx"
+#include "MsWks4Zone.hxx"
 
 #include "MsWksDocument.hxx"
 
@@ -64,6 +66,7 @@ namespace MsWksDocumentInternal
 struct State {
   //! constructor
   State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_fileHeaderSize(0), m_typeZoneMap(), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
+    m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
@@ -77,6 +80,17 @@ struct State {
   //! the list of entries, name->entry ( for v4 document)
   std::multimap<std::string, MWAWEntry> m_entryMap;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
+
+  // ole data
+  /** the ole parser */
+  shared_ptr<MWAWOLEParser> m_oleParser;
+  shared_ptr<MsWks4Zone> m_headerParser /**parser of the header ole*/, m_footerParser /**parser of the footer ole*/,
+             m_footnoteParser /**parser of the footnote ole*/;
+  /**the frame parsers: name-> parser*/
+  std::map<std::string, shared_ptr<MsWks4Zone> > m_frameParserMap;
+  //! the list of unparsed OLEs
+  std::vector<std::string> m_unparsedOlesName;
+
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -88,7 +102,7 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  enum Type { Zone, Text };
+  enum Type { Note, OLE, Zone, Text };
   SubDocument(MsWksDocument &document, MWAWInputStreamPtr input, Type type,
               int zoneId) :
     MWAWSubDocument(document.m_parser, input, MWAWEntry()), m_document(document), m_type(type), m_id(zoneId) {}
@@ -126,6 +140,16 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 
   long pos = m_input->tell();
   switch (m_type) {
+  case Note:
+    m_document.sendFootnoteContent(m_id);
+    break;
+  case OLE:
+    if (m_id==MsWksDocument::Z_HEADER) m_document.sendTextbox(MWAWEntry(),"QHdr");
+    else if (m_id==MsWksDocument::Z_FOOTER) m_document.sendTextbox(MWAWEntry(),"QFtr");
+    else {
+      MWAW_DEBUG_MSG(("MsWksDocument::SubDocument::parse: unexpected ole zone %d\n", m_id));
+    }
+    break;
   case Text:
     m_document.sendText(m_id);
     break;
@@ -155,12 +179,11 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, accessor functions...
 ////////////////////////////////////////////////////////////
 MsWksDocument::MsWksDocument(MWAWInputStreamPtr input, MWAWParser &parser) :
-  m_state(), m_parserState(parser.getParserState()), m_input(input), m_parser(&parser), m_asciiFile(),
-  m_graphParser(), m_textParser3(), m_textParser4(),
+  m_state(), m_parserState(parser.getParserState()), m_parser(&parser), m_parentDocument(0),
+  m_input(input), m_asciiFile(), m_graphParser(), m_textParser3(), m_textParser4(),
   m_newPage(0), m_sendFootnote(0), m_sendTextbox(0), m_sendOLE(0)
 {
-  m_state.reset(new MsWksDocumentInternal::State);
-
+  m_state.reset(new MsWksDocumentInternal::State());
   m_graphParser.reset(new MsWksGraph(*this));
 }
 
@@ -242,6 +265,18 @@ void MsWksDocument::sendZone(int zoneType)
   if (zone.m_textId >= 0) sendText(zone.m_textId);
 }
 
+void MsWksDocument::sendFootnoteContent(int noteId)
+{
+  if (!m_parserState->getMainListener()) return;
+  if (!m_state->m_footnoteParser) {
+    MWAW_DEBUG_MSG(("MsWksDocument::sendFootnoteContent: can not found the footnote parser\n"));
+    m_parserState->getMainListener()->insertChar(' ');
+    return;
+  }
+  m_state->m_footnoteParser->createZones(false);
+  m_state->m_footnoteParser->readFootNote(noteId);
+}
+
 ////////////////////////////////////////////////////////////
 // page span function
 ////////////////////////////////////////////////////////////
@@ -265,9 +300,11 @@ void MsWksDocument::getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &n
   Zone mainZone=getZone(Z_MAIN);
   // first count the page
   numPages = 1;
-  if (mainZone.m_textId >= 0 && m_textParser3 && m_textParser3->numPages(mainZone.m_textId) > numPages)
+  if (m_textParser3 && mainZone.m_textId >= 0 && m_textParser3->numPages(mainZone.m_textId) > numPages)
     numPages = m_textParser3->numPages(mainZone.m_textId);
-  if (mainZone.m_zoneId >= 0 && m_graphParser->numPages(mainZone.m_zoneId) > numPages)
+  if (m_textParser4 && m_textParser4->numPages() > numPages)
+    numPages = m_textParser4->numPages();
+  if (m_graphParser->numPages(mainZone.m_zoneId) > numPages)
     numPages = m_graphParser->numPages(mainZone.m_zoneId);
   // now update the page list
   MWAWPageSpan ps(m_parserState->m_pageSpan);
@@ -287,6 +324,13 @@ void MsWksDocument::getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &n
      (*this, getInput(), MsWksDocumentInternal::SubDocument::Zone, int(MsWksDocument::Z_HEADER)));
     ps.setHeaderFooter(header);
   }
+  else if (m_state->m_headerParser) {
+    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    header.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::OLE, int(MsWksDocument::Z_HEADER)));
+    ps.setHeaderFooter(header);
+  }
   id = m_textParser3 ? m_textParser3->getFooter() : -1;
   if (id >= 0) {
     m_state->m_footerHeight=12;
@@ -303,6 +347,13 @@ void MsWksDocument::getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &n
      (*this, getInput(), MsWksDocumentInternal::SubDocument::Zone, int(MsWksDocument::Z_FOOTER)));
     ps.setHeaderFooter(footer);
   }
+  else if (m_state->m_footerParser) {
+    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    footer.m_subDocument.reset
+    (new MsWksDocumentInternal::SubDocument
+     (*this, getInput(), MsWksDocumentInternal::SubDocument::OLE, int(MsWksDocument::Z_FOOTER)));
+    ps.setHeaderFooter(footer);
+  }
   ps.setPageSpan(numPages+1);
   pagesList=std::vector<MWAWPageSpan>(1,ps);
 }
@@ -312,6 +363,8 @@ void MsWksDocument::getPageSpanList(std::vector<MWAWPageSpan> &pagesList, int &n
 ////////////////////////////////////////////////////////////
 void MsWksDocument::newPage(int page, bool softBreak)
 {
+  if (m_parentDocument)
+    return m_parentDocument->newPage(page, softBreak);
   if (!m_newPage) {
     MWAW_DEBUG_MSG(("MsWksDocument::newPage: can not find the newPage callback\n"));
     return;
@@ -321,20 +374,33 @@ void MsWksDocument::newPage(int page, bool softBreak)
 
 void MsWksDocument::sendFootnote(int id)
 {
-  if (!m_sendFootnote) {
-    MWAW_DEBUG_MSG(("MsWksDocument::sendFootnote: can not find the sendFootnote callback\n"));
-    return;
-  }
-  (m_parser->*m_sendFootnote)(id);
+  if (m_parentDocument)
+    return m_parentDocument->sendFootnote(id);
+  if (m_sendFootnote)
+    return (m_parser->*m_sendFootnote)(id);
+  if (!m_parserState->getMainListener()) return;
+
+  MWAWSubDocumentPtr subdoc(new MsWksDocumentInternal::SubDocument
+                            (*this, getInput(), MsWksDocumentInternal::SubDocument::Note, id));
+  m_parserState->getMainListener()->insertNote(MWAWNote(MWAWNote::FootNote), subdoc);
 }
 
-void MsWksDocument::sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style)
+void MsWksDocument::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
 {
-  if (!m_sendOLE) {
-    MWAW_DEBUG_MSG(("MsWksDocument::sendOLE: can not find the sendOLE callback\n"));
+  if (m_parentDocument)
+    return m_parentDocument->sendOLE(id, pictPos, style);
+  if (m_sendOLE)
+    return (m_parser->*m_sendOLE)(id, pictPos, style);
+
+  if (!m_parserState->getMainListener()) return;
+  librevenge::RVNGBinaryData data;
+  MWAWPosition pos;
+  std::string type;
+  if (!m_state->m_oleParser->getObject(id, data, pos, type)) {
+    MWAW_DEBUG_MSG(("MsWksDocument::sendOLE: can not find OLE%d\n", id));
     return;
   }
-  (m_parser->*m_sendOLE)(id, pos, style);
+  m_parserState->getMainListener()->insertPicture(pictPos, data, type, style);
 }
 
 void MsWksDocument::sendRBIL(int id, Vec2i const &sz)
@@ -349,13 +415,38 @@ void MsWksDocument::sendRBIL(int id, Vec2i const &sz)
 
 void MsWksDocument::sendTextbox(MWAWEntry const &entry, std::string const &frame)
 {
-  if (!m_sendTextbox) {
-    MWAW_DEBUG_MSG(("MsWksDocument::sendTextbox: can not find the sendTextbox callback\n"));
-    if (m_parserState->getMainListener())
-      m_parserState->getMainListener()->insertChar(' ');
+  if (m_parentDocument)
+    return m_parentDocument->sendTextbox(entry,frame);
+  if (m_sendTextbox)
+    return (m_parser->*m_sendTextbox)(entry,frame);
+  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener) return;
+
+  if (entry.length()==0) {
+    listener->insertChar(' ');
     return;
   }
-  (m_parser->*m_sendTextbox)(entry,frame);
+
+  MsWks4Zone *parser = 0;
+  if (frame == "QHdr") parser=m_state->m_headerParser.get();
+  else if (frame == "QFtr") parser=m_state->m_footerParser.get();
+  else {
+    std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
+      m_state->m_frameParserMap.find(frame);
+    if (frameIt != m_state->m_frameParserMap.end())
+      parser = frameIt->second.get();
+  }
+  if (!parser || (entry.length() && parser->getTextPosition().length() < entry.end())) {
+    MWAW_DEBUG_MSG(("MsWksDocument::sendTextbox: can not find frame ole: %s\n", frame.c_str()));
+    listener->insertChar(' ');
+    return;
+  }
+
+  // ok, create the entry
+  MWAWEntry ent(entry);
+  ent.setBegin(entry.begin()+parser->getTextPosition().begin());
+  parser->createZones(false);
+  parser->readContentZones(ent, false);
 }
 
 ////////////////////////////////////////////////////////////
@@ -481,6 +572,95 @@ bool MsWksDocument::getColor(int id, MWAWColor &col, int vers)
 // Low level
 //
 ////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// create the ole structures or get list of unparsed zones
+////////////////////////////////////////////////////////////
+std::vector<std::string> const &MsWksDocument::getUnparsedOLEZones() const
+{
+  return m_state->m_unparsedOlesName;
+}
+
+bool MsWksDocument::createOLEZones(MWAWInputStreamPtr input)
+{
+  if (!input || !input->isStructured()) return false;
+  m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
+
+  if (!m_state->m_oleParser->parse(input)) return false;
+
+  // normally,
+  // MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes, MacWorks/QFrm<number>
+  // MN0 (the main header)
+  std::vector<std::string> unparsed = m_state->m_oleParser->getNotParse();
+
+  size_t numUnparsed = unparsed.size();
+  unparsed.push_back("MN0");
+
+  for (size_t i = 0; i <= numUnparsed; i++) {
+    std::string const &name = unparsed[i];
+
+    // separated the directory and the name
+    //    MatOST/MatadorObject1/Ole10Native
+    //      -> dir="MatOST/MatadorObject1", base="Ole10Native"
+    std::string::size_type pos = name.find_last_of('/');
+    std::string dir, base;
+    if (pos == std::string::npos) base = name;
+    else if (pos == 0) base = name.substr(1);
+    else {
+      dir = name.substr(0,pos);
+      base = name.substr(pos+1);
+    }
+
+    if (dir == "" && base == "MN0") continue;
+    bool ok = false;
+    bool isFrame = false;
+    if (!ok && dir == "MacWorks") {
+      ok = (base == "QHdr" || base == "QFtr" || base == "QFootnotes");
+      if (!ok && strncmp(base.c_str(),"QFrm",4)==0)
+        ok = isFrame = true;
+    }
+    if (!ok) {
+      m_state->m_unparsedOlesName.push_back(name);
+      continue;
+    }
+
+    MWAWInputStreamPtr ole = input->getSubStreamByName(name.c_str());
+    if (!ole.get()) {
+      MWAW_DEBUG_MSG(("MsWksDocument::createOLEZones: error: can not find OLE part: \"%s\"\n", name.c_str()));
+      continue;
+    }
+
+    shared_ptr<MsWks4Zone> newParser(new MsWks4Zone(ole, m_parserState, *m_parser, name));
+    try {
+      ok = newParser->createZones(false);
+    }
+    catch (...) {
+      ok = false;
+    }
+
+    if (!ok) {
+      MWAW_DEBUG_MSG(("MsWksDocument::createOLEZones: error: can not parse OLE: \"%s\"\n", name.c_str()));
+      continue;
+    }
+
+    // first update the parent document
+    newParser->m_document->m_parentDocument=this;
+    if (base == "QHdr") m_state->m_headerParser = newParser;
+    else if (base == "QFtr") m_state->m_footerParser = newParser;
+    else if (isFrame) {
+      std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
+        m_state->m_frameParserMap.find(base);
+      if (frameIt != m_state->m_frameParserMap.end()) {
+        MWAW_DEBUG_MSG(("MsWksDocument::createOLEZones: error: oops, I already find a frame zone %s\n", base.c_str()));
+      }
+      else
+        m_state->m_frameParserMap[base] = newParser;
+    }
+    else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
+  }
+
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read the print info

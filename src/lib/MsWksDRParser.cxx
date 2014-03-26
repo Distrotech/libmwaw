@@ -111,8 +111,6 @@ void MsWksDRParser::init()
   getPageSpan().setMargins(0.1);
 
   m_document->m_newPage=static_cast<MsWksDocument::NewPage>(&MsWksDRParser::newPage);
-  m_document->m_sendOLE=static_cast<MsWksDocument::SendOLE>(&MsWksDRParser::sendOLE);
-  m_document->m_sendTextbox=static_cast<MsWksDocument::SendTextbox>(&MsWksDRParser::sendTextbox);
 }
 
 ////////////////////////////////////////////////////////////
@@ -207,7 +205,7 @@ void MsWksDRParser::createDocument(librevenge::RVNGDrawingInterface *documentInt
 bool MsWksDRParser::createZones()
 {
   if (getInput()->isStructured())
-    createOLEZones();
+    m_document->createOLEZones(getInput());
   MWAWInputStreamPtr input = m_document->getInput();
   long pos = input->tell();
   if (!m_document->readDocumentInfo(0x9a))
@@ -275,131 +273,6 @@ bool MsWksDRParser::createZones()
   m_document->getGraphParser()->computePositions(mainZone.m_zoneId, linesH, pagesH);
 
   return true;
-}
-
-////////////////////////////////////////////////////////////
-// create the ole structures
-////////////////////////////////////////////////////////////
-bool MsWksDRParser::createOLEZones()
-{
-  MWAWInputStreamPtr &input= getInput();
-  assert(input.get());
-  m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
-
-  if (!m_state->m_oleParser->parse(input)) return false;
-
-  // normally,
-  // MacWorks/QHdr, MacWorks/QFtr, MacWorks/QFootnotes, MacWorks/QFrm<number>
-  // MN0 (the main header)
-  std::vector<std::string> unparsed = m_state->m_oleParser->getNotParse();
-
-  size_t numUnparsed = unparsed.size();
-  unparsed.push_back("MN0");
-
-  for (size_t i = 0; i <= numUnparsed; i++) {
-    std::string const &name = unparsed[i];
-
-    // separated the directory and the name
-    //    MatOST/MatadorObject1/Ole10Native
-    //      -> dir="MatOST/MatadorObject1", base="Ole10Native"
-    std::string::size_type pos = name.find_last_of('/');
-    std::string dir, base;
-    if (pos == std::string::npos) base = name;
-    else if (pos == 0) base = name.substr(1);
-    else {
-      dir = name.substr(0,pos);
-      base = name.substr(pos+1);
-    }
-
-    if (dir == "" && base == "MN0") continue;
-    bool ok = false;
-    bool isFrame = false;
-    if (!ok && dir == "MacWorks") {
-      ok = (base == "QHdr" || base == "QFtr" || base == "QFootnotes");
-      if (!ok && strncmp(base.c_str(),"QFrm",4)==0)
-        ok = isFrame = true;
-    }
-    if (!ok) {
-      m_state->m_unparsedOlesName.push_back(name);
-      continue;
-    }
-
-    MWAWInputStreamPtr ole = input->getSubStreamByName(name.c_str());
-    if (!ole.get()) {
-      MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: can not find OLE part: \"%s\"\n", name.c_str()));
-      continue;
-    }
-
-    shared_ptr<MsWks4Zone> newParser(new MsWks4Zone(ole, getParserState(), *this, name));
-    try {
-      ok = newParser->createZones(false);
-    }
-    catch (...) {
-      ok = false;
-    }
-
-    if (!ok) {
-      MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: can not parse OLE: \"%s\"\n", name.c_str()));
-      continue;
-    }
-
-    if (base == "QHdr") m_state->m_headerParser = newParser;
-    else if (base == "QFtr") m_state->m_footerParser = newParser;
-    else if (isFrame) {
-      std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
-        m_state->m_frameParserMap.find(base);
-      if (frameIt != m_state->m_frameParserMap.end()) {
-        MWAW_DEBUG_MSG(("MsWksDrParser::createOLEZones: error: oops, I already find a frame zone %s\n", base.c_str()));
-      }
-      else
-        m_state->m_frameParserMap[base] = newParser;
-    }
-    else if (base == "QFootnotes") m_state->m_footnoteParser = newParser;
-  }
-
-  return true;
-}
-
-void MsWksDRParser::sendTextbox(MWAWEntry const &entry, std::string const &frame)
-{
-  MWAWListenerPtr listener=getMainListener();
-  if (!listener) return;
-
-  if (entry.length()==0) {
-    listener->insertChar(' ');
-    return;
-  }
-
-  MsWks4Zone *parser = 0;
-  std::map<std::string, shared_ptr<MsWks4Zone> >::iterator frameIt =
-    m_state->m_frameParserMap.find(frame);
-  if (frameIt != m_state->m_frameParserMap.end())
-    parser = frameIt->second.get();
-  if (!parser || parser->getTextPosition().length() < entry.end()) {
-    MWAW_DEBUG_MSG(("MsWksDRParser::sendTextbox: can not find frame ole: %s\n", frame.c_str()));
-    listener->insertChar(' ');
-    return;
-  }
-
-  // ok, create the entry
-  MWAWEntry ent(entry);
-  ent.setBegin(entry.begin()+parser->getTextPosition().begin());
-  parser->createZones(false);
-  parser->readContentZones(ent, false);
-}
-
-void MsWksDRParser::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyle const &style)
-{
-  if (!getMainListener()) return;
-
-  librevenge::RVNGBinaryData data;
-  MWAWPosition pos;
-  std::string type;
-  if (!m_state->m_oleParser->getObject(id, data, pos, type)) {
-    MWAW_DEBUG_MSG(("MsWksDRParser::sendOLE: can not find OLE%d\n", id));
-    return;
-  }
-  getMainListener()->insertPicture(pictPos, data, type, style);
 }
 
 ////////////////////////////////////////////////////////////

@@ -77,6 +77,7 @@ class SubDocument;
 class MsWks4Zone
 {
   friend class MsWks4ParserInternal::SubDocument;
+  friend class MsWksDocument;
   friend class MsWksDRParser;
   friend class MsWks4Parser;
   friend class MsWks4Text;
@@ -112,9 +113,7 @@ protected:
   void readContentZones(MWAWEntry const &entry, bool mainOle);
 
   /** creates the main listener */
-  MWAWTextListenerPtr createListener
-  (librevenge::RVNGTextInterface *interface,
-   MWAWSubDocumentPtr &header, MWAWSubDocumentPtr &footer);
+  MWAWTextListenerPtr createListener(librevenge::RVNGTextInterface *interface);
 
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
