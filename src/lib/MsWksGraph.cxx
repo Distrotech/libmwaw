@@ -701,7 +701,7 @@ struct Patterns {
 //! Internal: the state of a MsWksGraph
 struct State {
   //! constructor
-  State() : m_version(-1), m_leftTopPos(0,0), m_zonesList(), m_RBsMap(), m_font(20,12), m_frameName(""), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
+  State() : m_version(-1), m_leftTopPos(0,0), m_zonesList(), m_RBsMap(), m_font(20,12), m_chartId(0), m_tableId(0), m_numPages(0), m_rsrcPatternsMap() { }
   //! return the pattern corresponding to an id
   bool getPattern(MWAWGraphicStyle::Pattern &pat, int id, long rsid=-1);
   //! return the percentage corresponding to a pattern
@@ -718,8 +718,6 @@ struct State {
   std::map<int, RBZone> m_RBsMap;
   //! the actual font
   MWAWFont m_font;
-  //! the default frame name
-  std::string m_frameName;
   //! an index used to store chart
   int m_chartId;
   //! an index used to store table
@@ -960,11 +958,6 @@ int MsWksGraph::numPages(int zoneId) const
   }
   m_state->m_numPages = maxPage+1;
   return m_state->m_numPages;
-}
-
-void MsWksGraph::setGroupDefaultFrameName(std::string const &name)
-{
-  m_state->m_frameName=name;
 }
 
 void MsWksGraph::sendFrameText(MWAWEntry const &entry, std::string const &frame)
@@ -1732,8 +1725,6 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     }
     textbox->m_text.setBegin(input->readLong(4));
     textbox->m_text.setEnd(input->readLong(4));
-    if (textbox->m_frame.empty())
-      textbox->m_frame=m_state->m_frameName;
 
     // always 0 ?
     val = (int) input->readLong(2);
@@ -1935,17 +1926,20 @@ int MsWksGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
 }
 
 // a list of picture
-bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
+bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool hasHeaderSize)
 {
-  if (entry.length() < 0x164) return false;
+  int sizeField=!hasHeaderSize ? 0 : 4;
+  if (entry.length() < 0x164+sizeField || !input->checkPosition(entry.end())) return false;
   entry.setParsed(true);
   libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
+  if (hasHeaderSize)
+    f << "Entries(" << entry.name() << "):";
   MsWksGraphInternal::RBZone zone;
   zone.m_isMain = entry.name()=="RBDR";
   zone.m_id = entry.id();
 
-  uint32_t page_offset = (uint32_t) entry.begin();
+  uint32_t page_offset = (uint32_t)(entry.begin() + sizeField);
   long endOfPage = entry.end();
 
   input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
@@ -2019,7 +2013,7 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
     MWAWEntry pict;
     if (getEntryPicture(0, pict)<0 || input->tell() <= debPos) {
       f.str("");
-      MWAW_DEBUG_MSG(("MsWksGraph::readRB: oops can not read end of file\n"));
+      MWAW_DEBUG_MSG(("MsWksGraph::readRB: oops can not read a zone, reach end of file\n"));
       f << "###" << entry.name();
       ascFile.addPos(debPos);
       ascFile.addNote(f.str().c_str());
@@ -2039,7 +2033,7 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry)
   int zId = zone.getId();
   if (m_state->m_RBsMap.find(zId) != m_state->m_RBsMap.end()) {
     MWAW_DEBUG_MSG(("MsWksGraph::readRB: zone %d is already filled\n", zId));
-    return false;
+    return true;
   }
   m_state->m_RBsMap[zId]=zone;
   checkTextBoxLinks(zId);

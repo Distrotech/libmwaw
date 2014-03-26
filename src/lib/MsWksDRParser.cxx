@@ -222,10 +222,16 @@ bool MsWksDRParser::createZones()
 
   if (version()==4) {
     MWAWEntry group;
-    pos = input->tell();
-    MsWksDocument::Zone unknownZone(MsWksDocument::Z_NONE, -1);
-    if (!m_document->readGroup(unknownZone, group, 2))
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    group.setBegin(input->tell());
+    group.setLength((long) input->readULong(4)+4);
+    group.setId(-1); // fixme
+    group.setName("RBIL");
+    if (!m_document->m_graphParser->readRB(input,group,true)) {
+      MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBIL group\n"));
+      m_document->ascii().addPos(group.begin());
+      m_document->ascii().addNote("Entries(RBIL):###");
+      return false;
+    }
   }
 
   // now the main group of draw shape
@@ -234,10 +240,18 @@ bool MsWksDRParser::createZones()
   typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
                      (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
   MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
+
   MWAWEntry group;
-  pos = input->tell();
-  if (!m_document->readGroup(mainZone, group, 2))
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  group.setBegin(input->tell());
+  group.setLength((long) input->readULong(4)+4);
+  group.setId(mainZone.m_zoneId);
+  group.setName("RBDR");
+  if (!m_document->m_graphParser->readRB(input,group,true)) {
+    MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBDR group\n"));
+    m_document->ascii().addPos(group.begin());
+    m_document->ascii().addNote("Entries(RBDR):###");
+    return false;
+  }
 
   if (!input->isEnd()) {
     MWAW_DEBUG_MSG(("MsWksDRParser::createZones: find some extra data\n"));
@@ -270,9 +284,6 @@ bool MsWksDRParser::createOLEZones()
 {
   MWAWInputStreamPtr &input= getInput();
   assert(input.get());
-  if (!checkHeader(getHeader()))
-    throw libmwaw::ParseException();
-
   m_state->m_oleParser.reset(new MWAWOLEParser("MN0"));
 
   if (!m_state->m_oleParser->parse(input)) return false;

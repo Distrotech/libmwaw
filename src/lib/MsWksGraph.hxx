@@ -143,11 +143,10 @@ protected:
   /** checks if the next zone is a v2 picture and returns a zone id ( or -1) */
   int getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend=true, int order=-1000);
 
+  /** reads the RBDR or a RBIL zone: a zone which seems to regroup all pages pictures in v3-v4 document */
+  bool readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool hasHeaderSize=false);
+
   // version 4 file
-
-  /** reads the RBDR or a RBIL zone: a zone which seems to regroup all pages pictures */
-  bool readRB(MWAWInputStreamPtr input, MWAWEntry const &entry);
-
 
   /** reads a Pict zone: a zone which seems to code in v4 : header/footer picture */
   bool readPictureV4(MWAWInputStreamPtr input, MWAWEntry const &entry);
@@ -158,8 +157,6 @@ protected:
   void sendTextBox(int zId, MWAWListenerPtr listener);
   /** check the text box link v4 */
   void checkTextBoxLinks(int zId);
-  //! define the group default frame v4
-  void setGroupDefaultFrameName(std::string const &name="");
 
   // interface function
 

@@ -838,9 +838,7 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
       oleName+=c;
     }
     if (!oleName.empty()) {
-      if (oleName[0]=='Q')
-        m_graphParser->setGroupDefaultFrameName(oleName);
-      else {
+      if (oleName[0]!='Q') {
         MWAW_DEBUG_MSG(("MsWksDocument::readGroup: the oleName seems bad\n"));
         f << "###";
       }
@@ -868,7 +866,6 @@ bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int c
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     break;
   }
-  m_graphParser->setGroupDefaultFrameName();
   if (input->tell() < entry.end()) {
     ascFile.addPos(input->tell());
     ascFile.addNote("Entries(GroupData)");

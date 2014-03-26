@@ -365,9 +365,9 @@ void MsWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documen
 bool MsWksSSParser::createZones()
 {
   MWAWInputStreamPtr input = m_document->getInput();
-
+  const int vers=version();
   long pos;
-  if (version()>2) {
+  if (vers>2) {
     pos = input->tell();
     if (!m_document->readDocumentInfo(0x9a))
       m_document->getInput()->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -385,10 +385,30 @@ bool MsWksSSParser::createZones()
   typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
                      (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
   MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
-  MWAWEntry group;
-  pos = input->tell();
-  if (!m_document->readGroup(mainZone, group, 2))
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (vers>=3) {
+    pos = input->tell();
+    if (input->isEnd() || input->readLong(2)!=0)
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    else {
+      MWAWEntry group;
+      group.setBegin(pos+2);
+      group.setLength((long) input->readULong(4)+4);
+      group.setId(mainZone.m_zoneId);
+      group.setName("RBDR");
+      if (!m_document->m_graphParser->readRB(input,group,true)) {
+        MWAW_DEBUG_MSG(("MsWksSSParser::createZones: can not read RBDR group\n"));
+        m_document->ascii().addPos(group.begin());
+        m_document->ascii().addNote("Entries(RBDR):###");
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+      }
+    }
+  }
+  else {
+    MWAWEntry group;
+    pos = input->tell();
+    if (!m_document->readGroup(mainZone, group, 2))
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
 
   while (!input->isEnd()) {
     pos = input->tell();
@@ -1118,6 +1138,7 @@ bool MsWksSSParser::sendSpreadsheet()
 
   int prevRow = -1;
   listener->openSheet(sheet.convertInPoint(sheet.m_widthCols,76), librevenge::RVNG_POINT, sheet.m_name);
+  // fixme: this sends the pictures present in the main page, but not the picture present in header/footer
   MsWksDocument::Zone zone=m_document->getZone(MsWksDocument::Z_MAIN);
   m_document->getGraphParser()->sendAll(zone.m_zoneId, true);
 
