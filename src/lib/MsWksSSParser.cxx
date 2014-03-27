@@ -212,10 +212,8 @@ MsWksSSParser::MsWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcPar
   if (!input) return;
   if (input->isStructured()) {
     MWAWInputStreamPtr mainOle = input->getSubStreamByName("MN0");
-    if (mainOle) {
-      MWAW_DEBUG_MSG(("MsWksSSParser::MsWksSSParser: only the MN0 block will be parsed\n"));
+    if (mainOle)
       mainInput=mainOle;
-    }
   }
   m_document.reset(new MsWksDocument(mainInput, *this));
   init();
@@ -381,39 +379,30 @@ bool MsWksSSParser::createZones()
   }
   readSSheetZone();
 
-  std::map<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
-  MsWksDocument::ZoneType const type = MsWksDocument::Z_MAIN;
-  typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
-                     (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
-  MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
-  if (vers>=3) {
-    pos = input->tell();
-    if (input->isEnd() || input->readLong(2)!=0)
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-    else {
-      MWAWEntry group;
-      group.setBegin(pos+2);
-      group.setLength((long) input->readULong(4)+4);
-      group.setId(mainZone.m_zoneId);
-      group.setName("RBDR");
-      if (!m_document->m_graphParser->readRB(input,group,true)) {
-        MWAW_DEBUG_MSG(("MsWksSSParser::createZones: can not read RBDR group\n"));
-        m_document->ascii().addPos(group.begin());
-        m_document->ascii().addNote("Entries(RBDR):###");
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-      }
-    }
-  }
+  std::multimap<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
+  // fixme: getNewZoneId here
+  int mainId=MsWksDocument::Z_MAIN;
+  typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
+                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
+  pos = input->tell();
+  if (input->isEnd() || input->readLong(2)!=0)
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
   else {
     MWAWEntry group;
-    pos = input->tell();
-    if (!m_document->readGroup(mainZone, group, 2))
+    group.setId(mainId);
+    group.setName("RBDR");
+    if (!m_document->m_graphParser->readRB(input,group,1)) {
+      MWAW_DEBUG_MSG(("MsWksSSParser::createZones: can not read RBDR group\n"));
+      m_document->ascii().addPos(pos+2);
+      m_document->ascii().addNote("Entries(RBDR):###");
       input->seek(pos, librevenge::RVNG_SEEK_SET);
+    }
   }
 
   while (!input->isEnd()) {
     pos = input->tell();
-    if (!m_document->readZone(mainZone)) {
+    MsWksDocument::Zone unknown;
+    if (!m_document->readZone(unknown)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -430,7 +419,7 @@ bool MsWksSSParser::createZones()
   // ok, prepare the data
   m_state->m_numPages = 1;
   std::vector<int> linesH, pagesH;
-  m_document->getGraphParser()->computePositions(mainZone.m_zoneId, linesH, pagesH);
+  m_document->getGraphParser()->computePositions(mainId, linesH, pagesH);
   return true;
 }
 

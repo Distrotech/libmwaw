@@ -143,8 +143,13 @@ protected:
   /** checks if the next zone is a v2 picture and returns a zone id ( or -1) */
   int getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend=true, int order=-1000);
 
-  /** reads the RBDR or a RBIL zone: a zone which seems to regroup all pages pictures in v3-v4 document */
-  bool readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool hasHeaderSize=false);
+  /** reads the RBDR or a RBIL zone: a zone which seems to regroup all pages pictures in v3-v4 document
+
+      \a kind=0: uses entry to define the position
+      \a kind=1: entry size then data
+      \a kind=2: marker, entry size then data
+   */
+  bool readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, int kind);
 
   // version 4 file
 

@@ -516,7 +516,8 @@ bool MsWks4Zone::createZones(bool mainOle)
     if (!entry.hasName("RBDR")) break;
     if (!entry.hasType("RBDR")) continue;
 
-    m_document->getGraphParser()->readRB(input, entry);
+    if (m_document->getGraphParser()->readRB(input, entry, 0))
+      entry.setParsed(true);
   }
   pos = entryMap.lower_bound("RBIL");
   while (pos != entryMap.end()) {
@@ -524,7 +525,8 @@ bool MsWks4Zone::createZones(bool mainOle)
     if (!entry.hasName("RBIL")) break;
     if (!entry.hasType("RBIL")) continue;
 
-    m_document->getGraphParser()->readRB(input, entry);
+    if (m_document->getGraphParser()->readRB(input, entry, 0))
+      entry.setParsed(true);
   }
 
   /* read the pictures */

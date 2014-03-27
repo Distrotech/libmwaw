@@ -67,7 +67,8 @@ namespace MsWksDocumentInternal
 //! Internal: the state of a MsWksDocument
 struct State {
   //! constructor
-  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_fileHeaderSize(0), m_typeZoneMap(), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
+  State() : m_kind(MWAWDocument::MWAW_K_TEXT), m_fileHeaderSize(0),
+    m_freeZoneId(0), m_typeZoneMap(), m_entryMap(), m_hasHeader(false), m_hasFooter(false),
     m_oleParser(), m_headerParser(), m_footerParser(), m_footnoteParser(), m_frameParserMap(), m_unparsedOlesName(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
@@ -77,8 +78,10 @@ struct State {
   MWAWDocument::Kind m_kind;
   //! the file header size
   long m_fileHeaderSize;
+  //! an id to count the number of free map
+  mutable int m_freeZoneId;
   //! the list of zone (for v1-v3) document
-  std::map<int, MsWksDocument::Zone> m_typeZoneMap;
+  std::multimap<int, MsWksDocument::Zone> m_typeZoneMap;
   //! the list of entries, name->entry ( for v4 document)
   std::multimap<std::string, MWAWEntry> m_entryMap;
   bool m_hasHeader /** true if there is a header v3*/, m_hasFooter /** true if there is a footer v3*/;
@@ -230,6 +233,11 @@ void MsWksDocument::setKind(MWAWDocument::Kind kind)
   m_state->m_kind=kind;
 }
 
+int MsWksDocument::getNewZoneId() const
+{
+  return MsWksDocument::Z_NONE + ++m_state->m_freeZoneId;
+}
+
 MsWksDocument::Zone MsWksDocument::getZone(MsWksDocument::ZoneType type) const
 {
   Zone res;
@@ -238,7 +246,7 @@ MsWksDocument::Zone MsWksDocument::getZone(MsWksDocument::ZoneType type) const
   return res;
 }
 
-std::map<int, MsWksDocument::Zone> &MsWksDocument::getTypeZoneMap()
+std::multimap<int, MsWksDocument::Zone> &MsWksDocument::getTypeZoneMap()
 {
   return m_state->m_typeZoneMap;
 }
@@ -891,7 +899,7 @@ bool MsWksDocument::readGroupHeaderFooter(bool header, int check)
   if (check < 99) return true;
   if (header) m_state->m_headerHeight = box.size().y();
   else m_state->m_footerHeight = box.size().y();
-  std::map<int, MsWksDocument::Zone> &typeZoneMap=getTypeZoneMap();
+  std::multimap<int, MsWksDocument::Zone> &typeZoneMap=getTypeZoneMap();
   MsWksDocument::ZoneType type=
     header ? MsWksDocument::Z_HEADER : MsWksDocument::Z_FOOTER;
   MsWksDocument::Zone zone(type, int(typeZoneMap.size()));
@@ -932,121 +940,7 @@ bool MsWksDocument::readGroupHeaderFooter(bool header, int check)
     MWAW_DEBUG_MSG(("MsWksDocument::readGroupHeaderFooter: the zone already exists\n"));
   }
   else
-    typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type(int(type),zone));
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read a group info
-////////////////////////////////////////////////////////////
-bool MsWksDocument::readGroup(MsWksDocument::Zone &zone, MWAWEntry &entry, int check)
-{
-  entry = MWAWEntry();
-  MWAWInputStreamPtr input=getInput();
-  if (input->isEnd()) return false;
-
-  int const vers=version();
-  long pos = input->tell();
-  int val=(int) input->readULong(1);
-  // checkme is val==3 also ok for a draw/spreadsheet
-  if (val!=3 && (m_state->m_kind==MWAWDocument::MWAW_K_TEXT || val!=0))
-    return false;
-
-  libmwaw::DebugFile &ascFile=ascii();
-  libmwaw::DebugStream f;
-  bool isDraw=m_state->m_kind==MWAWDocument::MWAW_K_DRAW;
-  int docId = isDraw ? 0 : (int) input->readULong(1);
-  int docExtra = isDraw ? 0 : (int) input->readULong(1);
-  int flag = (int) input->readULong(1);
-  long size = (long) input->readULong(2)+(isDraw ? 4 : 6);
-
-  int blockSize = isDraw ? 358 : vers <= 2 ? 340 : 360;
-  if (size < blockSize) return false;
-
-  f << "Entries(GroupHeader):";
-  if (docId) f << "id=0x"<< std::hex << docId << std::dec << ",";
-  if (docExtra) f << "unk=" << docExtra << ",";
-  if (flag) f << "fl=" << flag << ",";
-  if (size != blockSize)
-    f << "end=" << std::hex << pos+size << std::dec << ",";
-
-  entry.setBegin(pos);
-  entry.setLength(size);
-  entry.setType("GroupHeader");
-
-  if (!input->checkPosition(entry.end())) {
-    if (!input->checkPosition(pos+blockSize)) {
-      MWAW_DEBUG_MSG(("MsWksDocument::readGroup: can not determine group %d size \n", docId));
-      return false;
-    }
-    entry.setLength(blockSize);
-  }
-
-  if (check <= 0) return true;
-  input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-  // the first bytes seems dependent of the file kind
-  for (int i=0; i<(blockSize-340)/2; ++i) {
-    int v = (int) input->readLong(2);
-    if (!v) continue;
-    if (i < 8 && (v < -100 || v > 100)) return false;
-    f << "f" << i << "=";
-    if (v > -100 && v < 1000)
-      f << v << ",";
-    else
-      f << std::hex << "X" << v << std::dec << ",";
-  }
-
-  for (int i = 0; i < 38; i++) {
-    int v = (int) input->readLong(2);
-    if (!v) continue;
-    f << "g" << i << "=";
-    if (v > -100 && v < 1000)
-      f << v << ",";
-    else
-      f << std::hex << "X" << v << std::dec << ",";
-  }
-  if (vers==4) {
-    std::string oleName("");
-    for (int l=0; l<16; ++l) { // what is the maximum length?
-      char c=(char) input->readULong(1);
-      if (!c) break;
-      oleName+=c;
-    }
-    if (!oleName.empty()) {
-      if (oleName[0]!='Q') {
-        MWAW_DEBUG_MSG(("MsWksDocument::readGroup: the oleName seems bad\n"));
-        f << "###";
-      }
-      f << "oleName=" << oleName << ",";
-    }
-  }
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  input->seek(pos+blockSize, librevenge::RVNG_SEEK_SET);
-
-  pos = input->tell();
-  int N=(int) input->readLong(2);
-  f.str("");
-  f << "GroupHeader:N=" << N << ",";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  MWAWEntry pictZone;
-  for (int i = 0; i < N; i++) {
-    pos = input->tell();
-    if (m_graphParser->getEntryPicture(zone.m_zoneId, pictZone)>=0)
-      continue;
-    MWAW_DEBUG_MSG(("MsWksDocument::readGroup: can not find the end of group\n"));
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    break;
-  }
-  if (input->tell() < entry.end()) {
-    ascFile.addPos(input->tell());
-    ascFile.addNote("Entries(GroupData)");
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-  }
-
+    typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type(int(type),zone));
   return true;
 }
 
@@ -1081,9 +975,11 @@ bool MsWksDocument::readZone(MsWksDocument::Zone &zone)
       return true;
     break;
   case 3: {
-    // checkme is it also ok for a spreadsheet?
+    // checkme, ok for text but is it also ok for other ?
     MWAWEntry group;
-    if (readGroup(zone, group, 2))
+    group.setId(zone.m_zoneId);
+    group.setName("RBDR");
+    if (m_graphParser->readRB(input, group, 2))
       return true;
     break;
   }

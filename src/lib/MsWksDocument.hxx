@@ -140,8 +140,6 @@ public:
   bool readZone(Zone &zone);
   //! try to read a header/footer group
   bool readGroupHeaderFooter(bool header, int check);
-  //! try to read a group zone (zone3)
-  bool readGroup(Zone &zone, MWAWEntry &entry, int check);
 
   //
   // read some ole structures
@@ -169,9 +167,11 @@ public:
   static std::vector<MWAWColor> const &getPalette(int vers);
 
   //! returns the document entry map of a v1-v3 document
-  std::map<int, Zone> &getTypeZoneMap();
+  std::multimap<int, Zone> &getTypeZoneMap();
   //! returns the zone corresponding to a zoneType (v1-v3 document)
   Zone getZone(ZoneType type) const;
+  //! returns a free zone'id
+  int getNewZoneId() const;
   //! returns the document entry map of a v4 document
   std::multimap<std::string, MWAWEntry> &getEntryMap();
 

@@ -1926,23 +1926,48 @@ int MsWksGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
 }
 
 // a list of picture
-bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool hasHeaderSize)
+bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, int kind)
 {
-  int sizeField=!hasHeaderSize ? 0 : 4;
-  if (entry.length() < 0x164+sizeField || !input->checkPosition(entry.end())) return false;
-  entry.setParsed(true);
   libmwaw::DebugFile &ascFile = m_document.ascii();
   libmwaw::DebugStream f;
-  if (hasHeaderSize)
-    f << "Entries(" << entry.name() << "):";
+
+  long beginRB, endRB;
+  long pos=input->tell();
+  f << "Entries(" << entry.name() << "):";
+  const int vers=version();
+  switch (kind) {
+  case 0:
+    pos=beginRB=entry.begin();
+    endRB=entry.end();
+    break;
+  case 2:
+    if (input->readLong(1)!=3) return false;
+    f << "id=" << input->readLong(1) << ",";
+  // no jump expected
+  case 1: {
+    unsigned long dSz=input->readULong(4);
+    beginRB=input->tell();
+    if (dSz&0x80000000) {
+      f << "flags[high],";
+      dSz &= 0x7FFFFFFF;
+    }
+    endRB=beginRB+(long) dSz;
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("MsWksGraph::readRB: unknown kind\n"));
+    return false;
+  }
+
+  long const headerSize=vers<3 ? 0x150 : 0x164;
+  if (endRB-beginRB+2 < headerSize || !input->checkPosition(endRB)) return false;
+
   MsWksGraphInternal::RBZone zone;
-  zone.m_isMain = entry.name()=="RBDR";
+  if (vers==4)
+    zone.m_isMain = entry.name()=="RBDR";
   zone.m_id = entry.id();
 
-  uint32_t page_offset = (uint32_t)(entry.begin() + sizeField);
-  long endOfPage = entry.end();
-
-  input->seek(long(page_offset), librevenge::RVNG_SEEK_SET);
+  input->seek(beginRB, librevenge::RVNG_SEEK_SET);
   f << input->readLong(4) << ", ";
   for (int i = 0; i < 4; i++) {
     long val = input->readLong(4);
@@ -1952,8 +1977,9 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool h
   f << "numPage=" << input->readLong(2) << ", ";
   for (int i = 0; i < 11; i++) {
     long val = input->readLong(2);
+    if (!val) continue;
     if (i >= 8 && (val < -100 || val > 100)) f << "###";
-    f << val << ", ";
+    f << "f" << i << "=" << val << ", ";
   }
   f << ", unk=(";
   for (int i = 0; i < 2; i++)
@@ -1976,60 +2002,72 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, bool h
     else f << "_,";
   }
   f << "), ";
-  std::string oleName;
-  while (input->tell() < long(page_offset)+0x162) {
-    char val  = (char) input->readLong(1);
-    if (val == 0) break;
-    oleName+= val;
-    if (oleName.length() > 30) break;
+  if (vers>=3) {
+    long aPos=input->tell();
+    std::string oleName;
+    while (input->tell() < beginRB+headerSize-2) {
+      char val  = (char) input->readLong(1);
+      if (val == 0) break;
+      oleName+= val;
+      if (oleName.length() >= 10) break;
+    }
+    if (!oleName.empty()) {
+      zone.m_frame = oleName;
+      f << "ole='" << oleName << "', ";
+    }
+    ascFile.addDelimiter(input->tell(),'|');
+    input->seek(aPos+20, librevenge::RVNG_SEEK_SET);
   }
-  if (!oleName.empty()) {
-    zone.m_frame = oleName;
-    f << "ole='" << oleName << "', ";
-  }
-
-  int i = int(input->tell()-long(page_offset));
-  if ((i%2) == 1) {
-    int val = (int) input->readLong(1);
-    if (val) f << "f" << i << "=" << val << ",";
-    i++;
-  }
-  while (i != 0x162) {
-    int val = (int) input->readLong(2);
-    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-    i+=2;
-  }
-  int n = (int) input->readLong(2);
-  f << "N= " << n;
-  ascFile.addPos(long(page_offset));
+  ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
-  if (n == 0) return true;
-
-  input->pushLimit(endOfPage);
-  while (input->tell()+20 < endOfPage) {
-    long debPos = input->tell();
-    size_t actId = m_state->m_zonesList.size();
-    MWAWEntry pict;
-    if (getEntryPicture(0, pict)<0 || input->tell() <= debPos) {
-      f.str("");
-      MWAW_DEBUG_MSG(("MsWksGraph::readRB: oops can not read a zone, reach end of file\n"));
-      f << "###" << entry.name();
-      ascFile.addPos(debPos);
-      ascFile.addNote(f.str().c_str());
-      break;
-    }
-    for (size_t z = actId; z < m_state->m_zonesList.size(); z++) {
-      shared_ptr<MsWksGraphInternal::Zone> pictZone = m_state->m_zonesList[z];
-      if (!pictZone) continue;
-      zone.m_idList.push_back(int(z));
-      if (!zone.m_isMain)
-        pictZone->m_page = -2;
-    }
+  pos=input->tell();
+  f.str("");
+  f << entry.name() << "-II:";
+  for (int i=0; i<118; ++i) {
+    int val = (int) input->readLong(2);
+    if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
   }
-  input->popLimit();
+  // can happens at least with vers=2 and this means that the size is not set
+  if (endRB-beginRB+2 == headerSize)
+    endRB=-1;
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
-  if (zone.m_idList.size() == 0) return false;
+  if (N == 0) return true;
+
+  if (endRB>0)
+    input->pushLimit(endRB);
+  size_t actId = m_state->m_zonesList.size();
+  for (int i = 0; i < N; i++) {
+    pos = input->tell();
+    MWAWEntry pictZone;
+    if (getEntryPicture(vers==4 ? 0 : entry.id(), pictZone)>=0)
+      continue;
+    MWAW_DEBUG_MSG(("MsWksDocument::readGroup: can not find the end of group\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    break;
+  }
+  if (endRB>0)
+    input->popLimit();
+  for (size_t z = actId; z < m_state->m_zonesList.size(); z++) {
+    shared_ptr<MsWksGraphInternal::Zone> pictZone = m_state->m_zonesList[z];
+    if (!pictZone) continue;
+    zone.m_idList.push_back(int(z));
+    if (!zone.m_isMain)
+      pictZone->m_page = -2;
+  }
+  if (endRB>0 && input->tell() < endRB) {
+    f.str("");
+    f << entry.name() << "-end:###";
+    MWAW_DEBUG_MSG(("MsWksGraph::readRB: find some extra data\n"));
+    ascFile.addPos(input->tell());
+    ascFile.addNote(f.str().c_str());
+  }
+  if (endRB>0)
+    input->seek(endRB, librevenge::RVNG_SEEK_SET);
   int zId = zone.getId();
   if (m_state->m_RBsMap.find(zId) != m_state->m_RBsMap.end()) {
     MWAW_DEBUG_MSG(("MsWksGraph::readRB: zone %d is already filled\n", zId));

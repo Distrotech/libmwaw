@@ -278,11 +278,13 @@ bool MsWksParser::createZones()
     else input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
-  std::map<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
-  MsWksDocument::ZoneType const type = MsWksDocument::Z_MAIN;
-  typeZoneMap.insert(std::map<int,MsWksDocument::Zone>::value_type
-                     (int(type),MsWksDocument::Zone(type, int(typeZoneMap.size()))));
-  MsWksDocument::Zone &mainZone = typeZoneMap.find(int(type))->second;
+  std::multimap<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
+  int mainId=int(typeZoneMap.size()); // FIXME: use m_document->getNewZoneId();
+  typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
+                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
+  MsWksDocument::Zone &mainZone = typeZoneMap.find(MsWksDocument::Z_MAIN)->second;
+
+  libmwaw::DebugFile &ascFile = m_document->ascii();
   while (!input->isEnd()) {
     pos = input->tell();
     if (!m_document->readZone(mainZone)) {
@@ -295,17 +297,18 @@ bool MsWksParser::createZones()
 
   pos = input->tell();
 
-  if (!input->isEnd())
-    m_document->ascii().addPos(input->tell());
-  m_document->ascii().addNote("Entries(End)");
-  m_document->ascii().addPos(pos+100);
-  m_document->ascii().addNote("_");
+  if (!input->isEnd()) {
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(End)");
+    ascFile.addPos(pos+100);
+    ascFile.addNote("_");
+  }
 
   // ok, prepare the data
   m_state->m_numPages = 1;
   std::vector<int> linesH, pagesH;
   if (m_document->getTextParser3()->getLinesPagesHeight(mainZone.m_textId, linesH, pagesH))
-    m_document->getGraphParser()->computePositions(mainZone.m_zoneId, linesH, pagesH);
+    m_document->getGraphParser()->computePositions(mainId, linesH, pagesH);
 
   return true;
 }
