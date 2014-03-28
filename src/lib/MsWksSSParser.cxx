@@ -385,6 +385,7 @@ bool MsWksSSParser::createZones()
   typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
                      (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
   pos = input->tell();
+  libmwaw::DebugFile &ascFile = m_document->ascii();
   if (input->isEnd() || input->readLong(2)!=0)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   else {
@@ -393,28 +394,25 @@ bool MsWksSSParser::createZones()
     group.setName("RBDR");
     if (!m_document->m_graphParser->readRB(input,group,1)) {
       MWAW_DEBUG_MSG(("MsWksSSParser::createZones: can not read RBDR group\n"));
-      m_document->ascii().addPos(pos+2);
-      m_document->ascii().addNote("Entries(RBDR):###");
+      ascFile.addPos(pos+2);
+      ascFile.addNote("Entries(RBDR):###");
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   }
 
+  // normally, the file is now parsed, let check for potential remaining zones
   while (!input->isEnd()) {
+    MWAW_DEBUG_MSG(("MsWksSSParser::createZones: find some unexpected data\n"));
     pos = input->tell();
     MsWksDocument::Zone unknown;
     if (!m_document->readZone(unknown)) {
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      ascFile.addNote("Entries(End)");
+      ascFile.addPos(pos+100);
+      ascFile.addNote("_");
       break;
     }
   }
-
-  pos = input->tell();
-
-  if (!input->isEnd())
-    m_document->ascii().addPos(input->tell());
-  m_document->ascii().addNote("Entries(End)");
-  m_document->ascii().addPos(pos+100);
-  m_document->ascii().addNote("_");
 
   // ok, prepare the data
   m_state->m_numPages = 1;

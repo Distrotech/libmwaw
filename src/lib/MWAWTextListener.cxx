@@ -589,18 +589,20 @@ void MWAWTextListener::_openPageSpan(bool sendHeaderFooters)
   }
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
-  while (actPage < m_ps->m_currentPage) {
-    actPage+=(unsigned)it++->getPageSpan();
-    if (it == m_ds->m_pageList.end()) {
-      MWAW_DEBUG_MSG(("MWAWTextListener::_openPageSpan: can not find current page\n"));
-      throw libmwaw::ParseException();
+  ++m_ps->m_currentPage;
+  while (true) {
+    actPage+=(unsigned)it->getPageSpan();
+    if (actPage>=m_ps->m_currentPage) break;
+    if (++it == m_ds->m_pageList.end()) {
+      MWAW_DEBUG_MSG(("MWAWTextListener::_openPageSpan: can not find current page, use last page\n"));
+      --it;
     }
   }
   MWAWPageSpan &currentPage = *it;
 
   librevenge::RVNGPropertyList propList;
   currentPage.getPageProperty(propList);
-  propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
+  propList.insert("librevenge:is-last-page-span", ++it == m_ds->m_pageList.end());
 
   if (!m_ps->m_isPageSpanOpened)
     m_documentInterface->openPageSpan(propList);
@@ -615,7 +617,6 @@ void MWAWTextListener::_openPageSpan(bool sendHeaderFooters)
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;
   m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
-  m_ps->m_currentPage++;
 }
 
 void MWAWTextListener::_closePageSpan()

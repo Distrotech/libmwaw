@@ -108,18 +108,17 @@ void MsWksDRParser::init()
 ////////////////////////////////////////////////////////////
 void MsWksDRParser::newPage(int number, bool softBreak)
 {
-  if (number <= m_state->m_actPage || number > m_state->m_numPages)
+  if (!getGraphicListener() || number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
 
   long pos = m_document->getInput()->tell();
   while (m_state->m_actPage < number) {
-    m_state->m_actPage++;
-    if (!getGraphicListener() || m_state->m_actPage == 1)
-      continue;
-    if (softBreak)
-      getGraphicListener()->insertBreak(MWAWGraphicListener::SoftPageBreak);
-    else
-      getGraphicListener()->insertBreak(MWAWGraphicListener::PageBreak);
+    if (++m_state->m_actPage!=1) {
+      if (softBreak)
+        getGraphicListener()->insertBreak(MWAWGraphicListener::SoftPageBreak);
+      else
+        getGraphicListener()->insertBreak(MWAWGraphicListener::PageBreak);
+    }
 
     MsWksGraph::SendData sendData;
     sendData.m_type = MsWksGraph::SendData::RBDR;
@@ -147,9 +146,11 @@ void MsWksDRParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      m_document->sendZone(MsWksDocument::Z_MAIN);
-#ifdef DEBUG
-      m_document->getTextParser3()->flushExtra();
+      for (int i=0; i< m_state->m_numPages; ++i)
+        newPage(i);
+#if defined(DEBUG)
+      if (version()<=3)
+        m_document->getTextParser3()->flushExtra();
       m_document->getGraphParser()->flushExtra();
 #endif
     }
@@ -208,55 +209,53 @@ bool MsWksDRParser::createZones()
 
   if (!readDrawHeader()) return false;
 
+  libmwaw::DebugFile &ascFile = m_document->ascii();
   std::multimap<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();
   MWAWEntry group;
 
+  // now the main group of draw shape
+  int mainId=MsWksDocument::Z_MAIN; // fixme: use m_document->getNewZoneId() here
+  typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
+                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
   if (version()==4) {
     pos=input->tell();
     int id=m_document->getNewZoneId();
     typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
                        (MsWksDocument::Z_NONE,MsWksDocument::Zone(MsWksDocument::Z_NONE, id)));
-    group.setId(id);
+    group.setId(mainId);
     group.setName("RBIL");
     if (!m_document->m_graphParser->readRB(input,group,1)) {
       MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBIL group\n"));
-      m_document->ascii().addPos(pos);
-      m_document->ascii().addNote("Entries(RBIL):###");
+      ascFile.addPos(pos);
+      ascFile.addNote("Entries(RBIL):###");
       return false;
     }
   }
 
-  // now the main group of draw shape
-  int mainId=m_document->getNewZoneId();
-  typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
-                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
   pos=input->tell();
   group.setId(mainId);
   group.setName("RBDR");
   if (!m_document->m_graphParser->readRB(input,group,1)) {
     MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBDR group\n"));
-    m_document->ascii().addPos(pos);
-    m_document->ascii().addNote("Entries(RBDR):###");
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(RBDR):###");
     return false;
   }
 
+  // normally, the file is now parsed, let check for potential remaining zones
   if (!input->isEnd()) {
     MWAW_DEBUG_MSG(("MsWksDRParser::createZones: find some extra data\n"));
     while (!input->isEnd()) {
       pos = input->tell();
       MsWksDocument::Zone unknown;
       if (!m_document->readZone(unknown)) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        ascFile.addPos(pos);
+        ascFile.addNote("Entries(End)");
+        ascFile.addPos(pos+100);
+        ascFile.addNote("_");
         break;
       }
     }
-  }
-  if (!input->isEnd()) {
-    pos = input->tell();
-    m_document->ascii().addPos(pos);
-    m_document->ascii().addNote("Entries(End)");
-    m_document->ascii().addPos(pos+100);
-    m_document->ascii().addNote("_");
   }
 
   std::vector<int> linesH, pagesH;

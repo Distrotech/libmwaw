@@ -51,6 +51,7 @@
 namespace MsWksGraphInternal
 {
 struct GroupZone;
+struct RBZone;
 struct TextBox;
 struct Zone;
 
@@ -161,7 +162,7 @@ protected:
   //! try to send a text box zone v1-3
   void sendTextBox(int zId, MWAWListenerPtr listener);
   /** check the text box link v4 */
-  void checkTextBoxLinks(int zId);
+  void checkTextBoxLinks(MsWksGraphInternal::RBZone &rbZone);
 
   // interface function
 

@@ -285,6 +285,11 @@ bool MsWksParser::createZones()
   MsWksDocument::Zone &mainZone = typeZoneMap.find(MsWksDocument::Z_MAIN)->second;
 
   libmwaw::DebugFile &ascFile = m_document->ascii();
+  /* now normally
+     in v1: a list of pictures, document info zone, ..., without any way to know the limit
+     in v2: a group zone (which regroup the graphic) and a document info zone
+     in v3: a document info zone and a group zone (the graphic zone)
+   */
   while (!input->isEnd()) {
     pos = input->tell();
     if (!m_document->readZone(mainZone)) {

@@ -529,9 +529,11 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
   m_ds->m_isAtLeastOnePageOpened=true;
   unsigned actPage = 0;
   std::vector<MWAWPageSpan>::iterator it = m_ds->m_pageList.begin();
-  while (actPage < m_ps->m_currentPage) {
-    actPage+=(unsigned)it++->getPageSpan();
-    if (it == m_ds->m_pageList.end()) {
+  m_ps->m_currentPage++;
+  while (true) {
+    actPage+=(unsigned)it->getPageSpan();
+    if (actPage >= m_ps->m_currentPage) break;
+    if (++it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find current page, use the previous one\n"));
       --it;
     }
@@ -540,7 +542,7 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
   MWAWPageSpan &currentPage = *it;
   librevenge::RVNGPropertyList propList;
   currentPage.getPageProperty(propList);
-  propList.insert("librevenge:is-last-page-span", bool(m_ps->m_currentPage + 1 == m_ds->m_pageList.size()));
+  propList.insert("librevenge:is-last-page-span", ++it == m_ds->m_pageList.end());
   // now add data for embedded graph
   propList.insert("svg:x",m_ps->m_origin.x(), librevenge::RVNG_POINT);
   propList.insert("svg:y",m_ps->m_origin.y(), librevenge::RVNG_POINT);
@@ -560,7 +562,6 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
   // first paragraph in span (necessary for resetting page number)
   m_ps->m_firstParagraphInPageSpan = true;
   m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
-  m_ps->m_currentPage++;
 }
 
 void MWAWGraphicListener::_closePageSpan()

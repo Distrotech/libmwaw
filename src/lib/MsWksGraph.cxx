@@ -1020,7 +1020,7 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
   int val;
   if (vers >= 3) {
     val = (int) input->readLong(2);
-    if (vers == 4)
+    if (vers == 4 || m_parserState->m_type==MWAWParserState::Graphic)
       pict.m_page = val==0 ? -2 : val-1;
     else if (val)
       f << "f0=" << val << ",";
@@ -2068,22 +2068,22 @@ bool MsWksGraph::readRB(MWAWInputStreamPtr input, MWAWEntry const &entry, int ki
   }
   if (endRB>0)
     input->seek(endRB, librevenge::RVNG_SEEK_SET);
+  checkTextBoxLinks(zone);
   int zId = zone.getId();
   if (m_state->m_RBsMap.find(zId) != m_state->m_RBsMap.end()) {
     MWAW_DEBUG_MSG(("MsWksGraph::readRB: zone %d is already filled\n", zId));
-    return true;
+    // ok, let's merge the two zone
+    MsWksGraphInternal::RBZone &orig=m_state->m_RBsMap.find(zId)->second;
+    orig.m_idList.insert(orig.m_idList.end(), zone.m_idList.begin(), zone.m_idList.end());
+    if (orig.m_frame.empty()) orig.m_frame=zone.m_frame;
   }
-  m_state->m_RBsMap[zId]=zone;
-  checkTextBoxLinks(zId);
+  else
+    m_state->m_RBsMap[zId]=zone;
   return true;
 }
 
-void MsWksGraph::checkTextBoxLinks(int zId)
+void MsWksGraph::checkTextBoxLinks(MsWksGraphInternal::RBZone &rbZone)
 {
-  std::map<int, MsWksGraphInternal::RBZone>::iterator rbIt = m_state->m_RBsMap.find(zId);
-  if (rbIt==m_state->m_RBsMap.end())
-    return;
-  MsWksGraphInternal::RBZone &rbZone=rbIt->second;
   std::vector<int> listIds = rbZone.m_idList;
   std::string const &fName = rbZone.m_frame;
   int numZones = int(m_state->m_zonesList.size());
@@ -2775,6 +2775,8 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBoxv4, textbox.m_text, textbox.m_frame));
     MWAWGraphicStyle style;
     zone->fillFrame(style);
+    // a textbox can not have a border
+    style.m_lineWidth=0;
     if (zone->m_ids[1] > 0) {
       librevenge::RVNGString fName;
       fName.sprintf("Frame%ld", zone->m_ids[0]);
@@ -2828,11 +2830,10 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
   std::vector<int> listIds;
   MsWksGraphInternal::RBZone *rbZone=0;
   switch (what.m_type) {
-  case MsWksGraph::SendData::ALL: {
+  case MsWksGraph::SendData::ALL:
     listIds.resize(size_t(numZones));
     for (int i = 0; i < numZones; i++) listIds[size_t(i)]=i;
     break;
-  }
   case MsWksGraph::SendData::RBDR:
   case MsWksGraph::SendData::RBIL: {
     int zId = what.m_type==MsWksGraph::SendData::RBDR ? -1 : what.m_id;
@@ -2866,6 +2867,7 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
   }
   MWAWPosition undefPos;
   undefPos.m_anchorTo = what.m_anchor;
+  bool isText=m_parserState->m_type==MWAWParserState::Text;
   for (size_t i = 0; i < listIds.size(); i++) {
     int id = listIds[i];
     if (id < 0 || id >= numZones) continue;
@@ -2882,7 +2884,7 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
 
     if (first) {
       first = false;
-      if (what.m_anchor == MWAWPosition::Page && (!listener->isSectionOpened() && !listener->isParagraphOpened()))
+      if (isText && what.m_anchor == MWAWPosition::Page && !listener->isSectionOpened() && !listener->isParagraphOpened())
         listener->insertChar(' ');
     }
     send(int(id), undefPos);
