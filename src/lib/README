@@ -198,10 +198,11 @@ MoreParser: parser of More document : v2.0 v3.0 ( organization part )
 - MsWksTable : class which reads a table
 - MsWksDocument  : class which defines a file zone (main or ole)
 - MsWksParser : parser of Microsoft Works document : v1.0-4.0
+- MsWksDRParser : parser of Microsoft Works graphic document : v1.0-4.0
+- MsWksSSParser : parser of Microsoft Works spreadsheet document : v1.0-4.0
 -   MsWks3Text : class which reads the text
 -   MsWks4Zone : real parser of a v4 text ole 
 -   MsWks4Text : class which reads the text
-- MsWksSSParser : parser of Microsoft Works spreadsheet document : v1.0-4.0
 
 MsWrd1Parser : parser of Microsoft Word document : v1.0 
 

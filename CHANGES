@@ -1,5 +1,8 @@
 CHANGES:
 
+3/29/2014
+- MicrosoftWorks: add a graphic parser(must find more document to improve it)
+
 3/21/2014
 - GreatWorks: replace the parser of vector graphic documents by a parser
   which generates graphic documents + correct to code to reconstruct arc/pie

@@ -154,7 +154,7 @@ struct Zone {
       if (rel==MWAWPosition::Paragraph)
         res.m_wrapping = MWAWPosition::WBackground;
     }
-    else if (rel!=MWAWPosition::Page || m_page < 0) {
+    else if (rel!=MWAWPosition::Page) {
       res = MWAWPosition(Vec2f(0,0), box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char,
                               MWAWPosition::XLeft, MWAWPosition::YTop);
@@ -162,7 +162,8 @@ struct Zone {
     else {
       res = MWAWPosition(box.min()+m_finalDecal, box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Page);
-      res.setPage(m_page+1);
+      if (m_page >=0)
+        res.setPage(m_page+1);
       res.m_wrapping =  MWAWPosition::WBackground;
     }
     if (m_order > 0) res.setOrder(m_order);
@@ -2186,7 +2187,10 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
   MsWksGraphInternal::GroupZone &group=
     static_cast<MsWksGraphInternal::GroupZone &>(*m_state->m_zonesList[size_t(id)]);
   group.m_isSent = true;
-
+  if (listener->getType()==MWAWListener::Graphic) {
+    sendGroup(group, m_parserState->m_graphicListener);
+    return;
+  }
   if (!canCreateGraphic(group)) {
     if (pos.m_anchorTo == MWAWPosition::Char || pos.m_anchorTo == MWAWPosition::CharBaseLine) {
       shared_ptr<MsWksGraphInternal::SubDocument> subdoc
@@ -2623,7 +2627,7 @@ bool MsWksGraph::readFont(MWAWFont &font)
 void MsWksGraph::sendTextBox(int zoneId, MWAWListenerPtr listener)
 {
   if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("MsWksGraph::sendTextBox: can not find get access to the graphicListener\n"));
+    MWAW_DEBUG_MSG(("MsWksGraph::sendTextBox: can not find get access to the listener\n"));
     return;
   }
   if (zoneId < 0 || zoneId >= int(m_state->m_zonesList.size())) {
@@ -2706,19 +2710,24 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
     pictPos.setOrigin(pictPos.origin()+m_state->m_leftTopPos);
 
   MWAWInputStreamPtr input=m_document.getInput();
+  bool isDraw=listener->getType()==MWAWListener::Graphic;
   switch (zone->type()) {
   case MsWksGraphInternal::Zone::Text: {
     MsWksGraphInternal::TextBox &textbox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
     Box2f box(Vec2f(0,0),textbox.m_box.size());
-    MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
-    graphicListener.startDocument();
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBox, id));
     // a textbox can not have border
     MWAWGraphicStyle style(textbox.m_style);
     style.m_lineWidth=0;
+    if (isDraw) {
+      listener->insertTextBox(pictPos, subdoc, style);
+      return;
+    }
     MWAWPosition textPos(box[0], box.size(), librevenge::RVNG_POINT);
+    MWAWGraphicEncoder graphicEncoder;
+    MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
+    graphicListener.startDocument();
     textPos.m_anchorTo=MWAWPosition::Page;
     textPos.m_wrapping=pos.m_wrapping;
     graphicListener.insertTextBox(textPos, subdoc, style);
@@ -2731,6 +2740,12 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   }
   case MsWksGraphInternal::Zone::TableZone: {
     MsWksGraphInternal::Table &table = static_cast<MsWksGraphInternal::Table &>(*zone);
+    if (isDraw) {
+      listener->openFrame(pictPos, zone->m_style);
+      m_tableParser->sendTable(table.m_tableId);
+      listener->closeFrame();
+      return;
+    }
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::Table, table.m_tableId));
     listener->insertTextBox(pictPos, subdoc, zone->m_style);
@@ -2846,7 +2861,8 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
   }
   if (rbZone)
     listIds=rbZone->m_idList;
-  if (what.m_type==MsWksGraph::SendData::RBIL) {
+  bool isText=m_parserState->m_type==MWAWParserState::Text;
+  if (isText && what.m_type==MsWksGraph::SendData::RBIL) {
     if (!rbZone) {
       MWAW_DEBUG_MSG(("MsWksGraph::sendObjects: can find RBIL zone %d\n", what.m_id));
       return;
@@ -2867,7 +2883,6 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
   }
   MWAWPosition undefPos;
   undefPos.m_anchorTo = what.m_anchor;
-  bool isText=m_parserState->m_type==MWAWParserState::Text;
   for (size_t i = 0; i < listIds.size(); i++) {
     int id = listIds[i];
     if (id < 0 || id >= numZones) continue;
@@ -2875,16 +2890,18 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
     if (!zone || zone->m_doNotSend) continue;
     if (zone->m_isSent) {
       if (what.m_type == MsWksGraph::SendData::ALL ||
-          what.m_anchor == MWAWPosition::Page) continue;
+          (isText && what.m_anchor == MWAWPosition::Page)) continue;
     }
     if (what.m_anchor == MWAWPosition::Page) {
       if (what.m_page > 0 && zone->m_page+1 != what.m_page) continue;
       else if (what.m_page==0 && zone->m_page < 0) continue;
+      else if (what.m_page==-2 && zone->m_page >=0) continue;
+      undefPos=zone->getPosition(MWAWPosition::Page);
     }
 
-    if (first) {
+    if (isText && first) {
       first = false;
-      if (isText && what.m_anchor == MWAWPosition::Page && !listener->isSectionOpened() && !listener->isParagraphOpened())
+      if (what.m_anchor == MWAWPosition::Page && !listener->isSectionOpened() && !listener->isParagraphOpened())
         listener->insertChar(' ');
     }
     send(int(id), undefPos);

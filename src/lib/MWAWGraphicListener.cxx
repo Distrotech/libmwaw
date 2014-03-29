@@ -1124,7 +1124,7 @@ void MWAWGraphicListener::openTable(MWAWTable const &table)
 
 void MWAWGraphicListener::openTable(MWAWPosition const &pos, MWAWTable const &table, MWAWGraphicStyle const &style)
 {
-  if ((m_ps->m_isFrameOpened&&!m_ps->m_isTextBoxOpened) || m_ps->m_isTableOpened) {
+  if (!m_ps->m_isFrameOpened || m_ps->m_isTableOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: no frame is already open...\n"));
     return;
   }

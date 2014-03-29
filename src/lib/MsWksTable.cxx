@@ -219,8 +219,8 @@ bool MsWksTable::sendTable(int zoneId)
       cell.setBorders(internWhat, internBorder);
       if (!table.m_style.m_surfaceColor.isWhite())
         cell.setBackgroundColor(table.m_style.m_surfaceColor);
-      listener->setParagraph(para);
       listener->openTableCell(cell);
+      listener->setParagraph(para);
 
       MsWksTableInternal::Table::Cell const *tCell=table.getCell(cellPosition);
       if (tCell) {

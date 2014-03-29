@@ -61,10 +61,12 @@ namespace MsWksDRParserInternal
 //! Internal: the state of a MsWksDRParser
 struct State {
   //! constructor
-  State() : m_actPage(0), m_numPages(0)
+  State() : m_mainZoneId(0), m_actPage(0), m_numPages(0)
   {
   }
 
+  /** the main zone */
+  int m_mainZoneId;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 };
 }
@@ -108,18 +110,27 @@ void MsWksDRParser::init()
 ////////////////////////////////////////////////////////////
 void MsWksDRParser::newPage(int number, bool softBreak)
 {
-  if (!getGraphicListener() || number <= m_state->m_actPage || number > m_state->m_numPages)
+  if (!getGraphicListener() || number < m_state->m_actPage || number > m_state->m_numPages)
     return;
 
   long pos = m_document->getInput()->tell();
-  while (m_state->m_actPage < number) {
+  int const vers=version();
+  while (m_state->m_actPage <= number) {
     if (++m_state->m_actPage!=1) {
       if (softBreak)
         getGraphicListener()->insertBreak(MWAWGraphicListener::SoftPageBreak);
       else
         getGraphicListener()->insertBreak(MWAWGraphicListener::PageBreak);
     }
-
+    // first, send the background
+    if (vers==4) {
+      MsWksGraph::SendData sendData;
+      sendData.m_type = MsWksGraph::SendData::RBIL;
+      sendData.m_anchor =  MWAWPosition::Page;
+      sendData.m_id = 0;
+      sendData.m_page = -1;
+      m_document->getGraphParser()->sendObjects(sendData);
+    }
     MsWksGraph::SendData sendData;
     sendData.m_type = MsWksGraph::SendData::RBDR;
     sendData.m_anchor =  MWAWPosition::Page;
@@ -148,7 +159,7 @@ void MsWksDRParser::parse(librevenge::RVNGDrawingInterface *docInterface)
       createDocument(docInterface);
       for (int i=0; i< m_state->m_numPages; ++i)
         newPage(i);
-#if defined(DEBUG)
+#if 0 && defined(DEBUG)
       if (version()<=3)
         m_document->getTextParser3()->flushExtra();
       m_document->getGraphParser()->flushExtra();
@@ -214,15 +225,15 @@ bool MsWksDRParser::createZones()
   MWAWEntry group;
 
   // now the main group of draw shape
-  int mainId=MsWksDocument::Z_MAIN; // fixme: use m_document->getNewZoneId() here
+  m_state->m_mainZoneId= version()==4 ? 0 : m_document->getNewZoneId();
   typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
-                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, mainId)));
+                     (MsWksDocument::Z_MAIN,MsWksDocument::Zone(MsWksDocument::Z_MAIN, m_state->m_mainZoneId)));
   if (version()==4) {
     pos=input->tell();
     int id=m_document->getNewZoneId();
     typeZoneMap.insert(std::multimap<int,MsWksDocument::Zone>::value_type
                        (MsWksDocument::Z_NONE,MsWksDocument::Zone(MsWksDocument::Z_NONE, id)));
-    group.setId(mainId);
+    group.setId(m_state->m_mainZoneId);
     group.setName("RBIL");
     if (!m_document->m_graphParser->readRB(input,group,1)) {
       MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBIL group\n"));
@@ -233,7 +244,7 @@ bool MsWksDRParser::createZones()
   }
 
   pos=input->tell();
-  group.setId(mainId);
+  group.setId(m_state->m_mainZoneId);
   group.setName("RBDR");
   if (!m_document->m_graphParser->readRB(input,group,1)) {
     MWAW_DEBUG_MSG(("MsWksDRParser::createZones: can not read RBDR group\n"));
@@ -259,7 +270,7 @@ bool MsWksDRParser::createZones()
   }
 
   std::vector<int> linesH, pagesH;
-  m_document->getGraphParser()->computePositions(mainId, linesH, pagesH);
+  m_document->getGraphParser()->computePositions(m_state->m_mainZoneId, linesH, pagesH);
 
   return true;
 }
