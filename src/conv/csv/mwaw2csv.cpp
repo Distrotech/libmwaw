@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     fprintf(stderr,"ERROR: Unsupported file format!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_SPREADSHEET) {
+  if (kind != MWAWDocument::MWAW_K_SPREADSHEET && kind != MWAWDocument::MWAW_K_DATABASE) {
     fprintf(stderr,"ERROR: not a spreadsheet!\n");
     return 1;
   }

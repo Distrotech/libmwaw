@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
       librevenge::RVNGRawDrawingGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);
     }
-    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
+    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET || kind == MWAWDocument::MWAW_K_DATABASE) {
       librevenge::RVNGRawSpreadsheetGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);
     }

@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
       }
       useStringVector=true;
     }
-    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET) {
+    else if (kind == MWAWDocument::MWAW_K_SPREADSHEET || kind == MWAWDocument::MWAW_K_DATABASE) {
       librevenge::RVNGTextSpreadsheetGenerator documentGenerator(pages, isInfo);
       error=MWAWDocument::parse(&input, &documentGenerator);
       if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {

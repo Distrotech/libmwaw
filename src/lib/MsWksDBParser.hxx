@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MS_WKS_SS_PARSER
-#  define MS_WKS_SS_PARSER
+#ifndef MS_WKS_DB_PARSER
+#  define MS_WKS_DB_PARSER
 
 #include <list>
 #include <string>
@@ -47,29 +47,29 @@
 
 #include "MWAWParser.hxx"
 
-namespace MsWksSSParserInternal
+namespace MsWksDBParserInternal
 {
+class Form;
 struct State;
 
-class Cell;
 class SubDocument;
 }
 
 class MsWksDocument;
 
-/** \brief the main class to read a Microsoft Works spreadsheet file
+/** \brief the main class to read a Microsoft Works database file and convert it in a spreadsheet file
  *
  *
  *
  */
-class MsWksSSParser : public MWAWSpreadsheetParser
+class MsWksDBParser : public MWAWSpreadsheetParser
 {
-  friend class MsWksSSParserInternal::SubDocument;
+  friend class MsWksDBParserInternal::SubDocument;
 public:
   //! constructor
-  MsWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  MsWksDBParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~MsWksSSParser();
+  virtual ~MsWksDBParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -91,30 +91,79 @@ protected:
   // intermediate level
   //
 
-  //! try to read the spreadsheet data zone
-  bool readSSheetZone();
+  //! try to read the database zone
+  bool readDataBase();
 
-  /** try to send a note */
-  void sendNote(int id);
-
-  //! try to send the main spreadsheet
-  bool sendSpreadsheet();
+  //! try to send the main database
+  bool sendDatabase();
 
   //
   // low level
   //
 
-  //!reads the end of the header
-  bool readEndHeader();
-  //!reads a cell content data
-  bool readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell);
+  ////////////////////////////////////////
+  //     FIELD/RECORD/FILTERS
+  ////////////////////////////////////////
+
+  /** reads the list of the fields type v3-v4*/
+  bool readFieldTypes();
+  /** reads the list of the fields type v2 */
+  bool readFieldTypesV2();
+  /** reads the database contents: field's names and values
+
+  \note if onlyCheck = true, only check if the zone is ok but do nothing */
+  bool readRecords(bool onlyCheck);
+  /** reads the filters */
+  bool readFilters();
+  /** reads the list of the columns size */
+  bool readColSize(std::vector<int> &colSize);
+
+  /** reads the default value */
+  bool readDefaultValues();
+  /** reads the formula value */
+  bool readFormula();
+  /** reads the serial value */
+  bool readSerialFormula();
+
+
+  ////////////////////////////////////////
+  //     FORM
+  ////////////////////////////////////////
+  /** reads all the form */
+  bool readForms();
+  /** reads a list of dimension(?) corresponding to the fields type v2 */
+  bool readFormV2();
+  /** reads one form */
+  bool readForm();
+  /** read a form types */
+  bool readFormTypes(MsWksDBParserInternal::Form &form);
+
+  ////////////////////////////////////////
+  //     REPORT
+  ////////////////////////////////////////
+  /** reads the reports */
+  bool readReports();
+  /** read a report header */
+  bool readReportHeader();
+  /** reads a report zone in v.2 file */
+  bool readReportV2();
+
+  ////////////////////////////////////////
+  //     UNKNOWN
+  ////////////////////////////////////////
+  /** reads an unknown zone V2
+
+   \note this header looks like the form v3-4 header, but
+   is it really the form header ?*/
+  bool readUnknownV2();
+
 
 protected:
   //
   // data
   //
   //! the state
-  shared_ptr<MsWksSSParserInternal::State> m_state;
+  shared_ptr<MsWksDBParserInternal::State> m_state;
 
   //! the list of different Zones
   std::vector<MWAWEntry> m_listZones;

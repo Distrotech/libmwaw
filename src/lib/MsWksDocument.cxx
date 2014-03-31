@@ -740,7 +740,7 @@ bool MsWksDocument::readDocumentInfo(long sz)
   long pos = input->tell();
   libmwaw::DebugStream f;
 
-  int vers = version();
+  int vers = m_parserState->m_kind==MWAWDocument::MWAW_K_DATABASE ? 2 : version();
   int docId = 0;
   int docExtra = 0;
   int flag = 0;
@@ -1145,6 +1145,224 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
 
   input->seek(headerSize,librevenge::RVNG_SEEK_SET);
   return strict ? (numError==0) : (numError < 3);
+}
+
+////////////////////////////////////////////////////////////
+// spreadsheet/database function
+////////////////////////////////////////////////////////////
+bool MsWksDocument::readDBString(long endPos, std::string &res)
+{
+  MWAWInputStreamPtr input=getInput();
+  res = "";
+  int error = 0;
+  int ok = 0;
+  while (input->tell() != endPos) {
+    char c = (char) input->readLong(1);
+    if (c < 27 && c != '\t' && c != '\n') error++;
+    else ok++;
+    res += c;
+  }
+  return ok >= error;
+}
+
+bool MsWksDocument::readDBNumber(long endPos, double &res, bool &isNan, std::string &str)
+{
+  MWAWInputStreamPtr input=getInput();
+  res = 0;
+  str="";
+  long pos = input->tell();
+  if (endPos > pos+10 && !readDBString(endPos-10,str)) return false;
+  return input->tell() == endPos-10 && input->readDouble10(res,isNan);
+}
+
+bool MsWksDocument::readCellInFormula(MWAWCellContent::FormulaInstruction &instr, bool is2D)
+{
+  MWAWInputStreamPtr input=getInput();
+  instr=MWAWCellContent::FormulaInstruction();
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  bool ok = true;
+  if (is2D) {
+    bool absolute[2] = { false, false};
+    int type = (int) input->readULong(1);
+    if (type & 0x80) {
+      absolute[0] = true;
+      type &= 0x7F;
+    }
+    if (type & 0x40) {
+      absolute[1] = true;
+      type &= 0xBF;
+    }
+    if (type) {
+      MWAW_DEBUG_MSG(("MSWksSSParser::readCellInFormula:Pb find fl=%d when reading a cell\n", type));
+      ok = false;
+    }
+    int pos[2]= {1,0};
+    for (int i=0; i< 2; ++i)
+      pos[i] = (int) input->readULong(1);
+
+    if (pos[0] < 1 || pos[1] < 0) {
+      if (ok) {
+        MWAW_DEBUG_MSG(("MSWksSSParser::readCellInFormula: can not read cell position\n"));
+      }
+      return false;
+    }
+    instr.m_position[0]=Vec2i(pos[1],pos[0]-1);
+    instr.m_positionRelative[0]=Vec2b(!absolute[1],!absolute[0]);
+  }
+  else
+    instr.m_position[0]=Vec2i((int) input->readULong(1),0);
+  return ok;
+}
+
+bool MsWksDocument::readFormula(long endPos, MWAWCellContent &content, std::string &extra)
+{
+  MWAWInputStreamPtr input=getInput();
+  long pos = input->tell();
+  extra="";
+  if (pos == endPos) return false;
+
+  std::stringstream f;
+  std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
+  bool is2D=m_parserState->m_kind!=MWAWDocument::MWAW_K_DATABASE;
+  bool ok=true;
+  while (input->tell() !=endPos) {
+    pos = input->tell();
+    int code = (int) input->readLong(1);
+    MWAWCellContent::FormulaInstruction instr;
+    bool findEnd=false;
+    switch (code) {
+    case 0x0:
+    case 0x2:
+    case 0x4:
+    case 0x6: {
+      static char const *wh[]= {"+","-","*","/"};
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content=wh[code/2];
+      break;
+    }
+    case 0x8: { // a number
+      int sz = (int) input->readULong(1);
+      std::string s;
+      double val;
+      bool isNan;
+      if (pos+sz+12 <= endPos && readDBNumber((pos+2)+sz+10, val, isNan, s)) {
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+        instr.m_doubleValue=val;
+        break;
+      }
+      f << "###number" << s;
+      ok=false;
+      break;
+    }
+    case 0x0a: { // a cell
+      if (!readCellInFormula(instr, is2D))
+        f << "#";
+      break;
+    }
+    case 0x0c: { // function
+      int v = (int) input->readULong(1);
+      static char const *(listFunc) [0x41] = {
+        "Abs", "Sum", "Na", "Error", "ACos", "And", "ASin", "ATan",
+        "ATan2", "Average", "Choose", "Cos", "Count", "Exp", "False", "FV",
+        "HLookup", "If", "Index", "Int", "IRR", "IsBlank", "IsError", "IsNa",
+        "##Funct[30]", "Ln", "Lookup", "Log10", "Max", "Min", "Mod", "Not",
+        "NPer", "NPV", "Or", "Pi", "Pmt", "PV", "Rand", "Round",
+        "Sign", "Sin", "Sqrt", "StDev", "Tan", "True", "Var", "VLookup",
+        "Match", "MIRR", "Rate", "Type", "Radians", "Degrees", "Sum" /*"SSum: checkme"*/, "Date",
+        "Day", "Hour", "Minute", "Month", "Now", "Second", "Time", "Weekday",
+        "Year"
+      };
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+      if ((v%2) == 0 && v >= 0 && v/2 <= 0x40)
+        instr.m_content=listFunc[v/2];
+      else {
+        f << "###";
+        MWAW_DEBUG_MSG(("MSWksSSParser::readFormula: find unknown function %x\n", v));
+        std::stringstream s;
+        s << "Funct" << std::hex << v << std::dec;
+        instr.m_content=s.str();
+      }
+      break;
+    }
+    case 0x0e: { // list of cell
+      MWAWCellContent::FormulaInstruction instr2;
+      if (endPos-pos< (is2D ? 9 : 5)) {
+        f << "###list cell short";
+        ok = false;
+        break;
+      }
+      if (!readCellInFormula(instr, is2D) || !readCellInFormula(instr2, is2D))
+        f << "#";
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      instr.m_position[1]=instr2.m_position[0];
+      instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+      break;
+    }
+    case 0x16:
+      findEnd=true;
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
+      f << ",";
+      break;
+    default:
+      if ((code%2)==0 && code>=0x10 && code<=0x22) {
+        static char const *wh[]= {"(", ")", ";", "end", "<", ">", "=", "<=", ">=", "<>" };
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+        instr.m_content=wh[(code-0x10)/2];
+        break;
+      }
+      f << "###" << std::hex << code << std::dec;
+      ok = false;
+      break;
+    }
+    if (!ok || findEnd)
+      break;
+    f << instr;
+    formula.push_back(instr);
+  }
+  if (ok)
+    content.m_formula=formula;
+  extra=f.str();
+  pos = input->tell();
+  if (endPos - pos < 21)
+    return ok;
+  // test if we have the value
+  if (input->readLong(1) != 0x16) {
+    input->seek(-1, librevenge::RVNG_SEEK_CUR);
+    return true;
+  }
+
+  f.str("");
+  f << std::dec << "unk1=[";
+  // looks a little as a zone of cell ?? but this seems eroneous
+  for (int i = 0; i < 2; i++) {
+    int v = (int) input->readULong(1);
+
+    int n0 = (int) input->readULong(1);
+    int n1 = (int) input->readULong(1);
+    if (i == 1) f << ":";
+    f << n0 << "x" << n1;
+    if (v) f << "##v";
+  }
+  f << std::hex << "],unk2=["; // 0, followed by a small number between 1 and 140
+  for (int i = 0; i < 2; i++)
+    f << input->readULong(2) << ",";
+  f << "]";
+
+  // the value
+  double value;
+  bool isNan;
+  std::string res;
+  if (!readDBNumber(endPos, value, isNan, res)) {
+    MWAW_DEBUG_MSG(("MsWksDocument::readFormula: can not read val number\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    f << ",###";
+  }
+  else {
+    content.setValue(value);
+    f << ":" << value << ",";
+  }
+  extra += f.str();
+  return true;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

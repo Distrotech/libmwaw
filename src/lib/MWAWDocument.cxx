@@ -69,6 +69,7 @@
 #include "MindWrtParser.hxx"
 #include "MoreParser.hxx"
 #include "MsWksParser.hxx"
+#include "MsWksDBParser.hxx"
 #include "MsWksDRParser.hxx"
 #include "MsWksSSParser.hxx"
 #include "MsWrd1Parser.hxx"
@@ -507,7 +508,12 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new GreatWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
-      parser.reset(new MsWksSSParser(input, rsrcParser, header));
+      if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
+        parser.reset(new MsWksSSParser(input, rsrcParser, header));
+#ifdef DEBUG
+      else
+        parser.reset(new MsWksDBParser(input, rsrcParser, header));
+#endif
       break;
     case MWAWDocument::MWAW_T_WINGZ:
       parser.reset(new WingzParser(input, rsrcParser, header));

@@ -230,6 +230,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3));
         return res;
       }
+      if (type=="AWDB") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3, MWAWDocument::MWAW_K_DATABASE));
+        return res;
+      }
       if (type=="AWDR") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 3, MWAWDocument::MWAW_K_DRAW));
         return res;
@@ -530,7 +534,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       mainOle->seek(16, librevenge::RVNG_SEEK_SET);
       int value=(int) mainOle->readULong(2);
       switch (value) {
-      // case 2: database
+      case 2:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4, MWAWDocument::MWAW_K_DATABASE));
+        break;
       case 3:
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, 4, MWAWDocument::MWAW_K_SPREADSHEET));
         break;
@@ -619,7 +625,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       case 1:
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers));
         break;
-      // case 2: database
+      case 2:
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers, MWAWDocument::MWAW_K_DATABASE));
+        break;
       case 3:
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORKS, vers, MWAWDocument::MWAW_K_SPREADSHEET));
         break;

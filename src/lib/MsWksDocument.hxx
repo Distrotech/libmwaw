@@ -41,7 +41,9 @@
 #include <librevenge/librevenge.h>
 
 #include "libmwaw_internal.hxx"
+
 #include "MWAWDebug.hxx"
+#include "MWAWCell.hxx"
 
 namespace MsWksDocumentInternal
 {
@@ -51,6 +53,7 @@ class SubDocument;
 }
 
 class MsWksParser;
+class MsWksDBParser;
 class MsWksDRParser;
 class MsWksSSParser;
 class MsWks4Zone;
@@ -66,6 +69,7 @@ class MsWksDocument
   friend class MsWksDocumentInternal::SubDocument;
   friend class MsWksParser;
   friend class MsWks4Zone;
+  friend class MsWksDBParser;
   friend class MsWksDRParser;
   friend class MsWksSSParser;
 public:
@@ -201,6 +205,18 @@ public:
   void sendTextbox(MWAWEntry const &entry, std::string const &frame);
 
 protected:
+  //
+  // spreadsheet/database function
+  //
+
+  /** reads a cell */
+  bool readCellInFormula(MWAWCellContent::FormulaInstruction &instr, bool is2D);
+  /** try to read a string */
+  bool readDBString(long endPos, std::string &res);
+  /** try to read a number */
+  bool readDBNumber(long endPos, double &res, bool &isNan, std::string &str);
+  /* reads a formula */
+  bool readFormula(long endPos, MWAWCellContent &content, std::string &extra);
 
 protected:
 

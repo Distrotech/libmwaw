@@ -65,6 +65,7 @@ class MsWksDocument;
 
 class MsWksParser;
 class MsWks4Zone;
+class MsWksDBParser;
 class MsWksDRParser;
 class MsWksSSParser;
 
@@ -76,6 +77,7 @@ class MsWksGraph
 
   friend class MsWksParser;
   friend class MsWks4Zone;
+  friend class MsWksDBParser;
   friend class MsWksDRParser;
   friend class MsWksSSParser;
   friend class MsWksGraphInternal::SubDocument;
