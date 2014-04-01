@@ -1061,8 +1061,7 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
       else
         content.setValue(val);
       f << val;
-      if (!str.empty())
-        f << "[" << str << "],";
+      if (!str.empty()) f << "[" << str << "],";
       break;
     }
     case MWAWCellContent::C_FORMULA: {
