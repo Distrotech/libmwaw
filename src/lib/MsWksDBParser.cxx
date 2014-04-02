@@ -67,27 +67,18 @@ class SerialFormula
 {
 public:
   //! the constructor
-  SerialFormula() : m_increm(0), m_firstValue(0), m_prefix(""), m_suffix("") { }
+  SerialFormula() : m_increment(0), m_nextValue(0), m_prefix(""), m_suffix("") { }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, SerialFormula const &form);
-  //! returns true if the content is a text
-  bool isText() const
-  {
-    return m_prefix.length() || m_suffix.length();
-  }
-  //! returns a string corresponding to a row value
-  std::string getString(double value) const
-  {
-    std::stringstream f;
-    f << m_prefix << value << m_suffix;
-    return f.str();
-  }
+
+  //! update a content (knowing the value)
+  void updateContent(long value, MWAWCellContent &content);
 
   //! the increment
-  int m_increm;
+  long m_increment;
   //! the first value
-  unsigned long m_firstValue;
+  long m_nextValue;
 
   //! the prefix
   std::string m_prefix;
@@ -96,11 +87,53 @@ public:
   std::string m_suffix;
 };
 
+void SerialFormula::updateContent(long value, MWAWCellContent &content)
+{
+  std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
+  formula.resize(0);
+  content.m_contentType=MWAWCellContent::C_FORMULA;
+  MWAWCellContent::FormulaInstruction instr;
+  if (m_prefix.empty() && m_suffix.empty()) {
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+    instr.m_longValue=value;
+    formula.push_back(instr);
+    return;
+  }
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+  instr.m_content="Concatenate";
+  formula.push_back(instr);
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+  instr.m_content="(";
+  formula.push_back(instr);
+  if (!m_prefix.empty()) {
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+    instr.m_content=m_prefix;
+    formula.push_back(instr);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content=";";
+    formula.push_back(instr);
+  }
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+  instr.m_longValue=value;
+  formula.push_back(instr);
+  if (!m_suffix.empty()) {
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content=";";
+    formula.push_back(instr);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+    instr.m_content=m_suffix;
+    formula.push_back(instr);
+  }
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+  instr.m_content=")";
+  formula.push_back(instr);
+}
+
 //! operator<<
 std::ostream &operator<<(std::ostream &o, SerialFormula const &form)
 {
   if (form.m_prefix.length()) o << "\"" << form.m_prefix << "\".";
-  o << "(" << form.m_firstValue << "+" << form.m_increm << "*Row)";
+  o << "(" << form.m_nextValue << "+" << form.m_increment << "*Row)";
   if (form.m_suffix.length()) o << ".\"" << form.m_suffix << "\"";
   return o;
 }
@@ -111,11 +144,20 @@ class FieldType : public MWAWCell
 public:
   //! constructor
   FieldType() : MWAWCell(), m_content(), m_name(""), m_used(true), m_isSerial(false),
-    m_height(0), m_serialId(0), m_serialFormula(), m_extra("")
+    m_serialId(0), m_serialFormula(), m_height(0), m_extra("")
   { }
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, FieldType const &fType);
+
+  //! returns true if the field has no content
+  bool empty() const
+  {
+    return !m_isSerial && m_content.empty();
+  }
+
+  //! update a field with the record data
+  void updateWithContent(Vec2i const &pos, MWAWCellContent const &content);
 
   /** the cell content */
   MWAWCellContent m_content;
@@ -126,21 +168,17 @@ public:
   bool m_used;
   /** a flag to deferentiate a serial formula to a formula */
   bool m_isSerial;
-
-  /** the height */
-  int m_height;
-
   /** serialized field identificator */
   int m_serialId;
-
   /** the serial formula ( if the field is serialized ) */
   SerialFormula m_serialFormula;
 
+  /** the height */
+  int m_height;
   /** extra data */
   std::string m_extra;
 };
 
-//! operator<<
 std::ostream &operator<<(std::ostream &o, FieldType const &fType)
 {
   if (!fType.m_used) {
@@ -159,12 +197,62 @@ std::ostream &operator<<(std::ostream &o, FieldType const &fType)
   return o;
 }
 
+void FieldType::updateWithContent(Vec2i const &pos, MWAWCellContent const &content)
+{
+  setPosition(pos);
+  if (m_isSerial) {
+    m_serialFormula.updateContent((long)(content.m_value+0.4), m_content);
+    return;
+  }
+  MWAWCell::Format const &format=getFormat();
+  if (!content.empty()) {
+    if (m_content.m_contentType==MWAWCellContent::C_FORMULA) {
+      // special case, we need to conserve the formula
+      if (content.m_contentType==MWAWCellContent::C_NUMBER)
+        m_content.setValue(content.m_value);
+      else
+        m_content.m_textEntry=content.m_textEntry;
+    }
+    else
+      m_content=content;
+  }
+  // change the reference date from 1/1/1904 to 1/1/1900
+  if (format.m_format==MWAWCell::F_DATE && m_content.isValueSet())
+    m_content.setValue(m_content.m_value+1462.);
+  // and try to update the 1D formula in 2D
+  std::vector<MWAWCellContent::FormulaInstruction> &formula=m_content.m_formula;
+  for (size_t i=0; i<formula.size(); ++i) {
+    MWAWCellContent::FormulaInstruction &instr=formula[i];
+    if (instr.m_type==MWAWCellContent::FormulaInstruction::F_Cell) {
+      --instr.m_position[0][0];
+      instr.m_position[0][1]=pos[1];
+    }
+    else if (instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList) {
+      --instr.m_position[0][0];
+      --instr.m_position[1][0];
+      instr.m_position[0][1]=instr.m_position[1][1]=pos[1];
+    }
+  }
+}
+
 /** the database */
 class DataBase
 {
 public:
   /** constructor */
   DataBase() : m_numFields(0), m_numRecords(0), m_listFieldTypes(), m_listRecords() {}
+  //! convert the m_widthCols in a vector of of point size
+  std::vector<float> convertInPoint(std::vector<int> const &list, float defSize) const
+  {
+    size_t numCols=m_listFieldTypes.size();
+    std::vector<float> res;
+    res.resize(numCols);
+    for (size_t i = 0; i < numCols; i++) {
+      if (i>=list.size() || list[i] < 0) res[i] = defSize;
+      else res[i] = float(list[i]);
+    }
+    return res;
+  }
 
   /** the number of fields */
   int m_numFields;
@@ -444,7 +532,6 @@ void MsWksDBParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 
     checkHeader(0L);
     ok=createZones();
-    ok=false;
     if (ok) {
       createDocument(docInterface);
       sendDatabase();
@@ -1059,7 +1146,7 @@ bool MsWksDBParser::readFormTypes(MsWksDBParserInternal::Form &form)
       if ((lowFlag & 8) != 8 && nType != 0) f << "###flagNoV4,";
       lowFlag &= 7;
     }
-    if (lowFlag) f << "###VisFlag=" << lowFlag;
+    if (lowFlag) f << "###VisFlag=" << lowFlag << ",";
     f << "flg=" << std::hex <<  input->readULong(1)  << std::dec << ",";
 
     // font,sz
@@ -1070,12 +1157,12 @@ bool MsWksDBParser::readFormTypes(MsWksDBParserInternal::Form &form)
     int backColor = (int) input->readULong(1);
     int fontFlags = (int) input->readULong(1);
     uint32_t fflags = 0;
-    if (fontFlags) {
-      if (fontFlags & 1) fflags |= MWAWFont::shadowBit;
-      if (fontFlags & 2) fflags |= MWAWFont::embossBit;
-      if (fontFlags & 4) fflags |= MWAWFont::italicBit;
-      if (fontFlags & 8) font.setUnderlineStyle(MWAWFont::Line::Simple);
-      if (fontFlags & 16) fflags |= MWAWFont::boldBit;
+    if (fontFlags) { // checkme
+      if (fontFlags & 0x1) flag |= MWAWFont::boldBit;
+      if (fontFlags & 0x2) flag |= MWAWFont::italicBit;
+      if (fontFlags & 0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+      if (fontFlags & 0x8) flag |= MWAWFont::embossBit;
+      if (fontFlags & 0x10) flag |= MWAWFont::shadowBit;
       if (fontFlags &0xE0) f << "fFlags=" << std::hex << (fontFlags &0xE0) << std::dec << ",";
     }
     font.setFlags(fflags);
@@ -1271,11 +1358,25 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
     }
     for (int nField = 0; nField < numFields; nField++) {
       pos = input->tell();
+      f.str("");
+      f << "DBRecord["<< rec << "-" << nField << "]:";
 
       int fSz = (int) input->readULong(1);
-      if (fSz == 255 && vers <= 2) {
-        input->seek(-1, librevenge::RVNG_SEEK_CUR);
-        break;
+      if (vers <= 2 && fSz >= 254) { // only for v2 or can we find it for v2 or v3 ?
+        if (fSz == 254) {
+          int skip = (int) input->readLong(1);
+          if (skip > 0 && skip+nField < numFields) {
+            nField+=skip-1;
+            f << "skip=" << skip;
+            ascFile.addPos(pos);
+            ascFile.addNote(f.str().c_str());
+            continue;
+          }
+        }
+        else if (fSz == 255) {
+          input->seek(-1, librevenge::RVNG_SEEK_CUR);
+          break;
+        }
       }
       long ePos = pos+1+fSz;
       if (ePos > endPos) {
@@ -1293,17 +1394,19 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
       f << "DBRecord["<< rec << "-" << nField << "]:";
       MWAWCellContent record;
       if (fSz == 0) ok = true;
-      else if (nField+1 < numFieldsHeader) {
+      else if (nField < numFieldsHeader) {
         double value;
         bool isNan;
         std::string textValue;
-        if (listFields[size_t(nField)+1].getFormat().m_format == MWAWCell::F_TEXT) {
+        if (listFields[size_t(nField)].getFormat().m_format == MWAWCell::F_TEXT) {
           record.m_textEntry.setBegin(pos+1);
           record.m_textEntry.setLength(fSz);
+          record.m_contentType=MWAWCellContent::C_TEXT;
           ok = m_document->readDBString(ePos, textValue);
         }
         else if (m_document->readDBNumber(ePos, value, isNan, textValue)) {
           record.setValue(value);
+          record.m_contentType=MWAWCellContent::C_NUMBER;
           f << value << ",";
           ok=true;
         }
@@ -1321,7 +1424,7 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
 
       (*row)[size_t(nField)] = record;
 
-      f << record; // fixme: use field.getString(record, true)
+      f << record;
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
@@ -1381,7 +1484,7 @@ bool MsWksDBParser::readFieldTypes()
 
   std::vector<MsWksDBParserInternal::FieldType> &listFields = m_state->m_database.m_listFieldTypes;
   listFields.resize(255);
-  for (size_t elt = 0; elt < 255; elt++) {
+  for (size_t  elt = 0; elt < 255; elt++) {
     MsWksDBParserInternal::FieldType fieldType;
     MWAWCell::Format format;
     MWAWCellContent &content=fieldType.m_content;
@@ -1390,22 +1493,22 @@ bool MsWksDBParser::readFieldTypes()
     val = (int) input->readULong(2);
     int type = (val>>13) & 3;
     int inputType = (val>>6) & 0x3;
+    int subformat = ((val>>8) & 0x7);
     format.m_digits = (val>>2) & 0xF;
     switch ((val&3)) {
     case 0:
       fieldType.setHAlignement(MWAWCell::HALIGN_LEFT);
       break;
     case 1:
-      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
+      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
       break;
     case 2:
-      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
       break;
     default:
       f << "#align=3,";
       break;
     }
-    if ((val>>8) & 0x7) f << "format[extra]=" << ((val>>8) & 0x7) << ",";
     val &= 0x9800;
 
     switch (type) {
@@ -1417,14 +1520,55 @@ bool MsWksDBParser::readFieldTypes()
       format.m_format=MWAWCell::F_NUMBER;
       format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
       content.m_contentType=MWAWCellContent::C_NUMBER;
+      switch (subformat) { // checkme
+      case 0:
+        break;
+      case 1:
+        format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+        break;
+      case 2:
+        format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+        break;
+      case 3:
+        format.m_thousandHasSeparator=true;
+        break;
+      case 4:
+        format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+        format.m_thousandHasSeparator=true;
+        break;
+      case 5:
+        format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+        break;
+      case 6:
+        format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+        break;
+      case 7:
+        format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+        format.m_thousandHasSeparator=true;
+        break;
+      default:
+        f << "subform=##unkn" << subformat << ",";
+        break;
+      }
+      subformat=0;
       break;
     case 2:
       format.m_format=MWAWCell::F_DATE;
       content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (subformat>=0 && subformat < 5) { // checkme
+        static char const *(wh[])= {"%m/%d/%y", "%b %d, %Y", "%b, %d", "%b, %Y", "%a, %d %b, %Y" };
+        format.m_DTFormat=wh[subformat];
+        subformat=0;
+      }
       break;
     case 3:
       format.m_format=MWAWCell::F_TIME;
       content.m_contentType=MWAWCellContent::C_NUMBER;
+      if (subformat >= 0 && subformat < 4) { // checkme
+        static char const *(wh[])= {"%I:%M:%S %p", "%I:%M %p", "%H:%M:%S", "%H:%M"};
+        format.m_DTFormat=wh[subformat];
+        subformat=0;
+      }
       break;
     default:
       break;
@@ -1444,6 +1588,7 @@ bool MsWksDBParser::readFieldTypes()
       f << "###inputType(unknown),";
       break;
     }
+    if (subformat) f << "format[extra]=#" << subformat << ",";
     MWAWFont font;
     font.setId((int) input->readULong(2));
     font.setSize((float) input->readULong(2));
@@ -1452,12 +1597,12 @@ bool MsWksDBParser::readFieldTypes()
     int fColor = (int) input->readULong(1);
     int unkn = (int) input->readULong(1); // always 0 ? back color?
     uint32_t fflags = 0;
-    if (fontFlags) {
-      if (fontFlags & 1) fflags |= MWAWFont::shadowBit;
-      if (fontFlags & 2) fflags |= MWAWFont::embossBit;
-      if (fontFlags & 4) fflags |= MWAWFont::italicBit;
-      if (fontFlags & 8) font.setUnderlineStyle(MWAWFont::Line::Simple);
-      if (fontFlags & 16) fflags |= MWAWFont::boldBit;
+    if (fontFlags) { // checkme
+      if (fontFlags & 0x1) fflags |= MWAWFont::boldBit;
+      if (fontFlags & 0x2) fflags |= MWAWFont::italicBit;
+      if (fontFlags & 0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+      if (fontFlags & 0x8) fflags |= MWAWFont::embossBit;
+      if (fontFlags & 0x10) fflags |= MWAWFont::shadowBit;
       if (fontFlags &0xE0) f << "fFlags=" << std::hex << (fontFlags &0xE0) << std::dec << ",";
     }
     font.setFlags(fflags);
@@ -1484,9 +1629,13 @@ bool MsWksDBParser::readFieldTypes()
     fieldType.setFormat(format);
 
     f.str("");
-    f << "FieldType-" << elt << ":" << fieldType;
+    if (elt) {
+      f << "FieldType-" << elt-1 << ":" << fieldType;
+      listFields[elt-1] = fieldType;
+    }
+    else
+      f << "FieldType-def:" << fieldType;
     f << "font=[" << font.getDebugString(getParserState()->m_fontConverter) << "],";
-    listFields[elt] = fieldType;
 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -1522,8 +1671,8 @@ bool MsWksDBParser::readFieldTypesV2()
 
 
   std::vector<MsWksDBParserInternal::FieldType> &listFields = m_state->m_database.m_listFieldTypes;
-  listFields.resize(61);
-  for (int elt = 1; elt <= 60; elt++) {
+  listFields.resize(60);
+  for (int elt = 0; elt < 60; elt++) {
     MsWksDBParserInternal::FieldType fieldType;
     MWAWCellContent &content=fieldType.m_content;
     MWAWCell::Format format;
@@ -1537,10 +1686,10 @@ bool MsWksDBParser::readFieldTypesV2()
       fieldType.setHAlignement(MWAWCell::HALIGN_LEFT);
       break;
     case 1:
-      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
+      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
       break;
     case 2:
-      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
       break;
     default:
       f << "#align=3,";
@@ -1598,9 +1747,6 @@ bool MsWksDBParser::readFieldTypesV2()
 
     switch (what) {
     case 0x80:
-      fieldType.m_used=false;
-      break;
-    case 0x0:
       break;
     default:
       f << "##unknWhat=" << std::hex << what << std::dec << ",";
@@ -1869,12 +2015,12 @@ bool MsWksDBParser::readReportHeader()
   int backColor = (int) input->readULong(1);
   int fontFlags = (int) input->readULong(1);
   uint32_t fflags = 0;
-  if (fontFlags) {
-    if (fontFlags & 1) fflags |= MWAWFont::shadowBit;
-    if (fontFlags & 2) fflags |= MWAWFont::embossBit;
-    if (fontFlags & 4) fflags |= MWAWFont::italicBit;
-    if (fontFlags & 8) font.setUnderlineStyle(MWAWFont::Line::Simple);
-    if (fontFlags & 16) fflags |= MWAWFont::boldBit;
+  if (fontFlags) { // checkme
+    if (fontFlags & 0x1) fflags |= MWAWFont::boldBit;
+    if (fontFlags & 0x2) fflags |= MWAWFont::italicBit;
+    if (fontFlags & 0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
+    if (fontFlags & 0x8) fflags |= MWAWFont::embossBit;
+    if (fontFlags & 0x10) fflags |= MWAWFont::shadowBit;
     if (fontFlags &0xE0) f << "fFlags=" << std::hex << (fontFlags &0xE0) << std::dec << ",";
   }
   font.setFlags(fflags);
@@ -2076,6 +2222,43 @@ bool MsWksDBParser::sendDatabase()
     MWAW_DEBUG_MSG(("MsWksDBParser::sendDatabase: I can not find the listener\n"));
     return false;
   }
+  MWAWInputStreamPtr input=m_document->getInput();
+  MsWksDBParserInternal::DataBase const &database=m_state->m_database;
+  std::vector<MsWksDBParserInternal::FieldType> const &fields = database.m_listFieldTypes;
+  size_t numFields=fields.size();
+  std::vector<std::vector<MWAWCellContent> > const &records=database.m_listRecords;
+  size_t numRecords=records.size();
+  listener->openSheet(database.convertInPoint(m_state->m_widthCols,76), librevenge::RVNG_POINT, "Sheet0");
+  int height=12;
+  for (size_t c=0; c<numFields; ++c)
+    if (fields[c].m_height > height) height=fields[c].m_height;
+  for (size_t r=0; r<numRecords; ++r) {
+    std::vector<MWAWCellContent> const &row=records[r];
+    listener->openSheetRow(height, librevenge::RVNG_POINT);
+    for (size_t c=0; c<row.size(); ++c) {
+      if (c>=numFields) break;
+      MsWksDBParserInternal::FieldType field=fields[c];
+      field.updateWithContent(Vec2i(int(c),int(r)), row[c]);
+      if (field.empty()) continue;
+
+      MWAWCellContent const &content=field.m_content;
+      listener->openSheetCell(field, content);
+      if (content.m_contentType==MWAWCellContent::C_TEXT && content.m_textEntry.valid()) {
+        listener->setFont(field.getFont());
+        input->seek(content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+        while (!input->isEnd() && input->tell()<content.m_textEntry.end()) {
+          unsigned char ch=(unsigned char) input->readULong(1);
+          if (ch==0xd)
+            listener->insertEOL();
+          else
+            listener->insertCharacter(ch);
+        }
+      }
+      listener->closeSheetCell();
+    }
+    listener->closeSheetRow();
+  }
+  listener->closeSheet();
   return false;
 }
 
@@ -2121,7 +2304,6 @@ bool MsWksDBParser::readFormula()
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
     }
-    // FIXME
     listFields.resize(size_t(numFields)+1);
   }
   for (int nField = 0; nField < numFields; nField++) {
@@ -2144,17 +2326,17 @@ bool MsWksDBParser::readFormula()
     else if (fVal < 0);   // error
     else if (fVal == 0) ok = true;
     else {
-      MsWksDBParserInternal::FieldType &field = listFields[size_t(nField)+1];
-      if (field.m_isSerial || field.m_content.m_contentType!=MWAWCellContent::C_FORMULA)
-        break;
+      MsWksDBParserInternal::FieldType &field = listFields[size_t(nField)];
       std::string extra;
-      MWAWCellContent content;
-      // CHANGEME
-      ok = m_document->readFormula(pos+1+fVal, content, extra);
-      if (ok) {
+      if (!field.m_isSerial && field.m_content.m_contentType==MWAWCellContent::C_FORMULA &&
+          m_document->readFormula(pos+1+fVal, field.m_content, extra))
         f << field << extra;
-        input->seek(pos+1+fVal, librevenge::RVNG_SEEK_SET);
+      else {
+        MWAW_DEBUG_MSG(("MsWksDBParser::readFormula: can not read formula for field:%d\n", nField));
+        f << field << "###";
       }
+      input->seek(pos+1+fVal, librevenge::RVNG_SEEK_SET);
+      ok = true;
     }
     if (!ok || input->tell() >= endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -2225,13 +2407,13 @@ bool  MsWksDBParser::readSerialFormula()
     }
     serial.m_prefix = prefSuff[0];
     serial.m_suffix = prefSuff[1];
-    serial.m_increm = (int) input->readULong(2);
+    serial.m_increment = (long) input->readULong(2);
     // the initial value seems to 48 bytes,
     // but we can suppose that the high 32 bytes are
     // almost always 0...
     unsigned long orig = (input->readULong(2) << 16) << 16;
     orig += input->readULong(4);
-    serial.m_firstValue = orig;
+    serial.m_nextValue = (long) orig;
 
     f << serial;
     listSerial.push_back(serial);
@@ -2310,7 +2492,7 @@ bool MsWksDBParser::readDefaultValues()
     else if (fVal < 0);   // error
     else if (fVal == 0) ok = true;
     else {
-      MsWksDBParserInternal::FieldType &field = listFields[size_t(nField+1)];
+      MsWksDBParserInternal::FieldType &field = listFields[size_t(nField)];
       MWAWCell::Format const &format=field.getFormat();
       MWAWCellContent content=field.m_content;
       double value;
