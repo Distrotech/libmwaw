@@ -287,18 +287,21 @@ bool MWAWInputStream::readDouble10(double &res, bool &isNotANumber)
   isNotANumber=false;
   unsigned long mantisse = (unsigned long) readULong(4);
   if ((mantisse & 0x80000001) == 0) {
-    if (readULong(4) != 0) return false;
-
-    if (exp == -0x3fff && mantisse == 0) {
-      res=0;
-      return true; // ok zero
+    // unormalized number are not frequent, but can appear at least for date, ...
+    if (readULong(4) != 0)
+      seek(-4, librevenge::RVNG_SEEK_CUR);
+    else {
+      if (exp == -0x3fff && mantisse == 0) {
+        res=0;
+        return true; // ok zero
+      }
+      if (exp == 0x4000 && (mantisse & 0xFFFFFFL)==0) { // ok Nan
+        isNotANumber = true;
+        res=std::numeric_limits<double>::quiet_NaN();
+        return true;
+      }
+      return false;
     }
-    if (exp == 0x4000 && (mantisse & 0xFFFFFFL)==0) { // ok Nan
-      isNotANumber = true;
-      res=std::numeric_limits<double>::quiet_NaN();
-      return true;
-    }
-    return false;
   }
   double value=double(mantisse);
   value+=double(readULong(4))/65536./65536.;

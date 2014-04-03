@@ -94,7 +94,7 @@ class Spreadsheet
 public:
   //! constructor
   Spreadsheet() : m_font(3,12), m_widthCols(), m_cells(), m_listPageBreaks(), m_idNoteMap(), m_name("Sheet0") {}
-  //! convert the m_widthCols, m_heightRows in a vector of of point size
+  //! convert the m_widthCols in a vector of of point size
   std::vector<float> convertInPoint(std::vector<int> const &list, float defSize) const
   {
     size_t numCols=size_t(getRightBottomPosition()[0]+1);

@@ -73,7 +73,7 @@ public:
   friend std::ostream &operator<<(std::ostream &o, SerialFormula const &form);
 
   //! update a content (knowing the value)
-  void updateContent(long value, MWAWCellContent &content);
+  void updateContent(double value, MWAWCellContent &content);
 
   //! the increment
   long m_increment;
@@ -87,7 +87,7 @@ public:
   std::string m_suffix;
 };
 
-void SerialFormula::updateContent(long value, MWAWCellContent &content)
+void SerialFormula::updateContent(double value, MWAWCellContent &content)
 {
   std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
   formula.resize(0);
@@ -201,7 +201,7 @@ void FieldType::updateWithContent(Vec2i const &pos, MWAWCellContent const &conte
 {
   setPosition(pos);
   if (m_isSerial) {
-    m_serialFormula.updateContent((long)(content.m_value+0.4), m_content);
+    m_serialFormula.updateContent(content.m_value, m_content);
     return;
   }
   MWAWCell::Format const &format=getFormat();
@@ -1362,21 +1362,20 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
       f << "DBRecord["<< rec << "-" << nField << "]:";
 
       int fSz = (int) input->readULong(1);
-      if (vers <= 2 && fSz >= 254) { // only for v2 or can we find it for v2 or v3 ?
-        if (fSz == 254) {
-          int skip = (int) input->readLong(1);
-          if (skip > 0 && skip+nField < numFields) {
-            nField+=skip-1;
-            f << "skip=" << skip;
-            ascFile.addPos(pos);
-            ascFile.addNote(f.str().c_str());
-            continue;
-          }
+      // only for v2 or can we find it for v2 or v3 ?
+      if (fSz == 254) {
+        int skip = (int) input->readLong(1);
+        if (skip > 0 && skip+nField < numFields) {
+          nField+=skip-1;
+          f << "skip=" << skip;
+          ascFile.addPos(pos);
+          ascFile.addNote(f.str().c_str());
+          continue;
         }
-        else if (fSz == 255) {
-          input->seek(-1, librevenge::RVNG_SEEK_CUR);
-          break;
-        }
+      }
+      else if (fSz == 255) {
+        input->seek(-1, librevenge::RVNG_SEEK_CUR);
+        break;
       }
       long ePos = pos+1+fSz;
       if (ePos > endPos) {
@@ -1414,6 +1413,7 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
       }
 
       if (!ok) {
+        f << "###";
         static bool first = true;
         if (first) {
           MWAW_DEBUG_MSG(("MsWksDBParser::readRecords: warning Record=%d:%d ignored\n", rec, nField));
@@ -1671,7 +1671,7 @@ bool MsWksDBParser::readFieldTypesV2()
 
 
   std::vector<MsWksDBParserInternal::FieldType> &listFields = m_state->m_database.m_listFieldTypes;
-  listFields.resize(60);
+  listFields.resize(61);
   for (int elt = 0; elt < 60; elt++) {
     MsWksDBParserInternal::FieldType fieldType;
     MWAWCellContent &content=fieldType.m_content;
@@ -1681,24 +1681,30 @@ bool MsWksDBParser::readFieldTypesV2()
     int val = (int) input->readULong(2);
     int type = (val>>14) & 3;
     format.m_digits = (val>>8) & 0xF;
+    int subFormat = val & 7;
     switch (((val>>5) & 3)) {
     case 0:
       fieldType.setHAlignement(MWAWCell::HALIGN_LEFT);
       break;
     case 1:
-      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
       break;
     case 2:
-      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
+      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
       break;
     default:
       f << "#align=3,";
       break;
     }
-
-    int form = val & 7;
-    val &= 0x3098;
-
+    if (val & 0x18) {
+      MWAWFont font;
+      if (val & 8) font.setUnderlineStyle(MWAWFont::Line::Simple);
+      if (val & 0x10) font.setFlags(MWAWFont::boldBit);
+      fieldType.setFont(font);
+    }
+    if (val & 0x1000) f << "comma,";
+    val &= 0x2080;
+    if (val) f << "#f0=" << std::hex << val << std::dec << ",";
     switch (type) {
     default:
     case 0:
@@ -1719,38 +1725,49 @@ bool MsWksDBParser::readFieldTypesV2()
       f << "##unknType,";
       break;
     }
+    int unkn = (int) input->readULong(1); // always 0 ?
+    if (unkn) f << "##unkn=" << std::hex << unkn << std::dec << ",";
+    int what = (int) input->readULong(1);
+
     if (format.m_format==MWAWCell::F_NUMBER) {
       bool ok = true;
-      switch (form) {
+      switch (subFormat) {
+      case 0:
+        format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+        break;
       case 1:
-        f << "format[extra]=1,";
+        format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+        break;
+      case 2:
+        format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
         break;
       case 3:
         break;
-      case 6:
-        f << "format[extra]=6,";
+      case 4:
+        format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+        break;
       case 5:
         format.m_format=MWAWCell::F_DATE;
+        format.m_DTFormat="%m/%d/%y";
         break;
+      case 6: {
+        format.m_format=MWAWCell::F_DATE;
+        static char const *(wh[])= {"%B %d, %Y", "%b %d, %Y", "%A, %d %B, %Y", "%a, %d %b, %Y" };
+        format.m_DTFormat=wh[((what>>5)&3)];
+        what &= 0x9F;
+        break;
+      }
       case 7:
         format.m_format=MWAWCell::F_TIME;
         break;
       default:
         ok = false;
       }
-      if (ok) form = 0;
+      if (ok) subFormat = 0;
     }
-    if (form) f << "#format[extra]=" << form << ",";
-    int unkn = (int) input->readULong(1); // always 0 ?
-    if (unkn) f << "##unkn=" << std::hex << unkn << std::dec << ",";
-    int what = (int) input->readULong(1);
-
-    switch (what) {
-    case 0x80:
-      break;
-    default:
+    if (subFormat) f << "#format[extra]=" << subFormat << ",";
+    if (what != 0x80)
       f << "##unknWhat=" << std::hex << what << std::dec << ",";
-    }
     fieldType.m_extra=f.str();
     fieldType.setFormat(format);
 
@@ -2184,6 +2201,7 @@ bool MsWksDBParser::readReportV2()
   std::vector<int> colSize;
   if (!readColSize(colSize)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("MsWksDBParser::readReportV2: can not read colSize\n"));
     return false;
   }
 
@@ -2198,8 +2216,9 @@ bool MsWksDBParser::readReportV2()
   ascFile.addNote(f.str().c_str());
 
   pos = input->tell();
-  if (!m_document->readDocumentInfo(0x15e))
+  if (!m_document->readDocumentInfo(0x15e)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
 
   pos = input->tell();
   f.str("");
@@ -2234,7 +2253,7 @@ bool MsWksDBParser::sendDatabase()
     if (fields[c].m_height > height) height=fields[c].m_height;
   for (size_t r=0; r<numRecords; ++r) {
     std::vector<MWAWCellContent> const &row=records[r];
-    listener->openSheetRow(height, librevenge::RVNG_POINT);
+    listener->openSheetRow(float(height), librevenge::RVNG_POINT);
     for (size_t c=0; c<row.size(); ++c) {
       if (c>=numFields) break;
       MsWksDBParserInternal::FieldType field=fields[c];
@@ -2338,7 +2357,7 @@ bool MsWksDBParser::readFormula()
       input->seek(pos+1+fVal, librevenge::RVNG_SEEK_SET);
       ok = true;
     }
-    if (!ok || input->tell() >= endPos) {
+    if (!ok || input->tell() > endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("MsWksDBParser::readFormula: can not read defValue for field:%d\n", nField));
       return false;
@@ -2565,12 +2584,12 @@ bool MsWksDBParser::readColSize(std::vector<int> &colSize)
   }
 
   int lastVal = (int) input->readLong(2);
-  if ((vers > 2 && lastVal != -1) || (vers <= 2 && lastVal != 0)) {
+  if (lastVal<-1 || lastVal>numElt) { // normally 0|-1 but I also find 9(number of elements?)
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MsWksDBParser::readColSize:  end of colSize is odd\n"));
     return false;
   }
-
+  if (lastVal) f << "unkn=" << lastVal << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   return true;
@@ -2661,9 +2680,5 @@ bool MsWksDBParser::checkHeader(MWAWHeader *header, bool strict)
 #endif
   return true;
 }
-
-////////////////////////////////////////////////////////////
-// formula data
-////////////////////////////////////////////////////////////
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

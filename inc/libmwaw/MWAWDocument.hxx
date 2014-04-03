@@ -119,7 +119,7 @@ public:
     MWAW_T_MORE /** More (v2-3): retrieve the organization part but not the slide/tree parts*/,
     MWAW_T_MICROSOFTMULTIPLAN /** Microsoft Multiplan: TODO*/,
     MWAW_T_MICROSOFTWORD /** Microsoft Word  (v1-v5)*/,
-    MWAW_T_MICROSOFTWORKS /** Microsoft Works Mac: export graphic, spreadsheet and text files.*/,
+    MWAW_T_MICROSOFTWORKS /** Microsoft Works Mac: export database(as spreadsheet), graphic, spreadsheet and text files.*/,
     MWAW_T_MACWRITE /** MacWrite */,
     MWAW_T_MACWRITEPRO /** MacWrite II/Pro*/,
     MWAW_T_NISUSWRITER /** Nisus Writer (v3.4-v6.5)*/,

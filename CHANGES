@@ -1,5 +1,8 @@
 CHANGES:
 
+4/3/2014
+- MicrosoftWorks: add a database parser which uses spreadsheet interface
+
 3/29/2014
 - MicrosoftWorks: add a graphic parser(must find more document to improve it)
 

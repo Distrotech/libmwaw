@@ -510,10 +510,8 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
         parser.reset(new MsWksSSParser(input, rsrcParser, header));
-#ifdef DEBUG
       else
         parser.reset(new MsWksDBParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_WINGZ:
       parser.reset(new WingzParser(input, rsrcParser, header));
