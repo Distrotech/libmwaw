@@ -73,7 +73,7 @@ public:
   friend std::ostream &operator<<(std::ostream &o, SerialFormula const &form);
 
   //! update a content (knowing the value)
-  void updateContent(double value, MWAWCellContent &content);
+  void updateContent(double value, MWAWCellContent &content) const;
 
   //! the increment
   long m_increment;
@@ -87,7 +87,7 @@ public:
   std::string m_suffix;
 };
 
-void SerialFormula::updateContent(double value, MWAWCellContent &content)
+void SerialFormula::updateContent(double value, MWAWCellContent &content) const
 {
   std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
   formula.resize(0);
