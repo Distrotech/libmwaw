@@ -1076,14 +1076,25 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
   f << "version= " << input->readULong(4);
   long dim[4];
   for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
+  bool checkDatabaseFileHSize=false;
   if (dim[2] <= dim[0] || dim[3] <= dim[1]) {
-    MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find odd bdbox\n"));
-    numError++;
+    // bdbox(0,0,0,0) can appear if there is no document info, so do not consider this an error for database file
+    if (dim[0]==0 && dim[1]==0 && dim[2]==0 && dim[3]==0 && m_state->m_kind == MWAWDocument::MWAW_K_DATABASE) {
+      checkDatabaseFileHSize=true;
+    }
+    else {
+      MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find odd bdbox\n"));
+      numError++;
+    }
   }
   f << ", windowdbdbox?=(";
   for (int i = 0; i < 4; i++) f << dim[i]<<",";
   f << "),";
   long fileHeaderSize=(long) input->readULong(4);
+  if (checkDatabaseFileHSize && strict) {
+    if ((version()==2 && fileHeaderSize!=0x516) || (version()==3&&fileHeaderSize!=0x50))
+      return false;
+  }
   if (fileHeaderSize)
     f << "headerSize=" << std::hex << fileHeaderSize << std::dec << ",";
 

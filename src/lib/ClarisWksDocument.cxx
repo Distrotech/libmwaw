@@ -492,10 +492,9 @@ bool ClarisWksDocument::checkHeader(MWAWHeader *header, bool strict)
   m_parserState->m_kind=kind;
   if (header) {
     header->reset(MWAWDocument::MWAW_T_CLARISWORKS, vers, kind);
+    // changeme: draw files are actually converted in text document
     if (type == 0)
       header->setKind(MWAWDocument::MWAW_K_TEXT);
-    if (type == 3)
-      header->setKind(MWAWDocument::MWAW_K_SPREADSHEET);
   }
 
   if (strict && type > 5) return false;
