@@ -110,6 +110,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
         return res;
       }
+      if (type=="BWdb") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_DATABASE));
+        return res;
+      }
       if (type=="BWdr") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
@@ -477,6 +481,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     if (val[3]==0x7770) {
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks file\n"));
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1));
+      return res;
+    }
+    if (val[3]==0x6462) {
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a BeagleWorks Database file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_DATABASE));
       return res;
     }
     if (val[3]==0x6472) {

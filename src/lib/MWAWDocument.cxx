@@ -46,6 +46,7 @@
 #include "ActaParser.hxx"
 #include "BeagleWksParser.hxx"
 #include "BeagleWksBMParser.hxx"
+#include "BeagleWksDBParser.hxx"
 #include "BeagleWksDRParser.hxx"
 #include "BeagleWksSSParser.hxx"
 #include "ClarisWksParser.hxx"
@@ -496,7 +497,12 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
   try {
     switch (header->getType()) {
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
-      parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
+      if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
+        parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
+#ifdef DEBUG
+      else
+        parser.reset(new BeagleWksDBParser(input, rsrcParser, header));
+#endif
       break;
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
       parser.reset(new WingzParser(input, rsrcParser, header));

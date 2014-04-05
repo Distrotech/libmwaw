@@ -163,7 +163,7 @@ void Chart::sendContent(Chart::TextZone const &zone, MWAWListenerPtr &listener)
 //! Internal: the state of a BeagleWksSSParser
 struct State {
   //! constructor
-  State() :  m_spreadsheetBegin(-1), m_spreadsheet(), m_spreadsheetName("Sheet0"), m_chartList(), m_typeEntryMap(), m_header(), m_footer(),
+  State() :  m_spreadsheetBegin(-1), m_spreadsheet(), m_spreadsheetName("Sheet0"), m_chartList(), m_typeEntryMap(),
     m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
@@ -210,10 +210,6 @@ struct State {
   std::vector<shared_ptr<Chart> > m_chartList;
   /** the type entry map */
   std::multimap<std::string, MWAWEntry> m_typeEntryMap;
-  /** the header entry */
-  MWAWEntry m_header;
-  /** the footer entry */
-  MWAWEntry m_footer;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -381,21 +377,23 @@ void BeagleWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *doc
   int numPages = 1;
   m_state->m_numPages = numPages;
 
+  MWAWEntry header, footer;
+  m_structureManager->getHeaderFooterEntries(header,footer);
   std::vector<MWAWPageSpan> pageList;
   MWAWPageSpan ps(getPageSpan());
-  if (m_state->m_header.valid()) {
+  if (header.valid()) {
     shared_ptr<BeagleWksSSParserInternal::SubDocument> subDoc
-    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), m_state->m_header));
-    MWAWHeaderFooter header(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
-    header.m_subDocument=subDoc;
-    ps.setHeaderFooter(header);
+    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), header));
+    MWAWHeaderFooter hf(MWAWHeaderFooter::HEADER, MWAWHeaderFooter::ALL);
+    hf.m_subDocument=subDoc;
+    ps.setHeaderFooter(hf);
   }
-  if (m_state->m_footer.valid()) {
+  if (footer.valid()) {
     shared_ptr<BeagleWksSSParserInternal::SubDocument> subDoc
-    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), m_state->m_footer));
-    MWAWHeaderFooter footer(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    footer.m_subDocument=subDoc;
-    ps.setHeaderFooter(footer);
+    (new BeagleWksSSParserInternal::SubDocument(*this, getInput(), footer));
+    MWAWHeaderFooter hf(MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hf.m_subDocument=subDoc;
+    ps.setHeaderFooter(hf);
   }
   ps.setPageSpan(numPages);
   pageList.push_back(ps);
@@ -477,7 +475,10 @@ bool BeagleWksSSParser::createZones()
 
   input->seek(m_state->m_spreadsheetBegin, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
-  if (!readDocumentInfo())
+  if (!m_structureManager->readDocumentPreferences())
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  pos = input->tell();
+  if (!m_structureManager->readDocumentInfo())
     input->seek(pos, librevenge::RVNG_SEEK_SET);
   pos = input->tell();
   if (!readChartZone())
@@ -583,130 +584,6 @@ bool BeagleWksSSParser::readPrintInfo()
   }
   ascii().addPos(input->tell());
 
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// document header
-////////////////////////////////////////////////////////////
-bool BeagleWksSSParser::readDocumentInfo()
-{
-  MWAWInputStreamPtr &input= getInput();
-  long pos=input->tell();
-  if (!input->checkPosition(pos+92+512)) {
-    MWAW_DEBUG_MSG(("BeagleWksSSParser::readDocumentInfo: can not find the spreadsheet zone\n"));
-    return false;
-  }
-  libmwaw::DebugStream f;
-  f << "Entries(DocInfo):";
-  // the preferences
-  int val=(int) input->readLong(2);
-  if (val!=0x2e) f << "f0=" << val << ",";
-  val=(int) input->readLong(2);
-  if (val!=0xa) f << "f1=" << val << ",";
-  std::string what("");
-  for (int i=0; i < 4; ++i) // pref
-    what+=(char) input->readLong(1);
-  f << what << ",";
-  for (int i=0; i < 3; ++i) { // always 0
-    val=(int) input->readLong(2);
-    if (val) f << "f" << i+2 << "=" << val << ",";
-  }
-  f << "ids=[";
-  for (int i=0; i < 2; i++) {
-    long id=(long) input->readULong(4);
-    f << std::hex << id << std::dec << ",";
-  }
-  f << "],";
-  val=(int) input->readULong(2); // 0|22d8|4ead|e2c8
-  if (val)
-    f << "fl?=" << std::hex << val << std::dec << ",";
-  for (int i=0; i < 8; i++) {
-    static int const(expectedValues[])= {1,4/*or 2*/,3,2,2,1,1,1 };
-    val=(int) input->readLong(1);
-    if (val!=expectedValues[i])
-      f << "g" << i << "=" << val << ",";
-  }
-  for (int i=0; i < 8; ++i) { // 1,a|e, 0, 21, 3|4, 6|7|9, d|13, 3|5: related to font?
-    val=(int) input->readLong(2);
-    if (val)
-      f << "h" << i << "=" << val << ",";
-  }
-  val=(int) input->readULong(2); //0|10|3e|50|c8|88|98
-  if (val)
-    f << "h8=" <<  std::hex << val << std::dec << ",";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  // document info
-  pos=input->tell();
-  f.str("");
-  f << "DocInfo[dosu]:";
-  val=(int) input->readLong(2);
-  if (val!=0x226) f << "f0=" << val << ",";
-  val=(int) input->readLong(2);
-  if (val!=1) f << "f1=" << val << ",";
-  what="";
-  for (int i=0; i < 4; ++i) // dosu
-    what+=(char) input->readLong(1);
-  f << what << ",";
-  for (int i=0; i < 3; ++i) { // always 961, 0, 0
-    val=(int) input->readLong(2);
-    if ((i==0 && val!=0x961) || (i&&val))
-      f << "f" << i+2 << "=" << val << ",";
-  }
-  f << "ids=[";
-  for (int i=0; i < 2; ++i) {
-    long id=(long) input->readULong(4);
-    f << std::hex << id << std::dec << ",";
-  }
-  f << "],";
-  double margins[4];
-  f << "margins=[";
-  for (int i=0; i < 4; ++i) {
-    margins[i]=double(input->readLong(4))/72.;
-    f << margins[i] << ",";
-  }
-  f << "],";
-  f << "margins=[" << margins[0] << "," << margins[1] << "," << margins[2] << "," << margins[3] << "],";
-  if (margins[0]>=0&&margins[1]>=0&&margins[2]>=0&&margins[3]>=0&&
-      margins[0]+margins[1]<0.5*getFormLength() &&
-      margins[2]+margins[3]<0.5*getFormWidth()) {
-    getPageSpan().setMarginTop(margins[0]);
-    getPageSpan().setMarginBottom(margins[1]);
-    getPageSpan().setMarginLeft(margins[3]);
-    getPageSpan().setMarginRight(margins[2]);
-  }
-  else {
-    MWAW_DEBUG_MSG(("BeagleWksParser::readDocumentInfo: the page margins seem bad\n"));
-    f << "###";
-  }
-  for (int i=0; i < 4; ++i) { // 1,1,1,0 4 flags ?
-    val = (int) input->readLong(1);
-    if (val!=1) f << "fl" << i << "=" << val << ",";
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int st=0; st<2; ++st) {
-    pos=input->tell();
-    f.str("");
-    if (st==0)
-      f << "DocInfo[header]:";
-    else
-      f << "DocInfo[footer]:";
-    int fSz = (int) input->readULong(1);
-    MWAWEntry &entry=st==0 ? m_state->m_header : m_state->m_footer;
-    entry.setBegin(input->tell());
-    entry.setLength(fSz);
-    std::string name("");
-    for (int i=0; i<fSz; ++i)
-      name+=(char) input->readULong(1);
-    f << name;
-    input->seek(pos+256, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
   return true;
 }
 

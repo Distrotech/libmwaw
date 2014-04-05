@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef BEAGLE_WKS_SS_PARSER
-#  define BEAGLE_WKS_SS_PARSER
+#ifndef BEAGLE_WKS_DB_PARSER
+#  define BEAGLE_WKS_DB_PARSER
 
 #include <string>
 #include <vector>
@@ -46,29 +46,26 @@
 
 #include "MWAWParser.hxx"
 
-namespace BeagleWksSSParserInternal
+namespace BeagleWksDBParserInternal
 {
 class SubDocument;
 
-struct Cell;
-struct Chart;
-struct Spreadsheet;
+struct Database;
 struct State;
 }
 
 class BeagleWksStructManager;
 
-/** \brief the main class to read a BeagleWorks spreadsheet file
+/** \brief the main class to read a BeagleWorks database file
  */
-class BeagleWksSSParser : public MWAWSpreadsheetParser
+class BeagleWksDBParser : public MWAWSpreadsheetParser
 {
-  friend struct BeagleWksSSParserInternal::Chart;
-  friend class BeagleWksSSParserInternal::SubDocument;
+  friend class BeagleWksDBParserInternal::SubDocument;
 public:
   //! constructor
-  BeagleWksSSParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
+  BeagleWksDBParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
-  virtual ~BeagleWksSSParser();
+  virtual ~BeagleWksDBParser();
 
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
@@ -85,11 +82,9 @@ protected:
 
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
-  //! adds a new page
-  void newPage(int number);
 
-  //! try to send the main spreadsheet
-  bool sendSpreadsheet();
+  //! try to send the main database
+  bool sendDatabase();
   //! try to send a text zone
   bool sendText(MWAWEntry entry, bool headerFooter=false);
   //! try to send the page graphic
@@ -117,29 +112,14 @@ protected:
 
   // data fork
 
-  //! read the chart zone
-  bool readChartZone();
-
-  //! read a chart
-  bool readChart();
-
-  //! read the spreadsheet zone
-  bool readSpreadsheet();
-
-  //! read the spreadsheet row
-  bool readRowSheet(BeagleWksSSParserInternal::Spreadsheet &sheet);
-
-  //! read a cell row
-  bool readCellSheet(BeagleWksSSParserInternal::Cell &cell);
-
-  //! read an unknown zone ( which appears before and after the columns's width zone )
-  bool readZone0();
-
-  //! read the columns widths
-  bool readColumnWidths(BeagleWksSSParserInternal::Spreadsheet &sheet);
-
-  //! read the differents formula
-  bool readFormula(BeagleWksSSParserInternal::Spreadsheet &sheet);
+  //! read the database zone
+  bool readDatabase();
+  //! read the fields list
+  bool readFields();
+  //! read the layout zone
+  bool readLayouts();
+  //! read a layout zone
+  bool readLayout(int id);
 
   // resource fork
 
@@ -149,17 +129,8 @@ protected:
   //! a DebugFile used to write what we recognize when we parse the document in rsrc
   libmwaw::DebugFile &rsrcAscii();
 
-  //
-  // formula data
-  //
-  /* reads a cell */
-  bool readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
-  /* reads a formula */
-  bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
-
-
   //! the state
-  shared_ptr<BeagleWksSSParserInternal::State> m_state;
+  shared_ptr<BeagleWksDBParserInternal::State> m_state;
 
   //! the structure manager
   shared_ptr<BeagleWksStructManager> m_structureManager;

@@ -103,6 +103,10 @@ SOURCE=..\..\src\lib\BeagleWksBMParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\BeagleWksDBParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\BeagleWksDRParser.cxx
 # End Source File
 # Begin Source File
@@ -556,6 +560,10 @@ SOURCE=..\..\src\lib\BeagleWksParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\BeagleWksBMParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\BeagleWksDBParser.hxx
 # End Source File
 # Begin Source File
 

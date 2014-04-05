@@ -68,11 +68,16 @@ public:
 
   //! returns a font id corresponding to a file id (or -3)
   int getFontId(int fFontId) const;
-
+  //! returns the header, footer entries (find by readDocumentInfo)
+  void getHeaderFooterEntries(MWAWEntry &header, MWAWEntry &footer) const;
   //! read the font names
   bool readFontNames(MWAWEntry const &entry);
   //! read the frame
   bool readFrame(MWAWEntry const &entry);
+  //! read the document information ( pagespan + header/footer)
+  bool readDocumentInfo();
+  //! read the document preferences
+  bool readDocumentPreferences();
 
   // resource fork
 

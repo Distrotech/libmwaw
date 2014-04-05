@@ -54,11 +54,15 @@ namespace BeagleWksStructManagerInternal
 //! Internal: the state of a BeagleWksStructManager
 struct State {
   //! constructor
-  State() :  m_fileIdFontIdList(), m_idFrameMap()
+  State() :  m_fileIdFontIdList(), m_header(), m_footer(), m_idFrameMap()
   {
   }
   //! a list to get the correspondance between fileId and fontId
   std::vector<int> m_fileIdFontIdList;
+  //! the header
+  MWAWEntry m_header;
+  //! the footer
+  MWAWEntry m_footer;
   /** the map id to frame */
   std::map<int, BeagleWksStructManager::Frame> m_idFrameMap;
 };
@@ -85,6 +89,12 @@ int BeagleWksStructManager::getFontId(int fId) const
   }
 
   return m_state->m_fileIdFontIdList[size_t(fId)];
+}
+
+void BeagleWksStructManager::getHeaderFooterEntries(MWAWEntry &header, MWAWEntry &footer) const
+{
+  header=m_state->m_header;
+  footer=m_state->m_footer;
 }
 
 std::map<int,BeagleWksStructManager::Frame> const &BeagleWksStructManager::getIdFrameMap() const
@@ -359,6 +369,143 @@ bool BeagleWksStructManager::readFontNames(MWAWEntry const &entry)
   }
   ascii().addPos(endPos);
   ascii().addNote("_");
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// the document info and preferences
+////////////////////////////////////////////////////////////
+bool BeagleWksStructManager::readDocumentInfo()
+{
+  MWAWInputStreamPtr input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(DocInfo):";
+  long dSz=(int) input->readULong(2);
+  long endPos=pos+dSz+4;
+  if (dSz<0x226 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readDocumentInfo: can not find the database zone\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  int id=(int) input->readLong(2);
+  if (id!=1) f << "id=" << id << ",";
+  std::string what("");
+  for (int i=0; i < 4; ++i) // dosu
+    what+=(char) input->readLong(1);
+  f << what << ",";
+  int val;
+  for (int i=0; i < 3; ++i) { // 961/2101, 0, 0
+    val=(int) input->readLong(2);
+    if ((i==0 && val!=0x961) || (i&&val))
+      f << "f" << i+2 << "=" << val << ",";
+  }
+  f << "ids=[";
+  for (int i=0; i < 2; ++i)
+    f << std::hex << (long) input->readULong(4) << std::dec << ",";
+  f << "],";
+  double margins[4];
+  f << "margins=[";
+  for (int i=0; i < 4; ++i) {
+    margins[i]=double(input->readLong(4))/72.;
+    f << margins[i] << ",";
+  }
+  f << "],";
+  MWAWPageSpan &pageSpan=m_parserState->m_pageSpan;
+  if (margins[0]>=0&&margins[1]>=0&&margins[2]>=0&&margins[3]>=0&&
+      margins[0]+margins[1]<0.5*pageSpan.getFormLength() &&
+      margins[2]+margins[3]<0.5*pageSpan.getFormWidth()) {
+    pageSpan.setMarginTop(margins[0]);
+    pageSpan.setMarginBottom(margins[1]);
+    pageSpan.setMarginLeft(margins[3]);
+    pageSpan.setMarginRight(margins[2]);
+  }
+  else {
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readDocumentInfo: the page margins seem bad\n"));
+    f << "###";
+  }
+  int numRemains=int(endPos-512-input->tell());
+  f << "fls=[";
+  for (int i=0; i < numRemains; ++i) { // [_,_,_,_,_,1,]
+    val = (int) input->readLong(1);
+    if (val) f << val << ",";
+    else f << "_,";
+  }
+  f << "],";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int st=0; st<2; ++st) {
+    pos=input->tell();
+    f.str("");
+    if (st==0)
+      f << "DocInfo[header]:";
+    else
+      f << "DocInfo[footer]:";
+    int fSz = (int) input->readULong(1);
+    MWAWEntry &entry=st==0 ? m_state->m_header : m_state->m_footer;
+    entry.setBegin(input->tell());
+    entry.setLength(fSz);
+    std::string name("");
+    for (int i=0; i<fSz; ++i)
+      name+=(char) input->readULong(1);
+    f << name;
+    input->seek(pos+256, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  return true;
+}
+
+bool BeagleWksStructManager::readDocumentPreferences()
+{
+  MWAWInputStreamPtr input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "Entries(Preferences):";
+  long dSz=(long) input->readULong(2);
+  long endPos=pos+dSz+4;
+  if (dSz<0x2e || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("BeagleWksStructManager::readDocumentInfo: can not find the database zone\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  int id=(int) input->readLong(2);
+  if (id!=0xa) f << "id=" << id << ",";
+  std::string what="";
+  for (int i=0; i < 4; ++i) // pref
+    what+=(char) input->readLong(1);
+  f << what << ",";
+  for (int i=0; i < 3; ++i) { // always 0
+    int val=(int) input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  f << "ids=[";
+  for (int i=0; i < 2; i++)
+    f << std::hex << (long) input->readULong(4) << std::dec << ",";
+  f << "],";
+  int val=(int) input->readULong(2); // 0|22d8|4ead|e2c8
+  if (val)
+    f << "fl?=" << std::hex << val << std::dec << ",";
+  for (int i=0; i < 8; i++) {
+    static int const(expectedValues[])= {1,4/*or 2*/,3,2,2,1,1,1 };
+    val=(int) input->readLong(1);
+    if (val!=expectedValues[i])
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i < 8; ++i) { // 1,a|e, 0, 21, 3|4, 6|7|9, d|13, 3|5: related to font?
+    val=(int) input->readLong(2);
+    if (val)
+      f << "h" << i << "=" << val << ",";
+  }
+  val=(int) input->readULong(2); //0|10|3e|50|c8|88|98
+  if (val)
+    f << "h8=" <<  std::hex << val << std::dec << ",";
+  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
 
   return true;
 }

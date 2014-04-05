@@ -188,6 +188,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\BeagleWksDBParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\BeagleWksDRParser.cxx"
 				>
 			</File>
@@ -642,6 +646,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\BeagleWksBMParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\BeagleWksDBParser.hxx"
 				>
 			</File>
 			<File
