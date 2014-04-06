@@ -60,11 +60,17 @@ namespace BeagleWksDBParserInternal
 {
 //! Internal: the cell of a BeagleWksDBParser
 struct Cell : public MWAWCell {
+  //! the cell type
+  enum Type { Text, Number, Date, Time, Picture, Formula, Memo, Unknown };
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1), m_isEmpty(false)
+  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_type(Unknown), m_name(""), m_content(), m_formula(-1), m_isEmpty(false)
   {
     setPosition(pos);
   }
+  //! the cell type
+  Type m_type;
+  //! the field name
+  std::string m_name;
   //! the cell content
   MWAWCellContent m_content;
   //! the formula id
@@ -76,14 +82,11 @@ struct Cell : public MWAWCell {
 //! Internal: the spreadsheet of a BeagleWksDBParser
 struct Database {
   //! constructor
-  Database() : m_numFields(0), m_widthCols(), m_heightRows(), m_cells(), m_lastReadRow(-1)
+  Database() : m_numFields(0), m_fields(), m_cells(), m_lastReadRow(-1)
   {
   }
-  //! try to associate a formula to a cell
-  bool addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula);
   //! convert the m_widthCols, m_heightRows in a vector of of point size
-  static std::vector<float> convertInPoint(std::vector<int> const &list,
-      float defSize)
+  static std::vector<float> convertInPoint(std::vector<int> const &list, float defSize)
   {
     size_t numElt = list.size();
     std::vector<float> res;
@@ -94,39 +97,15 @@ struct Database {
     }
     return res;
   }
-  //! update the number of columns and the width
-  void updateWidthCols()
-  {
-    int maxCol=-1;
-    for (size_t i = 0; i < m_cells.size(); ++i) {
-      if (m_cells[i].position()[0]>maxCol)
-        maxCol = m_cells[i].position()[0];
-    }
-    m_widthCols.resize(size_t(maxCol+1),-1);
-  }
   //! the number of rows
   int m_numFields;
-  //! the column size in points
-  std::vector<int> m_widthCols;
-  //! the row size in points
-  std::vector<int> m_heightRows;
+  //! the list of fields
+  std::vector<Cell> m_fields;
   //! the list of not empty cells
   std::vector<Cell> m_cells;
   //! the last read rows
   int m_lastReadRow;
 };
-
-bool Database::addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula)
-{
-  for (size_t c=0; c < m_cells.size(); ++c) {
-    if (m_cells[c].position()!=cellPos)
-      continue;
-    m_cells[c].m_content.m_formula=formula;
-    return true;
-  }
-  MWAW_DEBUG_MSG(("Database::addFormula: can not find cell with position %dx%d\n", cellPos[0], cellPos[1]));
-  return false;
-}
 
 ////////////////////////////////////////
 //! Internal: the state of a BeagleWksDBParser
@@ -294,7 +273,7 @@ void BeagleWksDBParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface
     ascii().open(asciiName());
 
     checkHeader(0L);
-    ok = createZones();
+    ok = createZones() && false;
     if (ok) {
       createDocument(docInterface);
       sendDatabase();
@@ -649,7 +628,7 @@ bool BeagleWksDBParser::readDatabase()
     return false;
   }
   libmwaw::DebugStream f;
-  f << "Entries(Database):";
+  f << "Entries(DbRow):";
   int val;
   for (int i=0; i<2; ++i) { // f0=0|1
     val =(int) input->readLong(2);
@@ -658,38 +637,23 @@ bool BeagleWksDBParser::readDatabase()
   val =(int) input->readLong(2);
   if (val!=7) f << "f2=" << val << ",";
   int N=(int) input->readLong(2);
-  f << "N[records]=" << N << ",";
+  f << "N=" << N << ",";
   val =(int) input->readLong(2);
   if (val) f << "f3=" << val << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
   for (int i=0; i<=N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Database-record" << i << ":";
-    int id=(int) input->readLong(2);
-    if (i!=id) f << "id=" << id << ",";
-    long dSz=(long) input->readULong(4);
-    long endPos=pos+6+dSz;
-    if (!input->checkPosition(pos+6+dSz)) {
-      MWAW_DEBUG_MSG(("BeagleWksDBParser::readDatabase: can not find the database row %d\n", i));
-      f << "###";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-    }
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    if (!readRow()) return false;
   }
 
   pos=input->tell();
   f.str("");
-  f << "Database-field:";
+  f << "Entries(DbFld):";
   val =(int) input->readLong(2);
   if (val) f << "f0=" << val << ",";
   N=(int) input->readULong(2);
-  f << "N[fields]=" << N << ",";
+  f << "N=" << N << ",";
   val =(int) input->readLong(2);
   if (val) f << "f1=" << val << ",";
   int dSz =(int) input->readULong(2);
@@ -707,7 +671,7 @@ bool BeagleWksDBParser::readDatabase()
   for (int i=0; i<=N; ++i) {
     pos=input->tell();
     f.str("");
-    f << "Database-field" << i << ":";
+    f << "DbFld" << i << ":";
     val=(int) input->readULong(2);
     if (val!=1) f << "f0=" << val << ",";
     val=(int) input->readULong(2);
@@ -729,6 +693,74 @@ bool BeagleWksDBParser::readDatabase()
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// read the row data
+////////////////////////////////////////////////////////////
+bool BeagleWksDBParser::readRow()
+{
+  MWAWInputStreamPtr &input= getInput();
+  long pos=input->tell();
+  libmwaw::DebugStream f;
+
+  int id=(int) input->readLong(2);
+  f << "DbRow" << id << ":";
+  int val=(int) input->readLong(2);
+  if (val) f << "f0=" << val << ",";
+  long dSz=(long) input->readULong(2);
+  long endPos=pos+6+dSz;
+  if (dSz<18 || !input->checkPosition(pos+6+dSz)) {
+    MWAW_DEBUG_MSG(("BeagleWksDBParser::readRow: can not find the database row %d\n", id));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  val=(int) input->readLong(2); // 0|78|86
+  if (val) f << "f1=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=-1) f << "f2=" << val << ",";
+  f << "fl?=[" << std::hex;
+  for (int i=0; i<4; ++i) {
+    val=(int) input->readULong(2);
+    if (val) f << val << ",";
+    else f << "_,";
+  }
+  f << std::dec << "],";
+  // now a format
+  f << "fId=" << input->readULong(2) << ",";
+  f << "fSz=" << input->readULong(2) << ",";
+  val=(int) input->readULong(2);
+  if (val!=dSz) f << "#dSz1=" << val << ",";
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  BeagleWksDBParserInternal::Database &database=m_state->m_database;
+  size_t numFields=database.m_fields.size();
+  for (size_t fd=0; fd<numFields; ++fd) {
+    pos=input->tell();
+    f.str("");
+    f << "DbRow" << id << "-" << fd << ":";
+    int fSz=(int) input->readULong(1);
+    if (pos+fSz+2>endPos) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+
+    if ((fSz%2)) ++fSz;
+    input->seek(pos+fSz+2, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  if (input->tell()!=endPos) {
+    MWAW_DEBUG_MSG(("BeagleWksDBParser::readRow: find some extra data\n"));
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote("DbRow:###");
+  }
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // read the fields
@@ -766,6 +798,7 @@ bool BeagleWksDBParser::readFields()
     pos=input->tell();
     f.str("");
     f << "Field-" << fld << ":";
+    BeagleWksDBParserInternal::Cell field;
     long dSz=(long) input->readULong(2);
     long endPos=pos+4+dSz;
     if (dSz<0x3c || !input->checkPosition(endPos)) {
@@ -785,33 +818,56 @@ bool BeagleWksDBParser::readFields()
       ascii().addNote(f.str().c_str());
       return false;
     }
-    std::string name("");
-    for (int i=0; i<sSz; ++i) name += (char) input->readULong(1);
-    f << "\"" << name << "\",";
+    for (int i=0; i<sSz; ++i) field.m_name += (char) input->readULong(1);
+    f << "\"" << field.m_name << "\",";
     ascii().addDelimiter(input->tell(),'|');
     input->seek(endPos-10, librevenge::RVNG_SEEK_SET);
     ascii().addDelimiter(input->tell(),'|');
+
+    MWAWCell::Format format;
+    MWAWCellContent &content=field.m_content;
     int type=(int) input->readLong(1);
     switch (type) {
     case 0:
+      field.m_type = BeagleWksDBParserInternal::Cell::Text;
+      format.m_format=MWAWCell::F_TEXT;
+      content.m_contentType=MWAWCellContent::C_TEXT;
       f << "text,";
       break;
     case 1:
+      field.m_type = BeagleWksDBParserInternal::Cell::Number;
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+      content.m_contentType=MWAWCellContent::C_NUMBER;
       f << "number,";
       break;
     case 2:
+      field.m_type = BeagleWksDBParserInternal::Cell::Date;
+      format.m_format=MWAWCell::F_DATE;
+      content.m_contentType=MWAWCellContent::C_NUMBER;
       f << "date,";
       break;
     case 3:
+      field.m_type = BeagleWksDBParserInternal::Cell::Time;
+      format.m_format=MWAWCell::F_TIME;
+      content.m_contentType=MWAWCellContent::C_NUMBER;
       f << "time,";
       break;
     case 4:
+      field.m_type = BeagleWksDBParserInternal::Cell::Picture;
       f << "picture,";
       break;
     case 5:
+      field.m_type = BeagleWksDBParserInternal::Cell::Formula;
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+      content.m_contentType=MWAWCellContent::C_FORMULA;
       f << "formula,";
       break;
     case 6:
+      field.m_type = BeagleWksDBParserInternal::Cell::Memo;
+      format.m_format=MWAWCell::F_TEXT;
+      content.m_contentType=MWAWCellContent::C_TEXT;
       f << "memo,";
       break;
     default:
@@ -823,6 +879,8 @@ bool BeagleWksDBParser::readFields()
     val=(int) input->readLong(2); // 0|-1
     if (val!=-1) f << "g0=" << val << ",";
     f << "g1=" << input->readLong(2) << ",";
+    database.m_fields.push_back(field);
+
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -866,20 +924,21 @@ bool BeagleWksDBParser::readLayout(int id)
   f << "Layout-" << id << "[A]:";
 
   long pos=input->tell();
-  int val=(int) input->readULong(1);
+  int readId=(int) input->readULong(1);
   long dSz=(long) input->readULong(2);
   long endPos=pos+1+dSz;
-  if (val!=id || dSz<100 || !input->checkPosition(endPos)) {
+  if (dSz<100 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("BeagleWksDBParser::readLayouts: can find a layout\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
   }
-  val=(int) input->readLong(2);
+  if (readId!=id) f << "#id=" << readId << ",";
+  int val=(int) input->readLong(2);
   if (val) f << "f0=" << val << ",";
   val=(int) input->readULong(1);
-  if (val!=id) f << "#id=" << val << ",";
+  if (val!=readId) f << "#id1=" << val << ",";
   int sSz=(int) input->readULong(1);
   if (sSz>30) {
     MWAW_DEBUG_MSG(("BeagleWksDBParser::readLayouts: can find layout string\n"));
@@ -1012,10 +1071,7 @@ bool BeagleWksDBParser::readLayout(int id)
     f.str("");
     f << "Layout-" << id << "[field" << i << "]:";
     val=(int) input->readLong(2);
-    if (val!=i) {
-      MWAW_DEBUG_MSG(("BeagleWksDBParser::readLayouts: old field id\n"));
-      f << "##id=" << val << ",";
-    }
+    if (val!=i) f << "id[field]=" << val << ",";
     val=(int) input->readLong(2);
     if (val!=0x4b) f << "f0=" << val << ",";
     for (int j=0; j<2; ++j) {
@@ -1062,6 +1118,7 @@ bool BeagleWksDBParser::readLayout(int id)
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
+
 ////////////////////////////////////////////////////////////
 // send data
 ////////////////////////////////////////////////////////////

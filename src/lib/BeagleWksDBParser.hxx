@@ -114,6 +114,8 @@ protected:
 
   //! read the database zone
   bool readDatabase();
+  //! read a row
+  bool readRow();
   //! read the fields list
   bool readFields();
   //! read the layout zone
