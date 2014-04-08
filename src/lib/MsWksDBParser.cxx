@@ -2278,7 +2278,7 @@ bool MsWksDBParser::sendDatabase()
     listener->closeSheetRow();
   }
   listener->closeSheet();
-  return false;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

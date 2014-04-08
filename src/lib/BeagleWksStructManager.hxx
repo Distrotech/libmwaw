@@ -42,6 +42,8 @@
 
 #include "libmwaw_internal.hxx"
 
+#include "MWAWCell.hxx"
+
 namespace BeagleWksStructManagerInternal
 {
 struct State;
@@ -88,7 +90,15 @@ public:
   //! read the font style ressource
   bool readFontStyle(MWAWEntry const &entry);
 
-//! Internal: a structure use to store a frame in a BeagleWorks files
+  //
+  // formula data
+  //
+  /* reads a cell */
+  bool readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
+  /* reads a formula */
+  bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
+
+  //! Internal: a structure use to store a frame in a BeagleWorks files
   struct Frame {
     //! constructor
     Frame() : m_charAnchor(true), m_id(0), m_pictId(0), m_origin(), m_dim(), m_page(1),

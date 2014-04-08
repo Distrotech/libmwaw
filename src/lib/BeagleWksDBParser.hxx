@@ -122,6 +122,8 @@ protected:
   bool readLayouts();
   //! read a layout zone
   bool readLayout(int id);
+  //! try to read a cell's format+font
+  bool readFormat(MWAWCell &cell, std::string &extra);
 
   // resource fork
 

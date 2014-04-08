@@ -1,5 +1,8 @@
 CHANGES:
 
+8/3/2014
+- BeagleWorks/WordPerfect Works: add a database parser which uses spreadsheet interface
+
 4/3/2014
 - MicrosoftWorks: add a database parser which uses spreadsheet interface
 
@@ -11,7 +14,7 @@ CHANGES:
   which generates graphic documents + correct to code to reconstruct arc/pie
 
 3/19/2014
-- BeagleWorks/WordPerfect Work: add parser of vector graphic documents
+- BeagleWorks/WordPerfect Works: add parser of vector graphic documents
 
 3/13/2014
 - SuperPaint: add a parser of drawing SuperPaint v1 document

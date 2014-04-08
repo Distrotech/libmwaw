@@ -149,15 +149,6 @@ protected:
   //! a DebugFile used to write what we recognize when we parse the document in rsrc
   libmwaw::DebugFile &rsrcAscii();
 
-  //
-  // formula data
-  //
-  /* reads a cell */
-  bool readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
-  /* reads a formula */
-  bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
-
-
   //! the state
   shared_ptr<BeagleWksSSParserInternal::State> m_state;
 

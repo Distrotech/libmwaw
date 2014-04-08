@@ -499,10 +499,8 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
         parser.reset(new BeagleWksSSParser(input, rsrcParser, header));
-#ifdef DEBUG
       else
         parser.reset(new BeagleWksDBParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
       parser.reset(new WingzParser(input, rsrcParser, header));
