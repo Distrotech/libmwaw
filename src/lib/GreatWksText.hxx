@@ -50,6 +50,7 @@ struct Zone;
 
 class GreatWksDocument;
 class GreatWksParser;
+class GreatWksDBParser;
 class GreatWksDRParser;
 class GreatWksSSParser;
 
@@ -62,6 +63,7 @@ class GreatWksText
 {
   friend class GreatWksDocument;
   friend class GreatWksParser;
+  friend class GreatWksDBParser;
   friend class GreatWksDRParser;
   friend class GreatWksSSParser;
 public:

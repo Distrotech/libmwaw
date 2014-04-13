@@ -288,6 +288,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\GreatWksDBParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\GreatWksDocument.cxx"
 				>
 			</File>
@@ -746,6 +750,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\FullWrtText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\GreatWksDBParser.hxx"
 				>
 			</File>
 			<File

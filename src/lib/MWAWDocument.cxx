@@ -57,6 +57,7 @@
 #include "FullWrtParser.hxx"
 #include "GreatWksParser.hxx"
 #include "GreatWksBMParser.hxx"
+#include "GreatWksDBParser.hxx"
 #include "GreatWksDRParser.hxx"
 #include "GreatWksSSParser.hxx"
 #include "HanMacWrdJParser.hxx"
@@ -509,7 +510,12 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
       parser.reset(new ClarisWksSSParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_GREATWORKS:
-      parser.reset(new GreatWksSSParser(input, rsrcParser, header));
+      if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
+        parser.reset(new GreatWksSSParser(input, rsrcParser, header));
+#ifdef DEBUG
+      else
+        parser.reset(new GreatWksDBParser(input, rsrcParser, header));
+#endif
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)

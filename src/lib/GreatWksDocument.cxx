@@ -492,30 +492,31 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
   std::string type("");
   for (int i=0; i < 4; ++i)
     type+=(char) input->readLong(1);
-  bool isDraw=false, isSheet=false;
   if (type=="ZOBJ") {
-    isDraw=true;
     m_parserState->m_kind=MWAWDocument::MWAW_K_DRAW;
     MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: find a draw file\n"));
   }
   else if (type=="ZCAL") {
-    isSheet=true;
     m_parserState->m_kind=MWAWDocument::MWAW_K_SPREADSHEET;
     MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: find a spreadsheet file\n"));
+  }
+  else if (type=="ZDBS") {
+    m_parserState->m_kind=MWAWDocument::MWAW_K_DATABASE;
+    MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: find a database file\n"));
   }
   else if (type!="ZWRT")
     return false;
 
   if (strict) {
     // check that the fonts table is in expected position
-    long fontPos;
-    if (isDraw)
+    long fontPos=-1;
+    if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
       fontPos = 0x4a;
-    else if (isSheet)
+    else if (m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET)
       fontPos=18;
     else
       fontPos = vers==1 ? 0x302 : 0x308;
-    if (input->seek(fontPos, librevenge::RVNG_SEEK_SET) || !m_textParser->readFontNames()) {
+    if (fontPos>0 && (input->seek(fontPos, librevenge::RVNG_SEEK_SET) || !m_textParser->readFontNames())) {
       MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: can not find fonts table\n"));
       return false;
     }

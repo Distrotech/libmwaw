@@ -48,6 +48,7 @@ struct State;
 
 class GreatWksGraph;
 class GreatWksParser;
+class GreatWksDBParser;
 class GreatWksDRParser;
 class GreatWksSSParser;
 class GreatWksText;
@@ -57,6 +58,7 @@ class GreatWksText;
 class GreatWksDocument
 {
   friend class GreatWksParser;
+  friend class GreatWksDBParser;
   friend class GreatWksDRParser;
   friend class GreatWksSSParser;
 public:
