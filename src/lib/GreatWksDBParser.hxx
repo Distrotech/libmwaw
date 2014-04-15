@@ -108,32 +108,47 @@ protected:
   //! try to read a field
   bool readField(GreatWksDBParserInternal::Field &field);
   //! try to read a zone which links a field to zone record
-  bool readFieldLink(GreatWksDBParserInternal::Field &field);
+  bool readFieldLinks(GreatWksDBParserInternal::Field &field);
   //! try to read a list of records corresponding to field
-  bool readRecords(GreatWksDBParserInternal::Field &field);
+  bool readFieldRecords(GreatWksDBParserInternal::Field &field);
+  //! try to read the list of form
+  bool readFormLinks(MWAWEntry const &zone);
+  //! try to read a form zone
+  bool readForm(MWAWEntry const &zone);
+  //! try to read row record to small zone link (the 1th big zone)
+  bool readRowLinks(GreatWksDBParserInternal::Block &block);
+  //! try to read a list of records corresponding to a row
+  bool readRowRecords(MWAWEntry const &zone);
+  //! try to read the record list (the 3th big zone)
+  bool readRecordList(GreatWksDBParserInternal::Block &block);
+
+  //! try to read a formula result in field definition
+  bool readFormula(long endPos);
+  //! try to read a formula result in a row content zone
+  bool readFormulaResult(long endPos, std::string &extra);
+
   //! try to read a int's zone
   bool readIntList(MWAWEntry const &zone, std::vector<int> &list);
-  //! try to read the second small zone (probably a list of zone 9 zones)
-  bool readZone2(MWAWEntry const &zone);
-  //! try to read the zone 12(unknown)
-  bool readZone12(MWAWEntry const &zone);
   //! try to read an unknown small zone, ie. a default reader: type, 0, size, N, dSz
   bool readSmallZone(MWAWEntry const &zone);
   //! check if a pointer correspond or not to a small zone entry, if so update the entry
   bool checkSmallZone(MWAWEntry &zone);
-
-  //! try to read the record list (the 3th big zone)
-  bool readRecordList(GreatWksDBParserInternal::Block &block);
-  //! try to read the 0th big zone
-  bool readBlockHeader0(GreatWksDBParserInternal::Block &block);
-  //! try to read the 1th, 2th big zone, maybe a list position <-> recordId
-  bool readRecordPosition(GreatWksDBParserInternal::Block &block);
-  //! try to read a big block entry
-  bool readBlockHeader(GreatWksDBParserInternal::BlockHeader &entry);
   //! try to create a block corresponding to an entry
   shared_ptr<GreatWksDBParserInternal::Block> createBlock(GreatWksDBParserInternal::BlockHeader &entry);
   //! try to read a unknown block, knowing the field size
   bool readBlock(GreatWksDBParserInternal::Block &block, int fieldSize);
+
+  // unknown zones
+
+  //! try to read the small zone 12(unknown format, maybe some preferences)
+  bool readZone12(MWAWEntry const &zone);
+
+  //! try to read the 0th big zone
+  bool readBlockHeader0(GreatWksDBParserInternal::Block &block);
+  //! try to read the 2th big zone (maybe a list of pointers, but I only see a list of 0:recordId )
+  bool readBlockHeader2(GreatWksDBParserInternal::Block &block);
+  //! try to read a big block entry
+  bool readBlockHeader(GreatWksDBParserInternal::BlockHeader &entry);
 
   //
   // data

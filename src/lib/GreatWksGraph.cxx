@@ -63,7 +63,7 @@ namespace GreatWksGraphInternal
 //! Internal: the graphic zone of a GreatWksGraph
 struct Frame {
   //! the frame type
-  enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_UNSET };
+  enum Type { T_BAD, T_BASIC, T_GROUP, T_PICTURE, T_TEXT, T_DBFIELD, T_UNSET };
   //! constructor
   Frame() : m_type(-1), m_styleId(-1), m_parent(0), m_order(-1), m_dataSize(0), m_box(), m_page(-1), m_extra(""), m_parsed(false)
   {
@@ -110,6 +110,9 @@ struct Frame {
       break;
     case 8:
       o << "poly,";
+      break;
+    case 10:
+      o << "database[field],";
       break;
     case 11:
       o << "picture,";
@@ -334,6 +337,25 @@ struct FrameText : public Frame {
   bool m_flip[2];
   //! the rotate angle
   int m_rotate;
+};
+
+////////////////////////////////////////
+//! Internal: the DBField zone of a GreatWksGraph
+struct FrameDBField : public Frame {
+  //! constructor
+  FrameDBField(Frame const &frame) : Frame(frame)
+  {
+  }
+  //! return the frame type
+  virtual Type getType() const
+  {
+    return T_DBFIELD;
+  }
+  //! print funtion
+  virtual void print(std::ostream &o) const
+  {
+    Frame::print(o);
+  }
 };
 
 ////////////////////////////////////////
@@ -756,9 +778,11 @@ bool GreatWksGraph::findGraphicZone()
 bool GreatWksGraph::isPageFrames()
 {
   int const vers=version();
-  bool hasPageUnknown=vers==2 && m_parserState->m_kind!=MWAWDocument::MWAW_K_DRAW;
-  int const headerSize=hasPageUnknown ? 22 : vers==2 ? 12 : 16;
-  int const nZones= vers==2 ? 3 : 4;
+  bool isDatabase=m_parserState->m_kind==MWAWDocument::MWAW_K_DATABASE;
+  bool hasPageUnknown=vers==2 && m_parserState->m_kind!=MWAWDocument::MWAW_K_DRAW &&
+                      !isDatabase;
+  int const headerSize=hasPageUnknown ? 22 : (vers==2&&!isDatabase) ? 12 : 16;
+  int const nZones= (vers==2||isDatabase) ? 3 : 4;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
   long endPos=pos+headerSize+4*nZones;
@@ -767,7 +791,7 @@ bool GreatWksGraph::isPageFrames()
   long sz=-1;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (hasPageUnknown) {
-    input->seek(2, librevenge::RVNG_SEEK_CUR); // page
+    input->seek(2, librevenge::RVNG_SEEK_CUR); // page or 1c for spreadsheet
     sz=(long) input->readULong(4);
     endPos=input->tell()+sz;
   }
@@ -1100,8 +1124,9 @@ bool GreatWksGraph::readPageFrames()
   int const vers=version();
   bool isDraw = m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   bool isSpreadsheet = m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET;
-  bool hasPageUnknown=vers==2 && !isDraw;
-  int const nZones=hasPageUnknown ? 4 : vers==2 ? 3 : 4;
+  bool isDatabase = m_parserState->m_kind==MWAWDocument::MWAW_K_DATABASE;
+  bool hasPageUnknown=vers==2 && !isDraw && !isDatabase;
+  int const nZones=hasPageUnknown ? 4 : (vers==2&&!isDatabase) ? 3 : 4;
   long pos=input->tell();
   if (!isPageFrames()) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1566,6 +1591,12 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
     shape.m_type = zone.m_type==3 ? MWAWGraphicShape::Rectangle : MWAWGraphicShape::Circle;
     break;
   }
+  case 10: {
+    GreatWksGraphInternal::FrameDBField *field=new GreatWksGraphInternal::FrameDBField(zone);
+    res.reset(field);
+    field->m_dataSize=(long) input->readULong(4);
+    break;
+  }
   case 7:
   case 8:
   case 12: {
@@ -1614,6 +1645,11 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
     ascFile.addNote(f.str().c_str());
     return true;
   }
+  case 10:
+    input->seek(pos+frame.m_dataSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
   case 2:
   case 3:
   case 4:
@@ -1877,6 +1913,7 @@ bool GreatWksGraph::canCreateGraphic(GreatWksGraphInternal::FrameGroup const &gr
     switch (frame->getType()) {
     case GreatWksGraphInternal::Frame::T_BASIC:
       break;
+    case GreatWksGraphInternal::Frame::T_DBFIELD:
     case GreatWksGraphInternal::Frame::T_PICTURE:
       return false;
     case GreatWksGraphInternal::Frame::T_GROUP:
@@ -1930,6 +1967,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
       sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
                            static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style, listener);
       break;
+    case GreatWksGraphInternal::Frame::T_DBFIELD:
     case GreatWksGraphInternal::Frame::T_PICTURE:
     case GreatWksGraphInternal::Frame::T_BAD:
     case GreatWksGraphInternal::Frame::T_UNSET:
@@ -1975,6 +2013,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         canMerge=m_document.canSendTextboxAsGraphic(text.m_entry);
         break;
       }
+      case GreatWksGraphInternal::Frame::T_DBFIELD:
       case GreatWksGraphInternal::Frame::T_PICTURE:
       case GreatWksGraphInternal::Frame::T_BAD:
       case GreatWksGraphInternal::Frame::T_UNSET:
@@ -2026,6 +2065,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
                                static_cast<GreatWksGraphInternal::FrameText const &>(*child), style, graphicListener);
           break;
+        case GreatWksGraphInternal::Frame::T_DBFIELD:
         case GreatWksGraphInternal::Frame::T_PICTURE:
         case GreatWksGraphInternal::Frame::T_BAD:
         case GreatWksGraphInternal::Frame::T_UNSET:
@@ -2115,6 +2155,8 @@ bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, Gr
   case GreatWksGraphInternal::Frame::T_TEXT:
     ok = sendTextbox(static_cast<GreatWksGraphInternal::FrameText const &>(*frame), zone, fPos);
     break;
+  case GreatWksGraphInternal::Frame::T_DBFIELD:
+  // do me
   case GreatWksGraphInternal::Frame::T_BAD:
   case GreatWksGraphInternal::Frame::T_UNSET:
   default:

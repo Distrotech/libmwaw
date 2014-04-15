@@ -254,7 +254,7 @@ class Database
 {
 public:
   //! constructor
-  Database() : m_numRecords(0), m_fieldList(), m_widthDefault(75), m_widthCols(), m_heightDefault(13), m_heightRows(),
+  Database() : m_numRecords(0), m_rowList(), m_fieldList(), m_widthDefault(75), m_widthCols(), m_heightDefault(13), m_heightRows(),
     m_cells(), m_name("Sheet0")
   {
   }
@@ -279,6 +279,8 @@ public:
   }
   //! the number of records
   int m_numRecords;
+  //! the list of rows data
+  std::vector<MWAWEntry> m_rowList;
   //! the list of field
   std::vector<Field> m_fieldList;
   /** the default column width */
@@ -525,9 +527,11 @@ bool GreatWksDBParser::createZones()
       case 0: // unknown maybe some flag
         ok = readBlockHeader0(*block);
         break;
-      case 1: // look like a list of position
-      case 2: // checkme: seems similar to zone 1 so...
-        ok = readRecordPosition(*block);
+      case 1: // a list of record<->id
+        ok = readRowLinks(*block);
+        break;
+      case 2: // a list of 0<->id
+        ok = readBlockHeader2(*block);
         break;
       case 3: // the record list
         ok = readRecordList(*block);
@@ -562,8 +566,8 @@ bool GreatWksDBParser::createZones()
     case 13: // a version 2 zone which seems to contains added data for each fields
       ok=true;
       break;
-    case 2: // a list of Zone9?
-      ok=readZone2(it->second);
+    case 2:
+      ok=readFormLinks(it->second);
       break;
     case 5: // one time with list=[19, 20], list of computed fields ?
     case 6: // one time with list=[21, 22], list of summary fields ?
@@ -644,13 +648,15 @@ bool GreatWksDBParser::readDatabase()
       readSmallZone(it->second);
   }
   GreatWksDBParserInternal::Database &database=m_state->m_database;
+  for (size_t i=0; i < database.m_rowList.size(); ++i)
+    readRowRecords(database.m_rowList[i]);
   for (size_t i=0; i < database.m_fieldList.size(); ++i) {
     if (!database.m_fieldList[i].m_linkZone) continue;
-    readFieldLink(database.m_fieldList[i]);
+    readFieldLinks(database.m_fieldList[i]);
   }
   for (size_t i=0; i < database.m_fieldList.size(); ++i) {
     if (database.m_fieldList[i].m_recordBlock.isEmpty()) continue;
-    readRecords(database.m_fieldList[i]);
+    readFieldRecords(database.m_fieldList[i]);
   }
   return false;
 }
@@ -678,7 +684,7 @@ bool GreatWksDBParser::readHeader()
       ascii().addNote(f.str().c_str());
       return false;
     }
-    static char const *(wh[])= {"Block0", "RecPos1", "RecPos2"};
+    static char const *(wh[])= {"Block0", "RecLink", "Block2"};
     block.m_name=wh[i];
     m_state->m_blocks.push_back(block);
     f << block << ",";
@@ -708,7 +714,7 @@ bool GreatWksDBParser::readHeader()
       if (i==9) f << "act[record]=" << val << ",";
       else f << "h" << i << "=" << val << ",";
     }
-    else if (val) f << "h" << i << "=" << std::hex << val << std::dec << ",";
+    else if (val) f << "h" << i << "=" << val << ",";
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -725,6 +731,7 @@ bool GreatWksDBParser::readHeader()
     entry.setBegin(ptr);
     zones.push_back(entry);
     if (!ptr) continue;
+    // checkme: does the zone type can be deduced from i?
     f << "Zone" << i << "A=" << std::hex << ptr << std::dec << ",";
   }
   if (vers==1) {
@@ -752,16 +759,6 @@ bool GreatWksDBParser::readHeader()
   // from here, probably only junk in v1 and list of 0 + unkn number in v2
   ascii().addPos(input->tell());
   ascii().addNote("HeaderZone:end");
-
-  if (vers==1) {
-    // the list of record pointer does not seem to be present in v1
-    MWAWEntry entry;
-    entry.setBegin(0x200);
-    entry.setId(10);
-    entry.setName("Record");
-    if (std::find(zones.begin(), zones.end(), entry)==zones.end())
-      zones.push_back(entry);
-  }
 
   for (size_t i=0; i<zones.size(); ++i) {
     MWAWEntry &entry=zones[i];
@@ -918,39 +915,6 @@ bool GreatWksDBParser::readRecordList(GreatWksDBParserInternal::Block &block)
   return true;
 }
 
-bool GreatWksDBParser::readRecordPosition(GreatWksDBParserInternal::Block &block)
-{
-  MWAWInputStreamPtr input = getInput();
-  GreatWksDBParserInternal::BlockHeader const &header=block.m_header;
-  libmwaw::DebugStream f;
-  for (size_t z=0; z<block.getNumZones(); ++z) {
-    GreatWksDBParserInternal::Block::Zone const &zone=block.getZone(z);
-    long pos=zone.m_ptr;
-    if (!pos || !input->checkPosition(pos+zone.m_N*8)) {
-      MWAW_DEBUG_MSG(("GreatWksDBParser::readRecordPosition: the zone seems too short\n"));
-      f.str("");
-      f << "Entries(" << header.m_name << ")[" << header << "]:###";
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-      continue;
-    }
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    f.str("");
-    f << "Entries(" << header.m_name << "):dim=[";
-    for (int i=0; i<zone.m_N; ++i) {
-      // checkme: very often a multiple of 72., so maybe a dimension
-      f << double(input->readULong(4))/72. << ":";
-      f << input->readLong(4) << ","; // record id
-    }
-    f << "]";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    ascii().addPos(input->tell());
-    ascii().addNote("_");
-  }
-  return true;
-}
-
 bool GreatWksDBParser::readBlockHeader0(GreatWksDBParserInternal::Block &block)
 {
   MWAWInputStreamPtr input = getInput();
@@ -976,6 +940,82 @@ bool GreatWksDBParser::readBlockHeader0(GreatWksDBParserInternal::Block &block)
          maybe some flags
       */
       f << std::hex << input->readULong(4) << ":" << input->readULong(4) << std::dec << ",";
+    }
+    f << "]";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(input->tell());
+    ascii().addNote("_");
+  }
+  return true;
+}
+
+bool GreatWksDBParser::readRowLinks(GreatWksDBParserInternal::Block &block)
+{
+  MWAWInputStreamPtr input = getInput();
+  GreatWksDBParserInternal::BlockHeader const &header=block.m_header;
+  GreatWksDBParserInternal::Database &database=m_state->m_database;
+  libmwaw::DebugStream f;
+  for (size_t z=0; z<block.getNumZones(); ++z) {
+    GreatWksDBParserInternal::Block::Zone const &zone=block.getZone(z);
+    long pos=zone.m_ptr;
+    if (!pos || !input->checkPosition(pos+zone.m_N*8)) {
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readRowLinks: the zone seems too short\n"));
+      f.str("");
+      f << "Entries(" << header.m_name << ")[" << header << "]:###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    f.str("");
+    f << "Entries(" << header.m_name << "):ptrs=[";
+    for (int i=0; i<zone.m_N; ++i) {
+      long ptr=(long) input->readULong(4);
+      int id=(int) input->readLong(4);
+      if (ptr) {
+        MWAWEntry entry;
+        entry.setBegin(ptr);
+        entry.setId(id);
+        database.m_rowList.push_back(entry);
+      }
+      else {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowLinks: find an empty record zone\n"));
+        f << "###";
+      }
+      f << std::hex << ptr << std::dec << ":" << id << ",";
+    }
+    f << "]";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    ascii().addPos(input->tell());
+    ascii().addNote("_");
+  }
+  return true;
+}
+
+bool GreatWksDBParser::readBlockHeader2(GreatWksDBParserInternal::Block &block)
+{
+  MWAWInputStreamPtr input = getInput();
+  GreatWksDBParserInternal::BlockHeader const &header=block.m_header;
+  libmwaw::DebugStream f;
+  for (size_t z=0; z<block.getNumZones(); ++z) {
+    GreatWksDBParserInternal::Block::Zone const &zone=block.getZone(z);
+    long pos=zone.m_ptr;
+    if (!pos || !input->checkPosition(pos+zone.m_N*8)) {
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readBlockHeader2: the zone seems too short\n"));
+      f.str("");
+      f << "Entries(" << header.m_name << ")[" << header << "]:###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    f.str("");
+    f << "Entries(" << header.m_name << "):unkn=[";
+    for (int i=0; i<zone.m_N; ++i) {
+      f << input->readULong(4) << ":"; // always 0?
+      f << input->readLong(4) << ","; // ids
     }
     f << "]";
     ascii().addPos(pos);
@@ -1034,8 +1074,8 @@ bool GreatWksDBParser::checkSmallZone(MWAWEntry &entry)
   entry.setLength(6+(long) input->readULong(4));
   if (id>=0 && id<15) {
     static char const *(names[])= {
-      "Zone0A", "Field", "Zone2A", "Zone3A", "Zone4A", "ListForm", "ListSum", "Zone7A",
-      "Zone8A", "Zone9A", "Record", "Zone11A", "Zone12A", "FldAuxi", "Zone14A"
+      "Zone0A", "Field", "FrmLink", "Zone3A", "Zone4A", "ListFrmula", "ListSummary", "Zone7A",
+      "Zone8A", "Form", "FldLink", "Zone11A", "Zone12A", "FldAuxi", "Zone14A"
     };
     entry.setName(names[id]);
   }
@@ -1045,6 +1085,282 @@ bool GreatWksDBParser::checkSmallZone(MWAWEntry &entry)
     entry.setName(s.str());
   }
   return input->checkPosition(entry.begin()+6);
+}
+
+////////////////////////////////////////////////////////////
+// read the row zone
+////////////////////////////////////////////////////////////
+bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (!pos || !input->checkPosition(pos+6)) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: can not find a row position\n"));
+    if (pos) {
+      ascii().addPos(pos);
+      ascii().addNote("Entries(RowRec):###");
+    }
+    return false;
+  }
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(RowRec):";
+  // probably type=0 followed by ?
+  int val=(int) input->readULong(2);
+  if (val!=0xFF) f << "f0=" << std::hex << val << std::dec << ",";
+  long dSz=(long) input->readULong(4);
+  long endPos=pos+6+dSz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  ascii().addPos(endPos);
+  ascii().addNote("_");
+
+  GreatWksDBParserInternal::Database &database=m_state->m_database;
+  for (size_t fl=0; fl<database.m_fieldList.size(); ++fl) {
+    pos=input->tell();
+    f.str("");
+    f << "RowRec-" << fl << ":";
+    if (pos >= endPos) {
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: actual pos seems bad\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      return true;
+    }
+    GreatWksDBParserInternal::Field const &field=database.m_fieldList[fl];
+    bool ok=true;
+    switch (field.m_type) {
+    case GreatWksDBParserInternal::Field::F_Text: {
+      int sSz=(int) input->readULong(1);
+      if (pos+1+sSz>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: the string length seems bad\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      }
+      std::string text("");
+      for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
+      f << text << ",";
+      // realign to a multiple of 2
+      if ((sSz%2)==0) input->seek(1,librevenge::RVNG_SEEK_CUR);
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Summary: {
+      if (pos+10>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: can not read a summary zone\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+        return false;
+      }
+      f << "summary,";
+      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Number:
+    case GreatWksDBParserInternal::Field::F_Date:
+    case GreatWksDBParserInternal::Field::F_Time: {
+      if (pos+10>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: can not read a number zone\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+        return false;
+      }
+      double value;
+      bool isNan;
+      if (!input->readDouble10(value, isNan)) {
+        static bool first=true;
+        if (first) {
+          // can be normal, ie. 7fff403200000000000000 means no value which generates an error
+          MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: can not read a number, maybe a undef number\n"));
+          first=false;
+        }
+        f << "#";
+      }
+      else
+        f << value;
+      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Picture: {
+      long pSz=(int) input->readULong(4);
+      if (pos+4+pSz>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: the picture length seems bad\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      }
+      if (pSz) {
+#ifdef DEBUG_WITH_FILES
+        ascii().skipZone(pos+4,pos+4+pSz-1);
+        librevenge::RVNGBinaryData file;
+        input->seek(pos+4,librevenge::RVNG_SEEK_SET);
+        input->readDataBlock(pSz, file);
+
+        static int volatile pictName = 0;
+        libmwaw::DebugStream f2;
+        f2 << "DATA-" << ++pictName << ".pct";
+        libmwaw::Debug::dumpFile(file, f2.str().c_str());
+#endif
+      }
+      input->seek(pos+4+pSz, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Memo: {
+      long mSz=(int) input->readULong(4);
+      if (pos+4+mSz>endPos) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: the memo length seems bad\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+      }
+      // probably a simple textbox ( see sendSimpleTextbox )
+      if (mSz) f << "memo,";
+      input->seek(pos+4+mSz, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Formula: {
+      std::string extra("");
+      ok=readFormulaResult(endPos, extra);
+      f << extra;
+      break;
+    }
+    case GreatWksDBParserInternal::Field::F_Unknown:
+    default:
+      ok=false;
+      break;
+    }
+    if (!ok)
+      break;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  pos=input->tell();
+  if (pos+2==endPos) {
+    // seems ok to find 0 here
+    val=(int) input->readLong(2);
+    if (val) {
+      f.str("");
+      f << "RowRec[end]:" << val << ",";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+    }
+    else {
+      ascii().addPos(pos);
+      ascii().addNote("_");
+    }
+  }
+  else if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readRowRecords: find some extra data\n"));
+    ascii().addPos(pos);
+    ascii().addNote("RowRec[end]:###");
+  }
+
+  return true;
+}
+
+bool GreatWksDBParser::readFormula(long endPos)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  long dSz=(long) input->readULong(2);
+  long endHeader=pos+2+dSz;
+  if (dSz<2 || endHeader > endPos) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFormula: can not read a formula\n"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(Formula):";
+  std::vector<MWAWCellContent::FormulaInstruction> formula;
+  std::string error("");
+  if (!m_document->readFormula(Vec2i(0,0),endHeader,formula, error))
+    f << "###";
+  f << "[";
+  for (size_t l=0; l < formula.size(); ++l)
+    f << formula[l];
+  f << "]" << error << ",";
+
+  input->seek(endHeader, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  if (endHeader+2*(N+1)>endPos) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFormula: can not read a formula field(II)\n"));
+    return false;
+  }
+  int val=(int) input->readLong(2); // Here I find always 2, the field size ?
+  if (val!=2) f << "g0=" << val << ",";
+  if (N) {
+    f << "list[varId]=[";
+    for (int i=0; i<N; ++i) f << input->readLong(2) << ",";
+    f << "],";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool GreatWksDBParser::readFormulaResult(long endPos, std::string &extra)
+{
+  libmwaw::DebugStream f;
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (pos+2>endPos) return false;
+  int type=(int) input->readLong(2);
+  switch (type) {
+  case 0: // average
+  case 1: // summary
+  case 5: // number
+  case 9: // date
+  case 0xa: { // time
+    if (pos+12>endPos) return false;
+    double value;
+    bool isNan;
+    if (!input->readDouble10(value, isNan))
+      f << "#double,";
+    else
+      f << value << ",";
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+    break;
+  }
+  case 7: {
+    // checkme
+    int sSz=(int) input->readULong(1);
+    if (pos+3+sSz>endPos) {
+      MWAW_DEBUG_MSG(("GreatWksSSParser::readFormulaResult: can not read a string value\n"));
+      return false;
+    }
+    std::string text("");
+    for (int i=0; i<sSz; ++i)
+      text += (char) input->readULong(1);
+    f << "\"" << text << "\",";
+    if ((sSz%2)==0)
+      input->seek(1, librevenge::RVNG_SEEK_CUR);
+    break;
+  }
+  case 8: // bool or long
+    if (pos+4>endPos) return false;
+    f << input->readLong(2) << ",";
+    break;
+  case 0xf: // nan
+    if (pos+6>endPos) return false;
+    f << "nan" << input->readLong(4) << ",";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFormulaResult: find unknown type %d\n", type));
+    f << "#type=" << type << ",";
+    extra=f.str();
+    return false;
+  }
+  extra=f.str();
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1094,6 +1410,33 @@ bool GreatWksDBParser::readFields(MWAWEntry const &entry)
     ascii().addNote(f.str().c_str());
     input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
   }
+  for (size_t fl=0; fl<m_state->m_database.m_fieldList.size(); ++fl) {
+    GreatWksDBParserInternal::Field const &field=m_state->m_database.m_fieldList[fl];
+    pos=input->tell();
+    if (field.m_type==GreatWksDBParserInternal::Field::F_Summary) {
+      if (pos+18>entry.end()) {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readFields: can not read a summary field\n"));
+        break;
+      }
+      /*
+        average: 010a0001000a01e000000000000000000000
+        count:   010a0002000a01e000000000000000000000
+        total:   01800003000a001400000000000000000000
+        minimum: 010a0004000a01e000000000000000000000
+        maximum: 010a0005000a01e000000000000000000000
+      */
+      ascii().addPos(pos);
+      ascii().addNote("Field[summary]:");
+      input->seek(pos+18, librevenge::RVNG_SEEK_SET);
+      continue;
+    }
+    if (field.m_type!=GreatWksDBParserInternal::Field::F_Formula)
+      continue;
+    if (!readFormula(entry.end())) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+  }
   pos=input->tell();
   if (input->tell()!=entry.end()) { // now some string or formula?
     ascii().addPos(pos);
@@ -1112,12 +1455,14 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
   int type=(int) input->readLong(2);
   libmwaw::DebugStream f;
   switch (type) {
+  // 0, 1: average/summary(followed by double10)
   case 5:
     field.m_type=GreatWksDBParserInternal::Field::F_Number;
     break;
   case 7:
     field.m_type=GreatWksDBParserInternal::Field::F_Text;
     break;
+  // 8: bool(followed by int16)
   case 9:
     field.m_type=GreatWksDBParserInternal::Field::F_Date;
     break;
@@ -1130,6 +1475,7 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
   case 0xd:
     field.m_type=GreatWksDBParserInternal::Field::F_Picture;
     break;
+  // f: nan(followed by int32)
   case 0xFF:
     field.m_type=GreatWksDBParserInternal::Field::F_Formula;
     break;
@@ -1181,17 +1527,17 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
 }
 
 ////////////////////////////////////////////////////////////
-// read a list of records corresponding to a link
+// read a list of records corresponding to a field
 ////////////////////////////////////////////////////////////
-bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
+bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
 {
   if (field.m_recordBlock.isEmpty()) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not read a record zone\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not read a record zone\n"));
     return false;
   }
   shared_ptr<GreatWksDBParserInternal::Block> block=createBlock(field.m_recordBlock);
   if (!block) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not find the records input\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not find the records input\n"));
     return false;
   }
   MWAWInputStreamPtr input = getInput();
@@ -1200,13 +1546,13 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
     GreatWksDBParserInternal::Block::Zone const &zone=block->getZone(z);
     long pos=zone.m_ptr;
     f.str("");
-    f << "Entries(Record)[" << field.m_id << "]:type=" << int(field.m_type) << ",";
+    f << "Entries(FldRec)[" << field.m_id << "]:type=" << int(field.m_type) << ",";
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     int const N=zone.m_N;
     int const dSz=(int) zone.m_dataSize;
     if (field.m_type==GreatWksDBParserInternal::Field::F_Text) {
       if (!input->checkPosition(pos+dSz+N*5)) {
-        MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not read a text zone\n"));
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not read a text zone\n"));
         f << "###";
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
@@ -1229,7 +1575,7 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
       for (size_t i=0; i<(size_t)N; ++i) {
         int nextPos= i+1==size_t(N) ? dSz : positions[i+1];
         if (actPos!=positions[i] || nextPos>dSz) {
-          MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not read a text zone, pb with a position\n"));
+          MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not read a text zone, pb with a position\n"));
           f << "###";
           break;
         }
@@ -1248,7 +1594,7 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
              field.m_type==GreatWksDBParserInternal::Field::F_Date ||
              field.m_type==GreatWksDBParserInternal::Field::F_Time) {
       if (!input->checkPosition(pos+14*N)) {
-        MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not read a number zone\n"));
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not read a number zone\n"));
         f << "###";
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
@@ -1263,7 +1609,7 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
           static bool first=true;
           if (first) {
             // can be normal, ie. 7fff403200000000000000 means no value which generates an error
-            MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: can not read a number, maybe a undef number\n"));
+            MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not read a number, maybe a undef number\n"));
             first=false;
           }
           f << "#";
@@ -1275,12 +1621,13 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
       }
     }
     else {
-      MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecord: does not know how to read list for type=%d\n", int(field.m_type)));
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: does not know how to read list for type=%d\n", int(field.m_type)));
       f << "###";
     }
-    ascii().addDelimiter(input->tell(),'|');
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
+    ascii().addPos(input->tell());
+    ascii().addNote("_");
   }
   return true;
 }
@@ -1288,11 +1635,11 @@ bool GreatWksDBParser::readRecords(GreatWksDBParserInternal::Field &field)
 ////////////////////////////////////////////////////////////
 // read the links between fields and record zone
 ////////////////////////////////////////////////////////////
-bool GreatWksDBParser::readFieldLink(GreatWksDBParserInternal::Field &field)
+bool GreatWksDBParser::readFieldLinks(GreatWksDBParserInternal::Field &field)
 {
   MWAWInputStreamPtr input = getInput();
   if (field.m_linkZone<=0 || !input->checkPosition(field.m_linkZone+32)) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldLink: can not read a link between field to records\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldLinks: can not read a link between field to records\n"));
     return false;
   }
   input->seek(field.m_linkZone, librevenge::RVNG_SEEK_SET);
@@ -1305,7 +1652,7 @@ bool GreatWksDBParser::readFieldLink(GreatWksDBParserInternal::Field &field)
   val=(int) input->readLong(2);
   if (val!=0x14) f << "f1=" << val << ",";
   if (!readBlockHeader(field.m_recordBlock)) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldLink: the zone position seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldLinks: the zone position seems bad\n"));
     f << "###block,";
   }
   f << "block=" << field.m_recordBlock << ",";
@@ -1347,26 +1694,26 @@ bool GreatWksDBParser::readIntList(MWAWEntry const &entry, std::vector<int> &lis
 }
 
 ////////////////////////////////////////////////////////////
-// read a unknown zone of pointers
+// read a list of form
 ////////////////////////////////////////////////////////////
-bool GreatWksDBParser::readZone2(MWAWEntry const &entry)
+bool GreatWksDBParser::readFormLinks(MWAWEntry const &entry)
 {
   if (!entry.valid() || entry.length()<10) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readZone2: the entry length seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFormLinks: the entry length seems bad\n"));
     return false;
   }
   entry.setParsed(true);
   ascii().addPos(entry.end());
   ascii().addNote("_");
   MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugStream f, f2;
+  libmwaw::DebugStream f;
   f << "Entries(" << entry.name() << "):";
   input->seek(entry.begin()+6, librevenge::RVNG_SEEK_SET);
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   int dSz=(int) input->readULong(2);
   if (entry.length()!=10+N*dSz || dSz<4) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readZone2: the number of data seems bad\n"));
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFormLinks: the number of data seems bad\n"));
     f << "###";
     ascii().addPos(entry.begin());
     ascii().addNote(f.str().c_str());
@@ -1374,6 +1721,7 @@ bool GreatWksDBParser::readZone2(MWAWEntry const &entry)
   }
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
+  std::vector<MWAWEntry> listZones;
   long pos;
   for (int i=0; i<N; ++i) {
     pos=input->tell();
@@ -1385,14 +1733,8 @@ bool GreatWksDBParser::readZone2(MWAWEntry const &entry)
     if (ptr) {
       MWAWEntry zone;
       zone.setBegin(ptr);
-      if (checkSmallZone(zone)) {
-        f2.str("");
-        f2 << "Entries(" << zone.name() << "):";
-        ascii().addPos(ptr);
-        ascii().addNote(f2.str().c_str());
-        ascii().addPos(zone.end());
-        ascii().addNote("_");
-      }
+      if (checkSmallZone(zone))
+        listZones.push_back(zone);
       else
         f << "###";
       f << "ptr" << i << "=" << std::hex << ptr << std::dec << ",";
@@ -1401,7 +1743,68 @@ bool GreatWksDBParser::readZone2(MWAWEntry const &entry)
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
+  for (size_t z=0; z<listZones.size(); ++z)
+    readForm(listZones[z]);
+  return true;
+}
 
+////////////////////////////////////////////////////////////
+// read zone 2 link zone
+////////////////////////////////////////////////////////////
+bool GreatWksDBParser::readForm(MWAWEntry const &entry)
+{
+  int const vers=version();
+  /* not really sure what may be the header size, ie.
+     in v1: 264 seems ok,
+     in v2: 276 seems ok,
+     but some v1 file converted in v2 seems to keep intact the v1 structure :-~
+
+     This must be fixed if we want to export the form...
+  */
+  int const headerSize=vers==1 ? 264 : 276;
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.name() << "):";
+  ascii().addPos(entry.end());
+  ascii().addNote("_");
+  if (entry.id()!=9 || entry.length() < 6+headerSize) {
+    f << "###";
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readForm: the entry seems bad\n"));
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+6, librevenge::RVNG_SEEK_SET);
+  // a big number 5bafac : an id?
+  f << "f0=" << std::hex << input->readULong(4) << std::dec << ",";
+  // small number between 1 and 4
+  f << "id=" << input->readLong(2) << ",";
+  int sSz=(int) input->readULong(1);
+  if (sSz>32) {
+    f << "###";
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readForm: the string size seems bad\n"));
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  std::string text("");
+  for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
+  f << text << ",";
+  input->seek(pos+44, librevenge::RVNG_SEEK_SET);
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  input->seek(pos+headerSize, librevenge::RVNG_SEEK_SET);
+  pos=input->tell();
+  if (!m_document->getGraphParser()->readPageFrames())
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  pos=input->tell();
+  if (pos!=entry.end()) {
+    ascii().addPos(pos);
+    ascii().addNote("Form:end");
+  }
   return true;
 }
 

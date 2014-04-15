@@ -514,8 +514,9 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
       fontPos = 0x4a;
     else if (m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET)
       fontPos=18;
-    else
+    else if (m_parserState->m_kind==MWAWDocument::MWAW_K_TEXT)
       fontPos = vers==1 ? 0x302 : 0x308;
+    // fixme: add also some text for database file here
     if (fontPos>0 && (input->seek(fontPos, librevenge::RVNG_SEEK_SET) || !m_textParser->readFontNames())) {
       MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: can not find fonts table\n"));
       return false;
@@ -531,6 +532,320 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
   return true;
 }
 
+
+////////////////////////////////////////////////////////////
+// read a formula
+////////////////////////////////////////////////////////////
+bool GreatWksDocument::readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  instr=MWAWCellContent::FormulaInstruction();
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  bool absolute[2] = { true, true};
+  int cPos[2];
+  for (int i=0; i<2; ++i) {
+    int val = (int) input->readULong(2);
+    if (val & 0x8000) {
+      absolute[i]=false;
+      if (val&0x4000)
+        cPos[i] = pos[i]+(val-0xFFFF);
+      else
+        cPos[i] = pos[i]+(val-0x7FFF);
+    }
+    else
+      cPos[i]=val;
+  }
+
+  if (cPos[0] < 1 || cPos[1] < 1) {
+    MWAW_DEBUG_MSG(("GreatWksDocument::readCellInFormula: can not read cell position\n"));
+    return false;
+  }
+  instr.m_position[0]=Vec2i(cPos[0]-1,cPos[1]-1);
+  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  return true;
+}
+
+bool GreatWksDocument::readString(long endPos, std::string &res)
+{
+  res="";
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  long pos=input->tell();
+  int fSz=(int) input->readULong(1);
+  if (pos+1+fSz>endPos) {
+    MWAW_DEBUG_MSG(("GreatWksDocument::readString: can not read string size\n"));
+    return false;
+  }
+  for (int i=0; i<fSz; ++i)
+    res += (char) input->readULong(1);
+  return true;
+}
+
+bool GreatWksDocument::readNumber(long endPos, double &res, bool &isNan)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  long pos=input->tell();
+  if (pos+10>endPos) {
+    MWAW_DEBUG_MSG(("GreatWksDocument::readNumber: can not read a number\n"));
+    return false;
+  }
+  return input->readDouble10(res, isNan);
+}
+
+namespace GreatWksDocumentInternal
+{
+struct Functions {
+  char const *m_name;
+  int m_arity;
+};
+
+static Functions const s_listFunctions[] = {
+  { "=", 1}, {"", -1} /*UNKN*/, {"", 0}/*SPEC:long*/, {"", -1} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", 0} /*SPEC:double*/,{ "", -2} /*UNKN*/,{ "", 0} /*SPEC:text*/,
+  { "", 0} /*SPEC:short*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { "", 0} /*SPEC:cell*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { ":", 2} /*SPEC:concatenate cell*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+  { "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,{ "", -2} /*UNKN*/,
+
+  { "(", 1}, { "-", 1}, { "+", 1} /*checkme*/,{ "^", 2},
+  { "*", 2}, { "/", 2}, { "+", 2}, { "-", 2},
+  { "", -2} /*UNKN*/,{ "=", 2}, { "<", 2}, { "<=", 2},
+  { ">", 2}, { ">=", 2}, { "<>", 2}, { "", -2} /*UNKN*/,
+
+};
+}
+
+bool GreatWksDocument::readFormula(Vec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  libmwaw::DebugStream f;
+  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
+  bool ok=true;
+  while (!input->isEnd()) {
+    long pos=input->tell();
+    if (pos >= endPos)
+      break;
+    int arity=0, val, type=(int) input->readULong(1);
+    MWAWCellContent::FormulaInstruction instr;
+    switch (type) {
+    case 2:
+      if (pos+1+2 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(2);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=val;
+      break;
+    case 5: {
+      double value;
+      bool isNan;
+      ok=readNumber(endPos, value, isNan);
+      if (!ok) break;
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=value;
+      break;
+    }
+    case 7: {
+      std::string text;
+      ok=readString(endPos, text);
+      if (!ok) break;
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+      instr.m_content=text;
+      break;
+    }
+    case 8:
+      if (pos+1+1 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(1);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=val;
+      break;
+    case 0x10: {
+      ok=readCellInFormula(cPos,instr);
+      if (!ok) break;
+      f << instr << ",";
+      break;
+    }
+    case 0x41: {
+      // field in a database formula
+      if (pos+1+1 > endPos || m_parserState->m_kind!=MWAWDocument::MWAW_K_DATABASE) {
+        ok = false;
+        break;
+      }
+      std::string text;
+      ok=readString(endPos, text);
+      if (!ok) break;
+      // we have not sufficient information to fill the position, let GreatWksDBParser fills it
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+      instr.m_positionRelative[0]=Vec2b(true,true);
+      instr.m_content=text;
+      break;
+    }
+    case 0x40: {
+      if (pos+1+1 > endPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readULong(1);
+      arity= (int) input->readULong(1);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+
+      static char const* (s_functions[]) = {
+        "", "Abs", "Exp", "Fact", "Int", "Ln", "Log", "Log10",
+        "Mod", "Pi", "Product", "Rand", "Round", "Sign", "Sqrt", "Trunc",
+
+        "Average", "Count", "CountA", "Max", "Min", "StDev", "StDevP", "Sum",
+        "Var", "VarP", "Acos", "Asin", "Atan", "Atan2", "Cos", "Sin",
+
+        "Tan", "Degrees", "Radians", "And", "Choose", "False", "If", "IsBlank",
+        "IsErr", "IsError", "IsLogical", "IsNa", "IsNonText", "IsNum", "IsRef", "IsText",
+
+        "Not", "Or", "True", "Char", "Clean", "Code", "Dollar", "Exact",
+        "Find", "Fixed", "Left", "Len", "Lower", "Mid", "Proper"/*checkme: first majuscule*/, "Replace",
+
+        "Rept", "Right", "Search", "Substitute", "Trim", "Upper", "DDB", "FV",
+        "IPMT", "IRR", "MIRR", "NPER", "NPV", "PMT", "PPMT", "PV",
+
+        "Rate", "SLN", "SYD", "Annuity", "Compound", "Date", "Day", "Hour",
+        "Minute", "Month", "Now", "Second", "Time", "Weekday", "Year", "HLookup",
+
+        "Index", "Lookup", "Match", "N", "Na", "T", "Type", "VLookup",
+        "", "", "", "", "", "", "", "",
+
+      };
+      std::string functName("");
+      if (val < 0x70) functName=s_functions[val];
+      if (!functName.empty())
+        instr.m_content=functName;
+      else {
+        std::stringstream s;
+        s << "Funct" << std::hex << val << std::dec << "#";
+        instr.m_content=s.str();
+      }
+      break;
+    }
+    default:
+      if (type >= 0x40 || GreatWksDocumentInternal::s_listFunctions[type].m_arity == -2) {
+        f.str("");
+        f << "##Funct" << std::hex << type << std::dec;
+        ok = false;
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+      instr.m_content=GreatWksDocumentInternal::s_listFunctions[type].m_name;
+      ok=!instr.m_content.empty();
+      arity = GreatWksDocumentInternal::s_listFunctions[type].m_arity;
+      if (arity == -1) arity = (int) input->readLong(1);
+      if (arity<0) ok=false;
+      break;
+    }
+    if (!ok) break;
+    std::vector<MWAWCellContent::FormulaInstruction> child;
+    if (instr.m_type!=MWAWCellContent::FormulaInstruction::F_Function) {
+      child.push_back(instr);
+      stack.push_back(child);
+      continue;
+    }
+    size_t numElt = stack.size();
+    if ((int) numElt < arity) {
+      f.str("");
+      f << instr.m_content << "[##" << arity << "]";
+      ok = false;
+      break;
+    }
+    if ((instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') || instr.m_content[0] == '(') {
+      if (instr.m_content[0] != '(')
+        child.push_back(instr);
+
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content="(";
+      child.push_back(instr);
+      for (int i = 0; i < arity; i++) {
+        if (i) {
+          instr.m_content=";";
+          child.push_back(instr);
+        }
+        std::vector<MWAWCellContent::FormulaInstruction> const &node=
+          stack[size_t((int)numElt-arity+i)];
+        child.insert(child.end(), node.begin(), node.end());
+      }
+      instr.m_content=")";
+      child.push_back(instr);
+
+      stack.resize(size_t((int) numElt-arity+1));
+      stack[size_t((int)numElt-arity)] = child;
+      continue;
+    }
+    if (arity==1) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-1].insert(stack[numElt-1].begin(), instr);
+      if (type==0 && pos+1==endPos)
+        break;
+      continue;
+    }
+    if (arity==2 && instr.m_content==":") {
+      if (stack[numElt-2].size()!=1 || stack[numElt-2][0].m_type!=MWAWCellContent::FormulaInstruction::F_Cell ||
+          stack[numElt-1].size()!=1 || stack[numElt-1][0].m_type!=MWAWCellContent::FormulaInstruction::F_Cell) {
+        f << "### unexpected type of concatenate argument";
+        ok=false;
+        break;
+      }
+      instr=stack[numElt-2][0];
+      MWAWCellContent::FormulaInstruction instr2=stack[numElt-1][0];
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      instr.m_position[1]=instr2.m_position[0];
+      instr.m_positionRelative[1]=instr2.m_positionRelative[0];
+      stack[numElt-2][0]=instr;
+      stack.resize(numElt-1);
+      continue;
+    }
+    if (arity==2) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      stack[numElt-2].push_back(instr);
+      stack[numElt-2].insert(stack[numElt-2].end(), stack[numElt-1].begin(), stack[numElt-1].end());
+      stack.resize(numElt-1);
+      continue;
+    }
+    ok=false;
+    f << "### unexpected arity";
+    break;
+  }
+
+  if (!ok) ;
+  else if (stack.size()==1 && stack[0].size()>1 && stack[0][0].m_content=="=") {
+    formula.insert(formula.begin(),stack[0].begin()+1,stack[0].end());
+    return true;
+  }
+  else
+    f << "###stack problem";
+
+  m_parserState->m_asciiFile.addDelimiter(input->tell(),'#');
+  static bool first = true;
+  if (first) {
+    MWAW_DEBUG_MSG(("GreatWksDocument::readFormula: I can not read some formula\n"));
+    first = false;
+  }
+
+  error = f.str();
+  f.str("");
+  for (size_t i = 0; i < stack.size(); ++i) {
+    for (size_t j=0; j < stack[i].size(); ++j)
+      f << stack[i][j] << ",";
+  }
+  f << error;
+  error = f.str();
+  return false;
+}
 
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

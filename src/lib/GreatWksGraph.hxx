@@ -63,6 +63,7 @@ class SubDocument;
 
 class GreatWksDocument;
 class GreatWksParser;
+class GreatWksDBParser;
 class GreatWksDRParser;
 class GreatWksSSParser;
 
@@ -75,6 +76,7 @@ class GreatWksGraph
 {
   friend class GreatWksDocument;
   friend class GreatWksParser;
+  friend class GreatWksDBParser;
   friend class GreatWksDRParser;
   friend class GreatWksSSParser;
   friend class GreatWksGraphInternal::SubDocument;

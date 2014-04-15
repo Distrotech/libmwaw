@@ -39,6 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
 
 namespace GreatWksDocumentInternal
@@ -99,12 +100,23 @@ public:
   bool canSendTextboxAsGraphic(MWAWEntry const &entry);
   //! try to send textbox
   bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener);
-protected:
 
 protected:
 
   //! read the resource fork zone
   bool readRSRCZones();
+
+  // formula function
+
+  /** reads a cell */
+  bool readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
+  /** try to read a string */
+  bool readString(long endPos, std::string &res);
+  /** try to read a number */
+  bool readNumber(long endPos, double &res, bool &isNan);
+  //! read to read a formula
+  bool readFormula(Vec2i const &cPos, long endPos,
+                   std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
 
   //
   // low level
