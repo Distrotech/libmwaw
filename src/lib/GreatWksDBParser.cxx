@@ -61,20 +61,6 @@
 /** Internal: the structures of a GreatWksDBParser */
 namespace GreatWksDBParserInternal
 {
-/**a style of a GreatWksDBParser */
-class Style
-{
-public:
-  /** constructor */
-  Style() : m_font(3,10), m_backgroundColor(MWAWColor::white())
-  {
-  }
-  /** the font style */
-  MWAWFont m_font;
-  /** the cell background color */
-  MWAWColor m_backgroundColor;
-};
-
 /**a big zone header of a GreatWksDBParser */
 struct BlockHeader {
   /** constructor */
@@ -171,7 +157,8 @@ struct Field {
   //! the file type
   enum Type { F_Unknown, F_Text, F_Number, F_Date, F_Time, F_Memo, F_Picture, F_Formula, F_Summary };
   //! constructor
-  Field() : m_type(F_Unknown), m_id(-1), m_name(""), m_linkZone(0), m_recordBlock(), m_extra("")
+  Field() : m_type(F_Unknown), m_id(-1), m_name(""), m_linkZone(0), m_recordBlock(),
+    m_formula(), m_summaryType(0), m_summaryField(0), m_isSequence(false), m_firstNumber(1), m_incrementNumber(1), m_extra("")
   {
   }
   //! operator<<
@@ -186,6 +173,25 @@ struct Field {
   long m_linkZone;
   //! the block file position which stores the position of the field's record
   BlockHeader m_recordBlock;
+
+  // formula
+
+  //! the formula
+  std::vector<MWAWCellContent::FormulaInstruction> m_formula;
+
+  //! the summary type: 1:average, 2:count, 3:total, 4:minimum, 5:maximum
+  int m_summaryType;
+  //! the summary field
+  int m_summaryField;
+
+  // sequence (or unique val)
+
+  //! true if the number is a sequence
+  bool m_isSequence;
+  //! the first number (in case of progression sequence)
+  int m_firstNumber;
+  //! the increment number (in case of progression sequence)
+  int m_incrementNumber;
   //! extra data
   std::string m_extra;
 };
@@ -236,7 +242,7 @@ class Cell : public MWAWCell
 {
 public:
   /// constructor
-  Cell() : m_content(), m_style(-1) { }
+  Cell() : m_content() { }
   //! returns true if the cell do contain any content
   bool isEmpty() const
   {
@@ -245,8 +251,6 @@ public:
 
   //! the cell content
   MWAWCellContent m_content;
-  /** the cell style */
-  int m_style;
 };
 
 /** the database of a MsWksDBParser */
@@ -314,18 +318,9 @@ protected:
 //! Internal: the state of a GreatWksDBParser
 struct State {
   //! constructor
-  State() : m_database(), m_idZonesMap(), m_blocks(), m_styleList(), m_actPage(0), m_numPages(0),
+  State() : m_database(), m_idZonesMap(), m_blocks(), m_actPage(0), m_numPages(0),
     m_headerBlockHeader(), m_footerBlockHeader(), m_headerPrint(false), m_footerPrint(false), m_headerHeight(0), m_footerHeight(0)
   {
-  }
-  //! returns the style corresponding to an id
-  Style getStyle(int id) const
-  {
-    if (id<0 || id>=int(m_styleList.size())) {
-      MWAW_DEBUG_MSG(("GreatWksDBParserInternal::State: can not find the style %d\n", id));
-      return Style();
-    }
-    return m_styleList[size_t(id)];
   }
   /** the database */
   Database m_database;
@@ -333,8 +328,6 @@ struct State {
   std::map<int, MWAWEntry> m_idZonesMap;
   /** the list of big blocks */
   std::vector<BlockHeader> m_blocks;
-  /** the list of style */
-  std::vector<Style> m_styleList;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   MWAWEntry m_headerBlockHeader /** the header entry (in v2)*/, m_footerBlockHeader/**the footer entry (in v2)*/;
@@ -525,7 +518,7 @@ bool GreatWksDBParser::createZones()
       bool ok=false;
       switch (i) {
       case 0: // unknown maybe some flag
-        ok = readBlockHeader0(*block);
+        ok = readFreeList(*block);
         break;
       case 1: // a list of record<->id
         ok = readRowLinks(*block);
@@ -600,7 +593,7 @@ bool GreatWksDBParser::createZones()
       ok=readZone12(entry);
       break;
     // zone3: never find with data, dSz=3C in v1 and dSz=3e in v2
-    // zone4: never find with data, dSz=112
+    // zone4: never find with data, dSz=112, seems one time in v2
     // zone8: never seems
     default:
       ok=readSmallZone(entry);
@@ -644,8 +637,10 @@ bool GreatWksDBParser::readDatabase()
   if (version()==2) {
     // zone13: a v2 zone with dSz=46, content seems constant in a file
     it=m_state->m_idZonesMap.find(13);
-    if (it!=m_state->m_idZonesMap.end())
-      readSmallZone(it->second);
+    if (it!=m_state->m_idZonesMap.end()) {
+      if (!readFieldAuxis(it->second))
+        readSmallZone(it->second);
+    }
   }
   GreatWksDBParserInternal::Database &database=m_state->m_database;
   for (size_t i=0; i < database.m_rowList.size(); ++i)
@@ -684,7 +679,7 @@ bool GreatWksDBParser::readHeader()
       ascii().addNote(f.str().c_str());
       return false;
     }
-    static char const *(wh[])= {"Block0", "RecLink", "Block2"};
+    static char const *(wh[])= {"Free", "RecLink", "Block2"};
     block.m_name=wh[i];
     m_state->m_blocks.push_back(block);
     f << block << ",";
@@ -915,7 +910,7 @@ bool GreatWksDBParser::readRecordList(GreatWksDBParserInternal::Block &block)
   return true;
 }
 
-bool GreatWksDBParser::readBlockHeader0(GreatWksDBParserInternal::Block &block)
+bool GreatWksDBParser::readFreeList(GreatWksDBParserInternal::Block &block)
 {
   MWAWInputStreamPtr input = getInput();
   GreatWksDBParserInternal::BlockHeader const &header=block.m_header;
@@ -924,7 +919,7 @@ bool GreatWksDBParser::readBlockHeader0(GreatWksDBParserInternal::Block &block)
     GreatWksDBParserInternal::Block::Zone const &zone=block.getZone(z);
     long pos=zone.m_ptr;
     if (!pos || !input->checkPosition(pos+zone.m_N*8)) {
-      MWAW_DEBUG_MSG(("GreatWksDBParser::readBlockHeader0: the zone seems too short\n"));
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readFreeList: the zone seems too short\n"));
       f.str("");
       f << "Entries(" << header.m_name << ")[" << header << "]:###";
       ascii().addPos(pos);
@@ -933,13 +928,31 @@ bool GreatWksDBParser::readBlockHeader0(GreatWksDBParserInternal::Block &block)
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     f.str("");
-    f << "Entries(" << header.m_name << "):flags=[";
+    f << "Entries(" << header.m_name << "):zones=[";
     for (int i=0; i<zone.m_N; ++i) {
-      /* look like 40000020:000055e0 or 00003dc0:40000040
-         ie { 400000000|small number and some number }
-         maybe some flags
-      */
-      f << std::hex << input->readULong(4) << ":" << input->readULong(4) << std::dec << ",";
+      /* a ptr followed by 400000000|size or the oposite
+         normally the content of a free block seems to be 0x8000, dataSz
+         excepted on time where it is 8, dataSz
+       */
+      long values[2];
+      for (int j=0; j<2; ++j) values[j]=(long) input->readULong(4);
+      if ((values[0]&0xFF000000)==0x40000000) {
+        long tmp=values[0];
+        values[0]=values[1];
+        values[1]=tmp;
+      }
+      if ((values[0]&0xFF000000)==0 && (values[1]&0xFF000000)==0x40000000 &&
+          input->checkPosition(values[0]+(values[1]&0xFFFFFF))) {
+        ascii().addPos(values[0]);
+        ascii().addNote("Free");
+        ascii().addPos(values[0]+(values[1]&0xFFFFFF));
+        ascii().addNote("_");
+        f << std::hex << values[0] << ":" << (values[1]&0xFFFFFF) << std::dec << ",";
+      }
+      else {
+        MWAW_DEBUG_MSG(("GreatWksDBParser::readFreeList: find an odd free zone\n"));
+        f << "###" << std::hex << values[0] << ":" << values[1] << std::dec << ",";
+      }
     }
     f << "]";
     ascii().addPos(pos);
@@ -1268,8 +1281,9 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
   return true;
 }
 
-bool GreatWksDBParser::readFormula(long endPos)
+bool GreatWksDBParser::readFormula(long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula)
 {
+  formula.resize(0);
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
   long dSz=(long) input->readULong(2);
@@ -1280,7 +1294,6 @@ bool GreatWksDBParser::readFormula(long endPos)
   }
   libmwaw::DebugStream f;
   f << "Entries(Formula):";
-  std::vector<MWAWCellContent::FormulaInstruction> formula;
   std::string error("");
   if (!m_document->readFormula(Vec2i(0,0),endHeader,formula, error))
     f << "###";
@@ -1297,10 +1310,29 @@ bool GreatWksDBParser::readFormula(long endPos)
   }
   int val=(int) input->readLong(2); // Here I find always 2, the field size ?
   if (val!=2) f << "g0=" << val << ",";
+  std::vector<int> varList;
   if (N) {
     f << "list[varId]=[";
-    for (int i=0; i<N; ++i) f << input->readLong(2) << ",";
+    for (int i=0; i<N; ++i) {
+      val=(int) input->readLong(2);
+      varList.push_back(val);
+      f << val << ",";
+    }
     f << "],";
+  }
+  // time to update the formula
+  int id=0;
+  for (size_t l=0; l < formula.size(); ++l) {
+    MWAWCellContent::FormulaInstruction &instr=formula[l];
+    if (instr.m_type!=MWAWCellContent::FormulaInstruction::F_Cell)
+      continue;
+    if (id>=(int) varList.size() || varList[size_t(id)]<=0) {
+      MWAW_DEBUG_MSG(("GreatWksDBParser::readFormula: can not associated a cell with field\n"));
+      f << "###";
+      formula.resize(0);
+      break;
+    }
+    instr.m_position[0][0]=varList[size_t(id++)]-1;
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1411,28 +1443,41 @@ bool GreatWksDBParser::readFields(MWAWEntry const &entry)
     input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
   }
   for (size_t fl=0; fl<m_state->m_database.m_fieldList.size(); ++fl) {
-    GreatWksDBParserInternal::Field const &field=m_state->m_database.m_fieldList[fl];
+    GreatWksDBParserInternal::Field &field=m_state->m_database.m_fieldList[fl];
     pos=input->tell();
     if (field.m_type==GreatWksDBParserInternal::Field::F_Summary) {
       if (pos+18>entry.end()) {
         MWAW_DEBUG_MSG(("GreatWksDBParser::readFields: can not read a summary field\n"));
         break;
       }
-      /*
-        average: 010a0001000a01e000000000000000000000
-        count:   010a0002000a01e000000000000000000000
-        total:   01800003000a001400000000000000000000
-        minimum: 010a0004000a01e000000000000000000000
-        maximum: 010a0005000a01e000000000000000000000
-      */
+      f.str("");
+      f << "Field[summary]:";
+      int val=(int) input->readULong(2); // 10a or 180
+      if (val!=0x10a) f << "fl=" << std::hex << val << std::dec << ",";
+      field.m_summaryType=(int) input->readULong(2);
+      if (field.m_summaryType > 0 && field.m_summaryType < 6) {
+        static char const *(wh[]) = { "", "average", "count", "total", "minimum", "maximum" };
+        f << wh[field.m_summaryType] << ",";
+      }
+      else
+        f << "#type=" << field.m_summaryType << ",";
+      field.m_summaryField=(int)input->readLong(2)-1;
+      f << "field=" << field.m_summaryField << ",";
+      val=(int) input->readULong(2); // 1e0 or 14
+      if (val!=0x1e0) f << "f0=" << std::hex << val << std::dec << ",";
+      for (int i=0; i<5; ++i) { // always 0
+        val=(int) input->readULong(2);
+        if (val)  f << "f" << i+1 << "=" << val << ",";
+      }
+
       ascii().addPos(pos);
-      ascii().addNote("Field[summary]:");
+      ascii().addNote(f.str().c_str());
       input->seek(pos+18, librevenge::RVNG_SEEK_SET);
       continue;
     }
     if (field.m_type!=GreatWksDBParserInternal::Field::F_Formula)
       continue;
-    if (!readFormula(entry.end())) {
+    if (!readFormula(entry.end(), field.m_formula)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1526,6 +1571,78 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
   return true;
 }
 
+bool GreatWksDBParser::readFieldAuxis(MWAWEntry const &entry)
+{
+  if (!entry.valid() || entry.length()<10) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldAuxis: the entry length seems bad\n"));
+    return false;
+  }
+  int const vers=version();
+  entry.setParsed(true);
+  ascii().addPos(entry.end());
+  ascii().addNote("_");
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  f << "Entries(Field):";
+  input->seek(entry.begin()+6, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  int dSz=(int) input->readULong(2);
+  if (vers==1 || (vers==2 && dSz<0x46) || entry.length()<10+N*dSz) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldAuxis: the number of data seems bad\n"));
+    f << "###";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+  GreatWksDBParserInternal::Database &database=m_state->m_database;
+  if (N>(int) database.m_fieldList.size()) {
+    MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldAuxis: the field list seems too short\n"));
+    database.m_fieldList.resize(size_t(N));
+  }
+  for (int i=0; i<N; ++i) {
+    long pos=input->tell();
+    GreatWksDBParserInternal::Field &field=database.m_fieldList[size_t(i)];
+    f.str("");
+    f << "FldAuxi-" << i << ":";
+    int val=(int) input->readLong(2);
+    if (val) {
+      // checkme: find val=10 for a sequence with increment=10, so...
+      f << "type[increment]=" << val << ",";
+      field.m_isSequence=true;
+    }
+    val=(int) input->readLong(2);
+    if (val==1) {
+      f << "isUnique[number],";
+      // let use a sequence
+      field.m_isSequence=true;
+    }
+    else if (val)
+      f << "isUnique[number]=" << val << ",";
+    for (int j=0; j<2; ++j) { // always 0?
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    field.m_firstNumber=(int) input->readLong(2);
+    if (field.m_firstNumber!=1)
+      f << "first[sequence]=" << field.m_firstNumber << ",";
+    val=(int) input->readLong(2); // always 0
+    if (val) f << "f2=" << val << ",";
+    field.m_incrementNumber=(int) input->readLong(2);
+    if (field.m_incrementNumber!=1)
+      f << "increment[sequence]=" << field.m_incrementNumber << ",";
+    for (int j=0; j < 28; ++j) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
 ////////////////////////////////////////////////////////////
 // read a list of records corresponding to a field
 ////////////////////////////////////////////////////////////
@@ -1898,117 +2015,16 @@ bool GreatWksDBParser::sendDatabase()
 }
 
 ////////////////////////////////////////////////////////////
-// read the fonts
-////////////////////////////////////////////////////////////
-bool GreatWksDBParser::readStyles()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
-  int const vers=version();
-  libmwaw::DebugStream f;
-
-  f << "Entries(Style):";
-  long sz=(long) input->readULong(4);
-  long endPos=pos+4+sz;
-  int expectedSize=vers==1 ? 18 : 40;
-  if (!input->checkPosition(endPos) || (sz%expectedSize)) {
-    MWAW_DEBUG_MSG(("GreatWksDBParser::readStyles: can not find the font defs zone\n"));
-    f << "###";
-    ascii().addPos(pos-2);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  ascii().addPos(pos-2);
-  ascii().addNote(f.str().c_str());
-  int numFonts=int(sz/expectedSize);
-  for (int i=0; i <numFonts; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Style-" << i << ":";
-    GreatWksDBParserInternal::Style style;
-    MWAWFont &font=style.m_font;
-    int val=(int) input->readLong(2); // always 0 ?
-    if (val) f << "#unkn=" << val << ",";
-    val=(int) input->readLong(2);
-    if (val!=1) f << "used?=" << val << ",";
-
-    font.setId(m_document->getTextParser()->getFontId((int) input->readULong(2)));
-    int flag =(int) input->readULong(2);
-    uint32_t flags=0;
-    if (flag&0x1) flags |= MWAWFont::boldBit;
-    if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
-    if (flag&0x8) flags |= MWAWFont::embossBit;
-    if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0x20) font.setDeltaLetterSpacing(-1);
-    if (flag&0x40) font.setDeltaLetterSpacing(1);
-    if (flag&0x100) font.set(MWAWFont::Script::super100());
-    if (flag&0x200) font.set(MWAWFont::Script::sub100());
-    if (flag&0x800) font.setStrikeOutStyle(MWAWFont::Line::Simple);
-    if (flag&0x2000) {
-      font.setUnderlineStyle(MWAWFont::Line::Simple);
-      font.setUnderlineType(MWAWFont::Line::Double);
-    }
-    flag &=0xD480;
-    if (flag) f << "#fl=" << std::hex << flag << std::dec << ",";
-    font.setFlags(flags);
-    font.setSize((float) input->readULong(2));
-    unsigned char color[3];
-    for (int c=0; c<3; ++c)
-      color[c] = (unsigned char)(input->readULong(2)>>8);
-    font.setColor(MWAWColor(color[0],color[1],color[2]));
-    f << font.getDebugString(getParserState()->m_fontConverter) << ",";
-    f << "h[line]?=" << input->readULong(2) << ",";
-    if (vers==1) {
-      m_state->m_styleList.push_back(style);
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-      continue;
-    }
-    MWAWColor bfColors[2];
-    for (int j=0; j<2; ++j) {  // front/back color?
-      for (int c=0; c<3; ++c)
-        color[c] = (unsigned char)(input->readULong(2)>>8);
-      MWAWColor col(color[0],color[1],color[2]);
-      bfColors[j]=col;
-      if ((j==0 && col.isBlack()) || (j==1 && col.isWhite())) continue;
-      if (j==0) f << "col[front]=" << MWAWColor(color[0],color[1],color[2]) << ",";
-      else f << "col[back]=" << MWAWColor(color[0],color[1],color[2]) << ",";
-    }
-    int patId=(int) input->readLong(2);
-    if (!patId) {
-      style.m_backgroundColor=bfColors[1];
-      input->seek(8, librevenge::RVNG_SEEK_CUR);
-    }
-    else {
-      f << "pattern[id]=" << patId << ",";
-      MWAWGraphicStyle::Pattern pattern;
-      pattern.m_dim=Vec2i(8,8);
-      pattern.m_data.resize(8);
-      for (size_t j=0; j < 8; ++j)
-        pattern.m_data[j]=(unsigned char) input->readULong(1);
-      pattern.m_colors[0]=bfColors[1];
-      pattern.m_colors[1]=bfColors[0];
-      pattern.getAverageColor(style.m_backgroundColor);
-      f << "pat=[" << pattern << "],";
-    }
-    m_state->m_styleList.push_back(style);
-    ascii().addDelimiter(input->tell(), '|');
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
 bool GreatWksDBParser::checkHeader(MWAWHeader *header, bool strict)
 {
   *m_state = GreatWksDBParserInternal::State();
   if (!m_document->checkHeader(header, strict)) return false;
-  return getParserState()->m_kind==MWAWDocument::MWAW_K_DATABASE;
+  if (getParserState()->m_kind!=MWAWDocument::MWAW_K_DATABASE)
+    return false;
+  // FIXME: do some extra check here
+  return true;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

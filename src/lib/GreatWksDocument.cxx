@@ -507,7 +507,8 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
   else if (type!="ZWRT")
     return false;
 
-  if (strict) {
+  // extra check for database must be done in GreatWksDBParser
+  if (strict && m_parserState->m_kind!=MWAWDocument::MWAW_K_DATABASE) {
     // check that the fonts table is in expected position
     long fontPos=-1;
     if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
@@ -516,7 +517,6 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
       fontPos=18;
     else if (m_parserState->m_kind==MWAWDocument::MWAW_K_TEXT)
       fontPos = vers==1 ? 0x302 : 0x308;
-    // fixme: add also some text for database file here
     if (fontPos>0 && (input->seek(fontPos, librevenge::RVNG_SEEK_SET) || !m_textParser->readFontNames())) {
       MWAW_DEBUG_MSG(("GreatWksDocument::checkHeader: can not find fonts table\n"));
       return false;

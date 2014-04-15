@@ -96,8 +96,6 @@ protected:
   // low level
   //
 
-  //! try to read the styles
-  bool readStyles();
   //! read the database block
   bool readDatabase();
 
@@ -107,6 +105,8 @@ protected:
   bool readFields(MWAWEntry const &zone);
   //! try to read a field
   bool readField(GreatWksDBParserInternal::Field &field);
+  //! try to read a field extra v2 zone ( small zone 13)
+  bool readFieldAuxis(MWAWEntry const &zon);
   //! try to read a zone which links a field to zone record
   bool readFieldLinks(GreatWksDBParserInternal::Field &field);
   //! try to read a list of records corresponding to field
@@ -122,8 +122,11 @@ protected:
   //! try to read the record list (the 3th big zone)
   bool readRecordList(GreatWksDBParserInternal::Block &block);
 
+  //! try to read the free zone list: 0th big zone
+  bool readFreeList(GreatWksDBParserInternal::Block &block);
+
   //! try to read a formula result in field definition
-  bool readFormula(long endPos);
+  bool readFormula(long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula);
   //! try to read a formula result in a row content zone
   bool readFormulaResult(long endPos, std::string &extra);
 
@@ -143,8 +146,6 @@ protected:
   //! try to read the small zone 12(unknown format, maybe some preferences)
   bool readZone12(MWAWEntry const &zone);
 
-  //! try to read the 0th big zone
-  bool readBlockHeader0(GreatWksDBParserInternal::Block &block);
   //! try to read the 2th big zone (maybe a list of pointers, but I only see a list of 0:recordId )
   bool readBlockHeader2(GreatWksDBParserInternal::Block &block);
   //! try to read a big block entry
