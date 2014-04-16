@@ -127,8 +127,10 @@ protected:
 
   //! try to read a formula result in field definition
   bool readFormula(long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula);
-  //! try to read a formula result in a row content zone
-  bool readFormulaResult(long endPos, std::string &extra);
+  /** try to read a formula result in a row content zone
+
+      \note: we fill the cell content, which can overidden later if we find a formula to associate with the cell*/
+  bool readFormulaResult(long endPos, GreatWksDBParserInternal::Cell &cell, std::string &extra);
 
   //! try to read a int's zone
   bool readIntList(MWAWEntry const &zone, std::vector<int> &list);

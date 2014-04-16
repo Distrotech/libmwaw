@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <cmath>
 #include <limits>
 #include <set>
 #include <sstream>
@@ -152,15 +153,43 @@ private:
   Block &operator=(Block const &orig);
 };
 
+/** a cell of a GreatWksDBParser */
+class Cell : public MWAWCell
+{
+public:
+  /// constructor
+  Cell() : m_content() { }
+  //! returns true if the cell do contain any content
+  bool isEmpty() const
+  {
+    return m_content.empty() && !hasBorders();
+  }
+
+  //! the cell content
+  MWAWCellContent m_content;
+};
+
 /** a field of a GreatWksDBParser */
 struct Field {
   //! the file type
   enum Type { F_Unknown, F_Text, F_Number, F_Date, F_Time, F_Memo, F_Picture, F_Formula, F_Summary };
   //! constructor
-  Field() : m_type(F_Unknown), m_id(-1), m_name(""), m_linkZone(0), m_recordBlock(),
+  Field() : m_type(F_Unknown), m_id(-1), m_name(""), m_format(), m_linkZone(0), m_recordBlock(),
     m_formula(), m_summaryType(0), m_summaryField(0), m_isSequence(false), m_firstNumber(1), m_incrementNumber(1), m_extra("")
   {
   }
+  //! returns the default content type which corresponds to a field
+  MWAWCellContent::Type getContentType() const
+  {
+    if (m_type==F_Number)
+      return m_isSequence ? MWAWCellContent::C_FORMULA : MWAWCellContent::C_NUMBER;
+    if (m_type==F_Time || m_type==F_Date) return MWAWCellContent::C_NUMBER;
+    if (m_type==F_Formula || m_type==F_Summary) return MWAWCellContent::C_FORMULA;
+    if (m_type==F_Text || m_type==F_Memo) return MWAWCellContent::C_TEXT;
+    return MWAWCellContent::C_NONE;
+  }
+  //! update the cell to correspond to the final data
+  bool updateCell(int row, int numCol, Cell &cell) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Field const &field);
   //! the field type
@@ -169,6 +198,8 @@ struct Field {
   int m_id;
   //! the field name
   std::string m_name;
+  //! the field format
+  MWAWCell::Format m_format;
   //! the file position which stores the position link to record zone
   long m_linkZone;
   //! the block file position which stores the position of the field's record
@@ -195,6 +226,53 @@ struct Field {
   //! extra data
   std::string m_extra;
 };
+
+bool Field::updateCell(int row, int numCol, Cell &cell) const
+{
+  std::vector<MWAWCellContent::FormulaInstruction> &formula=cell.m_content.m_formula;
+  if (m_type==F_Formula) {
+    if (m_formula.size()==0)
+      return false;
+    cell.m_content.m_contentType=MWAWCellContent::C_FORMULA;
+    formula=m_formula;
+  }
+  else if (m_isSequence && !cell.m_content.isValueSet()) {
+    cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+    cell.m_content.setValue(double(m_firstNumber+row*m_incrementNumber));
+  }
+  else if (m_summaryType>0 && m_summaryType<6) {
+    cell.m_content.m_contentType=MWAWCellContent::C_FORMULA;
+    MWAWCellContent::FormulaInstruction instr;
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+    char const *(wh[])= {"Average", "Count", "Sum", "Min", "Max"};
+    instr.m_content=wh[m_summaryType-1];
+    formula.push_back(instr);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content="(";
+    formula.push_back(instr);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+    instr.m_position[0][0]=0;
+    instr.m_position[1][0]=numCol-1;
+    instr.m_position[0][1]=instr.m_position[1][1]=m_summaryField;
+    instr.m_positionRelative[0]=instr.m_positionRelative[0]=Vec2b(false,false);
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+    instr.m_content=")";
+    formula.push_back(instr);
+    return true;
+  }
+  // change the reference date from 1/1/1904 to 1/1/1900
+  if (m_type==F_Date && cell.m_content.isValueSet())
+    cell.m_content.setValue(cell.m_content.m_value+1462.);
+  // and try to update the 1D formula in 2D
+  for (size_t i=0; i<formula.size(); ++i) {
+    MWAWCellContent::FormulaInstruction &instr=formula[i];
+    if (instr.m_type==MWAWCellContent::FormulaInstruction::F_Cell)
+      instr.m_position[0][1]=row;
+    else if (instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList)
+      instr.m_position[0][1]=instr.m_position[1][1]=row;
+  }
+  return true;
+}
 
 std::ostream &operator<<(std::ostream &o, Field const &field)
 {
@@ -237,30 +315,29 @@ std::ostream &operator<<(std::ostream &o, Field const &field)
   return o;
 }
 
-/** a cell of a GreatWksDBParser */
-class Cell : public MWAWCell
-{
-public:
-  /// constructor
-  Cell() : m_content() { }
-  //! returns true if the cell do contain any content
-  bool isEmpty() const
-  {
-    return m_content.empty() && !hasBorders();
-  }
-
-  //! the cell content
-  MWAWCellContent m_content;
-};
-
-/** the database of a MsWksDBParser */
+/** the database of a GreatWksDBParser */
 class Database
 {
 public:
   //! constructor
   Database() : m_numRecords(0), m_rowList(), m_fieldList(), m_widthDefault(75), m_widthCols(), m_heightDefault(13), m_heightRows(),
-    m_cells(), m_name("Sheet0")
+    m_rowCellsMap(), m_name("Sheet0")
   {
+  }
+  //! add a cell data in one given position
+  bool addCell(Vec2i const &pos, Cell const &cell)
+  {
+    if (pos[0]<0 || pos[0]>=int(m_fieldList.size()) || pos[1]<0) {
+      MWAW_DEBUG_MSG(("GreatWksDBParserInternal::Database::addCell: the cell position seems bad\n"));
+      return false;
+    }
+    if (m_rowCellsMap.find(pos[1])==m_rowCellsMap.end())
+      m_rowCellsMap[pos[1]]=std::vector<Cell>();
+    std::vector<Cell> &cells=m_rowCellsMap.find(pos[1])->second;
+    if (pos[0]>=(int) cells.size())
+      cells.resize(m_fieldList.size());
+    cells[size_t(pos[0])]=cell;
+    return true;
   }
   //! returns the row size in point
   int getRowHeight(int row) const
@@ -272,7 +349,7 @@ public:
   //! convert the m_widthCols in a vector of of point size
   std::vector<float> convertInPoint(std::vector<int> const &list) const
   {
-    size_t numCols=size_t(getRightBottomPosition()[0]+1);
+    size_t numCols=m_fieldList.size();
     std::vector<float> res;
     res.resize(numCols);
     for (size_t i = 0; i < numCols; i++) {
@@ -295,23 +372,11 @@ public:
   int m_heightDefault;
   /** the row height in points */
   std::vector<int> m_heightRows;
-  /** the list of not empty cells */
-  std::vector<Cell> m_cells;
+  /** the map row -> list of cells */
+  std::map<int, std::vector<Cell> > m_rowCellsMap;
   /** the database name */
   std::string m_name;
 protected:
-  /** returns the last Right Bottom cell position */
-  Vec2i getRightBottomPosition() const
-  {
-    int maxX = 0, maxY = 0;
-    size_t numCell = m_cells.size();
-    for (size_t i = 0; i < numCell; i++) {
-      Vec2i const &p = m_cells[i].position();
-      if (p[0] > maxX) maxX = p[0];
-      if (p[1] > maxY) maxY = p[1];
-    }
-    return Vec2i(maxX, maxY);
-  }
 };
 
 ////////////////////////////////////////
@@ -611,15 +676,6 @@ bool GreatWksDBParser::createZones()
   if (!readDatabase())
     return false;
 
-  if (!input->isEnd()) {
-    long pos = input->tell();
-    MWAW_DEBUG_MSG(("GreatWksDBParser::createZones: find some extra data\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Loose):");
-    ascii().addPos(pos+100);
-    ascii().addNote("_");
-  }
-
   return true;
 }
 
@@ -643,16 +699,30 @@ bool GreatWksDBParser::readDatabase()
     }
   }
   GreatWksDBParserInternal::Database &database=m_state->m_database;
-  for (size_t i=0; i < database.m_rowList.size(); ++i)
-    readRowRecords(database.m_rowList[i]);
+  /* First read the fields' records then the rows' records.  As the
+     rows' records contain more information than the fields' records,
+     there will replace the field data if we success to read them
+     (and if not, we will keep the fields' records).
+   */
   for (size_t i=0; i < database.m_fieldList.size(); ++i) {
     if (!database.m_fieldList[i].m_linkZone) continue;
     readFieldLinks(database.m_fieldList[i]);
   }
+  for (size_t i=0; i < database.m_rowList.size(); ++i)
+    readRowRecords(database.m_rowList[i]);
   for (size_t i=0; i < database.m_fieldList.size(); ++i) {
     if (database.m_fieldList[i].m_recordBlock.isEmpty()) continue;
     readFieldRecords(database.m_fieldList[i]);
   }
+  if (database.m_rowCellsMap.size())
+    return true;
+  // let check if we can reconstruct something
+  for (size_t i=0; i < database.m_fieldList.size(); ++i) {
+    if (database.m_fieldList[i].m_recordBlock.isEmpty()) continue;
+    if (database.m_fieldList[i].m_isSequence) return true;
+    if (database.m_fieldList[i].m_type==GreatWksDBParserInternal::Field::F_Summary) return true;
+  }
+  MWAW_DEBUG_MSG(("GreatWksDBParser::readDatabase: can not find any cellule\n"));
   return false;
 }
 
@@ -1150,6 +1220,9 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
     }
     GreatWksDBParserInternal::Field const &field=database.m_fieldList[fl];
     bool ok=true;
+
+    GreatWksDBParserInternal::Cell cell;
+    cell.setFormat(field.m_format);
     switch (field.m_type) {
     case GreatWksDBParserInternal::Field::F_Text: {
       int sSz=(int) input->readULong(1);
@@ -1159,6 +1232,11 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
       }
+      cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
+      cell.m_content.m_textEntry.setBegin(input->tell());
+      cell.m_content.m_textEntry.setLength(sSz);
+      database.addCell(Vec2i(field.m_id, entry.id()), cell);
+
       std::string text("");
       for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
       f << text << ",";
@@ -1174,6 +1252,9 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
         ascii().addNote(f.str().c_str());
         return false;
       }
+      // formula will be will later
+      cell.m_content.m_contentType=MWAWCellContent::C_FORMULA;
+      database.addCell(Vec2i(field.m_id, entry.id()), cell);
       f << "summary,";
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       break;
@@ -1199,8 +1280,12 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
         }
         f << "#";
       }
-      else
+      else {
+        cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+        cell.m_content.setValue(value);
+        database.addCell(Vec2i(field.m_id, entry.id()), cell);
         f << value;
+      }
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1236,6 +1321,10 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
         ascii().addPos(pos);
         ascii().addNote(f.str().c_str());
       }
+      cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
+      cell.m_content.m_textEntry.setBegin(input->tell());
+      cell.m_content.m_textEntry.setLength(mSz);
+      database.addCell(Vec2i(field.m_id, entry.id()), cell);
       // probably a simple textbox ( see sendSimpleTextbox )
       if (mSz) f << "memo,";
       input->seek(pos+4+mSz, librevenge::RVNG_SEEK_SET);
@@ -1243,7 +1332,9 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
     }
     case GreatWksDBParserInternal::Field::F_Formula: {
       std::string extra("");
-      ok=readFormulaResult(endPos, extra);
+      ok=readFormulaResult(endPos, cell, extra);
+      if (ok)
+        database.addCell(Vec2i(field.m_id, entry.id()), cell);
       f << extra;
       break;
     }
@@ -1339,7 +1430,10 @@ bool GreatWksDBParser::readFormula(long endPos, std::vector<MWAWCellContent::For
   return true;
 }
 
-bool GreatWksDBParser::readFormulaResult(long endPos, std::string &extra)
+/* read the result of a formula.
+
+   note: we fill the cell content, which can overidden later if we find a formula to associate with the cell */
+bool GreatWksDBParser::readFormulaResult(long endPos, GreatWksDBParserInternal::Cell &cell, std::string &extra)
 {
   libmwaw::DebugStream f;
   MWAWInputStreamPtr input = getInput();
@@ -1357,8 +1451,11 @@ bool GreatWksDBParser::readFormulaResult(long endPos, std::string &extra)
     bool isNan;
     if (!input->readDouble10(value, isNan))
       f << "#double,";
-    else
+    else {
+      cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+      cell.m_content.setValue(value);
       f << value << ",";
+    }
     input->seek(pos+12, librevenge::RVNG_SEEK_SET);
     break;
   }
@@ -1369,6 +1466,13 @@ bool GreatWksDBParser::readFormulaResult(long endPos, std::string &extra)
       MWAW_DEBUG_MSG(("GreatWksSSParser::readFormulaResult: can not read a string value\n"));
       return false;
     }
+    cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
+    cell.m_content.m_textEntry.setBegin(input->tell());
+    cell.m_content.m_textEntry.setLength(sSz);
+    // also modify the cell format in text
+    MWAWCell::Format format=cell.getFormat();
+    format.m_format=MWAWCell::F_TEXT;
+    cell.setFormat(format);
     std::string text("");
     for (int i=0; i<sSz; ++i)
       text += (char) input->readULong(1);
@@ -1377,12 +1481,18 @@ bool GreatWksDBParser::readFormulaResult(long endPos, std::string &extra)
       input->seek(1, librevenge::RVNG_SEEK_CUR);
     break;
   }
-  case 8: // bool or long
+  case 8: { // bool or long
     if (pos+4>endPos) return false;
+    int val=(int) input->readLong(2);
+    cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+    cell.m_content.setValue((double) val);
     f << input->readLong(2) << ",";
     break;
+  }
   case 0xf: // nan
     if (pos+6>endPos) return false;
+    cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+    cell.m_content.setValue(std::numeric_limits<double>::quiet_NaN());
     f << "nan" << input->readLong(4) << ",";
     break;
   default:
@@ -1430,14 +1540,14 @@ bool GreatWksDBParser::readFields(MWAWEntry const &entry)
     f.str("");
     f << "Field-" << i << ":";
     GreatWksDBParserInternal::Field field;
-    if (readField(field)) {
-      m_state->m_database.m_fieldList.push_back(field);
+    if (readField(field))
       f << field;
-    }
     else {
+      field = GreatWksDBParserInternal::Field();
       MWAW_DEBUG_MSG(("GreatWksDBParser::readFields: can not read a field\n"));
       f << "###";
     }
+    m_state->m_database.m_fieldList.push_back(field);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
@@ -1499,33 +1609,41 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
   if (!input->checkPosition(pos+0x3c)) return false;
   int type=(int) input->readLong(2);
   libmwaw::DebugStream f;
+  MWAWCell::Format &format = field.m_format;
   switch (type) {
-  // 0, 1: average/summary(followed by double10)
   case 5:
     field.m_type=GreatWksDBParserInternal::Field::F_Number;
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     break;
   case 7:
     field.m_type=GreatWksDBParserInternal::Field::F_Text;
+    format.m_format=MWAWCell::F_TEXT;
     break;
-  // 8: bool(followed by int16)
   case 9:
     field.m_type=GreatWksDBParserInternal::Field::F_Date;
+    format.m_format=MWAWCell::F_DATE;
     break;
   case 0xa:
     field.m_type=GreatWksDBParserInternal::Field::F_Time;
+    format.m_format=MWAWCell::F_TIME;
     break;
   case 0xc:
     field.m_type=GreatWksDBParserInternal::Field::F_Memo;
+    format.m_format=MWAWCell::F_TEXT;
     break;
   case 0xd:
     field.m_type=GreatWksDBParserInternal::Field::F_Picture;
     break;
-  // f: nan(followed by int32)
   case 0xFF:
     field.m_type=GreatWksDBParserInternal::Field::F_Formula;
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     break;
   case 0xFE:
     field.m_type=GreatWksDBParserInternal::Field::F_Summary;
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     break;
   default:
     MWAW_DEBUG_MSG(("GreatWksDBParser::readField: find unknown file type\n"));
@@ -1555,7 +1673,7 @@ bool GreatWksDBParser::readField(GreatWksDBParserInternal::Field &field)
   val=(int) input->readLong(2); // always 0
   if (val) f << "f5=" << val << ",";
   field.m_linkZone=(long) input->readULong(2);
-  field.m_id=(int) input->readLong(2);
+  field.m_id=(int) input->readLong(2)-1;
   int fSz=(int) input->readULong(1);
   if (fSz>31) {
     MWAW_DEBUG_MSG(("GreatWksDBParser::readField: the name field size seems to big\n"));
@@ -1657,6 +1775,7 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
     MWAW_DEBUG_MSG(("GreatWksDBParser::readFieldRecords: can not find the records input\n"));
     return false;
   }
+  GreatWksDBParserInternal::Database &database=m_state->m_database;
   MWAWInputStreamPtr input = getInput();
   libmwaw::DebugStream f;
   for (size_t z=0; z<block->getNumZones(); ++z) {
@@ -1684,7 +1803,7 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
       input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
       for (int i=0; i<N; ++i)
         positions.push_back((int) input->readULong(1));
-      // now read a list of small int (the row number?)
+      // now read a list of small int: the row number
       for (int i=0; i<N; ++i)
         rows.push_back((int) input->readULong(4));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1696,13 +1815,21 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
           f << "###";
           break;
         }
+        GreatWksDBParserInternal::Cell cell;
+        cell.setFormat(field.m_format);
+        cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
+        cell.m_content.m_textEntry.setBegin(input->tell());
         std::string text("");
+        bool findEmptyChar=false;
         while (actPos<nextPos) {
           char c=(char) input->readULong(1);
           // c==0 can indicate an empty field
           if (c) text += c;
+          else findEmptyChar=true;
           ++actPos;
         }
+        cell.m_content.m_textEntry.setEnd(input->tell()-(findEmptyChar ? 1 : 0));
+        database.addCell(Vec2i(field.m_id, rows[i]), cell);
         f << "\"" << text << "\":" << rows[i] << ",";
       }
       input->seek(pos+12+dSz+5*N, librevenge::RVNG_SEEK_SET);
@@ -1732,8 +1859,14 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
           f << "#";
           input->seek(fPos+14, librevenge::RVNG_SEEK_SET);
         }
-        else
+        else {
+          GreatWksDBParserInternal::Cell cell;
+          cell.setFormat(field.m_format);
+          cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
+          cell.m_content.setValue(value);
+          database.addCell(Vec2i(field.m_id, row), cell);
           f << value;
+        }
         f << ":" << row << ",";
       }
     }
@@ -2010,8 +2143,46 @@ bool GreatWksDBParser::sendDatabase()
     MWAW_DEBUG_MSG(("GreatWksDBParser::sendDatabase: I can not find the listener\n"));
     return false;
   }
-  MWAW_DEBUG_MSG(("GreatWksDBParser::sendDatabase: send a database is not implemented\n"));
-  return false;
+  MWAWInputStreamPtr input=getInput();
+  GreatWksDBParserInternal::Database const &database=m_state->m_database;
+  std::vector<GreatWksDBParserInternal::Field> const &fields = database.m_fieldList;
+  size_t numFields=fields.size();
+  // fixme: use first layout colWidth here
+  listener->openSheet(std::vector<float>(numFields,76), librevenge::RVNG_POINT, "Sheet0");
+  int r=0;
+  std::map<int, std::vector<GreatWksDBParserInternal::Cell> >::const_iterator rIt;
+  for (rIt=database.m_rowCellsMap.begin(); rIt != database.m_rowCellsMap.end(); ++rIt, ++r) {
+    std::vector<GreatWksDBParserInternal::Cell> const &row=rIt->second;
+    listener->openSheetRow(12, librevenge::RVNG_POINT);
+    for (size_t c=0; c<row.size(); ++c) {
+      if (c>=numFields) break;
+      GreatWksDBParserInternal::Field const &field=fields[c];
+      GreatWksDBParserInternal::Cell cell;
+      field.updateCell(int(r), int(numFields), cell);
+      if (cell.isEmpty()) continue;
+
+      MWAWCellContent const &content=cell.m_content;
+      listener->openSheetCell(cell, content);
+      if (content.m_contentType==MWAWCellContent::C_TEXT && content.m_textEntry.valid()) {
+        input->seek(content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
+        while (!input->isEnd() && input->tell()<content.m_textEntry.end()) {
+          unsigned char ch=(unsigned char) input->readULong(1);
+          if (ch==0xd)
+            listener->insertEOL();
+          else if (ch<30) {
+            MWAW_DEBUG_MSG(("GreatWksDBParser::sendDatabase: find some odd character\n"));
+            break;
+          }
+          else
+            listener->insertCharacter(ch);
+        }
+      }
+      listener->closeSheetCell();
+    }
+    listener->closeSheetRow();
+  }
+  listener->closeSheet();
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -2019,11 +2190,20 @@ bool GreatWksDBParser::sendDatabase()
 ////////////////////////////////////////////////////////////
 bool GreatWksDBParser::checkHeader(MWAWHeader *header, bool strict)
 {
+  MWAWInputStreamPtr input = getInput();
   *m_state = GreatWksDBParserInternal::State();
-  if (!m_document->checkHeader(header, strict)) return false;
+  if (!m_document->checkHeader(header, strict) || !input) return false;
   if (getParserState()->m_kind!=MWAWDocument::MWAW_K_DATABASE)
     return false;
-  // FIXME: do some extra check here
+  if (!strict) return true;
+
+  // let check that the 3 header are defined
+  input->seek(16, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<3; ++i) {
+    GreatWksDBParserInternal::BlockHeader block;
+    if (!readBlockHeader(block) || block.m_ptr[0]==0 || (block.m_ptr[0]&0x0FF)) return false;
+    input->seek(8, librevenge::RVNG_SEEK_CUR);
+  }
   return true;
 }
 
