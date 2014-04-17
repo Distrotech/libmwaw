@@ -512,10 +512,8 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_GREATWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)
         parser.reset(new GreatWksSSParser(input, rsrcParser, header));
-#ifdef DEBUG
       else
         parser.reset(new GreatWksDBParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET)

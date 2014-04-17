@@ -1,5 +1,8 @@
 CHANGES:
 
+16/3/2014
+- GreatWorks: add a database parser which uses spreadsheet interface
+
 8/3/2014
 - BeagleWorks/WordPerfect Works: add a database parser which uses spreadsheet interface
 

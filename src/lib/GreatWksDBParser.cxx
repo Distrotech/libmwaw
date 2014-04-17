@@ -178,18 +178,8 @@ struct Field {
     m_formula(), m_summaryType(0), m_summaryField(0), m_isSequence(false), m_firstNumber(1), m_incrementNumber(1), m_extra("")
   {
   }
-  //! returns the default content type which corresponds to a field
-  MWAWCellContent::Type getContentType() const
-  {
-    if (m_type==F_Number)
-      return m_isSequence ? MWAWCellContent::C_FORMULA : MWAWCellContent::C_NUMBER;
-    if (m_type==F_Time || m_type==F_Date) return MWAWCellContent::C_NUMBER;
-    if (m_type==F_Formula || m_type==F_Summary) return MWAWCellContent::C_FORMULA;
-    if (m_type==F_Text || m_type==F_Memo) return MWAWCellContent::C_TEXT;
-    return MWAWCellContent::C_NONE;
-  }
   //! update the cell to correspond to the final data
-  bool updateCell(int row, int numCol, Cell &cell) const;
+  bool updateCell(int row, int numRow, Cell &cell) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Field const &field);
   //! the field type
@@ -227,7 +217,7 @@ struct Field {
   std::string m_extra;
 };
 
-bool Field::updateCell(int row, int numCol, Cell &cell) const
+bool Field::updateCell(int row, int numRow, Cell &cell) const
 {
   std::vector<MWAWCellContent::FormulaInstruction> &formula=cell.m_content.m_formula;
   if (m_type==F_Formula) {
@@ -251,10 +241,11 @@ bool Field::updateCell(int row, int numCol, Cell &cell) const
     instr.m_content="(";
     formula.push_back(instr);
     instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
-    instr.m_position[0][0]=0;
-    instr.m_position[1][0]=numCol-1;
-    instr.m_position[0][1]=instr.m_position[1][1]=m_summaryField;
-    instr.m_positionRelative[0]=instr.m_positionRelative[0]=Vec2b(false,false);
+    instr.m_position[0][0]=instr.m_position[1][0]=m_summaryField;
+    instr.m_position[0][1]=0;
+    instr.m_position[1][1]=numRow-1;
+    instr.m_positionRelative[0]=instr.m_positionRelative[1]=Vec2b(false,false);
+    formula.push_back(instr);
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
     instr.m_content=")";
     formula.push_back(instr);
@@ -714,7 +705,7 @@ bool GreatWksDBParser::readDatabase()
     if (database.m_fieldList[i].m_recordBlock.isEmpty()) continue;
     readFieldRecords(database.m_fieldList[i]);
   }
-  if (database.m_rowCellsMap.size())
+  if (!database.m_rowCellsMap.empty())
     return true;
   // let check if we can reconstruct something
   for (size_t i=0; i < database.m_fieldList.size(); ++i) {
@@ -1972,9 +1963,8 @@ bool GreatWksDBParser::readFormLinks(MWAWEntry const &entry)
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
   std::vector<MWAWEntry> listZones;
-  long pos;
   for (int i=0; i<N; ++i) {
-    pos=input->tell();
+    long pos=input->tell();
     f.str("");
     f << entry.name() << "-" << i << ":";
     int val=(int) input->readLong(2); // always 0?
@@ -2121,9 +2111,8 @@ bool GreatWksDBParser::readSmallZone(MWAWEntry const &entry)
   }
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
-  long pos;
   for (int i=0; i<N; ++i) {
-    pos=input->tell();
+    long pos=input->tell();
     f.str("");
     f << entry.name() << "-" << i << ":";
     ascii().addPos(pos);
@@ -2149,21 +2138,22 @@ bool GreatWksDBParser::sendDatabase()
   size_t numFields=fields.size();
   // fixme: use first layout colWidth here
   listener->openSheet(std::vector<float>(numFields,76), librevenge::RVNG_POINT, "Sheet0");
-  int r=0;
+  int r=0, numRows=(int) database.m_rowCellsMap.size();
   std::map<int, std::vector<GreatWksDBParserInternal::Cell> >::const_iterator rIt;
   for (rIt=database.m_rowCellsMap.begin(); rIt != database.m_rowCellsMap.end(); ++rIt, ++r) {
     std::vector<GreatWksDBParserInternal::Cell> const &row=rIt->second;
     listener->openSheetRow(12, librevenge::RVNG_POINT);
-    for (size_t c=0; c<row.size(); ++c) {
-      if (c>=numFields) break;
+    for (size_t c=0; c< numFields; ++c) {
       GreatWksDBParserInternal::Field const &field=fields[c];
       GreatWksDBParserInternal::Cell cell;
-      field.updateCell(int(r), int(numFields), cell);
+      if (c<row.size()) cell=row[c];
+      field.updateCell(int(r), numRows, cell);
       if (cell.isEmpty()) continue;
 
       MWAWCellContent const &content=cell.m_content;
+      cell.setPosition(Vec2i(int(c),r));
       listener->openSheetCell(cell, content);
-      if (content.m_contentType==MWAWCellContent::C_TEXT && content.m_textEntry.valid()) {
+      if (field.m_type==GreatWksDBParserInternal::Field::F_Text && content.m_textEntry.valid()) {
         input->seek(content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
         while (!input->isEnd() && input->tell()<content.m_textEntry.end()) {
           unsigned char ch=(unsigned char) input->readULong(1);
@@ -2177,6 +2167,8 @@ bool GreatWksDBParser::sendDatabase()
             listener->insertCharacter(ch);
         }
       }
+      else if (field.m_type==GreatWksDBParserInternal::Field::F_Memo && content.m_textEntry.valid())
+        m_document->getTextParser()->sendTextbox(content.m_textEntry, listener);
       listener->closeSheetCell();
     }
     listener->closeSheetRow();

@@ -159,6 +159,7 @@ FullWrtParser: parser of FullWrite : v1.0 v2.0
 
 GreatWksParser : parser of GreatWorks text file(and draw): v1-v2
 GreatWksBMParser : parser of GreatWorks paint file: v1-v2
+GreatWksDBParser : parser of GreatWorks database file: v1-v2
 GreatWksDRParser: parser of GreatWorks vector graphic file: v1-v2
 GreatWksSSParser : parser of GreatWorks spreadsheet file: v1-v2
 -   GreatWksDocument : class which reads/stores the generic structures of a file

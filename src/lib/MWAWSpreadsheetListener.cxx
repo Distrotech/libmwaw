@@ -38,6 +38,7 @@
  * the librevenge::RVNGSpreadsheetInterface
  */
 
+#include <cmath>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
@@ -1684,7 +1685,7 @@ void MWAWSpreadsheetListener::openSheetCell(MWAWCell const &cell, MWAWCellConten
       propList.insert("librevenge:value-type", "time");
       if (!hasValue) break;
       int H=0, M=0, S=0;
-      if (!MWAWCellContent::double2Time(content.m_value,H,M,S))
+      if (!MWAWCellContent::double2Time(std::fmod(content.m_value,1.),H,M,S))
         break;
       propList.insert("librevenge:hours", H);
       propList.insert("librevenge:minutes", M);
