@@ -155,20 +155,31 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_ZWRITE:
       confidence = MWAW_C_EXCELLENT;
       break;
+    case MWAW_T_ADOBEILLUSTRATOR:
+    case MWAW_T_DBASE:
+    case MWAW_T_FAMILYTREEMAKER:
+    case MWAW_T_FILEMAKER:
+    case MWAW_T_FOXBASE:
     case MWAW_T_FRAMEMAKER:
     case MWAW_T_FULLIMPACT:
     case MWAW_T_FULLPAINT:
+    case MWAW_T_INFOGENIE:
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
     case MWAW_T_MACDRAW:
     case MWAW_T_MACDRAWPRO:
+    case MWAW_T_MICROSOFTFILE:
     case MWAW_T_MICROSOFTMULTIPLAN:
+    case MWAW_T_OVERVUE:
     case MWAW_T_PAGEMAKER:
     case MWAW_T_PIXELPAINT:
     case MWAW_T_READYSETGO:
     case MWAW_T_RAGTIME:
+    case MWAW_T_SYMPOSIUM:
     case MWAW_T_TRAPEZE:
     case MWAW_T_XPRESS:
+    case MWAW_T_4DIMENSION:
+
     case MWAW_T_RESERVED1:
     case MWAW_T_RESERVED2:
     case MWAW_T_RESERVED3:
@@ -431,13 +442,19 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
+    case MWAWDocument::MWAW_T_ADOBEILLUSTRATOR:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
+    case MWAWDocument::MWAW_T_DBASE:
     case MWAWDocument::MWAW_T_DOCMAKER:
     case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FAMILYTREEMAKER:
+    case MWAWDocument::MWAW_T_FILEMAKER:
+    case MWAWDocument::MWAW_T_FOXBASE:
     case MWAWDocument::MWAW_T_FRAMEMAKER:
     case MWAWDocument::MWAW_T_FULLIMPACT:
     case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FULLWRITE:
+    case MWAWDocument::MWAW_T_INFOGENIE:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_HANMACWORDJ:
     case MWAWDocument::MWAW_T_HANMACWORDK:
@@ -450,14 +467,17 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACWRITEPRO:
     case MWAWDocument::MWAW_T_MARINERWRITE:
     case MWAWDocument::MWAW_T_MINDWRITE:
+    case MWAWDocument::MWAW_T_MICROSOFTFILE:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_OVERVUE:
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_READYSETGO:
+    case MWAWDocument::MWAW_T_SYMPOSIUM:
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
     case MWAWDocument::MWAW_T_TRAPEZE:
@@ -466,6 +486,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_WRITERPLUS:
     case MWAWDocument::MWAW_T_XPRESS:
     case MWAWDocument::MWAW_T_ZWRITE:
+    case MWAWDocument::MWAW_T_4DIMENSION:
 
     case MWAWDocument::MWAW_T_RESERVED1:
     case MWAWDocument::MWAW_T_RESERVED2:
@@ -530,15 +551,21 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
     case MWAWDocument::MWAW_T_TRAPEZE:
 
-    // no spreadsheet
+    // no spreadsheet, but some database
     case MWAWDocument::MWAW_T_ACTA:
+    case MWAWDocument::MWAW_T_ADOBEILLUSTRATOR:
+    case MWAWDocument::MWAW_T_DBASE:
     case MWAWDocument::MWAW_T_DOCMAKER:
     case MWAWDocument::MWAW_T_EDOC:
+    case MWAWDocument::MWAW_T_FAMILYTREEMAKER:
+    case MWAWDocument::MWAW_T_FILEMAKER:
+    case MWAWDocument::MWAW_T_FOXBASE:
     case MWAWDocument::MWAW_T_FRAMEMAKER:
     case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FULLWRITE:
     case MWAWDocument::MWAW_T_HANMACWORDJ:
     case MWAWDocument::MWAW_T_HANMACWORDK:
+    case MWAWDocument::MWAW_T_INFOGENIE:
     case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
     case MWAWDocument::MWAW_T_MACDOC:
     case MWAWDocument::MWAW_T_MACDRAFT:
@@ -548,21 +575,25 @@ shared_ptr<MWAWSpreadsheetParser> getSpreadsheetParserFromHeader(MWAWInputStream
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:
     case MWAWDocument::MWAW_T_MARINERWRITE:
+    case MWAWDocument::MWAW_T_MICROSOFTFILE:
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
     case MWAWDocument::MWAW_T_MINDWRITE:
     case MWAWDocument::MWAW_T_MORE:
     case MWAWDocument::MWAW_T_NISUSWRITER:
+    case MWAWDocument::MWAW_T_OVERVUE:
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_SUPERPAINT:
+    case MWAWDocument::MWAW_T_SYMPOSIUM:
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
     case MWAWDocument::MWAW_T_WRITENOW:
     case MWAWDocument::MWAW_T_WRITERPLUS:
     case MWAWDocument::MWAW_T_XPRESS:
     case MWAWDocument::MWAW_T_ZWRITE:
+    case MWAWDocument::MWAW_T_4DIMENSION:
 
     case MWAWDocument::MWAW_T_RESERVED1:
     case MWAWDocument::MWAW_T_RESERVED2:
@@ -671,24 +702,34 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new ZWrtParser(input, rsrcParser, header));
       break;
 
+    case MWAWDocument::MWAW_T_ADOBEILLUSTRATOR:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
+    case MWAWDocument::MWAW_T_DBASE:
+    case MWAWDocument::MWAW_T_FAMILYTREEMAKER:
+    case MWAWDocument::MWAW_T_FILEMAKER:
+    case MWAWDocument::MWAW_T_FOXBASE:
     case MWAWDocument::MWAW_T_FULLIMPACT:
     case MWAWDocument::MWAW_T_FULLPAINT:
     case MWAWDocument::MWAW_T_FRAMEMAKER:
+    case MWAWDocument::MWAW_T_INFOGENIE:
     case MWAWDocument::MWAW_T_KALEIDAGRAPH:
     case MWAWDocument::MWAW_T_MACDRAFT:
     case MWAWDocument::MWAW_T_MACDRAW:
     case MWAWDocument::MWAW_T_MACDRAWPRO:
     case MWAWDocument::MWAW_T_MACPAINT:
+    case MWAWDocument::MWAW_T_MICROSOFTFILE:
     case MWAWDocument::MWAW_T_MICROSOFTMULTIPLAN:
+    case MWAWDocument::MWAW_T_OVERVUE:
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_READYSETGO:
     case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_SUPERPAINT:
+    case MWAWDocument::MWAW_T_SYMPOSIUM:
     case MWAWDocument::MWAW_T_TRAPEZE:
     case MWAWDocument::MWAW_T_WINGZ:
     case MWAWDocument::MWAW_T_XPRESS:
+    case MWAWDocument::MWAW_T_4DIMENSION:
 
     case MWAWDocument::MWAW_T_RESERVED1:
     case MWAWDocument::MWAW_T_RESERVED2:
