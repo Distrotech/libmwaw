@@ -2146,7 +2146,7 @@ bool MsWksDBParser::readReportHeader()
   if (val)  f << "#unkn1=" << val << ",";
   f << "pos(III)=" << (float)input->readLong(2)/72.f << ",";
   int numReportData2 = (int) input->readLong(2);
-  if (numReportData2) f << "numReportData2=" << numReportData << ",";
+  if (numReportData2) f << "numReportData2=" << numReportData2 << ",";
   f << "unkn2=" << input->readLong(2) << ",";
   f << "id?="  << input->readLong(1) << ",";
   f << "unk5=[" << std::hex;
