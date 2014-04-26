@@ -33,14 +33,13 @@
 
 #include <time.h>
 
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
-
-#include <boost/math/special_functions/fpclassify.hpp>
 
 #include <libwpd/libwpd.h>
 
