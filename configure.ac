@@ -7,7 +7,7 @@ AC_PREREQ([2.60])
 # ====================
 m4_define([libmwaw_version_major],[0])
 m4_define([libmwaw_version_minor],[1])
-m4_define([libmwaw_version_micro],[12])
+m4_define([libmwaw_version_micro],[13])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
