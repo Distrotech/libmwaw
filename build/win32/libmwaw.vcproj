@@ -600,6 +600,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTimeParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\SuperPaintParser.cxx"
 				>
 			</File>
@@ -1082,6 +1086,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\NisusWrtText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTimeParser.hxx"
 				>
 			</File>
 			<File

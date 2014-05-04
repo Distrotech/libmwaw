@@ -77,6 +77,7 @@
 #include "MsWrd1Parser.hxx"
 #include "MsWrdParser.hxx"
 #include "NisusWrtParser.hxx"
+#include "RagTimeParser.hxx"
 #include "SuperPaintParser.hxx"
 #include "TeachTxtParser.hxx"
 #include "WingzParser.hxx"
@@ -146,6 +147,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_MICROSOFTWORD:
     case MWAW_T_MICROSOFTWORKS:
     case MWAW_T_NISUSWRITER:
+    case MWAW_T_RAGTIME:
     case MWAW_T_SUPERPAINT:
     case MWAW_T_TEACHTEXT:
     case MWAW_T_TEXEDIT:
@@ -174,7 +176,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_PAGEMAKER:
     case MWAW_T_PIXELPAINT:
     case MWAW_T_READYSETGO:
-    case MWAW_T_RAGTIME:
     case MWAW_T_SYMPOSIUM:
     case MWAW_T_TRAPEZE:
     case MWAW_T_XPRESS:
@@ -688,6 +689,11 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_NISUSWRITER:
       parser.reset(new NisusWrtParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_RAGTIME:
+#ifdef DEBUG
+      parser.reset(new RagTimeParser(input, rsrcParser, header));
+#endif
+      break;
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
       parser.reset(new TeachTxtParser(input, rsrcParser, header));
@@ -723,7 +729,6 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_PAGEMAKER:
     case MWAWDocument::MWAW_T_PIXELPAINT:
     case MWAWDocument::MWAW_T_READYSETGO:
-    case MWAWDocument::MWAW_T_RAGTIME:
     case MWAWDocument::MWAW_T_SUPERPAINT:
     case MWAWDocument::MWAW_T_SYMPOSIUM:
     case MWAWDocument::MWAW_T_TRAPEZE:

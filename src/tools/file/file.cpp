@@ -299,6 +299,10 @@ bool File::readFileInformation()
     checkFInfoType("FWRT","FullWrite 1.0") || checkFInfoType("FWRM","FullWrite 1.0") ||
     checkFInfoType("FWRI","FullWrite 2.0") || checkFInfoType("FullWrite");
   }
+  else if (m_fInfoCreator=="F#+A") {
+    checkFInfoType("F#+D","RagTime Classic") || checkFInfoType("F#+F","RagTime Classic[form]") ||
+    checkFInfoType("RagTime Classic");
+  }
   else if (m_fInfoCreator=="JWrt") {
     checkFInfoType("TEXT","JoliWrite") || checkFInfoType("ttro","JoliWrite[readOnly]") ||
     checkFInfoType("JoliWrite");
@@ -394,7 +398,8 @@ bool File::readFileInformation()
     checkFInfoType("OUTL","MindWrite") || checkFInfoType("MindWrite");
   }
   else if (m_fInfoCreator=="R#+A") {
-    checkFInfoType("R#+D","RagTime") || checkFInfoType("RagTime");
+    checkFInfoType("R#+D","RagTime") || checkFInfoType("R#+F","RagTime[form]") ||
+    checkFInfoType("RagTime");
   }
   else if (m_fInfoCreator=="RTF ") {
     checkFInfoType("RTF ","RTF ") || checkFInfoType("RTF");
@@ -690,6 +695,13 @@ bool File::readDataInformation()
       break;
     default:
       break;
+    }
+  }
+  if (val[0]==0 && input.length() > 30) {
+    input.seek(16, InputStream::SK_SET);
+    if (input.readU16()==0x688f && input.readU16()==0x688f) {
+      m_dataResult.push_back("RagTime");
+      return true;
     }
   }
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0 &&

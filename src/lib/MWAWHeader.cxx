@@ -153,6 +153,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="F#+A") { // Classic
+      if (type=="F#+D" || type=="F#+F") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 3));
+        return res;
+      }
+    }
     else if (creator=="HMiw") {   // japonese
       if (type=="IWDC") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDJ,1));
@@ -303,6 +309,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     else if (creator=="Rslv") {
       if (type=="RsWs") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+        return res;
+      }
+    }
+    else if (creator=="R#+A") {
+      if (type=="R#+D" || type=="R#+F") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 3));
         return res;
       }
     }
@@ -612,6 +624,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MindWrite file 2.1\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MINDWRITE, 2));
   }
+
   // ----------- other ------------------
   if (val[0]==0 && val[1]==0 && val[2]==0 && val[3]==0) {
     input->seek(8, librevenge::RVNG_SEEK_SET);
@@ -619,6 +632,13 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     if (value==0x4 || value==0x44) {
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a WriteNow 1.0 or 2.0 file\n"));
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_WRITENOW, 2));
+    }
+  }
+  if (val[0]==0 && input->size() > 32) {
+    input->seek(16, librevenge::RVNG_SEEK_SET);
+    if (input->readLong(2)==0x688f && input->readLong(2)==0x688f) {
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a RagTime file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME));
     }
   }
   if (val[0]==0) {
