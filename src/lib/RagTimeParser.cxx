@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <set>
 #include <sstream>
 
 #include <librevenge/librevenge.h>
@@ -268,9 +269,84 @@ bool RagTimeParser::createZones()
     else
       readZone3(it++->second);
   }
+  it=m_state->m_dataZoneMap.lower_bound("Zone6");
+  while (it!=m_state->m_dataZoneMap.end() && it->first=="Zone6")
+    readZone6(it++->second);
+
+
+  // print info
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcPREC");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcPREC")
+    readPrintInfo(it++->second);
+  // the font
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHFont");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHFont")
+    readRsrcFont(it++->second);
+  // the numbering format
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFormat");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFormat")
+    readRsrcFormat(it++->second);
+  // the file link
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcLink");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcLink")
+    readRsrcFont(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcItem");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcItem")
+    readRsrcItemFormat(it++->second);
+
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcfppr");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcfppr")
+    readRsrcfppr(it++->second);
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcBeDc");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcBeDc")
     readRsrcBeDc(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcBtch");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcBtch")
+    readRsrcBtch(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcCalc");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcCalc")
+    readRsrcCalc(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcCHTa");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcCHTa")
+    readRsrcCHTa(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcUnamed");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcUnamed")
+    readRsrcUnamed(it++->second);
+
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHsl");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHsl")
+    readRsrcFHsl(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHwl");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHwl")
+    readRsrcFHwl(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcSpDI");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcSpDI")
+    readRsrcSpDI(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("rsrcSpDo");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcSpDo")
+    readRsrcSpDo(it++->second);
+  for (int i=0; i<10; ++i) {
+    /* gray [2bytes]:color,0,26
+       color [2bytes]*3:color
+       res_ [2bytes]*3: sometimes string?
+       BuSl: [small 2bytes int]*3
+       BuGr : structure with many data of size 0x1a
+
+       SpBo :  structure with many data of size 0x14
+       SpCe :  structure with many data of size 0x8
+       SpDE :  structure with many data of size 0xa ( 2int, unknown, 1int)
+       SpTe :  structure with many data of size 0xa
+       SpVa:  structure with many data of size 0xc
+     */
+    static char const *(what[])= {
+      "rsrcgray", "rsrccolr", "rsrcres_",
+      "rsrcBuSl", "rsrcBuGr",
+      "rsrcSpBo", "rsrcSpCe", "rsrcSpDE", "rsrcSpTe", "rsrcSpVa"
+    };
+    it=m_state->m_RSRCZoneMap.lower_bound(what[i]);
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first==what[i])
+      readRsrcStructured(it++->second);
+  }
 
   for (it=m_state->m_dataZoneMap.begin(); it!=m_state->m_dataZoneMap.end(); ++it) {
     MWAWEntry const &entry=it->second;
@@ -365,6 +441,7 @@ bool RagTimeParser::findDataZones()
       else if (filePos) {
         MWAWEntry entry;
         entry.setBegin(filePos+(vers==1 ? 4 : 0));
+        // checkme: some time in v3 the zones pos is decaled by 2, if *(pos+6)&0x80?
         entry.setType(what);
         m_state->m_dataZoneMap.insert
         (std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
@@ -412,6 +489,11 @@ bool RagTimeParser::findRsrcZones()
       if (ch==' ') what += '_';
       else what+=ch;
     }
+    if (what=="rsrc____") what="rsrcUnamed";
+    else if (what=="rsrcFHfl") what="rsrcFHFont";
+    else if (what=="rsrcFoTa") what="rsrcFormat";
+    else if (what=="rsrcFLin") what="rsrcLink";
+    else if (what=="rsrcRTml") what="rsrcItem";
     entry.setType(what);
     entry.setId((int) input->readLong(2));
     f << what << "[" << entry.id() << "],";
@@ -650,8 +732,8 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<76 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the position seems bad\n"));
-    f << "###";
+    MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the header size seems bad\n"));
+    f << "###dSz=" << dSz << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
@@ -674,7 +756,7 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
   long pictSz=(long) input->readULong(2);
   if (headerSz+pictSz>dSz) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the pict size seems bad\n"));
-    f << "###";
+    f << "###pictSz=" << std::hex << pictSz << std::dec << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
@@ -685,7 +767,7 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
   input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
   //TODO: store the picture
-  ascii().skipZone(pos, endPos+pictSz-1);
+  ascii().skipZone(pos, pos+pictSz-1);
 
   input->seek(pos+pictSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
@@ -717,7 +799,7 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<0x14 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readPictZoneV2: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readPictZoneV2: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -781,7 +863,7 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
   if (N[2]>=0) f << "maxptr=" << N[2] << ",";
   long endPos=pos+4+dSz;
   if (dSz<6+10*N[1]+(N[2]+1)*4+N[1] || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readColorMapV2: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readColorMapV2: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -843,6 +925,74 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
 }
 
 ////////////////////////////////////////////////////////////
+// print info
+////////////////////////////////////////////////////////////
+bool RagTimeParser::readPrintInfo(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+120)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readPrintInfo: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcPREC):";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  libmwaw::PrinterInfo info;
+  if (dSz<120 || !input->checkPosition(endPos) || !info.read(input)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readPrintInfo: the zone seems too short\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  f << info;
+
+  Vec2i paperSize = info.paper().size();
+  Vec2i pageSize = info.page().size();
+  if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
+      paperSize.x() <= 0 || paperSize.y() <= 0) return false;
+
+  // define margin from print info
+  Vec2i lTopMargin= -1 * info.paper().pos(0);
+  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+
+  // move margin left | top
+  int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
+  int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
+  lTopMargin -= Vec2i(decalX, decalY);
+  rBotMargin += Vec2i(decalX, decalY);
+
+  // decrease right | bottom
+  int rightMarg = rBotMargin.x() -10;
+  if (rightMarg < 0) rightMarg=0;
+  int botMarg = rBotMargin.y() -50;
+  if (botMarg < 0) botMarg=0;
+
+  getPageSpan().setMarginTop(lTopMargin.y()/72.0);
+  getPageSpan().setMarginBottom(botMarg/72.0);
+  getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
+  getPageSpan().setMarginRight(rightMarg/72.0);
+  getPageSpan().setFormLength(paperSize.y()/72.);
+  getPageSpan().setFormWidth(paperSize.x()/72.);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (pos==endPos) return true;
+  // TODO read the last part 0x20(size?) + page dim + some flags
+  f.str("");
+  f << "rsrcPREC[data]:";
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // unknown zone
 ////////////////////////////////////////////////////////////
 bool RagTimeParser::readZone3(MWAWEntry &entry)
@@ -864,7 +1014,7 @@ bool RagTimeParser::readZone3(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<0x62 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readZone3: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone3: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -948,7 +1098,7 @@ bool RagTimeParser::readZone3V2(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<4 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readZone3V2: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone3V2: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1042,6 +1192,104 @@ bool RagTimeParser::readZone3V2(MWAWEntry &entry)
   return true;
 }
 
+bool RagTimeParser::readZone6(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+0x66)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone6: the position seems bad\n"));
+    return false;
+  }
+  if (version()<2) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone6: must not be called for v1-2... file\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(Zone6):";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  if (dSz<0x62 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone6: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  std::set<long> beginZones;
+  long zonesList[4]= {0,0,0,0};
+  int val;
+  beginZones.insert(endPos);
+  long ptr=(long) input->readULong(4);
+  val=(int) input->readULong(2);
+  if (ptr) {
+    f << "zone0=" << std::hex << pos+2+ptr << std::dec << "[" << val << "],";
+    if (pos+2+ptr>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readZone6: the zone 0 seems bad\n"));
+      f << "###";
+    }
+    else {
+      beginZones.insert(pos+2+ptr);
+      zonesList[0]=pos+2+ptr;
+    }
+  }
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readULong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+
+  for (int i=0; i<3; ++i) {
+    ptr=(long) input->readULong(4);
+    val=(int) input->readULong(2);
+    if (!ptr) continue;
+    f << "zone" << i+1 << "=" << std::hex << pos+2+ptr << std::dec << "[" << val << "],";
+    if (pos+2+ptr>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readZone6: the zone %d seems bad\n",i+1));
+      f << "###";
+      continue;
+    }
+    beginZones.insert(pos+2+ptr);
+    zonesList[i+1]=pos+2+ptr;
+  }
+  ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<4; ++i) {
+    pos=zonesList[i];
+    if (!pos || pos==endPos) continue;
+    f.str("");
+    f << "Zone6-" << i << ":";
+    std::set<long>::const_iterator it=beginZones.find(pos);
+    if (it==beginZones.end() || ++it==beginZones.end()) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readZone6: can not find the end of zone\n"));
+      f << "###";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    long zEndPos=*it;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (pos+4>zEndPos) break;
+      dSz=(int) input->readULong(4);
+      if (pos+4+dSz>zEndPos) {
+        MWAW_DEBUG_MSG(("RagTimeParser::readZone6: can not determine the end of sub zone\n"));
+        f << "###";
+        ascii().addPos(pos);
+        ascii().addNote(f.str().c_str());
+        break;
+      }
+      input->seek(pos+4+dSz, librevenge::RVNG_SEEK_SET);
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+    }
+  }
+  return true;
+}
+
 bool RagTimeParser::readZone0(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
@@ -1057,7 +1305,7 @@ bool RagTimeParser::readZone0(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<20 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readZone0: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readZone0: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1085,8 +1333,499 @@ bool RagTimeParser::readZone0(MWAWEntry &entry)
 }
 
 ////////////////////////////////////////////////////////////
-// unknown rsrc zone
+// unknown rsrc zone: table + name
 ////////////////////////////////////////////////////////////
+bool RagTimeParser::readRsrcFont(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFont: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<0x10 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFont: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // small number
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2); // always 0?
+    if (val) f << "f1=" << val << ",";
+    int fPos=(int) input->readULong(2);
+    f << "pos[name]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+    posSet.insert(entry.begin()+2+fPos);
+    val=(int) input->readLong(2);
+    if (val) f << "fId=" << val << ",";
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    long nextPos=it==posSet.end() ? endPos : *it;
+    f.str("");
+    f << entry.type() << "[name]:";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::string name("");
+    while (!input->isEnd() && input->tell()<nextPos) {
+      char c=(char) input->readULong(1);
+      if (c=='\0') break;
+      name+=c;
+    }
+    f << name;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcFormat(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // 0 (except last)
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2); // always 1 ?
+    if (val!=1) f << "f1=" << val << ",";
+    int fPos=(int) input->readULong(2);
+    f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+    posSet.insert(entry.begin()+2+fPos);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    long nextPos=it==posSet.end() ? endPos : *it;
+    f.str("");
+    f << entry.type() << "[def]:";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    int depl[4];
+    f << "depl=[";
+    for (int i=0; i<4; ++i) {
+      depl[i]=(int) input->readULong(1);
+      if (depl[i]) f << depl[i] << ",";
+      else f << "_,";
+    }
+    f << "],";
+    // fixme: parser the 4 potential header zones
+    headerSz=depl[3];
+    if ((headerSz&1)) ++headerSz;
+    input->seek(pos+headerSz, librevenge::RVNG_SEEK_SET);
+    int cSz=(int) input->readULong(1);
+    if (headerSz<4||cSz<=0||pos+headerSz+1+cSz!=nextPos) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: can not read a format\n"));
+      f << "###";
+    }
+    else {
+      ascii().addDelimiter(input->tell()-1,'|');
+      std::string name("");
+      for (int i=0; i<cSz; ++i) name += (char) input->readULong(1);
+      f << name << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcCHTa(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCHTa: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<0x8 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCHTa: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // 0 (except last)
+    if (val) f << "f0=" << val << ",";
+    // CHTa[0](fSz=0xc) does contains name ptr, but not CHTa[1](fSz=0x8)
+    if (fSz>=0xc) {
+      int fPos=(int) input->readULong(2);
+      if (fPos) {
+        f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+        posSet.insert(entry.begin()+2+fPos);
+      }
+      // then 3*int for color
+      // 1 int for index or col number ?
+    }
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    long nextPos=it==posSet.end() ? endPos : *it;
+    f.str("");
+    f << entry.type() << "[name]:";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::string name("");
+    while (!input->isEnd() && input->tell()<nextPos) {
+      char c=(char) input->readULong(1);
+      if (c=='\0') break;
+      name+=c;
+    }
+    f << name;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcItemFormat(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcItemFormat: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<0x10 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcItemFormat: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int fPos=(int) input->readULong(2);
+    f << "pos[name]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+    posSet.insert(entry.begin()+2+fPos);
+    ascii().addDelimiter(input->tell(),'|');
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    long nextPos=it==posSet.end() ? endPos : *it;
+    f.str("");
+    f << entry.type() << "[name]:";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::string name("");
+    while (!input->isEnd() && input->tell()<nextPos) {
+      char c=(char) input->readULong(1);
+      if (c=='\0') break;
+      name+=c;
+    }
+    f << name;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// other unknown rsrc zone
+////////////////////////////////////////////////////////////
+bool RagTimeParser::readRsrcCalc(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCalc: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcCalc)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  int val=(int) input->readLong(2); // always 0
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(2); // a small number
+  if (val) f << "f1=" << val << ",";
+  int N=(int) input->readLong(2);
+  f << "N=" << N << ",";
+  long endPos=pos+2+dSz;
+  if (dSz!=24+N*26 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCalc: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+24, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "rsrcCalc-" << i << ":";
+
+    input->seek(pos+26, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcFHsl(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHsl: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcFHsl)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x2c || dSz!=headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHsl: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "rsrcFHsl-" << i << ":";
+    int val=(int) input->readLong(2); // 01?
+    if (val==-1) f << "unused,";
+    else if (val) f << "f0=" << val << ",";
+    // then 2 small number
+
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcFHwl(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHwl: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcFHwl)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x26 || dSz!=headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHwl: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  for (int i=0; i<8; ++i) {
+    int val=(int) input->readLong(2);
+    static int const expected[]= {0x200, 2, 0, 0, 0, 0, 5, 0/* small number*/};
+    if (val!=expected[i])
+      f << "f" << i+2 << "=" << val << ",";
+  }
+  for (int i=0; i<8; ++i) { // g4=1, g6=17|21|2b|7b, g7=0x208
+    int val=(int) input->readLong(2);
+    f << "g" << i << "=" << val << ",";
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "rsrcFHwl-" << i << ":";
+    /* a small number, except for the last value
+       so, maybe the interesting data are at the end of the bloc, in pos+0x210-4 ?
+       or the block are subdivided differently
+     */
+    f << "N=" << input->readLong(2) << ",";
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcSpDI(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x20)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDI: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<0x8 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDI: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // 0 (except last)
+    if (val) f << "f0=" << val << ",";
+    int fPos=(int) input->readULong(2);
+    if (fPos) {
+      f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+      posSet.insert(entry.begin()+2+fPos);
+    }
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    f.str("");
+    f << entry.type() << "[data]:";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
 bool RagTimeParser::readRsrcBeDc(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
@@ -1102,7 +1841,7 @@ bool RagTimeParser::readRsrcBeDc(MWAWEntry &entry)
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   if (dSz<52 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcBeDc: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcBeDc: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1129,6 +1868,272 @@ bool RagTimeParser::readRsrcBeDc(MWAWEntry &entry)
     ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool RagTimeParser::readRsrcBtch(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+6)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcBtch: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcBtch)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  if (dSz<6 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcBtch: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int val=(int) input->readLong(2); // an id?
+  f << "id=" << val << ",";
+  for (int i=0; i<2; ++i) { // alway 0?
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool RagTimeParser::readRsrcfppr(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x4a)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcfppr: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcfppr)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  if (dSz<0x1a || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcfppr: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  for (int i=0; i<5; ++i) {
+    int const expected[]= {2, 0x2d, 0x3c, 0, 0x64 };
+    int val=(int) input->readLong(2);
+    if (val!=expected[i]) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  for (int i=0; i<4; ++i) { // g0-g2: find small number of form 10*k+3 and often g1=g0+10, g2=g1+10 ; g3=0
+    int val = (int) input->readLong(4);
+    if (val)
+      f << "g" << i << "=" << val << ",";
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool RagTimeParser::readRsrcSele(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+4)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSele: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcSele)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  // checkme: what are the posible size value, I find either 4 or 18, 26, 74
+  if ((dSz!=4 && (dSz%8)!=2) || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSele: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  int val=(int) input->readLong(2);
+  f << "f0=" << val << ",";
+  if (dSz==4) {
+    val=(int) input->readLong(2); // maybe 2 bool
+    f << "f1=" << val << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return true;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  int N=(dSz/8);
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "rsrcSele-" << i << ":";
+    input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeParser::readRsrcSpDo(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  int const vers=version();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x4a)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcSpDo)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  int const expectedSz=vers>2 ? 0x4e : 0x4a;
+  long endPos=pos+2+dSz;
+  if (dSz!=expectedSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  for (int i=0; i<2; ++i) { // f1=0|80
+    int val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  int val0;
+  for (int i=0; i<10; ++i) { // find g0=3+10*k, g1=10+g0, g2=10+g1, g3=10+g2, other 0|3+10*k1
+    int val = (int) input->readLong(4);
+    if (i==0) {
+      val0=val;
+      f << "g0=" << val << ",";
+    }
+    else if (i<4 && val!=val0+10*i)
+      f << "g" << i << "=" << val << ",";
+    else if (i>=4 && val)
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i<9; ++i) {
+    int val = (int) input->readULong(2);
+    static int const expected[]= {0,0,0,0x64,0x3ff5,0x8312,0x6e97,0x8d4f,0xdf3b};
+    if (val!=expected[i])
+      f << "h" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  int const numVal=vers>2 ? 6:4;
+  for (int i=0; i<numVal; ++i) { // k0=small int, k1=k0+1, k2=k3=k4=0, k5=0|b7|e9|f3
+    int val = (int) input->readLong(2);
+    if (val) f << "k" << i << "=" << val << ",";
+  }
+  f << "id?=" << std::hex << input->readULong(4) << std::dec << ","; // a big number
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool RagTimeParser::readRsrcStructured(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  if (dSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  return true;
+}
+
+/* this field has often a standart formula: header[size], field[size], N but sometimes
+   it is a string or something else. Ie. we must find where the field format is stored...
+ */
+bool RagTimeParser::readRsrcUnamed(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcUnamed: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcUnamed)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  if (dSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcUnamed: the size seems bad\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "rsrcUnamed-" << i << ":";
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  if (input->tell()!=endPos) {
+    ascii().addPos(input->tell());
+    ascii().addNote("rsrcUnamed-end");
+  }
   return true;
 }
 
@@ -1186,8 +2191,11 @@ bool RagTimeParser::checkHeader(MWAWHeader *header, bool /*strict*/)
       f << "v2[" << std::hex << val << std::dec << "],";
     break;
   case 1:
-    setVersion(2);
-    if (val==0x2c) f << "v3.0,";
+    setVersion(3);
+    if (val==0x2c) {
+      f << "v3.0,";
+      setVersion(2);
+    }
     else if (val==0x90) f << "v3.[12],";
     else
       f << "v3[" << std::hex << val << std::dec << "],";

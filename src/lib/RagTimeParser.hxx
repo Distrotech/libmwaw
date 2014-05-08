@@ -100,6 +100,18 @@ protected:
 
   //! try to read the color map:v2
   bool readColorMapV2(MWAWEntry &entry);
+  //! read a printInfo block (a PREC rsrc)
+  bool readPrintInfo(MWAWEntry &entry);
+  /** try to read the File H? Font zone: FHFo
+      and changeme the file link zone: FLin, same structure
+   */
+  bool readRsrcFont(MWAWEntry &entry);
+  //! try to read the format table zone
+  bool readRsrcFormat(MWAWEntry &entry);
+  //! try to read the char table zone (CHTa) ?
+  bool readRsrcCHTa(MWAWEntry &entry);
+  //! try to read the item format zone (zone with id=0)
+  bool readRsrcItemFormat(MWAWEntry &entry);
 
   // unknown data fork zone
 
@@ -118,7 +130,28 @@ protected:
   // unknown rsrc fork zone
   //! try to read the BeDc zone ( zone of size 52, one by file with id=0);
   bool readRsrcBeDc(MWAWEntry &entry);
-  //! try to read the FHwl zone ( big zone, one by file with id=0);
+
+  //! try to read a structured zone
+  bool readRsrcStructured(MWAWEntry &entry);
+  //! try to read a unamed zone (5 by file, all with id=0)
+  bool readRsrcUnamed(MWAWEntry &entry);
+
+  //! try to read the Btch zone (zone with id=0)
+  bool readRsrcBtch(MWAWEntry &entry);
+  //! try to read the Calc zone (zone with id=0)
+  bool readRsrcCalc(MWAWEntry &entry);
+  //! try to read the fppr zone (zone with id=0)
+  bool readRsrcfppr(MWAWEntry &entry);
+  //! try to read the Sele zone (zone with id=0), maybe related to selection
+  bool readRsrcSele(MWAWEntry &entry);
+  //! try to read the SpDo zone (zone with id=0)
+  bool readRsrcSpDo(MWAWEntry &entry);
+  //! try to read the SpDI zone (zone with id=0)
+  bool readRsrcSpDI(MWAWEntry &entry);
+  // maybe FH=footer/header zone
+  //! try to read the FHsl zone (s=style?)
+  bool readRsrcFHsl(MWAWEntry &entry);
+  //! try to read the FHwl zone ( one by file with id=0), maybe width length?
   bool readRsrcFHwl(MWAWEntry &entry);
 protected:
   //
