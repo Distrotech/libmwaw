@@ -47,6 +47,8 @@ struct State;
 class SubDocument;
 }
 
+class RagTimeText;
+
 /** \brief the main class to read a RagTime v3 file
  *
  *
@@ -83,9 +85,15 @@ protected:
 
   //! try to create the main data zones list
   bool findDataZones();
+  //! try to read a data zone header
+  bool readDataZoneHeader(int id, long endPos);
 
   //! try to create the resource zones list
   bool findRsrcZones();
+
+  /** try to read page zone ( unknown content of size 40). A zone
+      which seems to appear between each page data */
+  bool readPageZone(MWAWEntry &entry);
 
   //! try to read pictZone ( a big zone)
   bool readPictZone(MWAWEntry &entry);
@@ -93,8 +101,12 @@ protected:
   //! try to read pictZone ( a big zone):v2
   bool readPictZoneV2(MWAWEntry &entry);
 
-  //! try to read a text zone
-  bool readTextZone(MWAWEntry &entry);
+  //! try to read spreadsheetZone ( a big zone):v2
+  bool readTableZoneV2(MWAWEntry &entry);
+
+  //! try to read spreadsheetZone ( a big zone)
+  bool readTableZone(MWAWEntry &entry);
+
 
   // some rsrc zone
 
@@ -102,27 +114,16 @@ protected:
   bool readColorMapV2(MWAWEntry &entry);
   //! read a printInfo block (a PREC rsrc)
   bool readPrintInfo(MWAWEntry &entry);
-  /** try to read the File H? Font zone: FHFo
-      and changeme the file link zone: FLin, same structure
-   */
-  bool readRsrcFont(MWAWEntry &entry);
-  //! try to read the format table zone
+  /** try to read the File Link zone: FLink */
+  bool readLinks(MWAWEntry &entry);
+  //! try to read the format table zone: FoTa
   bool readRsrcFormat(MWAWEntry &entry);
+  //! try to read the item format zone: RTml zones
+  bool readItemFormats(MWAWEntry &entry);
   //! try to read the char table zone (CHTa) ?
   bool readRsrcCHTa(MWAWEntry &entry);
-  //! try to read the item format zone (zone with id=0)
-  bool readRsrcItemFormat(MWAWEntry &entry);
 
   // unknown data fork zone
-
-  //! try to read zone0 ( unknown content of size 40)
-  bool readZone0(MWAWEntry &entry);
-
-  //! try to read zone3 ( a big zone):v2
-  bool readZone3V2(MWAWEntry &entry);
-
-  //! try to read zone3 ( a big zone)
-  bool readZone3(MWAWEntry &entry);
 
   //! try to read zone6 ( a big zone)
   bool readZone6(MWAWEntry &entry);
@@ -159,6 +160,8 @@ protected:
   //
   //! the state
   shared_ptr<RagTimeParserInternal::State> m_state;
+  //! the text parser
+  shared_ptr<RagTimeText> m_textParser;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

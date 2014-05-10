@@ -604,6 +604,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTimeSpreadsheet.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTimeText.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\SuperPaintParser.cxx"
 				>
 			</File>
@@ -1090,6 +1098,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTimeParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTimeSpreadsheet.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTimeText.hxx"
 				>
 			</File>
 			<File

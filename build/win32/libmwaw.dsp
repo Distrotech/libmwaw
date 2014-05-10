@@ -519,6 +519,14 @@ SOURCE=..\..\src\lib\RagTimeParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\RagTimeSpreadsheet.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTimeText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\SuperPaintParser.cxx
 # End Source File
 # Begin Source File
@@ -1004,6 +1012,14 @@ SOURCE=..\..\src\lib\NisusWrtText.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTimeParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTimeSpreadsheet.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTimeText.hxx
 # End Source File
 # Begin Source File
 

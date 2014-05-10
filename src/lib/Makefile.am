@@ -235,6 +235,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	NisusWrtText.hxx		\
 	RagTimeParser.cxx		\
 	RagTimeParser.hxx		\
+	RagTimeSpreadsheet.cxx		\
+	RagTimeSpreadsheet.hxx		\
+	RagTimeText.cxx			\
+	RagTimeText.hxx			\
 	SuperPaintParser.cxx		\
 	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\

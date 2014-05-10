@@ -1715,7 +1715,7 @@ bool WriteNowText::readTable(MWAWInputStream &input, WriteNowTextInternal::Table
 }
 
 ////////////////////////////////////////////////////////////
-//! send data to the listener
+// send data to the listener
 bool WriteNowText::send(WriteNowEntry const &entry)
 {
   shared_ptr<WriteNowTextInternal::ContentZones> text
