@@ -53,7 +53,7 @@ std::ostream &operator<< (std::ostream &o, Position const &pos)
 
 std::ostream &operator<< (std::ostream &o, FootnoteInfo const &fnote)
 {
-  if (fnote.m_flags&0x4) o << "sepPos=rigth,";
+  if (fnote.m_flags&0x4) o << "sepPos=right,";
   if (fnote.m_flags&0x8) o << "endNotes,"; // footnote|endnote
   if (fnote.m_flags&0x10) o << "renumber[Pages],";
   if (fnote.m_flags&0x20) o << "maySep,"; // can put note on diff page than ref

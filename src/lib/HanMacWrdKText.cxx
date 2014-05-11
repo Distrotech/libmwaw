@@ -1151,7 +1151,7 @@ bool HanMacWrdKText::readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal:
   para.m_marginsUnit = librevenge::RVNG_POINT;
   para.m_margins[0]=dim[1];
   para.m_margins[1]=dim[0];
-  para.m_margins[2]=dim[2]; // ie. distance to rigth border - ...
+  para.m_margins[2]=dim[2]; // ie. distance to right border - ...
 
   for (int i = 0; i < 3; i++)
     para.m_spacings[i] = float(input->readLong(4))/65536.0f;

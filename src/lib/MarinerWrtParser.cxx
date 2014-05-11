@@ -86,7 +86,7 @@ struct Zone {
   bool m_endNote;
   //! height of the zone
   long m_height;
-  //! rigth/bottom position
+  //! right/bottom position
   Vec2l m_RBpos;
   //! the zone total position
   Box2l m_dim;

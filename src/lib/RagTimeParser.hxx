@@ -48,6 +48,7 @@ class SubDocument;
 }
 
 class RagTimeText;
+class RagTimeSpreadsheet;
 
 /** \brief the main class to read a RagTime v3 file
  *
@@ -101,13 +102,6 @@ protected:
   //! try to read pictZone ( a big zone):v2
   bool readPictZoneV2(MWAWEntry &entry);
 
-  //! try to read spreadsheetZone ( a big zone):v2
-  bool readTableZoneV2(MWAWEntry &entry);
-
-  //! try to read spreadsheetZone ( a big zone)
-  bool readTableZone(MWAWEntry &entry);
-
-
   // some rsrc zone
 
   //! try to read the color map:v2
@@ -160,6 +154,8 @@ protected:
   //
   //! the state
   shared_ptr<RagTimeParserInternal::State> m_state;
+  //! the spreadsheet parser
+  shared_ptr<RagTimeSpreadsheet> m_spreadsheetParser;
   //! the text parser
   shared_ptr<RagTimeText> m_textParser;
 };

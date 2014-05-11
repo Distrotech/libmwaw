@@ -50,6 +50,7 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "RagTimeSpreadsheet.hxx"
 #include "RagTimeText.hxx"
 
 #include "RagTimeParser.hxx"
@@ -61,12 +62,36 @@ namespace RagTimeParserInternal
 //! Internal: a zone of a RagTimeParser
 struct Zone {
   //! the zone type
-  enum Type { Text, Picture, Line, Table, Unknown };
+  enum Type { Text, Picture, Line, Spreadsheet, Unknown };
   //! constructor
-  Zone(): m_type(Unknown), m_subType(0), m_dimension(), m_style(), m_fontColor(MWAWColor::black()),
-    m_extra("")
+  Zone(): m_type(Unknown), m_subType(0), m_dimension(),
+    m_style(MWAWGraphicStyle::emptyStyle()), m_fontColor(MWAWColor::black()), m_arrowFlags(0), m_extra("")
   {
     for (int i=0; i<3; ++i) m_linkZones[i]=0;
+  }
+  //! returns a zone name
+  std::string getTypeString() const
+  {
+    switch (m_type) {
+    case Spreadsheet:
+      return "SheetZone";
+    case Picture:
+      return "PictZone";
+    case Text:
+      return "TextZone";
+    case Line:
+      return "Zone4";
+    case Unknown:
+    default:
+      if (m_subType==0) return "PageZone";
+      break;
+    }
+    std::stringstream s;
+    if (m_subType&0xf)
+      s << "Undef" << m_subType << "A";
+    else
+      s << "Zone" << m_subType;
+    return s.str();
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &z);
@@ -80,6 +105,8 @@ struct Zone {
   MWAWGraphicStyle m_style;
   //! the font color (for text)
   MWAWColor m_fontColor;
+  //! arrow flag 1:begin, 2:end
+  int m_arrowFlags;
   //! the link zones ( parent, prev, next)
   int m_linkZones[3];
   //! extra data
@@ -98,8 +125,8 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
   case Zone::Text:
     o << "text,";
     break;
-  case Zone::Table:
-    o << "text,";
+  case Zone::Spreadsheet:
+    o << "spreadsheet,";
     break;
   case Zone::Unknown:
   default:
@@ -110,11 +137,17 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
   o << "style=[" << z.m_style << "],";
   if (!z.m_fontColor.isBlack())
     o << "color[font]=" << z.m_fontColor << ",";
+  if (z.m_arrowFlags&1)
+    o << "arrows[beg],";
+  if (z.m_arrowFlags&2)
+    o << "arrows[end],";
+  o << "ids=[";
   for (int i=0; i<3; ++i) {
     static char const *(wh[])= {"parent", "prev", "next"};
     if (z.m_linkZones[i])
-      o << "id[" << wh[i] << "]=Z" << z.m_linkZones[i] << ",";
+      o <<  wh[i] << "=Z" << z.m_linkZones[i] << ",";
   }
+  o << "],";
   o << z.m_extra << ",";
   return o;
 }
@@ -198,7 +231,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 RagTimeParser::RagTimeParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_textParser()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_spreadsheetParser(), m_textParser()
 {
   init();
 }
@@ -217,6 +250,7 @@ void RagTimeParser::init()
   // reduce the margin (in case, the page is not defined)
   getPageSpan().setMargins(0.1);
 
+  m_spreadsheetParser.reset(new RagTimeSpreadsheet(*this));
   m_textParser.reset(new RagTimeText(*this));
 }
 
@@ -343,23 +377,18 @@ bool RagTimeParser::createZones()
     else
       readPictZone(it++->second);
   }
-  if (vers<2) {
-    it=m_state->m_dataZoneMap.lower_bound("ColorMap");
-    while (it!=m_state->m_dataZoneMap.end() && it->first=="ColorMap")
-      readColorMapV2(it++->second);
-  }
 
   // now unknown zone
   it=m_state->m_dataZoneMap.lower_bound("PageZone");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="PageZone")
     readPageZone(it++->second);
 
-  it=m_state->m_dataZoneMap.lower_bound("TableZone");
-  while (it!=m_state->m_dataZoneMap.end() && it->first=="TableZone") {
+  it=m_state->m_dataZoneMap.lower_bound("SheetZone");
+  while (it!=m_state->m_dataZoneMap.end() && it->first=="SheetZone") {
     if (vers==1)
-      readTableZoneV2(it++->second);
+      m_spreadsheetParser->readSpreadsheetV2(it++->second);
     else
-      readTableZone(it++->second);
+      m_spreadsheetParser->readSpreadsheet(it++->second);
   }
   it=m_state->m_dataZoneMap.lower_bound("Zone6");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="Zone6")
@@ -472,8 +501,7 @@ bool RagTimeParser::findDataZones()
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(2));
     entry.setType("ColorMap");
-    if (entry.begin() && input->checkPosition(entry.begin()))
-      m_state->m_dataZoneMap.insert(std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
+    readColorMapV2(entry);
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -502,55 +530,35 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: the zone seems too short\n"));
     return false;
   }
-  int type=(int) input->readULong(1);
-  f << "Zones-Z" << id << ":";
-  std::string what("");
+  RagTimeParserInternal::Zone zone;
+  zone.m_subType=(int) input->readULong(1);
   bool hasPointer=true;
-  MWAWEntry entry;
-  switch (type) {
+  switch (zone.m_subType) {
   case 0: // checkme
     f << "page,";
-    entry.setType("PageZone");
     break;
   case 2:
-    f << "text,";
-    entry.setType("TextZone");
+    zone.m_type=RagTimeParserInternal::Zone::Text;
     break;
   case 3:
-    f << "spreadsheetZone,";
-    entry.setType("TableZone");
+    zone.m_type=RagTimeParserInternal::Zone::Spreadsheet;
     break;
   case 4:
-    f << "pict,";
-    entry.setType("PictZone");
+    zone.m_type=RagTimeParserInternal::Zone::Picture;
     break;
   case 5:
-    f << "line,";
+    zone.m_type=RagTimeParserInternal::Zone::Line;
     hasPointer=false;
     break;
   case 6:
-    f << "zone6,";
-    entry.setType("Zone6");
     break;
   default:
-    if ((type&0xf)==0xF)  { // find 0xF and 0xFF with no data
-      std::stringstream s;
-      s << "Undef" << (type>>4) << "A";
-      what=s.str();
+    if ((zone.m_subType&0xf)==0xF)
       hasPointer=false;
-    }
-    else {
-      MWAW_DEBUG_MSG(("RagTimeParser::findDataZones: find some unknown zone, type=%d\n", type));
-      std::stringstream s;
-      s << "Zone" << type;
-      what=s.str();
-    }
-    entry.setType(what);
-    f << what << ",";
     break;
   }
-  f << what << ",";
-
+  MWAWEntry entry;
+  entry.setType(zone.getTypeString());
   if (hasPointer) {
     input->seek(pos+zoneLength-4, librevenge::RVNG_SEEK_SET);
     long filePos=(long) input->readULong(4);
@@ -568,15 +576,18 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   input->seek(pos+1, librevenge::RVNG_SEEK_SET);
   if (vers>=2) {
     // TODO
+    zone.m_extra=f.str();
+    f.str("");
+    f << "Zones-Z" << id << ":" << zone;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(pos+zoneLength, librevenge::RVNG_SEEK_SET);
     return true;
   }
 
+  MWAWGraphicStyle &style=zone.m_style;
+  style.m_lineWidth=float(input->readULong(1))/8.f;
   int val;
-  val=(int) input->readULong(1);
-  if (val) f << "pen[size]=" << val/8. << ",";
   for (int i=0; i<4; ++i) {
     // fl0=0|80|81|83|a0|b0|c0,fl1=0|2|80,fl2=1|3|5|9|b|19|1d, fl3=0|1|28|2a|38|...|f8
     val=(int) input->readULong(1);
@@ -588,46 +599,77 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   }
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
-  // f1: next, f2: prev,
-  for (int i=0; i<4; ++i) { // f0=0-10, f1=0-4a,f2~f1,f3=(-20)-14|8001
+  zone.m_dimension=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  int numZones=m_state->m_numDataZone;
+  val=(int) input->readLong(2); // 0, find also 6 for a line ?
+  if (val) f << "f0=" << val << ",";
+  for (int i=0; i<2; ++i) {
     val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
+    if (val < 0 || val > numZones) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected link zone\n"));
+      f << "##id[" << i+1 << "]=" << val << ",";
+      continue;
+    }
+    zone.m_linkZones[i==0 ? 2 : 1]=val;
   }
+  val=(int) input->readLong(2); //f1=(-20)-14|8001
+  if (val) f << "f1=" << val << ",";
   for (int i=0; i<2; ++i) { // fl5=0|1|2|3|10, fl6=0|1
     val=(int) input->readULong(1);
     if (val) f << "fl" << i+5 << "=" << std::hex << val << std::dec << ",";
   }
   val=(int) input->readLong(2);
-  if (val) f << "f4=" << val << ",";
-  // checkme: clearly, the following is not correct for type=0
-  val=(int) input->readLong(2);
-  if (val) f << "parent=Z" << val << ",";
-  val=(int) input->readULong(1);
-  if (val) f << "fl7=" << std::hex << val << std::dec << ",";
-  val=(int) input->readLong(1);
-  if (val!=7) f << "pattern=" << val << ",";
-  for (int i=0; i<2; ++i) {
-    static char const *(wh[])= {"line", "surf"};
-    val=(int) input->readLong(1);
-    if (val!=100*(1-i)) f << "gray[" << wh[i] << "]=" << val << "%,";
-    val=(int) input->readULong(1);
-    // 0: white, 1: black, 2: yellow, 3: magenta, 4: red, 5: cyan, 6: green , 7: bleu
-    if (val!=1-i) f << "color[" << wh[i] << "]=" << val << ",";
-  }
-  val=(int) input->readULong(1);
-  if (type==5) {
-    if (val&0x8) f << "arrow[beg],";
-    if (val&0x10) f << "arrow[end],";
-    val &=0xE7;
-    if (val) f << "flA4=" << std::hex << val << std::dec << ",";
+  if (val) f << "f2=" << val << ",";
+  if (zone.m_subType==0) {
+    // todo: data probably differs before
   }
   else {
-    if (val!=100) f << "gray[text]=" << val << "%,";
+    val=(int) input->readLong(2);
+    if (val < 0 || val > numZones) {
+      MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected parent zone\n"));
+      f << "##id[parent]=" << val << ",";
+    }
+    else
+      zone.m_linkZones[0]=val;
     val=(int) input->readULong(1);
-    // 0: white, 1: black, 2: yellow, 3: magenta, 4: red, 5: cyan, 6: green , 7: bleu
-    if (val) f << "color[text]=" << val << ",";
+    if (val) f << "fl7=" << std::hex << val << std::dec << ",";
+    val=(int) input->readLong(1);
+    if (val!=7) f << "pattern=" << val << ",";
+    int numColors=(int) m_state->m_colorList.size();
+    for (int i=0; i<2; ++i) {
+      static char const *(wh[])= {"line", "surf"};
+      val=(int) input->readLong(1);
+      if (val!=100*(1-i)) f << "gray[" << wh[i] << "]=" << val << "%,";
+      val=(int) input->readULong(1);
+      if (val==1-i) continue;
+      if (val>=numColors) {
+        MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected color number\n"));
+        f << "##color[" << wh[i] << "]=" << val << ",";
+        continue;
+      }
+      f << "color[" << wh[i] << "]=" << m_state->m_colorList[size_t(val)] << ",";
+    }
+    val=(int) input->readULong(1);
+    if (zone.m_type==RagTimeParserInternal::Zone::Line) {
+      zone.m_arrowFlags=((val>>3)&3);
+      val &=0xE7;
+      if (val) f << "flA4=" << std::hex << val << std::dec << ",";
+    }
+    else {
+      if (val!=100) f << "gray[text]=" << val << "%,";
+      val=(int) input->readULong(1);
+      if (val>=numColors) {
+        MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected text color\n"));
+        f << "##color[text]=" << val << ",";
+      }
+      else
+        zone.m_fontColor=m_state->m_colorList[size_t(val)];
+    }
   }
+  zone.m_extra=f.str();
+  f.str("");
+  f << "Zones-Z" << id << ":" << zone;
+
   ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -986,203 +1028,6 @@ bool RagTimeParser::readPrintInfo(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // unknown zone
 ////////////////////////////////////////////////////////////
-bool RagTimeParser::readTableZone(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+0x66)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZone: the position seems bad\n"));
-    return false;
-  }
-  if (version()<2) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZone: must not be called for v1-2... file\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(TableZone):";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  if (dSz<0x62 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZone: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  int val;
-  for (int i=0; i<6; ++i) { // f0=0, f1=4|6|44, f2=1-8, f3=1-f, f4=1-5, f5=1-3
-    val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
-  for (int i=0; i<6; ++i) // g0~40, g1=g2=2, g3~16, g4=[b-10], g5=[8-c]|800d
-    f << "g" << i << "=" << double(input->readLong(4))/65536. << ",";
-  long zoneBegin[11];
-  zoneBegin[10]=endPos;
-  for (int i=0; i<10; ++i) {
-    zoneBegin[i]=(long) input->readULong(4);
-    if (!zoneBegin[i]) continue;
-    f << "zone" << i << "=" << std::hex << pos+2+zoneBegin[i] << std::dec << ",";
-    if (pos+2+zoneBegin[i]>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeParser::readTableZone: the zone %d seems bad\n",i));
-      zoneBegin[i]=0;
-      f << "###";
-      continue;
-    }
-    zoneBegin[i]+=pos+2;
-  }
-  f << "fl?=["; // or some big number
-  for (int i=0; i<8; ++i) {
-    val=(int) input->readULong(2);
-    if (val)
-      f << std::hex << val << std::dec << ",";
-    else
-      f << "_,";
-  }
-  f << "],";
-  for (int i=0; i<3; ++i) { // h0=0-4, h1=h2=0
-    val=(int) input->readULong(2);
-    if (val)
-      f << "h" << i << "=" << val << ",";
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  // now read the different zone, first set the endPosition
-  for (int i=9; i>=0; --i) {
-    if (zoneBegin[i]==0)
-      zoneBegin[i]=zoneBegin[i+1];
-    else if (zoneBegin[i]>zoneBegin[i+1]) {
-      MWAW_DEBUG_MSG(("RagTimeParser::readTableZone: the zone %d seems bad(II)\n",i));
-      zoneBegin[i]=zoneBegin[i+1];
-    }
-  }
-  for (int i=0; i<10; ++i) {
-    if (zoneBegin[i+1]<=zoneBegin[i]) continue;
-    f.str("");
-    f << "TableZone-" << i << ":";
-    // TableZone-3: sz+[32bytes]+(N+1)*12
-    // TableZone-9: sz+N+N*14
-    ascii().addPos(zoneBegin[i]);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool RagTimeParser::readTableZoneV2(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+6)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: the position seems bad\n"));
-    return false;
-  }
-  if (version()>=2) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: must not be called for v3... file\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(TableZone):";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  if (dSz<4 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  long zoneBegin[3];
-  zoneBegin[2]=endPos;
-  for (int i=0; i<2; ++i) {
-    zoneBegin[i]=pos+6+(long) input->readULong(2);
-    if (zoneBegin[i]>=endPos) {
-      f << "###";
-      MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: the zone begin seems bad%d\n", i));
-    }
-    f << "ptr[" << i << "]=" << std::hex << zoneBegin[i] << std::dec << ",";
-  }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  // now read the different zone, first set the endPosition
-  for (int i=1; i>=0; --i) {
-    if (zoneBegin[i]==0)
-      zoneBegin[i]=zoneBegin[i+1];
-    else if (zoneBegin[i]>zoneBegin[i+1]) {
-      MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: the zone %d seems bad(II)\n",i));
-      zoneBegin[i]=zoneBegin[i+1];
-    }
-  }
-
-  if (zoneBegin[0]<zoneBegin[1]) {
-    long zoneEndPos=zoneBegin[1];
-    int n=0;
-    input->seek(zoneBegin[0], librevenge::RVNG_SEEK_SET);
-    while (!input->isEnd()) {
-      pos=input->tell();
-      if (pos+2>zoneEndPos) break;
-      f.str("");
-      f << "TableZone[A" << n++ << "]:";
-      int val=(int) input->readLong(1);
-      f << "type=" << val << ",";
-      dSz=(int) input->readULong(1);
-      if (pos+6+dSz>zoneEndPos) {
-        MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: problem reading some spreadsheetZone[A] field\n"));
-        f << "###";
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-        break;
-      }
-      if ((dSz%2)==1) ++dSz;
-      input->seek(pos+6+dSz, librevenge::RVNG_SEEK_SET);
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-    }
-  }
-  if (zoneBegin[1]<endPos) {
-    input->seek(zoneBegin[1], librevenge::RVNG_SEEK_SET);
-    bool ok=true;
-    for (int i=0; i<2; ++i) {
-      pos=input->tell();
-      f.str("");
-      f << "TableZone[B" << i << "]:";
-      int n=(int) input->readULong(2);
-      f << "N=" << n << ",";
-      static int const dataSize[]= {20,14};
-      if (pos+2+dataSize[i]*n>endPos) {
-        MWAW_DEBUG_MSG(("RagTimeParser::readTableZoneV2: problem reading some spreadsheetZone[B%d] field\n", i));
-        f << "###";
-        ok=false;
-      }
-      ascii().addPos(pos);
-      ascii().addNote(f.str().c_str());
-      if (!ok) break;
-      for (int j=0; j<n; ++j) {
-        pos=input->tell();
-        f.str("");
-        f << "TableZone[B" << i << "-" << j << "]:";
-        input->seek(pos+dataSize[i], librevenge::RVNG_SEEK_SET);
-        ascii().addPos(pos);
-        ascii().addNote(f.str().c_str());
-      }
-    }
-    if (ok) {
-      /* finally something like
-         86000000200201000c000014003c00030c090000
-         or
-         86000000204201000a000003004000060d0a000000000ce5410000010000000000000000688f688f688f0000000000000000688f688f688f000000000000
-         font + ?
-       */
-      ascii().addPos(input->tell());
-      ascii().addNote("TableZone[B-end]:");
-    }
-  }
-  return true;
-}
-
 bool RagTimeParser::readZone6(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
