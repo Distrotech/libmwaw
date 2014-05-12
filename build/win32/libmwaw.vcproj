@@ -556,6 +556,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetDecoder.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetEncoder.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.cxx"
 				>
 			</File>
@@ -1050,6 +1058,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWSection.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetDecoder.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWSpreadsheetEncoder.hxx"
 				>
 			</File>
 			<File

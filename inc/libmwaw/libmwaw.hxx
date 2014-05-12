@@ -84,8 +84,11 @@ recommended to launch the tests in a empty repository...
 #define MWAW_PRESENTATION_VERSION 0
 /** Defines the spreadsheet possible conversion:
     - 1: can create some spreadsheet document(from libmwaw-0.3)
+    - 2: can create some spreadsheet shapes in a RVNGBinaryData
+      mimeType="image/mwaw-ods". You can use
+      MWAWDocument::decodeSpreasheet to read them(from libmwaw-0.3.1).
 */
-#define MWAW_SPREADSHEET_VERSION 1
+#define MWAW_SPREADSHEET_VERSION 2
 /** Defines the word processing possible conversion:
     - 1: can create some text document(from libmwaw-0.0)
     - 2: new interface with password encryption(from libmwaw-0.3) */

@@ -241,7 +241,8 @@ public:
    \param binary a list of librevenge::RVNGSpreadsheetInterface stored in a documentInterface,
    \param documentInterface the RVNGSpreadsheetInterface which will convert the spreadsheet is some specific format.
 
-   \note Reserved for future use. Actually, it only returns false. */
+   \note this function appears in libmwaw-0.3.0 (and returns always false).
+   It was only implemented with MWAW_SPREADSHEET_VERSION==2 in libmwaw-0.3.1 */
   static MWAWLIB bool decodeSpreadsheet(librevenge::RVNGBinaryData const &binary, librevenge::RVNGSpreadsheetInterface *documentInterface);
 
   /** Parses the text contained in the binary data and called documentInterface to reconstruct

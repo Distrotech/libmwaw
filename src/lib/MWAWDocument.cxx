@@ -40,6 +40,7 @@
 #include "MWAWParser.hxx"
 #include "MWAWPropertyHandler.hxx"
 #include "MWAWRSRCParser.hxx"
+#include "MWAWSpreadsheetDecoder.hxx"
 
 #include <libmwaw/libmwaw.hxx>
 
@@ -347,10 +348,21 @@ bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, libre
   return true;
 }
 
-bool MWAWDocument::decodeSpreadsheet(librevenge::RVNGBinaryData const &, librevenge::RVNGSpreadsheetInterface *)
+bool MWAWDocument::decodeSpreadsheet(librevenge::RVNGBinaryData const &binary, librevenge::RVNGSpreadsheetInterface *sheetInterface)
 {
-  MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: unimplemented\n"));
-  return false;
+  if (!sheetInterface || !binary.size()) {
+    MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: called with no data or no converter\n"));
+    return false;
+  }
+  MWAWSpreadsheetDecoder tmpHandler(sheetInterface);
+  try {
+    if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
+  }
+  catch (...) {
+    MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: unknown error\n"));
+    return false;
+  }
+  return true;
 }
 
 bool MWAWDocument::decodeText(librevenge::RVNGBinaryData const &, librevenge::RVNGTextInterface *)

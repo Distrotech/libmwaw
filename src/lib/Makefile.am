@@ -217,6 +217,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWRSRCParser.hxx		\
 	MWAWSection.cxx			\
 	MWAWSection.hxx			\
+	MWAWSpreadsheetDecoder.cxx	\
+	MWAWSpreadsheetDecoder.hxx	\
+	MWAWSpreadsheetEncoder.cxx	\
+	MWAWSpreadsheetEncoder.hxx	\
 	MWAWSpreadsheetListener.cxx	\
 	MWAWSpreadsheetListener.hxx	\
 	MWAWSubDocument.cxx		\

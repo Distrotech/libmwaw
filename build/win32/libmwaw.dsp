@@ -471,6 +471,14 @@ SOURCE=..\..\src\lib\MWAWSection.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWSpreadsheetDecoder.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSpreadsheetEncoder.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSpreadsheetListener.cxx
 # End Source File
 # Begin Source File
@@ -964,6 +972,14 @@ SOURCE=..\..\src\lib\MWAWRSRCParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWSection.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSpreadsheetDecoder.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWSpreadsheetEncoder.hxx
 # End Source File
 # Begin Source File
 
