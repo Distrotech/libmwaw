@@ -93,7 +93,7 @@ public:
     return false;
   }
   //! sends the zone data to the listener (if it exists )
-  bool sendDatabase(int number);
+  bool sendDatabase(int number, MWAWListenerPtr listener);
 
 protected:
   //

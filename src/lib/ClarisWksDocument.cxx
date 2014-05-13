@@ -291,10 +291,10 @@ bool ClarisWksDocument::sendZone(int zoneId, MWAWListenerPtr listener, MWAWPosit
     res = getTableParser()->sendZone(zoneId);
     break;
   case 2:
-    res = getSpreadsheetParser()->sendSpreadsheet(zoneId);
+    res = getSpreadsheetParser()->sendSpreadsheet(zoneId, listener);
     break;
   case 3:
-    res = getDatabaseParser()->sendDatabase(zoneId);
+    res = getDatabaseParser()->sendDatabase(zoneId, listener);
     break;
   default:
     MWAW_DEBUG_MSG(("ClarisWksDocument::sendZone: can not send zone: %d\n", zoneId));

@@ -67,6 +67,10 @@ class MWAWSpreadsheetListener : public MWAWListener
 public:
   /** constructor */
   MWAWSpreadsheetListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGSpreadsheetInterface *documentInterface);
+  /** simplified constructor (can be used for a embedded spreadsheet with one page).
+
+   \note the box coordinates must be given in point.*/
+  MWAWSpreadsheetListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface);
   /** destructor */
   virtual ~MWAWSpreadsheetListener();
 

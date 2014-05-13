@@ -391,15 +391,19 @@ bool ClarisWksSpreadsheet::readRowHeightZone(ClarisWksSpreadsheetInternal::Sprea
 // send data
 //
 ////////////////////////////////////////////////////////////
-bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
+bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
 {
-  if (zId!=1 || m_parserState->m_kind!=MWAWDocument::MWAW_K_SPREADSHEET)
-    return sendSpreadsheetAsTable(zId);
-  MWAWSpreadsheetListenerPtr listener=m_parserState->m_spreadsheetListener;
+  if (!listener)
+    listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: called without any listener\n"));
     return false;
   }
+  if (listener->getType()!=MWAWListener::Spreadsheet ||
+      (m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET && zId!=1))
+    return sendSpreadsheetAsTable(zId, listener);
+
+  MWAWSpreadsheetListener *sheetListener=static_cast<MWAWSpreadsheetListener *>(listener.get());
   std::map<int, shared_ptr<ClarisWksSpreadsheetInternal::Spreadsheet> >::iterator it=
     m_state->m_spreadsheetMap.find(zId);
   if (it == m_state->m_spreadsheetMap.end() || !it->second) {
@@ -417,13 +421,13 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
     if (c>=0 && c < int(sheet.m_colWidths.size()))
       colSize[size_t(fC)]=2.0f*(float) sheet.m_colWidths[size_t(c)];
   }
-  listener->openSheet(colSize, librevenge::RVNG_POINT);
+  sheetListener->openSheet(colSize, librevenge::RVNG_POINT);
   MWAWInputStreamPtr &input= m_parserState->m_input;
   for (int r=minData[1], fR=0; r <= maxData[1]; ++r, ++fR) {
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
-      listener->openSheetRow((float)sheet.m_rowHeightMap.find(r)->second, librevenge::RVNG_POINT);
+      sheetListener->openSheetRow((float)sheet.m_rowHeightMap.find(r)->second, librevenge::RVNG_POINT);
     else
-      listener->openSheetRow((float)14, librevenge::RVNG_POINT);
+      sheetListener->openSheetRow((float)14, librevenge::RVNG_POINT);
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       ClarisWksDbaseContent::Record rec;
       if (!sheet.m_content->get(Vec2i(c,r),rec)) continue;
@@ -443,32 +447,33 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId)
       }
       if (!rec.m_backgroundColor.isWhite())
         cell.setBackgroundColor(rec.m_backgroundColor);
-      listener->openSheetCell(cell, rec.m_content);
+      sheetListener->openSheetCell(cell, rec.m_content);
       if (rec.m_content.m_textEntry.valid()) {
         long fPos = input->tell();
         input->seek(rec.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
         long endPos = rec.m_content.m_textEntry.end();
-        listener->setFont(rec.m_font);
+        sheetListener->setFont(rec.m_font);
         while (!input->isEnd() && input->tell() < endPos) {
           unsigned char ch=(unsigned char) input->readULong(1);
           if (ch==0xd)
-            listener->insertEOL();
+            sheetListener->insertEOL();
           else
-            listener->insertCharacter(ch, input, endPos);
+            sheetListener->insertCharacter(ch, input, endPos);
         }
         input->seek(fPos,librevenge::RVNG_SEEK_SET);
       }
-      listener->closeSheetCell();
+      sheetListener->closeSheetCell();
     }
-    listener->closeSheetRow();
+    sheetListener->closeSheetRow();
   }
-  listener->closeSheet();
+  sheetListener->closeSheet();
   return true;
 }
 
-bool ClarisWksSpreadsheet::sendSpreadsheetAsTable(int zId)
+bool ClarisWksSpreadsheet::sendSpreadsheetAsTable(int zId, MWAWListenerPtr listener)
 {
-  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener)
+    listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheetAsTable: called without any listener\n"));
     return false;

@@ -92,9 +92,9 @@ public:
     return false;
   }
   //! sends the zone data to the listener (if it exists )
-  bool sendSpreadsheet(int number);
+  bool sendSpreadsheet(int number, MWAWListenerPtr listener);
   //! sends the zone data to the listener (if it exists )
-  bool sendSpreadsheetAsTable(int number);
+  bool sendSpreadsheetAsTable(int number, MWAWListenerPtr listener);
 
 protected:
   //

@@ -99,8 +99,11 @@ These files defined basic structures which must be used by the parsers :
 ## MWAWGraphicShape.hxx to define basic graphic shape
 ## MWAWGraphicStyle.hxx to store the graphic style's properties
 
-## MWAWGraphicDecoder.hxx to uncompress RVNGBinaryData into RVNGDrawInterface orders 
-## MWAWGraphicEncoder.hxx to compress RVNGDrawInterface orders into a RVNGBinaryData
+## MWAWGraphicDecoder.hxx to uncompress RVNGBinaryData into RVNGDrawingInterface orders 
+## MWAWGraphicEncoder.hxx to compress RVNGDrawingInterface orders into a RVNGBinaryData
+
+## MWAWSpreadsheetDecoder.hxx to uncompress RVNGBinaryData into RVNGSpreadsheetInterface orders 
+## MWAWSpreadsheetEncoder.hxx to compress RVNGSpreadsheetInterface orders into a RVNGBinaryData
 
 ## MWAWList.hxx
 	store a simple list definition 

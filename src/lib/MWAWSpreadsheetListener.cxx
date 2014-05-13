@@ -213,6 +213,18 @@ MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, s
 {
 }
 
+MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface) : MWAWListener(),
+  m_ds(), m_ps(new MWAWSpreadsheetListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
+{
+  MWAWPageSpan pageSpan;
+  pageSpan.setMargins(0);
+  pageSpan.setPageSpan(1);
+  pageSpan.setFormWidth(box.size().x()/72.);
+  pageSpan.setFormLength(box.size().y()/72.);
+  m_ds.reset(new MWAWSpreadsheetListenerInternal::DocumentState(std::vector<MWAWPageSpan>(1, pageSpan)));
+}
+
+
 MWAWSpreadsheetListener::~MWAWSpreadsheetListener()
 {
 }

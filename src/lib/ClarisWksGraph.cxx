@@ -51,6 +51,8 @@
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWSpreadsheetEncoder.hxx"
+#include "MWAWSpreadsheetListener.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "ClarisWksDocument.hxx"
@@ -2399,6 +2401,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     suggestedAnchor= (mainGroup || isSlide) ? MWAWPosition::Page : MWAWPosition::Char;
     break;
   }
+  // CHECKME
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: position is not set\n"));
   }
@@ -2614,7 +2617,8 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   ClarisWksStruct::DSET::Type cType=dset ? dset->m_type : ClarisWksStruct::DSET::T_Unknown;
   bool createFrame=
     cType == ClarisWksStruct::DSET::T_Frame || cType == ClarisWksStruct::DSET::T_Table ||
-    (cType == ClarisWksStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page);
+    (cType == ClarisWksStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page &&
+     (!dset || dset->m_fileType!=2));
   if (!isLinked && childZone.m_subId) {
     MWAW_DEBUG_MSG(("find old subs zone\n"));
     return false;
@@ -2646,6 +2650,20 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
       pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
     listener->insertTextBox(pos, doc, style);
+    return true;
+  }
+  if (dset && dset->m_fileType==2) { // spreadsheet
+    Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
+    MWAWSpreadsheetEncoder spreadsheetEncoder;
+    MWAWSpreadsheetListener *spreadsheetListener=new MWAWSpreadsheetListener(*m_parserState, box, &spreadsheetEncoder);
+    MWAWListenerPtr sheetListener(spreadsheetListener);
+    spreadsheetListener->startDocument();
+    m_document.sendZone(zId, sheetListener);
+    spreadsheetListener->endDocument();
+    librevenge::RVNGBinaryData data;
+    std::string mime;
+    if (spreadsheetEncoder.getBinaryResult(data,mime))
+      listener->insertPicture(pos, data, mime);
     return true;
   }
   return m_document.sendZone(zId);

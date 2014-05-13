@@ -663,18 +663,21 @@ bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
 // send data
 //
 ////////////////////////////////////////////////////////////
-bool ClarisWksDatabase::sendDatabase(int zId)
+bool ClarisWksDatabase::sendDatabase(int zId, MWAWListenerPtr listener)
 {
-  if (zId!=1 || m_parserState->m_kind!=MWAWDocument::MWAW_K_DATABASE) {
-    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: sending a database is not implemented\n"));
-    return false;
-  }
-
-  MWAWSpreadsheetListenerPtr listener=m_parserState->m_spreadsheetListener;
+  if (!listener)
+    listener=m_parserState->m_spreadsheetListener;
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: called without any listener\n"));
     return false;
   }
+  if (listener->getType()!=MWAWListener::Spreadsheet ||
+      (m_parserState->m_kind==MWAWDocument::MWAW_K_DATABASE && zId!=1)) {
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::sendDatabase: sending a database is not implemented\n"));
+    return false;
+  }
+
+  MWAWSpreadsheetListener *sheetListener=static_cast<MWAWSpreadsheetListener *>(listener.get());
   std::map<int, shared_ptr<ClarisWksDatabaseInternal::Database> >::iterator it=
     m_state->m_databaseMap.find(zId);
   if (it == m_state->m_databaseMap.end() || !it->second) {
@@ -736,10 +739,10 @@ bool ClarisWksDatabase::sendDatabase(int zId)
   dbase.m_content->setDatabaseFormats(formats);
 
   std::vector<float> colSize(size_t(numFields),72);
-  listener->openSheet(colSize, librevenge::RVNG_POINT);
+  sheetListener->openSheet(colSize, librevenge::RVNG_POINT);
   MWAWInputStreamPtr &input= m_parserState->m_input;
   for (size_t r=0; r < recordsPos.size(); ++r) {
-    listener->openSheetRow((float)14, librevenge::RVNG_POINT);
+    sheetListener->openSheetRow((float)14, librevenge::RVNG_POINT);
     for (int c=0; c < numFields; ++c) {
       ;
       ClarisWksDbaseContent::Record rec;
@@ -748,7 +751,7 @@ bool ClarisWksDatabase::sendDatabase(int zId)
       cell.setPosition(Vec2i(c,int(r)));
       cell.setFormat(rec.m_format);
       cell.setHAlignement(rec.m_hAlign);
-      listener->openSheetCell(cell, rec.m_content);
+      sheetListener->openSheetCell(cell, rec.m_content);
       if (rec.m_content.m_textEntry.valid()) {
         long fPos = input->tell();
         input->seek(rec.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
@@ -756,17 +759,17 @@ bool ClarisWksDatabase::sendDatabase(int zId)
         while (!input->isEnd() && input->tell() < endPos) {
           unsigned char ch=(unsigned char) input->readULong(1);
           if (ch==0xd)
-            listener->insertEOL();
+            sheetListener->insertEOL();
           else
-            listener->insertCharacter(ch, input, endPos);
+            sheetListener->insertCharacter(ch, input, endPos);
         }
         input->seek(fPos,librevenge::RVNG_SEEK_SET);
       }
-      listener->closeSheetCell();
+      sheetListener->closeSheetCell();
     }
-    listener->closeSheetRow();
+    sheetListener->closeSheetRow();
   }
-  listener->closeSheet();
+  sheetListener->closeSheet();
   return true;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
