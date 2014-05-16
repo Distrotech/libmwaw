@@ -58,6 +58,8 @@ class RagTimeSpreadsheet;
 class RagTimeParser : public MWAWTextParser
 {
   friend class RagTimeParserInternal::SubDocument;
+  friend class RagTimeText;
+  friend class RagTimeSpreadsheet;
 
 public:
   //! constructor
@@ -75,6 +77,13 @@ protected:
   //! inits all internal variables
   void init();
 
+  //
+  // interface with text parser
+  //
+
+  //! returns a mac font id corresponding to a local id
+  int getFontId(int localId) const;
+
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
@@ -91,6 +100,11 @@ protected:
 
   //! try to create the resource zones list
   bool findRsrcZones();
+
+  //! sends the picture
+  bool sendPicture(int zId, MWAWPosition const &pos);
+  //! flush unsent zone (debugging function)
+  void flushExtra();
 
   /** try to read page zone ( unknown content of size 40). A zone
       which seems to appear between each page data */

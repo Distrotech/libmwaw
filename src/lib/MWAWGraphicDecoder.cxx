@@ -55,7 +55,9 @@ void MWAWGraphicDecoder::insertElement(const char *psName)
   bool ok=true;
   switch (psName[0]) {
   case 'C':
-    if (strcmp(psName,"CloseLink")==0)
+    if (strcmp(psName,"CloseGroup")==0)
+      m_output->closeGroup();
+    else if (strcmp(psName,"CloseLink")==0)
       m_output->closeLink();
     else if (strcmp(psName,"CloseListElement")==0)
       m_output->closeListElement();
@@ -125,6 +127,8 @@ void MWAWGraphicDecoder::insertElement(const char *psName, const librevenge::RVN
     else if (strcmp(psName,"DefineParagraphStyle")==0)
       m_output->defineParagraphStyle(propList);
 
+    else if (strcmp(psName,"DrawConnector")==0)
+      m_output->drawConnector(propList);
     else if (strcmp(psName,"DrawEllipse")==0)
       m_output->drawEllipse(propList);
     else if (strcmp(psName,"DrawGraphicObject")==0)
@@ -149,7 +153,9 @@ void MWAWGraphicDecoder::insertElement(const char *psName, const librevenge::RVN
       ok=false;
     break;
   case 'O':
-    if (strcmp(psName,"OpenLink")==0)
+    if (strcmp(psName,"OpenGroup")==0)
+      m_output->openGroup(propList);
+    else if (strcmp(psName,"OpenLink")==0)
       m_output->openLink(propList);
     else if (strcmp(psName,"OpenListElement")==0)
       m_output->openListElement(propList);

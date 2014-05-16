@@ -59,6 +59,19 @@
 namespace RagTimeParserInternal
 {
 ////////////////////////////////////////
+//! Internal: a picture of a RagTimeParser
+struct Picture {
+  //! constructor
+  Picture() : m_pos(), m_isSent(false)
+  {
+  }
+  //! the data position
+  MWAWEntry m_pos;
+  //! a flag to know if the picture is sent
+  mutable bool m_isSent;
+};
+
+////////////////////////////////////////
 //! Internal: a zone of a RagTimeParser
 struct Zone {
   //! the zone type
@@ -156,19 +169,23 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
 //! Internal: the state of a RagTimeParser
 struct State {
   //! constructor
-  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_colorList(),
-    m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_colorList(), m_idZoneMap(),
+    m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
 
   //! the number of data zone
   int m_numDataZone;
-  //! the map: type->entry (datafork)
+  //! a map: type->entry (datafork)
   std::multimap<std::string, MWAWEntry> m_dataZoneMap;
-  //! the map: type->entry (resource fork)
+  //! a map: type->entry (resource fork)
   std::multimap<std::string, MWAWEntry> m_RSRCZoneMap;
   //! the color map (v2)
   std::vector<MWAWColor> m_colorList;
+  //! a map: zoneId->zone (datafork)
+  std::map<int, Zone> m_idZoneMap;
+  //! a map: zoneId->picture (datafork)
+  std::map<int, Picture> m_idPictureMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 
   int m_headerHeight /** the header height if known */,
@@ -254,6 +271,11 @@ void RagTimeParser::init()
   m_textParser.reset(new RagTimeText(*this));
 }
 
+int RagTimeParser::getFontId(int localId) const
+{
+  return m_textParser->getFontId(localId);
+}
+
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
@@ -288,6 +310,11 @@ void RagTimeParser::parse(librevenge::RVNGTextInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       // TODO
+#ifdef DEBUG
+      m_textParser->flushExtra();
+      m_spreadsheetParser->flushExtra();
+      flushExtra();
+#endif
     }
 
     ascii().reset();
@@ -368,8 +395,22 @@ bool RagTimeParser::createZones()
     readItemFormats(it++->second);
 
   it=m_state->m_dataZoneMap.lower_bound("TextZone");
-  while (it!=m_state->m_dataZoneMap.end() && it->first=="TextZone")
-    m_textParser->readTextZone(it++->second);
+  while (it!=m_state->m_dataZoneMap.end() && it->first=="TextZone") {
+    MWAWEntry entry=it++->second;
+    int width;
+    MWAWColor fontColor;
+    if (m_state->m_idZoneMap.find(entry.id())!=m_state->m_idZoneMap.end()) {
+      RagTimeParserInternal::Zone const &zone=m_state->m_idZoneMap.find(entry.id())->second;
+      width=zone.m_dimension.size()[0];
+      fontColor=zone.m_fontColor;
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTimeParser::createZones: can not find text zone with id=%d\n", entry.id()));
+      width=int(72.*getPageWidth());
+      fontColor=MWAWColor::black();
+    }
+    m_textParser->readTextZone(entry, width, fontColor);
+  }
   it=m_state->m_dataZoneMap.lower_bound("PictZone");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="PictZone") {
     if (vers==1)
@@ -393,8 +434,6 @@ bool RagTimeParser::createZones()
   it=m_state->m_dataZoneMap.lower_bound("Zone6");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="Zone6")
     readZone6(it++->second);
-
-
 
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcfppr");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcfppr")
@@ -467,7 +506,7 @@ bool RagTimeParser::createZones()
     ascii().addNote(f.str().c_str());
   }
 
-  return false;
+  return (vers<2);
 }
 
 ////////////////////////////////////////////////////////////
@@ -559,6 +598,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   }
   MWAWEntry entry;
   entry.setType(zone.getTypeString());
+  entry.setId(id);
   if (hasPointer) {
     input->seek(pos+zoneLength-4, librevenge::RVNG_SEEK_SET);
     long filePos=(long) input->readULong(4);
@@ -577,6 +617,8 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   if (vers>=2) {
     // TODO
     zone.m_extra=f.str();
+    m_state->m_idZoneMap[id]=zone;
+
     f.str("");
     f << "Zones-Z" << id << ":" << zone;
     ascii().addPos(pos);
@@ -667,6 +709,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     }
   }
   zone.m_extra=f.str();
+  m_state->m_idZoneMap[id]=zone;
   f.str("");
   f << "Zones-Z" << id << ":" << zone;
 
@@ -796,8 +839,21 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
 
   input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
-  //TODO: store the picture
+  RagTimeParserInternal::Picture pict;
+  pict.m_pos.setBegin(pos);
+  pict.m_pos.setLength(pictSz);
+  m_state->m_idPictureMap[entry.id()]=pict;
+
+#ifdef DEBUG_WITH_FILES
   ascii().skipZone(pos, pos+pictSz-1);
+  librevenge::RVNGBinaryData file;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  input->readDataBlock(pictSz, file);
+  static int volatile pictName = 0;
+  f.str("");
+  f << "PICT-" << ++pictName;
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
 
   input->seek(pos+pictSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
@@ -851,12 +907,22 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   ascii().addNote(f.str().c_str());
   input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
 
-  /* TO: store the picture position +
-     we need probably to read the bitmap: format:
-     804289ce[001c]:rowSize[00000000][0046]:numRow[00d1]:numCols
-  */
   pos=input->tell();
+  RagTimeParserInternal::Picture pict;
+  pict.m_pos.setBegin(pos);
+  pict.m_pos.setEnd(endPos);
+  m_state->m_idPictureMap[entry.id()]=pict;
+
+#ifdef DEBUG_WITH_FILES
   ascii().skipZone(pos, endPos-1);
+  librevenge::RVNGBinaryData file;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  input->readDataBlock(endPos-pos, file);
+  static int volatile pictName = 0;
+  f.str("");
+  f << "PICT-" << ++pictName;
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
   return true;
 }
 
@@ -2051,6 +2117,73 @@ bool RagTimeParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   ascii().addPos(headerSize);
 
   return true;
+}
+
+////////////////////////////////////////////////////////////
+// send data to the listener
+////////////////////////////////////////////////////////////
+bool RagTimeParser::sendPicture(int zId, MWAWPosition const &pos)
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the listener\n"));
+    return false;
+  }
+  if (m_state->m_idPictureMap.find(zId)==m_state->m_idPictureMap.end()) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture\n"));
+    return false;
+  }
+  RagTimeParserInternal::Picture const &pict=m_state->m_idPictureMap.find(zId)->second;
+  if (!pict.m_pos.valid()) return false;
+
+  MWAWInputStreamPtr input = getInput();
+  Box2f box;
+  input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
+  MWAWPict::ReadResult res = MWAWPictData::check(input, (int)pict.m_pos.length(), box);
+  if (res != MWAWPict::MWAW_R_BAD) {
+    input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
+    shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, (int)pict.m_pos.length()));
+    if (!thePict) return false;
+    librevenge::RVNGBinaryData data;
+    std::string type;
+    if (thePict->getBinary(data,type))
+      listener->insertPicture(pos, data, type);
+    return true;
+  }
+
+  input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
+  if (input->readULong(2)==0x8042) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not check the picture\n"));
+    return false;
+  }
+  /* so check the bitmap: format:
+     804289ce[001c]:rowSize[00000000][0046]:numRow[00d1]:numCols
+  */
+  MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: find a bitmap, not implemented\n"));
+  return false;
+}
+
+void RagTimeParser::flushExtra()
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeParser::flushExtra: can not find the listener\n"));
+    return;
+  }
+  std::map<int, RagTimeParserInternal::Picture >::const_iterator pIt;
+  for (pIt=m_state->m_idPictureMap.begin(); pIt!=m_state->m_idPictureMap.end(); ++pIt) {
+    RagTimeParserInternal::Picture const &pict=pIt->second;
+    if (pict.m_isSent) continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTimeParser::flushExtra: find some unsend zone\n"));
+      first=false;
+    }
+    MWAWPosition pos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
+    pos.m_anchorTo=MWAWPosition::Char;
+    sendPicture(pIt->first, pos);
+    listener->insertEOL();
+  }
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

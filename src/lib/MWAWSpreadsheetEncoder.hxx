@@ -170,6 +170,7 @@ public:
   void drawPolygon(const librevenge::RVNGPropertyList &propList);
   void drawPolyline(const librevenge::RVNGPropertyList &propList);
   void drawPath(const librevenge::RVNGPropertyList &propList);
+  void drawConnector(const ::librevenge::RVNGPropertyList &propList);
 
   //
   // Equation

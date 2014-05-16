@@ -74,12 +74,16 @@ public:
   void endLayer();
   void startEmbeddedGraphics(const ::librevenge::RVNGPropertyList &propList);
   void endEmbeddedGraphics();
+  void openGroup(const ::librevenge::RVNGPropertyList &propList);
+  void closeGroup();
+
 
   void drawRectangle(const ::librevenge::RVNGPropertyList &propList);
   void drawEllipse(const ::librevenge::RVNGPropertyList &propList);
   void drawPolygon(const ::librevenge::RVNGPropertyList &vertices);
   void drawPolyline(const ::librevenge::RVNGPropertyList &vertices);
   void drawPath(const ::librevenge::RVNGPropertyList &path);
+  void drawConnector(const ::librevenge::RVNGPropertyList &propList);
 
   void drawGraphicObject(const ::librevenge::RVNGPropertyList &propList);
 

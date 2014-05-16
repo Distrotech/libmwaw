@@ -464,6 +464,11 @@ void MWAWSpreadsheetEncoder::drawPath(const ::librevenge::RVNGPropertyList &path
   m_state->m_encoder.insertElement("DrawPath", path);
 }
 
+void MWAWSpreadsheetEncoder::drawConnector(const ::librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DrawConnector", list);
+}
+
 //
 // equation
 //

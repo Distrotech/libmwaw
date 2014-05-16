@@ -57,7 +57,7 @@ namespace RagTimeTextInternal
 //! Internal: a text's zone of a RagTimeText
 struct TextZone {
   //! constructor
-  TextZone() : m_textPos(), m_fontPosList(), m_fontList(), m_paragraphPosList(), m_paragraphList()
+  TextZone() : m_textPos(), m_fontPosList(), m_fontList(), m_paragraphPosList(), m_paragraphList(), m_isSent(false)
   {
   }
   //! the text zone
@@ -70,13 +70,15 @@ struct TextZone {
   std::vector<long> m_paragraphPosList;
   //! the list of paragraph's properties
   std::vector<MWAWParagraph> m_paragraphList;
+  //! true if the zone is sent to the listener
+  mutable bool m_isSent;
 };
 
 ////////////////////////////////////////
 //! Internal: the state of a RagTimeText
 struct State {
   //! constructor
-  State() : m_version(-1), m_localFIdMap()
+  State() : m_version(-1), m_localFIdMap(), m_idTextMap()
   {
   }
 
@@ -92,6 +94,8 @@ struct State {
   mutable int m_version;
   //! a map local fontId->fontId
   std::map<int, int> m_localFIdMap;
+  //! a map entry id to text zone
+  std::map<int, shared_ptr<TextZone> > m_idTextMap;
 };
 
 }
@@ -113,6 +117,12 @@ int RagTimeText::version() const
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
 }
+
+int RagTimeText::getFontId(int localId) const
+{
+  return m_state->getFontId(localId);
+}
+
 
 ////////////////////////////////////////////////////////////
 // rsrc zone: fonts
@@ -207,7 +217,7 @@ bool RagTimeText::readFontNames(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // read a zone of text
 ////////////////////////////////////////////////////////////
-bool RagTimeText::readTextZone(MWAWEntry &entry)
+bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &color)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
@@ -232,31 +242,26 @@ bool RagTimeText::readTextZone(MWAWEntry &entry)
     ascFile.addNote(f.str().c_str());
     return false;
   }
-  int val=(int) input->readLong(1); // always 0?
-  if (val) f << "g0=" << val << ",";
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   ascFile.addPos(endPos);
   ascFile.addNote("_");
 
-  RagTimeTextInternal::TextZone zone;
+  shared_ptr<RagTimeTextInternal::TextZone> zone(new RagTimeTextInternal::TextZone);
   pos = input->tell();
-  f.str("");
-  f << "TextZone[text]:";
-  zone.m_textPos.setBegin(pos);
-  zone.m_textPos.setLength(numChar);
-  std::string text("");
-  // 01: date, 02: time, ...
-  for (int i=0; i<numChar-1; ++i) text+=(char) input->readULong(1);
-  f << text << ",";
+  zone->m_textPos.setBegin(pos);
+  zone->m_textPos.setLength(numChar);
   if (vers>=2 && (numChar%2)==1)
-    input->seek(1, librevenge::RVNG_SEEK_CUR);
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
+    ++numChar;
+  input->seek(pos+numChar, librevenge::RVNG_SEEK_SET);
 
-  if (!readFonts(zone, endPos) || !readParagraphs(zone, endPos))
+  if (!readFonts(*zone, color, endPos) || !readParagraphs(*zone, width, endPos))
     return false;
-
+  if (m_state->m_idTextMap.find(entry.id())!=m_state->m_idTextMap.end()) {
+    MWAW_DEBUG_MSG(("RagTimeText::readTextZone: a zone with id=%d already exists\n", entry.id()));
+  }
+  else
+    m_state->m_idTextMap[entry.id()]=zone;
   pos=input->tell();
   if (vers==1) {
     if (pos!=endPos) {
@@ -338,13 +343,13 @@ bool RagTimeText::readTextZone(MWAWEntry &entry)
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
       f << "format?=[";
       for (int i=0; i< 6; ++i) { // small number
-        val=(int) input->readLong(2);
+        int val=(int) input->readLong(2);
         if (val) f << val << ",";
         else f << "_";
       }
       f << "],";
     }
-    text="";
+    std::string text("");
     for (int i=0; i<sSz; ++i)
       text+=(char) input->readULong(1);
     f << "\"" << text << "\",";
@@ -355,7 +360,7 @@ bool RagTimeText::readTextZone(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeText::readFonts(RagTimeTextInternal::TextZone &zone, long endPos)
+bool RagTimeText::readFonts(RagTimeTextInternal::TextZone &zone, MWAWColor const &color, long endPos)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
@@ -390,6 +395,7 @@ bool RagTimeText::readFonts(RagTimeTextInternal::TextZone &zone, long endPos)
       ascFile.addNote(f.str().c_str());
     }
     MWAWFont font;
+    font.setColor(color);
     int size= (int) input->readULong(1);
     int flag = (int) input->readULong(1);
     uint32_t flags=0;
@@ -407,11 +413,11 @@ bool RagTimeText::readFonts(RagTimeTextInternal::TextZone &zone, long endPos)
     }
     font.setSize((float)size);
     font.setFlags(flags);
-    font.setId(m_state->getFontId((int) input->readULong(2)));
+    font.setId(getFontId((int) input->readULong(2)));
     int val=(int) input->readLong(1);
-    if (val) font.set(MWAWFont::Script(float(val)));
+    if (val) font.setDeltaLetterSpacing(-float(val)/16.0f);
     val=(int) input->readLong(1);
-    if (val) font.setDeltaLetterSpacing(float(val)/16.0f);
+    if (val) font.set(MWAWFont::Script(-float(val),librevenge::RVNG_POINT));
     zone.m_fontPosList.push_back(textPos);
     zone.m_fontList.push_back(font);
     f << font.getDebugString(m_parserState->m_fontConverter);
@@ -423,7 +429,7 @@ bool RagTimeText::readFonts(RagTimeTextInternal::TextZone &zone, long endPos)
   return true;
 }
 
-bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, long endPos)
+bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, int width, long endPos)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
@@ -462,8 +468,7 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, long endPo
     MWAWParagraph para;
     para.m_marginsUnit=librevenge::RVNG_POINT;
     para.m_margins[1]=(double)input->readLong(2);
-    // FIXME: margins from left...
-    para.m_margins[2]=(double)input->readULong(2);
+    para.m_margins[2]=(double)(width-(int)input->readULong(2));
     int align=(int) input->readULong(1);
     switch (align) {
     case 0: // left
@@ -574,5 +579,153 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, long endPo
 
 ////////////////////////////////////////////////////////////
 // send data to the listener
+bool RagTimeText::send(int zId)
+{
+  if (m_state->m_idTextMap.find(zId)==m_state->m_idTextMap.end() ||
+      !m_state->m_idTextMap.find(zId)->second) {
+    MWAW_DEBUG_MSG(("RagTimeText::send: can not find the text zone %d\n", zId));
+    return false;
+  }
+  return send(*m_state->m_idTextMap.find(zId)->second);
+}
 
+bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
+{
+  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeText::send: can not find the listener\n"));
+    return false;
+  }
+  zone.m_isSent=true;
+  MWAWEntry entry=zone.m_textPos;
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("RagTimeText::send: the text zone is empty\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  long pos=entry.begin(), lPos=pos;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  size_t actFont=0, numFont=zone.m_fontPosList.size();
+  if (numFont>zone.m_fontList.size()) numFont=zone.m_fontList.size();
+  size_t actPara=0, numPara=zone.m_paragraphPosList.size();
+  if (numPara>zone.m_paragraphList.size()) numPara=zone.m_paragraphList.size();
+
+  for (long tPos=0; tPos<entry.length(); ++tPos, ++pos) {
+    if (input->isEnd()) {
+      MWAW_DEBUG_MSG(("RagTimeText::send: oops, find end of file\n"));
+      break;
+    }
+    if (actPara<numPara && zone.m_paragraphPosList[actPara]==tPos) {
+      if (pos!=lPos) {
+        ascFile.addPos(lPos);
+        ascFile.addNote(f.str().c_str());
+        lPos=pos;
+        f.str("");
+        f << "TextZone:";
+      }
+      f << "[P" << actPara << "]";
+      listener->setParagraph(zone.m_paragraphList[actPara++]);
+    }
+    if (actFont<numFont && zone.m_fontPosList[actFont]==tPos) {
+      if (pos!=lPos) {
+        ascFile.addPos(lPos);
+        ascFile.addNote(f.str().c_str());
+        lPos=pos;
+        f.str("");
+        f << "TextZone:";
+      }
+      f << "[C" << actFont << "]";
+      listener->setFont(zone.m_fontList[actFont++]);
+    }
+    unsigned char c = (unsigned char) input->readULong(1);
+    switch (c) {
+    case 0: // at the beginning of a zone of text: related to section?
+      break;
+    case 1: {
+      f << "[date]";
+      MWAWField date(MWAWField::Date);
+      date.m_DTFormat = "%d/%m/%y";
+      listener->insertField(date);
+      break;
+    }
+    case 2: {
+      f << "[time]";
+      MWAWField time(MWAWField::Time);
+      time.m_DTFormat="%H:%M";
+      listener->insertField(time);
+      break;
+    }
+    case 3:
+      f << "[page]";
+      listener->insertField(MWAWField(MWAWField::PageNumber));
+      break;
+    case 4:
+      f << "[page+1]";
+      listener->insertUnicodeString("#P+1#");
+      break;
+    case 5:
+      f << "[section]";
+      listener->insertUnicodeString("#S#");
+      break;
+    case 6: // ok, must be the end of the zone
+      f << "[pagebreak]";
+      break;
+    case 9:
+      listener->insertTab();
+      f << c;
+      break;
+    case 0xd:
+      listener->insertEOL();
+      ascFile.addPos(lPos);
+      ascFile.addNote(f.str().c_str());
+      lPos=pos+1;
+      f.str("");
+      f << "TextZone:";
+      break;
+    case 0x1f: // soft hyphen
+      break;
+    default:
+      if (c<=0x1f) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find an odd char %x\n", int(c)));
+        f << "[#" << std::hex << int(c) << std::dec << "]";
+        break;
+      }
+      listener->insertCharacter(c);
+      f << c;
+      break;
+    }
+
+  }
+
+  if (lPos!=entry.end()) {
+    ascFile.addPos(lPos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+void RagTimeText::flushExtra()
+{
+  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeText::flushExtra: can not find the listener\n"));
+    return;
+  }
+  std::map<int, shared_ptr<RagTimeTextInternal::TextZone> >::const_iterator it;
+  for (it=m_state->m_idTextMap.begin(); it!=m_state->m_idTextMap.end(); ++it) {
+    if (!it->second) continue;
+    RagTimeTextInternal::TextZone const &zone=*it->second;
+    if (zone.m_isSent) continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTimeText::flushExtra: find some unsend zone\n"));
+      first=false;
+    }
+    send(zone);
+    listener->insertEOL();
+  }
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

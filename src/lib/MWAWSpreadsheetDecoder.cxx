@@ -154,9 +154,11 @@ void MWAWSpreadsheetDecoder::insertElement(const char *psName, const librevenge:
       m_output->defineParagraphStyle(propList);
     else if (strcmp(psName,"DefineSectionStyle")==0)
       m_output->defineSectionStyle(propList);
-    else if (strcmp(psName,"DefineSheetNumberStyle")==0)
+    else if (strcmp(psName,"DefineSheetNumberingStyle")==0)
       m_output->defineSheetNumberingStyle(propList);
 
+    else if (strcmp(psName,"DrawConnector")==0)
+      m_output->drawConnector(propList);
     else if (strcmp(psName,"DrawEllipse")==0)
       m_output->drawEllipse(propList);
     else if (strcmp(psName,"DrawPath")==0)

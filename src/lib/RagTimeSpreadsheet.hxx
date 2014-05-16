@@ -54,7 +54,8 @@
 
 namespace RagTimeSpreadsheetInternal
 {
-struct SpreadsheetZone;
+struct Cell;
+struct Spreadsheet;
 
 struct State;
 }
@@ -84,14 +85,23 @@ protected:
   //! try to read spreadsheet zone ( a big zone):v2
   bool readSpreadsheetV2(MWAWEntry &entry);
   //! try to read spreadsheet cells :v2
-  bool readSpreadsheetCellsV2(MWAWEntry &entry);
+  bool readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read spreadsheet end zone (positions, ...) :v2
-  bool readSpreadsheetExtraV2(MWAWEntry &entry);
+  bool readSpreadsheetExtraV2(MWAWEntry &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+
+  //! send a spreadsheet corresponding to zId
+  bool send(int zId, MWAWPosition const &pos);
+  //! flush extra data
+  void flushExtra();
 
   //
   // low level
   //
 
+  //! try to read a cell :v2
+  bool readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
+  //! send a spreadsheet to a listener
+  bool send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MWAWSpreadsheetListenerPtr listener);
 
 private:
   RagTimeSpreadsheet(RagTimeSpreadsheet const &orig);

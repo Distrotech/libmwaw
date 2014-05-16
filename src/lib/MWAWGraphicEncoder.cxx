@@ -129,6 +129,16 @@ void MWAWGraphicEncoder::endEmbeddedGraphics()
   m_state->m_encoder.insertElement("StartEmbeddedGraphics");
 }
 
+void MWAWGraphicEncoder::openGroup(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("OpenGroup", list);
+}
+
+void MWAWGraphicEncoder::closeGroup()
+{
+  m_state->m_encoder.insertElement("CloseGroup");
+}
+
 void MWAWGraphicEncoder::drawRectangle(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("DrawRectangle", list);
@@ -152,6 +162,11 @@ void MWAWGraphicEncoder::drawPolyline(const ::librevenge::RVNGPropertyList &vert
 void MWAWGraphicEncoder::drawPath(const ::librevenge::RVNGPropertyList &path)
 {
   m_state->m_encoder.insertElement("DrawPath", path);
+}
+
+void MWAWGraphicEncoder::drawConnector(const ::librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DrawConnector", list);
 }
 
 void MWAWGraphicEncoder::drawGraphicObject(const ::librevenge::RVNGPropertyList &list)
