@@ -22,6 +22,7 @@
 - MsWks*        : parser of Microsoft Works documents
 - MsWrd*        : parser of Microsoft Word documents
 - NisusWrt*     : parser of Nisus Writer documents,
+- RagTime*      : parser of RagTime documents (not functional),
 - SuperPaint*   : parser of SuperPaint document,
 - TeachTxt*     : parser of TeachText/SimpleText/Tex-Edit documents,
 - Wingz*        : parser of Claris Resolve/Wingz documents
@@ -117,7 +118,7 @@ These files defined basic structures which must be used by the parsers :
 ------------------------------------------------------------------------
 ---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
 ---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacPaint/MacWrt/          ---
----  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt                    ---
+---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/RagTime            ---
 ---  SuperPaint/TeachTxt/Wingz/WriteNow/WriterPls/ZWrt               ---
 ------------------------------------------------------------------------
 
@@ -221,6 +222,10 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 -   NisusWrtGraph : class which reads the picture/graph
 -   NisusWrtStruct : class which defines the different structures used by the parsed
 -   NisusWrtText : class which reads the text
+
+RagTimeParser : parser of RagTime : v2-3, in preparation, ie not functional
+-   RagTimeSpreadsheet: class which reads the spreadsheet's zones
+-   RagTimeText: class which reads the text's zones
 
 SuperPaintParser: parser of drawing and paint SuperPaint files : v1 
 

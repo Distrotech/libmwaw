@@ -103,6 +103,8 @@ protected:
 
   //! sends the picture
   bool sendPicture(int zId, MWAWPosition const &pos);
+  //! sends a basic shape
+  bool sendBasicPicture(int zId, MWAWPosition const &pos);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
