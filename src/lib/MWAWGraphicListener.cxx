@@ -536,6 +536,7 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
     if (++it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::_openPageSpan: can not find current page, use the previous one\n"));
       --it;
+      break;
     }
   }
 

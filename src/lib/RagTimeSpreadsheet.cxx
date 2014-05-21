@@ -64,6 +64,27 @@ struct Cell : public MWAWCell {
   {
     setPosition(pos);
   }
+  //! test if we can use or not the formula
+  bool validateFormula()
+  {
+    if (m_content.m_formula.empty()) return false;
+    for (size_t i=0; i<m_content.m_formula.size(); ++i) {
+      bool ok=true;
+      MWAWCellContent::FormulaInstruction &instr=m_content.m_formula[i];
+      // fixme: cell to other spreadsheet
+      if (instr.m_type==MWAWCellContent::FormulaInstruction::F_Cell ||
+          instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList)
+        ok=instr.m_sheet.empty();
+      // fixme: replace operator or by function
+      else if (instr.m_type==MWAWCellContent::FormulaInstruction::F_Function)
+        ok=(instr.m_content!="Or"&&instr.m_content!="And"&&instr.m_content!="Not");
+      if (!ok) {
+        m_content.m_formula.resize(0);
+        return false;
+      }
+    }
+    return true;
+  }
   //! the cell content
   MWAWCellContent m_content;
 };
@@ -73,7 +94,7 @@ struct Cell : public MWAWCell {
 struct Spreadsheet {
   //! constructor
   Spreadsheet() : m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
-    m_cells(), m_name("Sheet0"), m_isSent(false)
+    m_cellsBegin(0), m_cellsList(), m_rowPositionsList(), m_name("Sheet0"), m_isSent(false)
   {
   }
   //! returns the row size in point
@@ -101,11 +122,11 @@ struct Spreadsheet {
   Vec2i getRightBottomPosition() const
   {
     Vec2i res(0,0);
-    for (size_t i=0; i<m_cells.size(); ++i) {
-      if (m_cells[i].position()[0] >= res[0])
-        res[0]=m_cells[i].position()[0]+1;
-      if (m_cells[i].position()[1] >= res[1])
-        res[1]=m_cells[i].position()[1]+1;
+    for (size_t i=0; i<m_cellsList.size(); ++i) {
+      if (m_cellsList[i].position()[0] >= res[0])
+        res[0]=m_cellsList[i].position()[0]+1;
+      if (m_cellsList[i].position()[1] >= res[1])
+        res[1]=m_cellsList[i].position()[1]+1;
     }
     return res;
   }
@@ -117,8 +138,12 @@ struct Spreadsheet {
   float m_heightDefault;
   /** the row height in points */
   std::vector<float> m_heightRows;
+  /** the positions of the cells in the file */
+  long m_cellsBegin;
   /** the list of not empty cells */
-  std::vector<Cell> m_cells;
+  std::vector<Cell> m_cellsList;
+  /** the positions of row in the file */
+  std::vector<long> m_rowPositionsList;
   /** the sheet name */
   std::string m_name;
   /** true if the sheet is sent to the listener */
@@ -295,17 +320,24 @@ bool RagTimeSpreadsheet::readSpreadsheetV2(MWAWEntry &entry)
   ascFile.addNote(f.str().c_str());
 
   shared_ptr<RagTimeSpreadsheetInternal::Spreadsheet> sheet(new RagTimeSpreadsheetInternal::Spreadsheet);
+  std::stringstream s;
+  s << "Sheet" << entry.id();
+  sheet->m_name=s.str();
+  // first read the last data, which contains the begin of row positions
+  MWAWEntry extra;
+  extra.setBegin(zonesList[1]);
+  extra.setEnd(endPos);
+  sheet->m_cellsBegin=zonesList[0];
+  if (!readSpreadsheetExtraV2(extra, *sheet))
+    return false;
 
   MWAWEntry cells;
   cells.setBegin(zonesList[0]);
   cells.setEnd(zonesList[1]);
-  if (readSpreadsheetCellsV2(cells, *sheet))
-    m_state->m_idSpreadsheetMap[entry.id()]=sheet;
-
-  MWAWEntry extra;
-  extra.setBegin(zonesList[1]);
-  extra.setEnd(endPos);
-  return readSpreadsheetExtraV2(extra, *sheet);
+  if (!readSpreadsheetCellsV2(cells, *sheet))
+    return false;
+  m_state->m_idSpreadsheetMap[entry.id()]=sheet;
+  return true;
 }
 
 bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet)
@@ -318,7 +350,6 @@ bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreads
     return false;
   }
 
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
   ascFile.addPos(endPos);
@@ -326,36 +357,53 @@ bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreads
 
   int n=0;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  Vec2i cellPos(-1,0);
-  while (!input->isEnd()) {
-    pos=input->tell();
-    if (pos+2>endPos) break;
-    int col=int(input->readLong(1))-1;
-    if (col<=cellPos[0]) ++cellPos[1];
-    cellPos[0]=col;
-    int dSz=(int) input->readULong(1);
-    long zEndPos=pos+6+dSz;
-    RagTimeSpreadsheetInternal::Cell cell;
-    cell.setPosition(cellPos);
-    f.str("");
-    f << "Entries(SpreadsheetCell)[" << n++ << "]:";
-    if (zEndPos>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: problem reading some cells\n"));
-      f << "###";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      return false;
+  for (size_t row=0; row<sheet.m_rowPositionsList.size(); ++row) {
+    pos=sheet.m_rowPositionsList[row];
+    long rEndPos=row+1==sheet.m_rowPositionsList.size() ? endPos : sheet.m_rowPositionsList[row+1];
+    if (pos<entry.begin() || rEndPos>entry.end()) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: the position of the row cells %d is odd\n", int(row)));
+      continue;
     }
-    else if (!readSpreadsheetCellV2(cell, zEndPos) || cellPos[0]<0||cellPos[1]<0) {
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: small pb reading a cell\n"));
-      f << "###";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
+    if (pos+2>=rEndPos) continue;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::map<int, RagTimeSpreadsheetInternal::Cell> cellsMap;
+    while (1) {
+      pos=input->tell();
+      if (pos+2>rEndPos) break;
+      int col=int(input->readULong(1))-1;
+      Vec2i cellPos(col,int(row));
+      int dSz=(int) input->readULong(1);
+      long zEndPos=pos+6+dSz;
+      RagTimeSpreadsheetInternal::Cell cell;
+      cell.setPosition(cellPos);
+      f.str("");
+      f << "Entries(SpreadsheetCell)[" << n++ << "]:";
+      if (zEndPos>endPos) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: problem reading some cells\n"));
+        f << "###";
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+        break;
+      }
+      else if (!readSpreadsheetCellV2(cell, zEndPos) || cellPos[0]<0||cellPos[1]<0) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: small pb reading a cell\n"));
+        f << "###";
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+      }
+      else if (cellsMap.find(cellPos[0]) != cellsMap.end()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: already find a cell in %d\n", cellPos[0]));
+        ascFile.addPos(pos);
+        ascFile.addNote("###duplicated");
+      }
+      else
+        cellsMap[cellPos[0]]=cell;
+      if ((dSz%2)==1) ++zEndPos;
+      input->seek(zEndPos, librevenge::RVNG_SEEK_SET);
     }
-    else
-      sheet.m_cells.push_back(cell);
-    if ((dSz%2)==1) ++zEndPos;
-    input->seek(zEndPos, librevenge::RVNG_SEEK_SET);
+    std::map<int, RagTimeSpreadsheetInternal::Cell>::const_iterator mIt;
+    for (mIt=cellsMap.begin(); mIt!=cellsMap.end(); ++mIt)
+      sheet.m_cellsList.push_back(mIt->second);
   }
   return true;
 }
@@ -389,9 +437,18 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     f << "number,";
     break;
+  case 7:
+    format.m_format=MWAWCell::F_DATE;
+    f << "date,";
+    break;
   case 9:
     format.m_format=MWAWCell::F_TEXT;
     f << "text,";
+    break;
+  case 11:
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+    f << "nan,";
     break;
   default:
     MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: find unknown type %d\n", type));
@@ -401,11 +458,11 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
   bool hasFont=(val&1);
   bool hasAlign=(val&2);
   bool hasFormula=(val&4);
-  bool hasFlag80=(val&8);
+  bool hasPreFormula=(val&8);
   if (hasFormula)
     f << "formula,";
-  if (val&8)
-    f << "flag80,";
+  if (hasPreFormula)
+    f << "preFormula,";
 
   val=(int) input->readULong(1);
   bool hasNumberFormat=false;
@@ -534,21 +591,27 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     cell.setFont(font);
     f << "font=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
   }
-  if (hasFlag80) {
-    actPos=input->tell();
-    int fSz=(int) input->readULong(1);
-    if (!fSz||actPos+1+fSz>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: can not read a flag 80\n"));
-      f << "###flag80,";
+  MWAWCellContent &content=cell.m_content;
+  if (hasPreFormula) {
+    std::string extra("");
+    std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
+    bool ok=readFormula(cell.position(), formula, endPos, extra);
+    f << "formula=[";
+    for (size_t i=0; i<formula.size(); ++i)
+      f << formula[i];
+    f << "]";
+    if (!extra.empty()) f << ":" << extra;
+    f << ",";
+    if (!ok) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: can not read a preFormula\n"));
+      f << "###formula,";
       ascFile.addPos(pos-2);
       ascFile.addNote(f.str().c_str());
       return true;
     }
-    // find some zone with size 22 as 59cb050e030304058380fd04050e86050d030104030d
-    ascFile.addDelimiter(input->tell(),'|');
-    input->seek(actPos+1+fSz, librevenge::RVNG_SEEK_SET);
-    if (actPos+1+fSz!=endPos)
-      ascFile.addDelimiter(input->tell(),'|');
+    if (cell.validateFormula())
+      content.m_contentType=MWAWCellContent::C_FORMULA;
+    if (input->tell()!=endPos) ascFile.addDelimiter(input->tell(),'|');
   }
   val= hasAlign ? (int) input->readULong(1) : 0;
   int align= val&7;
@@ -578,24 +641,32 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
   }
   val&=0xF8;
   if (hasFormula) {
-    // TODO: parse the formula
-    actPos=input->tell();
-    int fSz=(int) input->readULong(1);
-    if (!fSz||actPos+1+fSz>endPos) {
+    std::string extra("");
+    std::vector<MWAWCellContent::FormulaInstruction> condition;
+    std::vector<MWAWCellContent::FormulaInstruction> &formula=hasPreFormula ? condition : content.m_formula;
+    bool ok=readFormula(cell.position(), formula, endPos, extra);
+    if (hasPreFormula)
+      f << "condition=[";
+    else
+      f << "formula=[";
+    for (size_t i=0; i<formula.size(); ++i)
+      f << formula[i];
+    f << "]";
+    if (!extra.empty()) f << ":" << extra;
+    f << ",";
+    if (!ok) {
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: can not read a formula\n"));
       f << "###formula,";
       ascFile.addPos(pos-2);
       ascFile.addNote(f.str().c_str());
       return true;
     }
-    ascFile.addDelimiter(input->tell(),'|');
-    input->seek(actPos+1+fSz, librevenge::RVNG_SEEK_SET);
-    if (actPos+1+fSz!=endPos)
-      ascFile.addDelimiter(input->tell(),'|');
+    if (!hasPreFormula && cell.validateFormula())
+      content.m_contentType=MWAWCellContent::C_FORMULA;
+    if (input->tell()!=endPos) ascFile.addDelimiter(input->tell(),'|');
   }
 
   actPos=input->tell();
-  MWAWCellContent &content=cell.m_content;
   switch (type) {
   case 0:
     if (actPos!=endPos) {
@@ -624,6 +695,27 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     }
     break;
   }
+  case 7: {
+    if (actPos+4!=endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: can not read a date\n"));
+      f << "###number";
+      break;
+    }
+    if (format.m_format==MWAWCell::F_UNKNOWN)
+      format.m_format=MWAWCell::F_DATE;
+    if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+      content.m_contentType=MWAWCellContent::C_NUMBER;
+    int Y=(int) input->readULong(2);
+    int M=(int) input->readULong(1);
+    int D=(int) input->readULong(1);
+    f << M << "/" << D << "/" << Y << ",";
+    double res;
+    if (!MWAWCellContent::date2Double(Y,M,D,res))
+      f << "#date,";
+    else
+      content.setValue(res);
+    break;
+  }
   case 9: {
     int sSz=(int) input->readULong(1);
     if (actPos+1+sSz!=endPos) {
@@ -640,6 +732,21 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     std::string text("");
     for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
     f << text << ",";
+    break;
+  }
+  case 11: {
+    if (actPos+1!=endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellV2: can not read a nan number\n"));
+      f << "###nan";
+      break;
+    }
+    if (format.m_format==MWAWCell::F_UNKNOWN)
+      format.m_format=MWAWCell::F_NUMBER;
+    if (content.m_contentType!=MWAWCellContent::C_FORMULA)
+      content.m_contentType=MWAWCellContent::C_NUMBER;
+    cell.m_content.setValue(std::numeric_limits<double>::quiet_NaN());
+    val=(int) input->readULong(1);
+    f << "nan=" << val << ",";
     break;
   }
   default:
@@ -715,8 +822,9 @@ bool RagTimeSpreadsheet::readSpreadsheetExtraV2(MWAWEntry &entry, RagTimeSpreads
       }
       if (i==0) {
         f << "height=" << input->readULong(2) << ",";
-        // an increasing number, maybe related to the first cell position
-        f << "pos?=" << std::hex << input->readULong(4) << std::dec << ",";
+        long rowPos=sheet.m_cellsBegin+(long)input->readULong(4);
+        sheet.m_rowPositionsList.push_back(rowPos);
+        f << "pos?=" << std::hex << rowPos << std::dec << ",";
       }
       input->seek(pos+dataSize[i], librevenge::RVNG_SEEK_SET);
       ascFile.addPos(pos);
@@ -756,18 +864,18 @@ bool RagTimeSpreadsheet::send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MW
     return false;
   }
   sheet.m_isSent=true;
-  size_t numCell = sheet.m_cells.size();
   listener->openSheet(sheet.getColumnsWidth(), librevenge::RVNG_POINT, sheet.m_name);
 
   MWAWInputStreamPtr &input=m_parserState->m_input;
   int prevRow = -1;
-  for (size_t i = 0; i < numCell; i++) {
-    RagTimeSpreadsheetInternal::Cell cell= sheet.m_cells[i];
+  for (size_t i = 0; i < sheet.m_cellsList.size(); i++) {
+    RagTimeSpreadsheetInternal::Cell cell= sheet.m_cellsList[i];
     if (cell.position()[1] != prevRow) {
       while (cell.position()[1] > prevRow) {
         if (prevRow != -1)
           listener->closeSheetRow();
-        listener->openSheetRow(sheet.getRowHeight(++prevRow), librevenge::RVNG_POINT);
+        prevRow++;
+        listener->openSheetRow(sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
       }
     }
     listener->openSheetCell(cell, cell.m_content);
@@ -837,6 +945,318 @@ void RagTimeSpreadsheet::flushExtra()
     send(it->first, pos);
     listener->insertEOL();
   }
+}
+
+////////////////////////////////////////////////////////////
+// formula
+////////////////////////////////////////////////////////////
+bool RagTimeSpreadsheet::readCellInFormula(Vec2i const &cellPos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra)
+{
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  libmwaw::DebugStream f;
+
+  instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
+  f << "Cell=";
+  bool ok=true;
+  int which=0;
+  int page=-1, frame=-1;
+  while (!input->isEnd()) {
+    long pos=input->tell();
+    if (pos+2>endPos) break;
+    int what=(int) input->readULong(1);
+    if (canBeList && (what==0x83 || what==0x84) && which==0) {
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+      which=1;
+      what&=0xF;
+      instr.m_position[1]=instr.m_position[0];
+      instr.m_positionRelative[1]=instr.m_positionRelative[0];
+    }
+    if (what < 3 || what > 6) {
+      ok=false;
+      f << "##marker=" << what << ",";
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find unknown marker %d\n", what));
+      break;
+    }
+    int val = (int) input->readULong(1);
+    int flag=0;
+    if (val==0x80 || val==0xc0 || val==0xFF) {
+      flag=val;
+      val = (int) input->readULong(1);
+    }
+    if (input->tell()>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: the %d marker data seems odd\n", what));
+      f << "###market[data]=" << what << ",";
+      ok=false;
+      break;
+    }
+    bool absolute=false;
+    if ((flag==0&&!(val&0xC0)) || (flag==0x80 && (val&0xC0)))
+      absolute=true;
+    else if (flag==0&&(val&0xe0)==0x60) {
+      if (what>=5) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find relative position for sheet\n"));
+        f << "###";
+      }
+      else
+        val += 1-0x80+cellPos[4-what];
+    }
+    else if (flag==0&&(val&0xe0)==0x40) {
+      if (what>=5) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find relative position for sheet\n"));
+        f << "###";
+      }
+      else
+        val += 1-0x40+cellPos[4-what];
+    }
+    else if (flag==0xc0) {
+      if (what>=5) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find relative position for sheet\n"));
+        f << "###";
+      }
+      else
+        val += 1+cellPos[4-what];
+    }
+    else if (flag==0xff) {
+      if (what>=5) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find relative position for sheet\n"));
+        f << "###";
+      }
+      else
+        val += -0xff+cellPos[4-what];
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: can not read a cell position position for sheet\n"));
+      f << "###v" << what << "=" << std::hex << val << "[" << flag << "]" << std::dec;
+      ok=false;
+      break;
+    }
+    if (what==3||what==4) {
+      instr.m_position[which][4-what]=(val-1);
+      instr.m_positionRelative[which][4-what]=!absolute;
+    }
+    else if (what==5 || what==6) {
+      if (what==5) frame=val;
+      else if (what==6) page=val;
+      std::stringstream s;
+      s << "Sheet";
+      if (page>=0) s << "P" << page;
+      if (frame>=0) s << "F" << frame;
+      instr.m_sheet=s.str();
+    }
+    else {
+      f << "##marker=" << what << ",";
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find unexpected marker %d\n", what));
+      break;
+    }
+  }
+  if (ok && input->tell()!=endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: find extra data at the end of a cell\n"));
+    f << "###cell[extra],";
+    ok=false;
+  }
+  if (ok && (instr.m_position[0][0]<0||instr.m_position[0][0]>255 ||
+             instr.m_position[0][1]<0||instr.m_position[0][1]>255)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: something go wrong\n"));
+    f << "###cell[position],";
+    ok=false;
+  }
+  if (ok && instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList &&
+      (instr.m_position[1][0]<0||instr.m_position[1][0]>255 ||
+       instr.m_position[1][1]<0||instr.m_position[1][1]>255)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormula: something go wrong\n"));
+    f << "###cell[position2],";
+    ok=false;
+  }
+  extra=f.str();
+  return ok;
+}
+
+bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
+{
+  formula.resize(0);
+
+  MWAWInputStreamPtr input=m_parserState->m_input;
+  long pos=input->tell();
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  long formulaEndPos=pos+1+(long) input->readULong(1);
+  if (formulaEndPos>endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: the formula size seems bad\n"));
+    return false;
+  }
+  ascFile.addDelimiter(pos,'|');
+  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
+  bool ok=true;
+  while (!input->isEnd()) {
+    pos=input->tell();
+    if (pos >= formulaEndPos)
+      break;
+    int val, type=(int) input->readULong(1);
+    MWAWCellContent::FormulaInstruction instr;
+    switch (type) {
+    case 5:
+      if (pos+1+2 > formulaEndPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(2);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+      instr.m_longValue=val;
+      break;
+    case 6: {
+      if (pos+1+10 > formulaEndPos) {
+        ok = false;
+        break;
+      }
+      double value;
+      bool isNan;
+      input->readDouble10(value, isNan);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=value;
+      break;
+    }
+    case 8: {
+      if (pos+1+4 > formulaEndPos) {
+        ok = false;
+        break;
+      }
+      int Y=(int) input->readULong(2);
+      int M=(int) input->readULong(1);
+      int D=(int) input->readULong(1);
+      double value;
+      if (!MWAWCellContent::date2Double(Y,M,D,value)) {
+        f << "#date,";
+        break;
+      }
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Double;
+      instr.m_doubleValue=value;
+      break;
+    }
+    case 9: {
+      int sSz=(int) input->readULong(1);
+      if (pos+1+2+sSz > formulaEndPos) {
+        ok = false;
+        break;
+      }
+      val=(char) input->readULong(1);
+      if (val!='"' && val!='\'') {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: the first string char seems odd\n"));
+        f << "##fChar=" << val << ",";
+      }
+      std::string text("");
+      for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Text;
+      instr.m_content=text;
+      break;
+    }
+    case 0xf: // if delimiter with unknown value
+      if (pos+1+1 > formulaEndPos) {
+        ok = false;
+        break;
+      }
+      val = (int) input->readLong(1);
+      f << "unkn[sep]=" << val << ",";
+      instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      instr.m_content=";";
+      break;
+    default: {
+      if ((type&0xF0)==0x80) {
+        long endCellPos=pos+1+(type-0x80);
+        if (endCellPos > formulaEndPos) {
+          ok = false;
+          break;
+        }
+        std::string error("");
+        ok=readCellInFormula(cellPos, false, instr, endCellPos, error);
+        if (!ok) f << "cell=[" << extra << "],";
+        break;
+      }
+      if ((type&0xF0)==0xc0 || (type&0xF0)==0xd0) {
+        long endCellPos=pos+1+(type-0xc0);
+        if (endCellPos > formulaEndPos) {
+          ok = false;
+          break;
+        }
+        std::string error("");
+        ok=readCellInFormula(cellPos, true, instr, endCellPos, error);
+        if (!ok) f << "cell=[" << error << "],";
+        break;
+      }
+      static char const* (s_functions[]) = {
+        // 0
+        "", "", "", "", "", "", "", "",
+        "", "", "", "", "(", ")", ";", "",
+        // 1
+        /* fixme: we need to reconstruct the formula for operator or, and, ... */
+        "", "", "^", "", "", "*", "/", "",
+        "", "", "", "", "", "+", "-", "Or(" ,
+        // 2
+        "", "", "", "", "=", "<", ">", "<=",
+        ">=", "<>", "", "", "", "", "", "",
+        // 3
+        "", "", "Abs(", "Sign(", "Rand()", "Sqrt(", "Sum(", "SumSq(",
+        "Max(", "Min(", "Average(", "StDev(", "Pi()", "Sin(", "ASin(", "Cos(",
+        // 4
+        "ACos(", "Tan(", "ATan(", "Exp(", "Exp1(" /* fixme: exp(x+1)*/, "Ln(", "Ln1(" /* fixme: ln(n+1) */, "Log10(",
+        "Annuity(", "Rate(", "PV(", "If(", "True()", "False()", "Len(", "Mid(",
+        // 5
+        "Rept(", "Int(", "Round(", "Text("/* add a format*/, "Dollar(", "Value(", "Number(", "Row()",
+        "Column()", "Index(", "Find(", "", "Page()", "Frame()" /* frame?*/, "IsError(", "IsNA(",
+        // 6
+        "NA()", "Day(", "Month(", "Year(", "DayOfYear("/* checkme*/, "SetDay(", "SetMonth(", "SetYear(",
+        "AddMonth(", "AddYear(", "Today()", "Funct6b()"/*print ?*/, "Funct6c("/*print stop*/, "Choose("/*checkme or select */, "Type(", "Find(",
+        // 70
+        "SetFileName(", "", "", "", "", "", "", "",
+        "", "", "", "", "", "", "", "",
+      };
+      if (type>=0 && type < 0x80)
+        instr.m_content=s_functions[type];
+      size_t functionLength=instr.m_content.length();
+      if (functionLength==0) {
+        ok=false;
+        break;
+      }
+      if (instr.m_content[0] >= 'A' && instr.m_content[0] <= 'Z') {
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Function;
+        if (functionLength>2 && instr.m_content[functionLength-1]==')') {
+          instr.m_content.resize(functionLength-2);
+          formula.push_back(instr);
+          instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+          instr.m_content="(";
+          formula.push_back(instr);
+          instr.m_content=")";
+        }
+        else if (instr.m_content[functionLength-1]=='(') {
+          instr.m_content.resize(functionLength-1);
+          formula.push_back(instr);
+          instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+          instr.m_content="(";
+        }
+      }
+      else
+        instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
+      break;
+    }
+    }
+    if (!ok) {
+      ascFile.addDelimiter(pos,'#');
+      f << "###";
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: can not read a formula\n"));
+      break;
+    }
+    formula.push_back(instr);
+  }
+  extra=f.str();
+  input->seek(formulaEndPos, librevenge::RVNG_SEEK_SET);
+  if (ok) return true;
+
+  f.str("");
+  for (size_t i=0; i<formula.size(); ++i)
+    f << formula[i];
+  f << "," << extra;
+  extra=f.str();
+  formula.resize(0);
+  return true;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

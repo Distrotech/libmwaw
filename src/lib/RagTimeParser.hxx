@@ -34,6 +34,7 @@
 #ifndef RAG_TIME_PARSER
 #  define RAG_TIME_PARSER
 
+#include <set>
 #include <vector>
 
 #include "MWAWDebug.hxx"
@@ -86,6 +87,8 @@ protected:
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
+  //! try to send the different zones
+  bool sendZones();
 
   //! adds a new page
   void newPage(int number);
@@ -97,9 +100,18 @@ protected:
   bool findDataZones();
   //! try to read a data zone header
   bool readDataZoneHeader(int id, long endPos);
+  //! try to sort the zone on each page
+  bool findPagesZones();
 
   //! try to create the resource zones list
   bool findRsrcZones();
+
+  //! try to send the different zones of a page
+  bool sendPageZone(int page);
+  //! try to send a zone
+  bool send(int zId);
+  //! try to send the text zone (interface of RagTimeText)
+  bool sendText(int zId);
 
   //! sends the picture
   bool sendPicture(int zId, MWAWPosition const &pos);

@@ -61,6 +61,37 @@
 namespace RagTimeParserInternal
 {
 ////////////////////////////////////////
+//! Internal: the pattern of a RagTimeManager
+struct Pattern : public MWAWGraphicStyle::Pattern {
+  //! constructor ( 4 int by patterns )
+  Pattern(uint16_t const *pat=0) : MWAWGraphicStyle::Pattern(), m_percent(0)
+  {
+    if (!pat) return;
+    m_colors[0]=MWAWColor::white();
+    m_colors[1]=MWAWColor::black();
+    m_dim=Vec2i(8,8);
+    m_data.resize(8);
+    for (size_t i=0; i < 4; ++i) {
+      uint16_t val=pat[i];
+      m_data[2*i]=(unsigned char)(val>>8);
+      m_data[2*i+1]=(unsigned char)(val&0xFF);
+    }
+    int numOnes=0;
+    for (size_t j=0; j < 8; ++j) {
+      uint8_t val=(uint8_t) m_data[j];
+      for (int b=0; b < 8; b++) {
+        if (val&1) ++numOnes;
+        val = uint8_t(val>>1);
+      }
+    }
+    m_percent=float(numOnes)/64.f;
+  }
+  //! the percentage
+  float m_percent;
+};
+
+
+////////////////////////////////////////
 //! Internal: a picture of a RagTimeParser
 struct Picture {
   //! constructor
@@ -83,12 +114,24 @@ struct Picture {
 //! Internal: a zone of a RagTimeParser
 struct Zone {
   //! the zone type
-  enum Type { Text, Picture, Line, Spreadsheet, Unknown };
+  enum Type { Text, Page, Picture, Line, Spreadsheet, Unknown };
   //! constructor
-  Zone(): m_type(Unknown), m_subType(0), m_dimension(),
+  Zone(): m_type(Unknown), m_subType(0), m_dimension(), m_page(0),
     m_style(MWAWGraphicStyle::emptyStyle()), m_fontColor(MWAWColor::black()), m_arrowFlags(0), m_isSent(false), m_extra("")
   {
-    for (int i=0; i<3; ++i) m_linkZones[i]=0;
+    for (int i=0; i<4; ++i) m_linkZones[i]=0;
+  }
+  //! returns the bounding box
+  Box2f getBoundingBox() const
+  {
+    Vec2f minPt=m_dimension[0], maxPt=m_dimension[1];
+    for (int i=0; i<2; ++i) {
+      if (m_dimension[0][i]<=m_dimension[1][i])
+        continue;
+      minPt[i]=m_dimension[1][i];
+      maxPt[i]=m_dimension[0][i];
+    }
+    return Box2f(minPt,maxPt);
   }
   //! returns a zone name
   std::string getTypeString() const
@@ -96,15 +139,16 @@ struct Zone {
     switch (m_type) {
     case Spreadsheet:
       return "SheetZone";
+    case Page:
+      return "Page";
     case Picture:
       return "PictZone";
     case Text:
       return "TextZone";
     case Line:
-      return "Zone4";
+      return "Line";
     case Unknown:
     default:
-      if (m_subType==0) return "PageZone";
       break;
     }
     std::stringstream s;
@@ -121,15 +165,17 @@ struct Zone {
   //! the zone sub type
   int m_subType;
   //! the dimension
-  Box2i m_dimension;
+  Box2f m_dimension;
+  //! the page
+  int m_page;
   //! the style
   MWAWGraphicStyle m_style;
   //! the font color (for text)
   MWAWColor m_fontColor;
   //! arrow flag 1:begin, 2:end
   int m_arrowFlags;
-  //! the link zones ( parent, prev, next)
-  int m_linkZones[3];
+  //! the link zones ( parent, prev, next, child)
+  int m_linkZones[4];
   //! a flag to know if the picture is sent
   mutable bool m_isSent;
   //! extra data
@@ -141,6 +187,9 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
   switch (z.m_type) {
   case Zone::Line:
     o << "line,";
+    break;
+  case Zone::Page:
+    o << "page,";
     break;
   case Zone::Picture:
     o << "pict,";
@@ -157,6 +206,7 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
     break;
   }
   o << "dim=" << z.m_dimension << ",";
+  if (z.m_page>0) o << "page=" << z.m_page << ",";
   o << "style=[" << z.m_style << "],";
   if (!z.m_fontColor.isBlack())
     o << "color[font]=" << z.m_fontColor << ",";
@@ -165,8 +215,8 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
   if (z.m_arrowFlags&2)
     o << "arrows[end],";
   o << "ids=[";
-  for (int i=0; i<3; ++i) {
-    static char const *(wh[])= {"parent", "prev", "next"};
+  for (int i=0; i<4; ++i) {
+    static char const *(wh[])= {"parent", "prev", "next", "child"};
     if (z.m_linkZones[i])
       o <<  wh[i] << "=Z" << z.m_linkZones[i] << ",";
   }
@@ -179,10 +229,12 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
 //! Internal: the state of a RagTimeParser
 struct State {
   //! constructor
-  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_colorList(), m_idZoneMap(),
+  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_colorList(), m_patternList(), m_idZoneMap(), m_pageZonesIdMap(),
     m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
+  //! init the pattern to default
+  void initDefaultPatterns(int vers);
 
   //! the number of data zone
   int m_numDataZone;
@@ -192,8 +244,12 @@ struct State {
   std::multimap<std::string, MWAWEntry> m_RSRCZoneMap;
   //! the color map (v2)
   std::vector<MWAWColor> m_colorList;
+  //! a list patternId -> pattern
+  std::vector<Pattern> m_patternList;
   //! a map: zoneId->zone (datafork)
   std::map<int, Zone> m_idZoneMap;
+  //! a map: page->main zone id
+  std::map<int, std::vector<int> > m_pageZonesIdMap;
   //! a map: zoneId->picture (datafork)
   std::map<int, Picture> m_idPictureMap;
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
@@ -201,6 +257,28 @@ struct State {
   int m_headerHeight /** the header height if known */,
       m_footerHeight /** the footer height if known */;
 };
+
+void State::initDefaultPatterns(int vers)
+{
+  if (!m_patternList.empty()) return;
+  if (vers <= 2) {
+    static uint16_t const(s_pattern[4*40]) = {
+      0x0, 0x0, 0x0, 0x0, 0x8000, 0x800, 0x8000, 0x800, 0x8800, 0x2200, 0x8800, 0x2200, 0x8822, 0x8822, 0x8822, 0x8822,
+      0xaa55, 0xaa55, 0xaa55, 0xaa55, 0xdd77, 0xdd77, 0xdd77, 0xdd77, 0xddff, 0x77ff, 0xddff, 0x77ff, 0xffff, 0xffff, 0xffff, 0xffff,
+      0x8888, 0x8888, 0x8888, 0x8888, 0xff00, 0x0, 0xff00, 0x0, 0xaaaa, 0xaaaa, 0xaaaa, 0xaaaa, 0xff00, 0xff00, 0xff00, 0xff00,
+      0xeedd, 0xbb77, 0xeedd, 0xbb77, 0x1122, 0x4488, 0x1122, 0x4488, 0x102, 0x408, 0x1020, 0x4080, 0x102, 0x0, 0x0, 0x4080,
+      0x77bb, 0xddee, 0x77bb, 0xddee, 0x8844, 0x2211, 0x8844, 0x2211, 0x8040, 0x2010, 0x804, 0x201, 0x8040, 0x0, 0x0, 0x201,
+      0x55ff, 0x55ff, 0x55ff, 0x55ff, 0xaa00, 0xaa00, 0xaa00, 0xaa00, 0x8010, 0x220, 0x108, 0x4004, 0xb130, 0x31b, 0xd8c0, 0xc8d,
+      0xff88, 0x8888, 0xff88, 0x8888, 0xaa00, 0x8000, 0x8800, 0x8000, 0xff80, 0x8080, 0x8080, 0x8080, 0xf0f0, 0xf0f0, 0xf0f, 0xf0f,
+      0xc300, 0x0, 0x3c00, 0x0, 0x808, 0x8080, 0x8080, 0x808, 0x8040, 0x2000, 0x204, 0x800, 0x2, 0x588, 0x5020, 0x0,
+      0x8000, 0x0, 0x0, 0x0, 0x40a0, 0x0, 0x40a, 0x0, 0x8142, 0x2418, 0x1824, 0x4281, 0x2050, 0x8888, 0x8888, 0x502,
+      0xff80, 0x8080, 0xff08, 0x808, 0x44, 0x2810, 0x2844, 0x0, 0x103c, 0x5038, 0x1478, 0x1000, 0x8, 0x142a, 0x552a, 0x1408
+    };
+    m_patternList.resize(40);
+    for (size_t i = 0; i < 40; i++)
+      m_patternList[i]=Pattern(&s_pattern[i*4]);
+  }
+}
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a RagTimeParser
@@ -239,7 +317,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  // TODO
+  static_cast<RagTimeParser *>(m_parser)->sendText(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -286,6 +364,11 @@ int RagTimeParser::getFontId(int localId) const
   return m_textParser->getFontId(localId);
 }
 
+bool RagTimeParser::sendText(int zId)
+{
+  return m_textParser->send(zId);
+}
+
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
@@ -319,7 +402,7 @@ void RagTimeParser::parse(librevenge::RVNGTextInterface *docInterface)
     ok=createZones();
     if (ok) {
       createDocument(docInterface);
-      // TODO
+      sendZones();
 #ifdef DEBUG
       m_textParser->flushExtra();
       m_spreadsheetParser->flushExtra();
@@ -350,11 +433,19 @@ void RagTimeParser::createDocument(librevenge::RVNGTextInterface *documentInterf
   }
 
   // update the page
+  int numPages=1;
+  std::map<int, RagTimeParserInternal::Zone>::const_iterator it;
+  for (it=m_state->m_idZoneMap.begin(); it!=m_state->m_idZoneMap.end(); ++it) {
+    RagTimeParserInternal::Zone const &z=it->second;
+    if (z.m_type!=RagTimeParserInternal::Zone::Page || numPages>z.m_page)
+      continue;
+    numPages=z.m_page;
+  }
   m_state->m_actPage = 0;
+  m_state->m_numPages=numPages;
 
   // create the page list
   MWAWPageSpan ps(getPageSpan());
-  m_state->m_numPages=1;
   std::vector<MWAWPageSpan> pageList;
   ps.setPageSpan(m_state->m_numPages);
   pageList.push_back(ps);
@@ -370,7 +461,6 @@ void RagTimeParser::createDocument(librevenge::RVNGTextInterface *documentInterf
 // Intermediate level
 //
 ////////////////////////////////////////////////////////////
-
 
 bool RagTimeParser::createZones()
 {
@@ -411,7 +501,7 @@ bool RagTimeParser::createZones()
     MWAWColor fontColor;
     if (m_state->m_idZoneMap.find(entry.id())!=m_state->m_idZoneMap.end()) {
       RagTimeParserInternal::Zone const &zone=m_state->m_idZoneMap.find(entry.id())->second;
-      width=zone.m_dimension.size()[0];
+      width=int(zone.m_dimension.size()[0]);
       fontColor=zone.m_fontColor;
     }
     else {
@@ -516,6 +606,8 @@ bool RagTimeParser::createZones()
     ascii().addNote(f.str().c_str());
   }
 
+  // time to sort the zones by page
+  findPagesZones();
   return (vers<2);
 }
 
@@ -529,6 +621,8 @@ bool RagTimeParser::findDataZones()
   int const vers=version();
   int const headerSize=vers>=2 ? 156 : 196;
   int const zoneLength=vers>=2 ? 54 : 40;
+  m_state->initDefaultPatterns(vers);
+
   libmwaw::DebugStream f;
   f << "Entries(Zones)[header]:";
   long pos = input->tell();
@@ -568,6 +662,46 @@ bool RagTimeParser::findDataZones()
   return true;
 }
 
+bool RagTimeParser::findPagesZones()
+{
+  std::map<int,RagTimeParserInternal::Zone>::iterator it;
+  for (it=m_state->m_idZoneMap.begin(); it!=m_state->m_idZoneMap.end(); ++it) {
+    RagTimeParserInternal::Zone const &main=it->second;
+    if (main.m_type!=RagTimeParserInternal::Zone::Page)
+      continue;
+    int zId=main.m_linkZones[3];
+    int page=main.m_page;
+    std::set<int> seens;
+    std::vector<int> lists;
+    while (zId) {
+      if (seens.find(zId)!=seens.end()) {
+        MWAW_DEBUG_MSG(("RagTimeParser::findPagesZones: already find zone %d\n", zId));
+        break;
+      }
+      seens.insert(zId);
+      if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
+        MWAW_DEBUG_MSG(("RagTimeParser::findPagesZones: %d does not correspond to a zone\n", zId));
+        break;
+      }
+      RagTimeParserInternal::Zone &zone=m_state->m_idZoneMap.find(zId)->second;
+      if (zone.m_type==RagTimeParserInternal::Zone::Page) {
+        MWAW_DEBUG_MSG(("RagTimeParser::findPagesZones: oops find a page zone %d\n", zId));
+        break;
+      }
+      zone.m_page=page;
+      lists.push_back(zId);
+      zId=zone.m_linkZones[2];
+    }
+    if (lists.empty()) continue;
+    if (m_state->m_pageZonesIdMap.find(page)!=m_state->m_pageZonesIdMap.end()) {
+      MWAW_DEBUG_MSG(("RagTimeParser::findPagesZones: oops already find main zone for %d\n", page));
+    }
+    else
+      m_state->m_pageZonesIdMap[page]=lists;
+  }
+  return true;
+}
+
 bool RagTimeParser::readDataZoneHeader(int id, long endPos)
 {
   MWAWInputStreamPtr input = getInput();
@@ -584,7 +718,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   bool hasPointer=true;
   switch (zone.m_subType) {
   case 0: // checkme
-    f << "page,";
+    zone.m_type=RagTimeParserInternal::Zone::Page;
     break;
   case 2:
     zone.m_type=RagTimeParserInternal::Zone::Text;
@@ -651,7 +785,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   }
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  zone.m_dimension=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  zone.m_dimension=Box2i(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
   int numZones=m_state->m_numDataZone;
   val=(int) input->readLong(2); // 0, find also 6 for a line ?
   if (val) f << "f0=" << val << ",";
@@ -664,18 +798,25 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     }
     zone.m_linkZones[i==0 ? 2 : 1]=val;
   }
-  val=(int) input->readLong(2); //f1=(-20)-14|8001
-  if (val) f << "f1=" << val << ",";
+  if (zone.m_type==RagTimeParserInternal::Zone::Page)
+    // todo: data probably differs from here
+    zone.m_linkZones[3]=(int) input->readLong(2);
+  else {
+    val=(int) input->readLong(2); //f1=(-20)-14|8001
+    if (val) f << "f1=" << val << ",";
+  }
   for (int i=0; i<2; ++i) { // fl5=0|1|2|3|10, fl6=0|1
     val=(int) input->readULong(1);
     if (val) f << "fl" << i+5 << "=" << std::hex << val << std::dec << ",";
   }
-  val=(int) input->readLong(2);
-  if (val) f << "f2=" << val << ",";
-  if (zone.m_subType==0) {
+  if (zone.m_type==RagTimeParserInternal::Zone::Page) {
+    zone.m_page=(int) input->readLong(2);
+    f << "pg=" << zone.m_page << ",";
     // todo: data probably differs before
   }
   else {
+    val=(int) input->readLong(2);
+    if (val) f << "f2=" << val << ",";
     val=(int) input->readLong(2);
     if (val < 0 || val > numZones) {
       MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected parent zone\n"));
@@ -685,26 +826,60 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       zone.m_linkZones[0]=val;
     val=(int) input->readULong(1);
     if (val) f << "fl7=" << std::hex << val << std::dec << ",";
-    val=(int) input->readLong(1);
-    if (val!=7) f << "pattern=" << val << ",";
+    int pattern=(int) input->readLong(1);
+    if (pattern!=7) f << "pattern=" << pattern << ",";
     int numColors=(int) m_state->m_colorList.size();
+    int percentValues[2]= {100,0};
+    MWAWColor colors[2]= {MWAWColor::black(), MWAWColor::white()};
+    bool hasSurfaceColor=true;
     for (int i=0; i<2; ++i) {
       static char const *(wh[])= {"line", "surf"};
-      val=(int) input->readLong(1);
-      if (val!=100*(1-i)) f << "gray[" << wh[i] << "]=" << val << "%,";
-      val=(int) input->readULong(1);
-      if (val==1-i) continue;
-      if (i==1 && val==255) // none ?
+      percentValues[i]=(int) input->readLong(1);
+      if (percentValues[i]!=100*(1-i)) f << "gray[" << wh[i] << "]=" << percentValues[i] << "%,";
+      int col=(int) input->readULong(1);
+      if (col==1-i) continue;
+      if (i==1 && col==255) { // none ?
+        hasSurfaceColor=false;
         continue;
-      if (val>=numColors) {
+      }
+      if (col>=numColors) {
         if (i==0 || zone.m_type!=RagTimeParserInternal::Zone::Line) {
           f << "##";
           MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected color number\n"));
         }
-        f << "color[" << wh[i] << "]=" << val << ",";
+        f << "color[" << wh[i] << "]=" << col << ",";
         continue;
       }
-      f << "color[" << wh[i] << "]=" << m_state->m_colorList[size_t(val)] << ",";
+      colors[i]=m_state->m_colorList[size_t(col)];
+      f << "color[" << wh[i] << "]=" << colors[i] << ",";
+    }
+    for (int i=0; i<2; ++i)
+      colors[i]=MWAWColor::barycenter(float(percentValues[i])/100.f,colors[i],
+                                      1.f-float(percentValues[i])/100.f, MWAWColor::white());
+    if (pattern >=0 && pattern<int(m_state->m_patternList.size())) {
+      RagTimeParserInternal::Pattern const &pat=m_state->m_patternList[size_t(pattern)];
+      if (zone.m_type==RagTimeParserInternal::Zone::Line)
+        style.m_lineColor=MWAWColor::barycenter(1.f-pat.m_percent/100.f,colors[0],
+                                                pat.m_percent/100.f, MWAWColor::white());
+      else {
+        style.m_lineColor=colors[0];
+        if (hasSurfaceColor) {
+          style.m_pattern=pat;
+          style.m_pattern.m_colors[0]=colors[1];
+          style.m_pattern.m_colors[1]=colors[0];
+          MWAWColor col;
+          if (style.m_pattern.getUniqueColor(col))
+            style.setBackgroundColor(col);
+          else if (style.m_pattern.getAverageColor(col))
+            style.setBackgroundColor(col);
+        }
+      }
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: can not find pattern %d\n", pattern));
+      style.m_lineColor=colors[0];
+      if (hasSurfaceColor)
+        style.setBackgroundColor(colors[1]);
     }
     val=(int) input->readULong(1);
     if (zone.m_type==RagTimeParserInternal::Zone::Line) {
@@ -917,7 +1092,7 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     int dim2[2];
-    for (int j=0; j<2; ++j) dim2[i]=(int) input->readULong(2);
+    for (int j=0; j<2; ++j) dim2[j]=(int) input->readULong(2);
     if (dim2[0]!=dim[2]-dim[0] || dim2[1]!=dim[3]-dim[1])
       f << "dim" << i+1 << "=" << dim2[1] << "x" << dim2[0] << ",";
   }
@@ -2192,10 +2367,11 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     return false;
   }
   if (m_state->m_idPictureMap.find(zId)==m_state->m_idPictureMap.end()) {
-    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture: %d\n", zId));
     return false;
   }
   RagTimeParserInternal::Picture const &pict=m_state->m_idPictureMap.find(zId)->second;
+  pict.m_isSent=true;
   if (!pict.m_pos.valid()) return false;
 
   MWAWInputStreamPtr input = getInput();
@@ -2317,13 +2493,70 @@ bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
     MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: find unexpected type for zone %d\n", zId));
     return false;
   }
-  MWAWGraphicShape shape= MWAWGraphicShape::line(Vec2f(zone.m_dimension[0][0],zone.m_dimension[0][1]),
-                          Vec2f(zone.m_dimension[1][0],zone.m_dimension[1][1]));
+  MWAWGraphicShape shape= MWAWGraphicShape::line(Vec2f(zone.m_dimension[0][0],zone.m_dimension[0][1])-position.origin(),
+                          Vec2f(zone.m_dimension[1][0],zone.m_dimension[1][1])-position.origin());
   MWAWGraphicStyle style(zone.m_style);
   if (zone.m_arrowFlags&1) style.m_arrows[0]=true;
   if (zone.m_arrowFlags&2) style.m_arrows[1]=true;
   listener->insertPicture(position, shape, style);
   return true;
+}
+
+bool RagTimeParser::sendPageZone(int page)
+{
+  if (m_state->m_pageZonesIdMap.find(page+1)==m_state->m_pageZonesIdMap.end())
+    return true;
+  std::vector<int> const &list=m_state->m_pageZonesIdMap.find(page+1)->second;
+  for (size_t i=0; i<list.size(); ++i)
+    send(list[i]);
+  return true;
+}
+
+bool RagTimeParser::sendZones()
+{
+  for (int pg=0; pg<m_state->m_numPages; ++pg)
+    sendPageZone(pg);
+  return true;
+}
+
+bool RagTimeParser::send(int zId)
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeParser::send: can not find the listener\n"));
+    return false;
+  }
+  if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
+    MWAW_DEBUG_MSG(("RagTimeParser::send: can not find the zone %d\n", zId));
+    return false;
+  }
+  RagTimeParserInternal::Zone const &zone=m_state->m_idZoneMap.find(zId)->second;
+  Box2i box=zone.getBoundingBox();
+  MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
+  pos.m_anchorTo=MWAWPosition::Page;
+  if (zone.m_page>0)
+    pos.setPage(zone.m_page);
+  pos.m_wrapping=MWAWPosition::WRunThrough;
+  switch (zone.m_type) {
+  case RagTimeParserInternal::Zone::Line:
+    pos.m_wrapping=MWAWPosition::WNone;
+    return sendBasicPicture(zId, pos);
+  case RagTimeParserInternal::Zone::Picture:
+    return sendPicture(zId, pos);
+  case RagTimeParserInternal::Zone::Spreadsheet:
+    return m_spreadsheetParser->send(zId, pos);
+  case RagTimeParserInternal::Zone::Text: {
+    pos.m_wrapping=MWAWPosition::WBackground;
+    MWAWSubDocumentPtr doc(new RagTimeParserInternal::SubDocument(*this, getInput(), zId));
+    listener->insertTextBox(pos, doc, zone.m_style);
+    return true;
+  }
+  case RagTimeParserInternal::Zone::Unknown:
+  case RagTimeParserInternal::Zone::Page:
+  default:
+    break;
+  }
+  return false;
 }
 
 void RagTimeParser::flushExtra()

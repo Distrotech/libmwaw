@@ -44,10 +44,9 @@
 
 #include "libmwaw_internal.hxx"
 
-#include "MWAWEntry.hxx"
-#include "MWAWSubDocument.hxx"
-
+#include "MWAWCell.hxx"
 #include "MWAWDebug.hxx"
+#include "MWAWEntry.hxx"
 #include "MWAWInputStream.hxx"
 
 #include "MWAWParser.hxx"
@@ -100,6 +99,10 @@ protected:
 
   //! try to read a cell :v2
   bool readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
+  //! try to read a formula
+  bool readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
+  //! try to read a cell in a formula
+  bool readCellInFormula(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
   //! send a spreadsheet to a listener
   bool send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MWAWSpreadsheetListenerPtr listener);
 

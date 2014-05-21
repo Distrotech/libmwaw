@@ -612,6 +612,7 @@ void MWAWSpreadsheetListener::_openPageSpan(bool sendHeaderFooters)
     if (++it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::_openPageSpan: can not find current page, use the previous one\n"));
       --it;
+      break;
     }
   }
   MWAWPageSpan &currentPage = *it;

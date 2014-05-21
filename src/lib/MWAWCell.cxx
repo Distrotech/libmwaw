@@ -559,6 +559,36 @@ bool MWAWCellContent::double2Date(double val, int &Y, int &M, int &D)
   return true;
 }
 
+bool MWAWCellContent::date2Double(int Y, int M, int D, double &val)
+{
+  --M;
+  --D;
+  if (M>11) {
+    Y += M/12;
+    M %= 12;
+  }
+  else if (M<0) {
+    int yDiff = (-M + 11)/12;
+    Y -= yDiff;
+    M+=12*yDiff;
+  }
+  // sanity check
+  if (M<0||M>11) {
+    MWAW_DEBUG_MSG(("MWAWCellContent::date2Double: something is bad\n"));
+    return false;
+  }
+  bool isLeap=(Y%4)==0 && ((Y%400)==0 || (Y%100)!=0);
+  int32_t const daysFrom0=365*Y+(Y/400)-(Y/100)+(Y/4);
+  int32_t const daysFrom1900=365*1900+(1900/400)-(1900/100)+(1900/4);
+  static const int32_t days[2][12] = {
+    { 0,31,59,90,120,151,181,212,243,273,304,334},
+    { 0,31,60,91,121,152,182,213,244,274,305,335}
+  };
+  int32_t daysFrom1Jan=days[isLeap ? 1 : 0][M] + D;
+  val=double(daysFrom0-daysFrom1900+daysFrom1Jan)*24.*3600.;
+  return true;
+}
+
 bool MWAWCellContent::double2Time(double val, int &H, int &M, int &S)
 {
   if (val < 0.0 || val > 1.0) return false;
@@ -720,6 +750,8 @@ librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyLis
     pList.insert("librevenge:row",m_position[0][1], librevenge::RVNG_GENERIC);
     pList.insert("librevenge:column-absolute",!m_positionRelative[0][0]);
     pList.insert("librevenge:row-absolute",!m_positionRelative[0][1]);
+    if (!m_sheet.empty())
+      pList.insert("librevenge:sheet-name",m_sheet.c_str());
     break;
   case F_CellList:
     pList.insert("librevenge:type","librevenge-cells");
@@ -731,6 +763,8 @@ librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyLis
     pList.insert("librevenge:end-row",m_position[1][1], librevenge::RVNG_GENERIC);
     pList.insert("librevenge:end-column-absolute",!m_positionRelative[1][0]);
     pList.insert("librevenge:end-row-absolute",!m_positionRelative[1][1]);
+    if (!m_sheet.empty())
+      pList.insert("librevenge:sheet-name",m_sheet.c_str());
     break;
   default:
     MWAW_DEBUG_MSG(("MWAWCellContent::FormulaInstruction::getPropertyList: unexpected type\n"));
@@ -745,6 +779,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellContent::FormulaInstruction co
   else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Long)
     o << inst.m_longValue;
   else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_Cell) {
+    if (!inst.m_sheet.empty()) o << inst.m_sheet;
     if (!inst.m_positionRelative[0][0]) o << "$";
     if (inst.m_position[0][0]<0) o << "C" << inst.m_position[0][0];
     else {
@@ -756,6 +791,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellContent::FormulaInstruction co
     else o << inst.m_position[0][1];
   }
   else if (inst.m_type==MWAWCellContent::FormulaInstruction::F_CellList) {
+    if (!inst.m_sheet.empty()) o << inst.m_sheet;
     for (int l=0; l<2; ++l) {
       if (!inst.m_positionRelative[l][0]) o << "$";
       if (inst.m_position[l][0]<0) o << "C" << inst.m_position[l][0];

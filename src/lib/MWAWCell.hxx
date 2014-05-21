@@ -360,7 +360,7 @@ public:
   struct FormulaInstruction {
     enum Type { F_Operator, F_Function, F_Cell, F_CellList, F_Long, F_Double, F_Text };
     //! constructor
-    FormulaInstruction() : m_type(F_Text), m_content(""), m_longValue(0), m_doubleValue(0)
+    FormulaInstruction() : m_type(F_Text), m_content(""), m_longValue(0), m_doubleValue(0), m_sheet("")
     {
       for (int i=0; i<2; ++i) {
         m_position[i]=Vec2i(0,0);
@@ -383,6 +383,8 @@ public:
     Vec2i m_position[2];
     //! relative cell position ( if type==F_Cell or F_CellList )
     Vec2b m_positionRelative[2];
+    //! the sheet name (if not empty)
+    std::string m_sheet;
   };
 
   /** the different types of cell's field */
@@ -424,6 +426,8 @@ public:
   static bool double2Time(double val, int &H, int &M, int &S);
   /** conversion of the value in string knowing the cell format */
   static bool double2String(double val, MWAWCell::Format const &format, std::string &str);
+  /** conversion beetween date and double days since 1900 date */
+  static bool date2Double(int Y, int M, int D, double &val);
   //! the content type ( by default unknown )
   Type m_contentType;
   //! the cell value

@@ -596,6 +596,7 @@ void MWAWTextListener::_openPageSpan(bool sendHeaderFooters)
     if (++it == m_ds->m_pageList.end()) {
       MWAW_DEBUG_MSG(("MWAWTextListener::_openPageSpan: can not find current page, use last page\n"));
       --it;
+      break;
     }
   }
   MWAWPageSpan &currentPage = *it;
