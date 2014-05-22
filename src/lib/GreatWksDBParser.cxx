@@ -995,18 +995,18 @@ bool GreatWksDBParser::readFreeList(GreatWksDBParserInternal::Block &block)
          normally the content of a free block seems to be 0x8000, dataSz
          excepted on time where it is 8, dataSz
        */
-      long values[2];
-      for (int j=0; j<2; ++j) values[j]=(long) input->readULong(4);
+      unsigned long values[2];
+      for (int j=0; j<2; ++j) values[j]=(unsigned long) input->readULong(4);
       if ((values[0]&0xFF000000)==0x40000000) {
-        long tmp=values[0];
+        unsigned long tmp=values[0];
         values[0]=values[1];
         values[1]=tmp;
       }
       if ((values[0]&0xFF000000)==0 && (values[1]&0xFF000000)==0x40000000 &&
-          input->checkPosition(values[0]+(values[1]&0xFFFFFF))) {
-        ascii().addPos(values[0]);
+          input->checkPosition(long(values[0]+(values[1]&0xFFFFFF)))) {
+        ascii().addPos(long(values[0]));
         ascii().addNote("Free");
-        ascii().addPos(values[0]+(values[1]&0xFFFFFF));
+        ascii().addPos(long(values[0]+(values[1]&0xFFFFFF)));
         ascii().addNote("_");
         f << std::hex << values[0] << ":" << (values[1]&0xFFFFFF) << std::dec << ",";
       }

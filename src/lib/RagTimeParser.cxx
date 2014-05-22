@@ -777,6 +777,14 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   for (int i=0; i<4; ++i) {
     // fl0=0|80|81|83|a0|b0|c0,fl1=0|2|80,fl2=1|3|5|9|b|19|1d, fl3=0|1|28|2a|38|...|f8
     val=(int) input->readULong(1);
+    if (i==1) {
+      if (val&4) f << "round,";
+      if (val&2) {
+        style.m_shadowOffset=Vec2f(5,5);
+        style.setShadowColor(MWAWColor(128,128,128));
+      }
+      val&=0xF9;
+    }
     if (i==2 && (val&2)) {
       f << "selected,";
       val &= 0xFD;
@@ -829,17 +837,23 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     int pattern=(int) input->readLong(1);
     if (pattern!=7) f << "pattern=" << pattern << ",";
     int numColors=(int) m_state->m_colorList.size();
-    int percentValues[2]= {100,0};
+    int percentValues[2]= {100,100};
     MWAWColor colors[2]= {MWAWColor::black(), MWAWColor::white()};
     bool hasSurfaceColor=true;
-    for (int i=0; i<2; ++i) {
+    bool const isLine=zone.m_type==RagTimeParserInternal::Zone::Line;
+    int const numColorsInFile=isLine ? 1 : 2;
+    for (int i=0; i<numColorsInFile; ++i) {
       static char const *(wh[])= {"line", "surf"};
       percentValues[i]=(int) input->readLong(1);
-      if (percentValues[i]!=100*(1-i)) f << "gray[" << wh[i] << "]=" << percentValues[i] << "%,";
+      // 255 means default, ...
+      if (percentValues[i]<=0 || percentValues[i]>=100) percentValues[i]=100;
+      else if (i) percentValues[i]=100-percentValues[i];
+      if (percentValues[i]!=100) f << "gray[" << wh[i] << "]=" << percentValues[i] << "%,";
       int col=(int) input->readULong(1);
       if (col==1-i) continue;
       if (i==1 && col==255) { // none ?
         hasSurfaceColor=false;
+        f << "noColors,";
         continue;
       }
       if (col>=numColors) {
@@ -853,24 +867,26 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       colors[i]=m_state->m_colorList[size_t(col)];
       f << "color[" << wh[i] << "]=" << colors[i] << ",";
     }
-    for (int i=0; i<2; ++i)
+    for (int i=0; i<numColorsInFile; ++i)
       colors[i]=MWAWColor::barycenter(float(percentValues[i])/100.f,colors[i],
-                                      1.f-float(percentValues[i])/100.f, MWAWColor::white());
+                                      1.f-float(percentValues[i])/100.f, i==0 ? MWAWColor::white() : MWAWColor::black());
     if (pattern >=0 && pattern<int(m_state->m_patternList.size())) {
-      RagTimeParserInternal::Pattern const &pat=m_state->m_patternList[size_t(pattern)];
-      if (zone.m_type==RagTimeParserInternal::Zone::Line)
+      RagTimeParserInternal::Pattern pat=m_state->m_patternList[size_t(pattern)];
+      if (isLine)
         style.m_lineColor=MWAWColor::barycenter(1.f-pat.m_percent/100.f,colors[0],
                                                 pat.m_percent/100.f, MWAWColor::white());
       else {
         style.m_lineColor=colors[0];
-        if (hasSurfaceColor) {
-          style.m_pattern=pat;
-          style.m_pattern.m_colors[0]=colors[1];
-          style.m_pattern.m_colors[1]=colors[0];
-          MWAWColor col;
-          if (style.m_pattern.getUniqueColor(col))
+        pat.m_colors[0]=colors[1];
+        pat.m_colors[1]=colors[0];
+        MWAWColor col;
+        if (style.m_pattern.getUniqueColor(col)) {
+          if (!col.isWhite())
             style.setBackgroundColor(col);
-          else if (style.m_pattern.getAverageColor(col))
+        }
+        else {
+          style.m_pattern=pat;
+          if (style.m_pattern.getAverageColor(col) && !col.isWhite())
             style.setBackgroundColor(col);
         }
       }
@@ -878,16 +894,40 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     else {
       MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: can not find pattern %d\n", pattern));
       style.m_lineColor=colors[0];
-      if (hasSurfaceColor)
+      if (!isLine && hasSurfaceColor)
         style.setBackgroundColor(colors[1]);
     }
-    val=(int) input->readULong(1);
-    if (zone.m_type==RagTimeParserInternal::Zone::Line) {
+    if (isLine) {
+      for (int i=0; i<2; ++i) {
+        val=(int) input->readULong(1);
+        if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
+      }
+      val=(int) input->readULong(1);
       zone.m_arrowFlags=((val>>3)&3);
-      val &=0xE7;
+      if (val&4) {
+        f << "mirrorX,";
+        float tmp=zone.m_dimension[1][1];
+        zone.m_dimension.setMax(Vec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
+        zone.m_dimension.setMin(Vec2f(zone.m_dimension[0][0], tmp));
+      }
+      val &=0xE3;
       if (val) f << "flA4=" << std::hex << val << std::dec << ",";
+      // not sure are to read the end but as I find 00c0000000: vertical and 0000004000: horizontal, let try
+      val=(int) input->readULong(1);
+      if (val) f << "g2=" << val << ",";
+      int unkn[2];
+      for (int i=0; i<2; ++i) unkn[i]=(int) input->readULong(2);
+      if (unkn[0]==0xc000 && unkn[1]==0) {
+        f << "vertical,";
+        zone.m_dimension.setMax(Vec2f(zone.m_dimension[0][0], zone.m_dimension[1][1]));
+      }
+      else if (unkn[0]==0 && unkn[1]==0x4000) {
+        f << "horizontal,";
+        zone.m_dimension.setMax(Vec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
+      }
     }
     else {
+      val=(int) input->readULong(1);
       if (val!=100) f << "gray[text]=" << val << "%,";
       val=(int) input->readULong(1);
       if (val>=numColors) {
@@ -2539,7 +2579,6 @@ bool RagTimeParser::send(int zId)
   pos.m_wrapping=MWAWPosition::WRunThrough;
   switch (zone.m_type) {
   case RagTimeParserInternal::Zone::Line:
-    pos.m_wrapping=MWAWPosition::WNone;
     return sendBasicPicture(zId, pos);
   case RagTimeParserInternal::Zone::Picture:
     return sendPicture(zId, pos);
@@ -2548,7 +2587,15 @@ bool RagTimeParser::send(int zId)
   case RagTimeParserInternal::Zone::Text: {
     pos.m_wrapping=MWAWPosition::WBackground;
     MWAWSubDocumentPtr doc(new RagTimeParserInternal::SubDocument(*this, getInput(), zId));
-    listener->insertTextBox(pos, doc, zone.m_style);
+    MWAWGraphicStyle style=zone.m_style;
+    if (style.hasLine()) {
+      MWAWBorder border;
+      border.m_width=style.m_lineWidth;
+      border.m_color=style.m_lineColor;
+      style.setBorders(0xf, border);
+    }
+    pos.setSize(Vec2f((float)box.size()[0],(float)-box.size()[1]));
+    listener->insertTextBox(pos, doc, style);
     return true;
   }
   case RagTimeParserInternal::Zone::Unknown:
