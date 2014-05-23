@@ -94,6 +94,11 @@ void MWAWGraphicEncoder::setDocumentMetaData(const librevenge::RVNGPropertyList 
   m_state->m_encoder.insertElement("SetDocumentMetaData", list);
 }
 
+void MWAWGraphicEncoder::defineEmbeddedFont(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DefineEmbeddedFont", list);
+}
+
 void MWAWGraphicEncoder::startPage(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("StartPage", list);
