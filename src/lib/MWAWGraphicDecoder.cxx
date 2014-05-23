@@ -91,6 +91,8 @@ void MWAWGraphicDecoder::insertElement(const char *psName)
         m_output->endEmbeddedGraphics();
       else if (strcmp(psName,"Layer")==0)
         m_output->endLayer();
+      else if (strcmp(psName,"MasterPage")==0)
+        m_output->endMasterPage();
       else if (strcmp(psName,"Page")==0)
         m_output->endPage();
       else if (strcmp(psName,"TableObject")==0)
@@ -230,6 +232,8 @@ void MWAWGraphicDecoder::insertElement(const char *psName, const librevenge::RVN
         m_output->startEmbeddedGraphics(propList);
       else if (strcmp(psName,"Layer")==0)
         m_output->startLayer(propList);
+      else if (strcmp(psName,"MasterPage")==0)
+        m_output->startMasterPage(propList);
       else if (strcmp(psName,"Page")==0)
         m_output->startPage(propList);
       else if (strcmp(psName,"TableObject")==0)

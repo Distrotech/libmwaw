@@ -109,6 +109,16 @@ void MWAWGraphicEncoder::endPage()
   m_state->m_encoder.insertElement("EndPage");
 }
 
+void MWAWGraphicEncoder::startMasterPage(const ::librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("StartMasterPage", list);
+}
+
+void MWAWGraphicEncoder::endMasterPage()
+{
+  m_state->m_encoder.insertElement("EndMasterPage");
+}
+
 void MWAWGraphicEncoder::setStyle(const ::librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("SetStyle", list);

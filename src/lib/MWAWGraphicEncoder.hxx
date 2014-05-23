@@ -70,6 +70,8 @@ public:
   void setDocumentMetaData(const librevenge::RVNGPropertyList &propList);
   void startPage(const ::librevenge::RVNGPropertyList &propList);
   void endPage();
+  void startMasterPage(const ::librevenge::RVNGPropertyList &propList);
+  void endMasterPage();
 
   void setStyle(const ::librevenge::RVNGPropertyList &propList);
   void startLayer(const ::librevenge::RVNGPropertyList &propList);
