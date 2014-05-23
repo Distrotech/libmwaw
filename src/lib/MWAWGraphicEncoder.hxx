@@ -65,6 +65,8 @@ public:
   void startDocument(const ::librevenge::RVNGPropertyList &propList);
   void endDocument();
 
+  void defineEmbeddedFont(const librevenge::RVNGPropertyList &propList);
+
   void setDocumentMetaData(const librevenge::RVNGPropertyList &propList);
   void startPage(const ::librevenge::RVNGPropertyList &propList);
   void endPage();

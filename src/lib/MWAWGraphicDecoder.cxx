@@ -124,6 +124,8 @@ void MWAWGraphicDecoder::insertElement(const char *psName, const librevenge::RVN
   case 'D':
     if (strcmp(psName,"DefineCharacterStyle")==0)
       m_output->defineCharacterStyle(propList);
+    if (strcmp(psName,"DefineEmbeddedFont")==0)
+      m_output->defineEmbeddedFont(propList);
     else if (strcmp(psName,"DefineParagraphStyle")==0)
       m_output->defineParagraphStyle(propList);
 

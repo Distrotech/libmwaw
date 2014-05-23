@@ -146,6 +146,8 @@ void MWAWSpreadsheetDecoder::insertElement(const char *psName, const librevenge:
       m_output->defineCharacterStyle(propList);
     else if (strcmp(psName,"DefineChartStyle")==0)
       m_output->defineChartStyle(propList);
+    else if (strcmp(psName,"DefineEmbeddedFont")==0)
+      m_output->defineEmbeddedFont(propList);
     else if (strcmp(psName,"DefineGraphicStyle")==0)
       m_output->defineGraphicStyle(propList);
     else if (strcmp(psName,"DefinePageStyle")==0)

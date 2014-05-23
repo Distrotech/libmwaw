@@ -102,6 +102,11 @@ void MWAWSpreadsheetEncoder::definePageStyle(const librevenge::RVNGPropertyList 
   m_state->m_encoder.insertElement("DefinePageStyle", list);
 }
 
+void MWAWSpreadsheetEncoder::defineEmbeddedFont(const librevenge::RVNGPropertyList &list)
+{
+  m_state->m_encoder.insertElement("DefineEmbeddedFont", list);
+}
+
 void MWAWSpreadsheetEncoder::openPageSpan(const librevenge::RVNGPropertyList &list)
 {
   m_state->m_encoder.insertElement("OpenPageSpan", list);
