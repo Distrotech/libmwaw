@@ -229,7 +229,7 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
 //! Internal: the state of a RagTimeParser
 struct State {
   //! constructor
-  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_colorList(), m_patternList(), m_idZoneMap(), m_pageZonesIdMap(),
+  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_idColorsMap(), m_patternList(), m_idZoneMap(), m_pageZonesIdMap(),
     m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
@@ -242,8 +242,8 @@ struct State {
   std::multimap<std::string, MWAWEntry> m_dataZoneMap;
   //! a map: type->entry (resource fork)
   std::multimap<std::string, MWAWEntry> m_RSRCZoneMap;
-  //! the color map (v2)
-  std::vector<MWAWColor> m_colorList;
+  //! the color map
+  std::map<int, std::vector<MWAWColor> > m_idColorsMap;
   //! a list patternId -> pattern
   std::vector<Pattern> m_patternList;
   //! a map: zoneId->zone (datafork)
@@ -364,6 +364,22 @@ int RagTimeParser::getFontId(int localId) const
   return m_textParser->getFontId(localId);
 }
 
+bool RagTimeParser::getColor(int colId, MWAWColor &color, int listId) const
+{
+  if (listId==-1) listId=version()>=2 ? 1 : 0;
+  if (m_state->m_idColorsMap.find(listId)==m_state->m_idColorsMap.end()) {
+    MWAW_DEBUG_MSG(("RagTimeParser::getColor: can not find the color list %d\n", listId));
+    return false;
+  }
+  std::vector<MWAWColor> const &colors=m_state->m_idColorsMap.find(listId)->second;
+  if (colId<0 || colId>=(int)colors.size()) {
+    MWAW_DEBUG_MSG(("RagTimeParser::getColor: can not find color %d\n", colId));
+    return false;
+  }
+  color=colors[size_t(colId)];
+  return true;
+}
+
 bool RagTimeParser::sendText(int zId)
 {
   return m_textParser->send(zId);
@@ -467,8 +483,6 @@ bool RagTimeParser::createZones()
   int const vers=version();
   if (!findDataZones())
     return false;
-  if (vers>=2)
-    findRsrcZones();
 
   libmwaw::DebugStream f;
   std::multimap<std::string,MWAWEntry>::iterator it;
@@ -481,18 +495,22 @@ bool RagTimeParser::createZones()
   it=m_state->m_RSRCZoneMap.lower_bound("FontName");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="FontName")
     m_textParser->readFontNames(it++->second);
+  // the character properties
+  it=m_state->m_RSRCZoneMap.lower_bound("CharProp");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="CharProp")
+    m_textParser->readCharProperties(it++->second);
   // the numbering format
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFormat");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFormat")
+  it=m_state->m_RSRCZoneMap.lower_bound("NumFormat");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="NumFormat")
     readRsrcFormat(it++->second);
   // the file link
   it=m_state->m_RSRCZoneMap.lower_bound("Link");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Link")
     readLinks(it++->second);
   // puce, ...
-  it=m_state->m_RSRCZoneMap.lower_bound("Item");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Item")
-    readItemFormats(it++->second);
+  it=m_state->m_RSRCZoneMap.lower_bound("Macro");
+  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Macro")
+    readMacroFormats(it++->second);
 
   it=m_state->m_dataZoneMap.lower_bound("TextZone");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="TextZone") {
@@ -547,16 +565,10 @@ bool RagTimeParser::createZones()
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcCalc");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcCalc")
     readRsrcCalc(it++->second);
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcCHTa");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcCHTa")
-    readRsrcCHTa(it++->second);
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcUnamed");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcUnamed")
     readRsrcUnamed(it++->second);
 
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHsl");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHsl")
-    readRsrcFHsl(it++->second);
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHwl");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHwl")
     readRsrcFHwl(it++->second);
@@ -608,7 +620,7 @@ bool RagTimeParser::createZones()
 
   // time to sort the zones by page
   findPagesZones();
-  return (vers<2);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -639,12 +651,18 @@ bool RagTimeParser::findDataZones()
     return false;
   }
   ascii().addDelimiter(input->tell(),'|');
+  // we must first read the color map as the frame header can use them
   if (vers==1) {
     input->seek(pos+186, librevenge::RVNG_SEEK_SET);
     MWAWEntry entry;
     entry.setBegin((long) input->readULong(2));
     entry.setType("ColorMap");
     readColorMapV2(entry);
+  }
+  else if (vers>=2) {
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    if (findRsrcZones())
+      readColorsMap();
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -836,7 +854,6 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     if (val) f << "fl7=" << std::hex << val << std::dec << ",";
     int pattern=(int) input->readLong(1);
     if (pattern!=7) f << "pattern=" << pattern << ",";
-    int numColors=(int) m_state->m_colorList.size();
     int percentValues[2]= {100,100};
     MWAWColor colors[2]= {MWAWColor::black(), MWAWColor::white()};
     bool hasSurfaceColor=true;
@@ -856,16 +873,10 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
         f << "noColors,";
         continue;
       }
-      if (col>=numColors) {
-        if (i==0 || zone.m_type!=RagTimeParserInternal::Zone::Line) {
-          f << "##";
-          MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected color number\n"));
-        }
-        f << "color[" << wh[i] << "]=" << col << ",";
-        continue;
-      }
-      colors[i]=m_state->m_colorList[size_t(col)];
-      f << "color[" << wh[i] << "]=" << colors[i] << ",";
+      if (col!=255 && !getColor(col, colors[i]))
+        f << "##color[" << wh[i] << "]=" << col << ",";
+      else
+        f << "color[" << wh[i] << "]=" << colors[i] << ",";
     }
     for (int i=0; i<numColorsInFile; ++i)
       colors[i]=MWAWColor::barycenter(float(percentValues[i])/100.f,colors[i],
@@ -930,12 +941,8 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       val=(int) input->readULong(1);
       if (val!=100) f << "gray[text]=" << val << "%,";
       val=(int) input->readULong(1);
-      if (val>=numColors) {
-        MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find unexpected text color\n"));
+      if (val!=255  && !getColor(val, zone.m_fontColor))
         f << "##color[text]=" << val << ",";
-      }
-      else
-        zone.m_fontColor=m_state->m_colorList[size_t(val)];
     }
   }
   zone.m_extra=f.str();
@@ -983,10 +990,13 @@ bool RagTimeParser::findRsrcZones()
       else what+=ch;
     }
     if (what=="rsrc____") what="rsrcUnamed";
+    else if (what=="rsrcCHTa") what="Color";
     else if (what=="rsrcFHfl") what="FontName";
+    else if (what=="rsrcFHsl") what="CharProp";
     else if (what=="rsrcFLin") what="Link";
-    else if (what=="rsrcFoTa") what="rsrcFormat";
-    else if (what=="rsrcRTml") what="Item";
+    else if (what=="rsrcFoTa") what="NumFormat";
+    else if (what=="rsrcRTml") what="Macro";
+    else if (what=="rsrcRtPr") what="Reserved";
     entry.setType(what);
     entry.setId((int) input->readLong(2));
     f << what << "[" << entry.id() << "],";
@@ -1206,6 +1216,21 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // color map
 ////////////////////////////////////////////////////////////
+bool RagTimeParser::readColorsMap()
+{
+  // we must read the colors map in order: first the 0th color map, ...
+  for (int i=0; i<3; ++i) {
+    std::multimap<std::string,MWAWEntry>::iterator it;
+    it=m_state->m_RSRCZoneMap.lower_bound("Color");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Color") {
+      MWAWEntry &entry=it++->second;
+      if ((i<2 && i==entry.id()) || (i>2 && !entry.isParsed()))
+        readColorTable(entry);
+    }
+  }
+  return true;
+}
+
 bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
@@ -1244,7 +1269,7 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
   }
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  m_state->m_colorList.resize(0);
+  std::vector<MWAWColor> colorList;
   for (int i=0; i<=N[0]; ++i) {
     //-2: white, -1: black, ...
     pos=input->tell();
@@ -1254,7 +1279,7 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
     for (int j=0; j < 3; j++)
       col[j] = (unsigned char)(input->readULong(2)>>8);
     MWAWColor color(col[0],col[1],col[2]);
-    m_state->m_colorList.push_back(color);
+    colorList.push_back(color);
     f << "col=" << color << ",";
     val=(int) input->readULong(2); // 1|2|3|4|22
     if (val) f << "used=" << val << ",";
@@ -1262,6 +1287,7 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
+  m_state->m_idColorsMap[0]=colorList;
   for (int i=0; i<=N[2]; ++i) {
     pos=input->tell();
     f.str("");
@@ -1667,18 +1693,25 @@ bool RagTimeParser::readRsrcFormat(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeParser::readRsrcCHTa(MWAWEntry &entry)
+bool RagTimeParser::readColorTable(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=entry.begin();
   if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCHTa: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: the position seems bad\n"));
     return false;
   }
   entry.setParsed(true);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  std::string what(entry.id()==0 ? "ColorMain" : "ColorList");
+  if (entry.id()<0 || entry.id()>1) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: find unknown color map\n"));
+    std::stringstream s;
+    s << "ColorTable" << entry.id();
+    what=s.str();
+  }
+  f << "Entries(" << what << "):";
   int dSz=(int) input->readULong(2);
   long endPos=pos+2+dSz;
   int headerSz=(int) input->readULong(2);
@@ -1686,11 +1719,16 @@ bool RagTimeParser::readRsrcCHTa(MWAWEntry &entry)
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   if (headerSz<0x20 || fSz<0x8 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcCHTa: the size seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
+  }
+  bool okSize=(entry.id()==0&&fSz==12)||(entry.id()==1&&fSz==8);
+  if (!okSize) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: unexpected size for table %d\n", entry.id()));
+    f << "###";
   }
   input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
@@ -1698,32 +1736,56 @@ bool RagTimeParser::readRsrcCHTa(MWAWEntry &entry)
 
   std::set<long> posSet;
   posSet.insert(endPos);
+  std::vector<MWAWColor> colorList;
   for (int i=0; i<=N; ++i) {
     pos=input->tell();
     f.str("");
-    f << entry.type() << "-" << i << ":";
+    f << what << "-" << i << ":";
     int val=(int) input->readLong(2); // 0 (except last)
     if (val) f << "f0=" << val << ",";
-    // CHTa[0](fSz=0xc) does contains name ptr, but not CHTa[1](fSz=0x8)
-    if (fSz>=0xc) {
+    if (i==N) {
+    }
+    else if (!okSize)
+      f << "###";
+    else if (entry.id()==0) {
       int fPos=(int) input->readULong(2);
       if (fPos) {
         f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
         posSet.insert(entry.begin()+2+fPos);
       }
-      // then 3*int for color
-      // 1 int for index or col number ?
+      unsigned char col[3];
+      for (int j=0; j < 3; j++)
+        col[j] = (unsigned char)(input->readULong(2)>>8);
+      MWAWColor color(col[0],col[1],col[2]);
+      colorList.push_back(color);
+      f << "col=" << color << ",";
+      f << "id?=" << input->readLong(2) << ",";
+    }
+    else if (entry.id()==1) {
+      val=(int) input->readLong(2);
+      if (val) f << "used?=" << val << ",";
+      int colId=(int) input->readULong(2)-1;
+      MWAWColor col=MWAWColor::white();
+      if (!getColor(colId,col,0)) {
+        MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: unexpected color id=%d\n", colId));
+        f << "###";
+      }
+      float percent=float(input->readLong(2))/1000.f;
+      col=MWAWColor::barycenter(percent,col,1.f-percent, MWAWColor::white());
+      colorList.push_back(col);
+      f << col << ",";
     }
     input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
+  m_state->m_idColorsMap[entry.id()]=colorList;
   for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
     pos=*(it++);
     if (pos>=endPos) break;
     long nextPos=it==posSet.end() ? endPos : *it;
     f.str("");
-    f << entry.type() << "[name]:";
+    f << what << "[name]:";
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     std::string name("");
     while (!input->isEnd() && input->tell()<nextPos) {
@@ -1738,12 +1800,12 @@ bool RagTimeParser::readRsrcCHTa(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeParser::readItemFormats(MWAWEntry &entry)
+bool RagTimeParser::readMacroFormats(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=entry.begin();
   if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readItemFormats: the position seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readMacroFormats: the position seems bad\n"));
     return false;
   }
   entry.setParsed(true);
@@ -1757,7 +1819,7 @@ bool RagTimeParser::readItemFormats(MWAWEntry &entry)
   int N=(int) input->readULong(2);
   f << "N=" << N << ",";
   if (headerSz<0x20 || fSz<0x10 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readItemFormats: the size seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::readMacroFormats: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1842,51 +1904,6 @@ bool RagTimeParser::readRsrcCalc(MWAWEntry &entry)
     f << "rsrcCalc-" << i << ":";
 
     input->seek(pos+26, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool RagTimeParser::readRsrcFHsl(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHsl: the position seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(rsrcFHsl)[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  int headerSz=(int) input->readULong(2);
-  int fSz=(int) input->readULong(2);
-  int N=(int) input->readULong(2);
-  f << "N=" << N << ",";
-  if (headerSz<0x2c || dSz!=headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFHsl: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i=0; i<=N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "rsrcFHsl-" << i << ":";
-    int val=(int) input->readLong(2); // 01?
-    if (val==-1) f << "unused,";
-    else if (val) f << "f0=" << val << ",";
-    // then 2 small number
-
-    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
@@ -2406,6 +2423,14 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the listener\n"));
     return false;
   }
+  if (version()>=2) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: sorry not implemented\n"));
+      first=false;
+    }
+    return false;
+  }
   if (m_state->m_idPictureMap.find(zId)==m_state->m_idPictureMap.end()) {
     MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture: %d\n", zId));
     return false;
@@ -2521,6 +2546,14 @@ bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
   MWAWListenerPtr listener=getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: can not find the listener\n"));
+    return false;
+  }
+  if (version()>=2) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: sorry not implemented\n"));
+      first=false;
+    }
     return false;
   }
   if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {

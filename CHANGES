@@ -1,8 +1,15 @@
 CHANGES:
 
+-------- version 0.3.2 (start)  -------------
+
+23/5/2014
+- create version 0.3.1 to be in correspondance with librevenge-0.0.0
+
 13/5/2014
 - add code to create embedded spreadsheet
 - AppleWorks/ClarisWorks: send page's embedded spreadsheets as spreadsheet (instead of table) 
+
+-------- version 0.3.1 (start)  -------------
 
 16/3/2014
 - GreatWorks: add a database parser which uses spreadsheet interface

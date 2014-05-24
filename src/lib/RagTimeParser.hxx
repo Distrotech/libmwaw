@@ -79,6 +79,13 @@ protected:
   void init();
 
   //
+  // interface
+  //
+
+  //! returns the ith color ( if possible)
+  bool getColor(int colId, MWAWColor &color, int listId=-1) const;
+
+  //
   // interface with text parser
   //
 
@@ -134,16 +141,18 @@ protected:
 
   //! try to read the color map:v2
   bool readColorMapV2(MWAWEntry &entry);
+  //! try to read the color map:v3
+  bool readColorsMap();
   //! read a printInfo block (a PREC rsrc)
   bool readPrintInfo(MWAWEntry &entry);
   /** try to read the File Link zone: FLink */
   bool readLinks(MWAWEntry &entry);
   //! try to read the format table zone: FoTa
   bool readRsrcFormat(MWAWEntry &entry);
-  //! try to read the item format zone: RTml zones
-  bool readItemFormats(MWAWEntry &entry);
-  //! try to read the char table zone (CHTa) ?
-  bool readRsrcCHTa(MWAWEntry &entry);
+  //! try to read the macro format zone: RTml zones
+  bool readMacroFormats(MWAWEntry &entry);
+  //! try to read the color table zone: CHTa zones
+  bool readColorTable(MWAWEntry &entry);
 
   // unknown data fork zone
 
@@ -172,8 +181,6 @@ protected:
   //! try to read the SpDI zone (zone with id=0)
   bool readRsrcSpDI(MWAWEntry &entry);
   // maybe FH=footer/header zone
-  //! try to read the FHsl zone (s=style?)
-  bool readRsrcFHsl(MWAWEntry &entry);
   //! try to read the FHwl zone ( one by file with id=0), maybe width length?
   bool readRsrcFHwl(MWAWEntry &entry);
 protected:

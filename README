@@ -97,16 +97,18 @@ creation), the libtool import libraries are not created. Make will try to instal
 them and will stop with error. The "-i" option makes it to report the error, but
 not to stop. Like that the installation will succeed.
 
-Mwaw2odf
-===============
-If we want to compile mwaw2odf ( which is a part of writerperfect), you
-must first download the last version of libwpg in http://sourceforge.net/projects/libwpg/
-and then download the lastest git version of odfgen and writerperfect:
-  git clone git://git.code.sf.net/p/libwpd/libodfgen libwpd-libodfgen
-  git clone git://git.code.sf.net/p/libwpd/writerperfect libwpd-writerperfect
-and finally, in each directories, execute autogen.sh and configure
-with the options corresponding to you computer and launch make to
-recompile.
+
+
+
+   =============================================
+   ==    INSTALLATION OF Mwaw2odf             ==
+   =============================================
+
+If we want to compile mwaw2odf ( which is a part of writerperfect),
+you must first download libodfgen and writerperfect in
+<http://libwpd.sourceforge.net/download.html> and finally, in each
+directories, execute configure with the options corresponding to you
+computer and launch make to recompile.
 
 That's all folks! While no mailing exists, for more information, ask
 questions directly to osnola@users.sourceforge.net. Remember that Uncle Google can

@@ -84,6 +84,8 @@ public:
 protected:
   /** try to read the font name: the FHFo structure: FileH?Font zone */
   bool readFontNames(MWAWEntry &entry);
+  //! try to read the character properties zone: FHsl zone
+  bool readCharProperties(MWAWEntry &entry);
 
   //! try to read a text zone (knowing the zone width in point and the font color)
   bool readTextZone(MWAWEntry &entry, int width, MWAWColor const &fontColor=MWAWColor::black());
@@ -91,7 +93,8 @@ protected:
   bool readFonts(RagTimeTextInternal::TextZone &zone, MWAWColor const &color, long endPos);
   //! try to read the paragraph properties (knowing the zone width in point used to determine the right margin)
   bool readParagraphs(RagTimeTextInternal::TextZone &zone, int width, long endPos);
-
+  //! try to read the token zones
+  bool readTokens(RagTimeTextInternal::TextZone &zone, long endPos);
   //! try to send a text zone
   bool send(int id);
   //! flush extra zone
