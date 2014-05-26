@@ -223,6 +223,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWSpreadsheetEncoder.hxx	\
 	MWAWSpreadsheetListener.cxx	\
 	MWAWSpreadsheetListener.hxx	\
+	MWAWStringStream.cxx		\
+	MWAWStringStream.hxx		\
 	MWAWSubDocument.cxx		\
 	MWAWSubDocument.hxx		\
 	MWAWTable.cxx			\

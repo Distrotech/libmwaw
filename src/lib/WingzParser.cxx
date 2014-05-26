@@ -49,6 +49,7 @@
 #include "MWAWPictMac.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSpreadsheetListener.hxx"
+#include "MWAWStringStream.hxx"
 #include "MWAWSubDocument.hxx"
 
 #include "WingzParser.hxx"
@@ -2496,7 +2497,7 @@ bool WingzParser::decodeEncrypted()
 
   // finally replace the actual input with a new input
   shared_ptr<librevenge::RVNGInputStream> newInput
-  (new librevenge::RVNGStringStream(buffer, (unsigned int)length));
+  (new MWAWStringStream(buffer, (unsigned int)length));
   delete [] buffer;
   getParserState()->m_input.reset(new MWAWInputStream(newInput, false));
   return true;
