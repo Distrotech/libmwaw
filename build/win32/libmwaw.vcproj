@@ -568,6 +568,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWStringStream.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWSubDocument.cxx"
 				>
 			</File>
@@ -1070,6 +1074,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWSpreadsheetListener.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWStringStream.hxx"
 				>
 			</File>
 			<File

@@ -483,6 +483,10 @@ SOURCE=..\..\src\lib\MWAWSpreadsheetListener.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWStringStream.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWSubDocument.cxx
 # End Source File
 # Begin Source File
@@ -984,6 +988,10 @@ SOURCE=..\..\src\lib\MWAWSpreadsheetEncoder.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWSpreadsheetListener.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWStringStream.hxx
 # End Source File
 # Begin Source File
 

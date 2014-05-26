@@ -63,8 +63,8 @@ static void usage(const char *cmdname)
   std::cerr << "\n";
   std::cerr << "Options:\n";
   std::cerr << "\t -h: print this help,\n";
-  std::cerr << "\t -x: do not zip a binhex or a zip file,\n";
-  std::cerr << "\t -v: Output mwawZip version\n";
+  std::cerr << "\t -x: do not zip a BinHex, an OLE2 or a Zip file,\n";
+  std::cerr << "\t -v: output mwawZip version\n";
   std::cerr << "\t -D: only zip the file containing a resource fork or finder information.\n";
 }
 
@@ -124,8 +124,14 @@ int __cdecl main(int argc, char **argv)
             (buff[2]=='L'&&buff[3]=='I') || (buff[2]=='S'&&buff[3]=='p'))
           return 2;
       }
+      // look for an ole file signature
+      else if (buff[0]==(char) 0xd0 && buff[1]==(char) 0xcf && buff[2]==(char) 0x11 && buff[3]==(char) 0xe0) {
+        file.read(buff,4);
+        if (buff[0]==(char) 0xa1&&buff[1]==(char) 0xb1&&buff[2]==(char) 0x1a&&buff[3]==(char) 0xe1)
+          return 2;
+      }
       // look for a binhex file signature
-      if (buff[0]=='('&&buff[1]=='T'&&buff[2]=='h'&&buff[3]=='i') {
+      else if (buff[0]=='('&&buff[1]=='T'&&buff[2]=='h'&&buff[3]=='i') {
         file.read(buff,4);
         if (buff[0]=='s'&&buff[1]==' '&&buff[2]=='f'&&buff[3]=='i')
           return 2;

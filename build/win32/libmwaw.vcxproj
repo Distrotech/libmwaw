@@ -494,6 +494,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MWAWStringStream.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MWAWSubDocument.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -687,6 +691,7 @@
     <ClInclude Include="..\..\src\lib\MWAWSpreadsheetDecoder.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSpreadsheetEncoder.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSpreadsheetListener.hxx" />
+    <ClInclude Include="..\..\src\lib\MWAWStringStream.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWSubDocument.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTable.hxx" />
     <ClInclude Include="..\..\src\lib\MWAWTextListener.hxx" />
