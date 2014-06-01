@@ -53,6 +53,8 @@
 
 namespace RagTimeSpreadsheetInternal
 {
+struct ComplexBlock;
+
 struct Cell;
 struct Spreadsheet;
 
@@ -81,6 +83,22 @@ public:
 protected:
   //! try to read a spreadsheet zone: v3-...
   bool readSpreadsheet(MWAWEntry &entry);
+  //! try to read spreadsheet cells
+  bool readSpreadsheetCells(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read spreadsheet cell's formats
+  bool readSpreadsheetCellFormats(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read a the last spreadsheet zone
+  bool readSpreadsheetZone9(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read a simple structured spreadsheet zone
+  bool readSpreadsheetSimpleStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read a complex structured spreadsheet zone
+  bool readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+
+  //! try to read a list of position
+  bool readPositionsList(MWAWEntry const &entry, std::vector<long> &posList, long &lastDataPos);
+  //! try to read a complex bock header
+  bool readBlockHeader(MWAWEntry const &entry, RagTimeSpreadsheetInternal::ComplexBlock &block);
+
   //! try to read spreadsheet zone ( a big zone):v2
   bool readSpreadsheetV2(MWAWEntry &entry);
   //! try to read spreadsheet cells :v2

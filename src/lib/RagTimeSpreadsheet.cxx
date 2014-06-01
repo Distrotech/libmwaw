@@ -57,6 +57,38 @@
 /** Internal: the structures of a RagTimeSpreadsheet */
 namespace RagTimeSpreadsheetInternal
 {
+//! Internal: header of a complex block of a RagTimeSpreadsheet
+struct ComplexBlock {
+  //! constructor
+  ComplexBlock() : m_zones()
+  {
+  }
+  //! a small zone of a ComplexBlock
+  struct Zone {
+    //! constructor
+    Zone() : m_pos(0)
+    {
+      for (int i=0; i<3; ++i) m_data[i]=0;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Zone const &z)
+    {
+      o << "pos=" << std::hex << z.m_pos << std::dec << ",";
+      for (int i=0; i<3; ++i) {
+        if (z.m_data[i])
+          o << "f" << i << "=" << z.m_data[i] << ",";
+      }
+      return o;
+    }
+    //! the zone position
+    long m_pos;
+    //! three unknown int
+    int m_data[3];
+  };
+  //! the list of zone
+  std::vector<Zone> m_zones;
+};
+
 //! Internal: a cell of a RagTimeSpreadsheet
 struct Cell : public MWAWCell {
   //! constructor
@@ -93,7 +125,7 @@ struct Cell : public MWAWCell {
 //! Internal: a spreadsheet's zone of a RagTimeSpreadsheet
 struct Spreadsheet {
   //! constructor
-  Spreadsheet() : m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
+  Spreadsheet() : m_rows(0), m_columns(0), m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
     m_cellsBegin(0), m_cellsList(), m_rowPositionsList(), m_name("Sheet0"), m_isSent(false)
   {
   }
@@ -130,6 +162,10 @@ struct Spreadsheet {
     }
     return res;
   }
+  /** the number of row */
+  int m_rows;
+  /** the number of col */
+  int m_columns;
   /** the default column width */
   float m_widthDefault;
   /** the column size in points */
@@ -188,9 +224,142 @@ int RagTimeSpreadsheet::version() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
+bool RagTimeSpreadsheet::readBlockHeader(MWAWEntry const &entry, RagTimeSpreadsheetInternal::ComplexBlock &block)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  long endPos=entry.end();
+  if (pos<=0 || entry.length()<6 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readBlockHeader: the position seems bad\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  f << "Entries(" << entry.type() << "):";
+  int N=(int) input->readLong(2);
+  f << "N=" << N << ",";
+  int dSz=(int) input->readULong(4);
+  if (dSz<N*2+10 || pos+2+dSz>endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readBlockHeader: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  int val;
+  f << "unkn=[";
+  for (int i=0; i<2+N; ++i) {
+    val=(int) input->readLong(2);
+    if (val) f << val << ",";
+    else f << "_,";
+  }
+  f << "],";
+  if (dSz!=N*2+10) {
+    ascFile.addDelimiter(input->tell(),'|');
+    input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << entry.type() << ":";
+  N=(int) input->readULong(2);
+  f << "N[zones]=" << N << ",";
+  if (pos+2+10*N>endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readBlockHeader: the zone block seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    RagTimeSpreadsheetInternal::ComplexBlock::Zone zone;
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-Z" << i << "[def]:";
+    for (int j=0; j<3; ++j) zone.m_data[j]=(int) input->readLong(2);
+    long dataPos=(long) input->readULong(4);
+    if (dataPos<N*2+10 || dataPos>entry.length()) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readBlockHeader: the zone position seems bad\n"));
+      f << "###dataPos" << std::hex << entry.begin()+dataPos << std::dec << ",";
+    }
+    else
+      zone.m_pos=entry.begin()+dataPos;
+    block.m_zones.push_back(zone);
+    f << zone;
+    input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  return true;
+}
+
+bool RagTimeSpreadsheet::readPositionsList(MWAWEntry const &entry, std::vector<long> &posList, long &lastDataPos)
+{
+  posList.resize(0);
+  if (version()<2) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readPositionsList: must not be called for v1-2... file\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=input->tell();
+  long endPos=entry.end();
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << entry.type() << "[PosList]:";
+  int dSz=(int) input->readULong(4);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (dSz<10+2*N || pos+dSz>endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readPositionsList: can not find the second block size\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  long dataSize=(long) input->readULong(2);
+  f << "lPos=" << std::hex << pos+dSz+dataSize << std::dec << ",";
+  if (dataSize&1) ++dataSize;
+  lastDataPos=pos+dSz+dataSize;
+  if (lastDataPos>endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readPositionsList: the last position seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << "pos=[";
+  for (int i=0; i<N; ++i) {
+    long newPos=pos+dSz+(long) input->readULong(2);
+    f << std::hex << newPos << std::dec << ",";
+    if (newPos>lastDataPos)  {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readPositionsList: find some bad position\n"));
+      f << "###]";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+dSz, librevenge::RVNG_SEEK_SET);
+      return true;
+    }
+    posList.push_back(newPos);
+  }
+  f << "],";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
-// spreadsheet zone
+// spreadsheet zone v3...
 ////////////////////////////////////////////////////////////
 bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
 {
@@ -265,18 +434,319 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
       zoneBegin[i]=zoneBegin[i+1];
     }
   }
+  shared_ptr<RagTimeSpreadsheetInternal::Spreadsheet> sheet(new RagTimeSpreadsheetInternal::Spreadsheet);
   for (int i=0; i<10; ++i) {
     if (zoneBegin[i+1]<=zoneBegin[i]) continue;
+    MWAWEntry zone;
+    zone.setBegin(zoneBegin[i]);
+    zone.setEnd(zoneBegin[i+1]);
+    zone.setId(i);
+    if (i<2) {
+      char const *(what[])= {"SpreadsheetCell", "SpreadsheetCFormat" };
+      zone.setType(what[i]);
+    }
+    else {
+      std::stringstream s;
+      s << "SpreadsheetUnknown" << i;
+      zone.setType(s.str());
+    }
+    bool ok=true;
+    switch (i) {
+    case 0:
+      ok=readSpreadsheetCells(zone, *sheet);
+      break;
+    case 1:
+      ok=readSpreadsheetCellFormats(zone, *sheet);
+      break;
+    case 2:
+    case 3:
+    case 4:
+      ok=readSpreadsheetComplexStructure(zone, *sheet);
+      break;
+    case 5:
+    case 7:
+    case 8:
+      ok=readSpreadsheetSimpleStructure(zone, *sheet);
+      break;
+    case 9:
+      ok=readSpreadsheetZone9(zone, *sheet);
+      break;
+    default:
+      ok=false;
+      break;
+    }
+    if (ok) continue;
     f.str("");
-    f << "SpreadsheetZone-" << i << ":";
-    // SpreadsheetZone-3: sz+[32bytes]+(N+1)*12
-    // SpreadsheetZone-9: sz+N+N*14
+    f << "Entries(" << zone.type() << "):";
     ascFile.addPos(zoneBegin[i]);
+    ascFile.addNote(f.str().c_str());
+    // SpreadsheetZone-9: sz+N+N*14
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readSpreadsheetCells(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+{
+  RagTimeSpreadsheetInternal::ComplexBlock block;
+  if (!readBlockHeader(entry, block)) return false;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long endPos=entry.end();
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  for (size_t i=0; i< block.m_zones.size(); ++i) {
+    long pos=block.m_zones[i].m_pos;
+    if (pos<entry.begin() || pos>=endPos) continue;
+
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::vector<long> posList;
+    long lastDataPos;
+    if (!readPositionsList(entry, posList, lastDataPos))
+      continue;
+
+    // the cell
+    for (size_t j=0; j<posList.size(); ++j) {
+      long zEndPos=(j+1==posList.size()) ? lastDataPos:posList[j+1];
+      if (!posList[j] || posList[j]>=zEndPos) continue;
+      f.str("");
+      f << entry.type() << "-C" << i << "-" << j << ":";
+      ascFile.addPos(posList[j]);
+      ascFile.addNote(f.str().c_str());
+    }
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readSpreadsheetCellFormats(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+{
+  RagTimeSpreadsheetInternal::ComplexBlock block;
+  if (!readBlockHeader(entry, block)) return false;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long endPos=entry.end();
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  int numBlocks=(int) block.m_zones.size();
+  if (numBlocks>3) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormats: the number of block seems bad\n"));
+    ascFile.addPos(entry.begin());
+    ascFile.addNote("###N");
+  }
+  for (size_t i=0; i<block.m_zones.size(); ++i) {
+    if (i>=3) break;
+    long pos=block.m_zones[i].m_pos;
+    if (pos<entry.begin() || pos>=endPos) continue;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::vector<long> posList;
+    long lastDataPos;
+    if (!readPositionsList(entry, posList, lastDataPos))
+      continue;
+    for (size_t j=0; j<posList.size(); ++j) {
+      long zEndPos=(j+1==posList.size()) ? lastDataPos:posList[j+1];
+      char const(*what[])= {"Cell","Col", "Row"};
+      if (!posList[j] || posList[j]>=zEndPos) continue;
+      f.str("");
+      f << entry.type() << "[" << what[i] << j << "]:";
+      if (posList[j]+8>zEndPos) {
+        f << "###";
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormats: a block definition seems bad\n"));
+        ascFile.addPos(posList[j]);
+        ascFile.addNote(f.str().c_str());
+        continue;
+      }
+      input->seek(posList[j], librevenge::RVNG_SEEK_SET);
+      for (int k=0; k<4; ++k) {
+        int val=(int) input->readULong(2);
+        // f0=SpTe, SpDo ?
+        char const(*wh[])= {"f0","rsrcSpVa", "rsrcSpBo", "rsrcSpCe"};
+        if (val!=1) f << wh[k] << "-" << val-1 << ",";
+      }
+      ascFile.addPos(posList[j]);
+      ascFile.addNote(f.str().c_str());
+    }
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readSpreadsheetZone9(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  long endPos=entry.end();
+  if (pos<=0 || entry.length()<3 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetZone9: the position seems bad\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  f << "Entries(" << entry.type() << "):";
+  int dSz=(int) input->readULong(4);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (pos+4+dSz>endPos||dSz!=2+14*N) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-A" << i << ":";
+    input->seek(pos+14, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  pos=input->tell();
+  if (pos!=endPos) {
+    f.str("");
+    f << entry.type() << "-extra:";
+    ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
   return true;
 }
 
+bool RagTimeSpreadsheet::readSpreadsheetSimpleStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  long endPos=entry.end();
+  if (pos<=0 || entry.length()<8 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the position seems bad\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  f << "Entries(" << entry.type() << "):";
+  int dSz=(int) input->readULong(4);
+  int headerSz=(int) input->readULong(2);
+  if (pos+4+dSz>endPos||headerSz<18||headerSz>dSz) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << "[" << fSz << "],";
+  int val;
+  for (int i=0; i<2; ++i) { // f0=4|c
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  int ptrSz=(int) input->readLong(2);
+  if (ptrSz==2||ptrSz==4) f << "ptr[sz]=" << ptrSz << ",";
+  else if (ptrSz) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the ptr size seems bad\n"));
+    f << "###ptrSz" << ptrSz << ",";
+  }
+  int dataSz=(int) input->readLong(4);
+  if (headerSz<18 || headerSz+(N+1)*fSz+dataSz>dSz || fSz < 0) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  ascFile.addDelimiter(input->tell(),'|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos+4+headerSz, librevenge::RVNG_SEEK_SET);
+  std::set<long> dataPosSet;
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-A" << i << ":";
+    if (ptrSz) {
+      long dPos=entry.begin()+4+(long) input->readULong(ptrSz);
+      f << "pos=" << std::hex << dPos << std::dec << ",";
+      if (dPos>endPos) {
+        f << "###";
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetSimpleStructure: the data pos seems bad\n"));
+      }
+      else if (dPos<endPos)
+        dataPosSet.insert(dPos);
+    }
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  f.str("");
+  f << entry.type() << "-data:";
+  for (std::set<long>::const_iterator it=dataPosSet.begin(); it!=dataPosSet.end(); ++it) {
+    ascFile.addPos(*it);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+{
+  RagTimeSpreadsheetInternal::ComplexBlock block;
+  if (!readBlockHeader(entry, block)) return false;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long endPos=entry.end();
+
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  for (size_t i=0; i< block.m_zones.size(); ++i) {
+    long pos=block.m_zones[i].m_pos;
+    if (pos<entry.begin() || pos>=endPos) continue;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::vector<long> posList;
+    long lastDataPos;
+    if (!readPositionsList(entry, posList, lastDataPos))
+      return true;
+
+    for (size_t j=0; j<posList.size(); ++j) {
+      if (posList[j]>=lastDataPos) continue;
+      f.str("");
+      f << "SpreadsheetZon" << entry.id() << "-B" << j << ":";
+      ascFile.addPos(posList[j]);
+      ascFile.addNote(f.str().c_str());
+    }
+    input->seek(lastDataPos, librevenge::RVNG_SEEK_SET);
+  }
+  long pos=input->tell();
+  if (pos<endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: find some extra data\n"));
+    f.str("");
+    f << "SpreadsheetZon" << entry.id() << "-extra:###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// spreadsheet zone v2...
+////////////////////////////////////////////////////////////
 bool RagTimeSpreadsheet::readSpreadsheetV2(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;

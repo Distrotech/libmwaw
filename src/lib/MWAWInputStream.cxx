@@ -790,6 +790,7 @@ shared_ptr<MWAWInputStream> MWAWInputStream::getSubStreamByName(std::string cons
   if (!res)
     return empty;
   shared_ptr<MWAWInputStream> inp(new MWAWInputStream(res,m_inverseRead));
+  inp->seek(0, librevenge::RVNG_SEEK_SET);
   return inp;
 }
 
@@ -809,6 +810,7 @@ shared_ptr<MWAWInputStream> MWAWInputStream::getSubStreamById(unsigned id)
   if (!res)
     return empty;
   shared_ptr<MWAWInputStream> inp(new MWAWInputStream(res,m_inverseRead));
+  inp->seek(0, librevenge::RVNG_SEEK_SET);
   return inp;
 }
 

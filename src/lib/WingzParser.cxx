@@ -169,7 +169,7 @@ void Spreadsheet::update(Cell &cell) const
       for (int c=0; c<2; ++c) {
         if (instr.m_positionRelative[j][c])
           instr.m_position[j][c]+=cPos[c];
-        if (instr.m_positionRelative[j][c]<0) {
+        if (instr.m_position[j][c]<0) {
           MWAW_DEBUG_MSG(("WingzParserInternal::Spreadsheet::update: find some bad cell position\n"));
           return;
         }

@@ -683,12 +683,6 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
     case MWAWDocument::MWAW_T_MARINERWRITE:
       parser.reset(new MarinerWrtParser(input, rsrcParser, header));
       break;
-    case MWAWDocument::MWAW_T_MINDWRITE:
-      parser.reset(new MindWrtParser(input, rsrcParser, header));
-      break;
-    case MWAWDocument::MWAW_T_MORE:
-      parser.reset(new MoreParser(input, rsrcParser, header));
-      break;
     case MWAWDocument::MWAW_T_MICROSOFTWORD:
       if (header->getMajorVersion()==1)
         parser.reset(new MsWrd1Parser(input, rsrcParser, header));
@@ -697,6 +691,12 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       break;
     case MWAWDocument::MWAW_T_MICROSOFTWORKS:
       parser.reset(new MsWksParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_MINDWRITE:
+      parser.reset(new MindWrtParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_MORE:
+      parser.reset(new MoreParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_NISUSWRITER:
       parser.reset(new NisusWrtParser(input, rsrcParser, header));

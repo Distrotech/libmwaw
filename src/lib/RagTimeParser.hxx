@@ -176,9 +176,9 @@ protected:
   bool readRsrcfppr(MWAWEntry &entry);
   //! try to read the Sele zone (zone with id=0), maybe related to selection
   bool readRsrcSele(MWAWEntry &entry);
-  //! try to read the SpDo zone (zone with id=0)
+  //! try to read the SpDo zone (a spreadsheet zone with id=0)
   bool readRsrcSpDo(MWAWEntry &entry);
-  //! try to read the SpDI zone (zone with id=0)
+  //! try to read the SpDI zone (a spreadsheet zone zone with id=0)
   bool readRsrcSpDI(MWAWEntry &entry);
   // maybe FH=footer/header zone
   //! try to read the FHwl zone ( one by file with id=0), maybe width length?

@@ -712,7 +712,6 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPo
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
-  MWAW_DEBUG_MSG(("RagTimeText::readTokens: Oops converting token is not yet implemented!!!\n"));
 
   int n=0;
   while (!input->isEnd()) {
@@ -731,7 +730,7 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPo
       return true;
     }
     int val;
-    if (dSz==4) { // with char[text]=1
+    if (dSz==4) {
       f << "field,";
       val=(int) input->readLong(1);
       if (val!=1) f << "f0=" << 1 << ",";
@@ -751,14 +750,14 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPo
         f << "#f1=" << val << ",";
       }
     }
-    else if (dSz==6) { // with char[text]=9
+    else if (dSz==6) {
       f << "date,";
       val=(int) input->readLong(2);
       if (val!=100) f << "f0=" << val << ",";
       // numFormat -1
       f << "F" << input->readLong(2)-1 << ",";
     }
-    else if (dSz>14) { // with char[text]=1
+    else if (dSz>14) {
       f << "item,";
       f << "id?=" << input->readLong(2) << ",";
       f << "value=[";
@@ -827,6 +826,7 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
   }
 
   MWAWInputStreamPtr input = m_parserState->m_input;
+  int const vers=version();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   long pos=entry.begin(), lPos=pos;
@@ -869,6 +869,15 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
     case 0: // at the beginning of a zone of text: related to section?
       break;
     case 1: {
+      if (vers>=2) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("RagTimeText::send: sending token is not implemented\n"));
+          first=false;
+        }
+        f << "[#token]";
+        break;
+      }
       f << "[date]";
       MWAWField date(MWAWField::Date);
       date.m_DTFormat = "%d/%m/%y";
@@ -876,6 +885,11 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
       break;
     }
     case 2: {
+      if (vers>=2) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find unexpected char 2\n"));
+        f << "[#2]";
+        break;
+      }
       f << "[time]";
       MWAWField time(MWAWField::Time);
       time.m_DTFormat="%H:%M";
@@ -883,18 +897,38 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
       break;
     }
     case 3:
+      if (vers>=2) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find unexpected char 3\n"));
+        f << "[#3]";
+        break;
+      }
       f << "[page]";
       listener->insertField(MWAWField(MWAWField::PageNumber));
       break;
     case 4:
+      if (vers>=2) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find unexpected char 4\n"));
+        f << "[#4]";
+        break;
+      }
       f << "[page+1]";
       listener->insertUnicodeString("#P+1#");
       break;
     case 5:
+      if (vers>=2) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find unexpected char 5\n"));
+        f << "[#5]";
+        break;
+      }
       f << "[section]";
       listener->insertUnicodeString("#S#");
       break;
     case 6: // ok, must be the end of the zone
+      if (vers>=2) {
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find unexpected char 6\n"));
+        f << "[#6]";
+        break;
+      }
       f << "[pagebreak]";
       break;
     case 9:

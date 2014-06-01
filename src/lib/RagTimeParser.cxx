@@ -2183,7 +2183,6 @@ bool RagTimeParser::readRsrcSele(MWAWEntry &entry)
 bool RagTimeParser::readRsrcSpDo(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
-  int const vers=version();
   long pos=entry.begin();
   if (pos<=0 || !input->checkPosition(pos+2+0x4a)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the position seems bad\n"));
@@ -2194,9 +2193,8 @@ bool RagTimeParser::readRsrcSpDo(MWAWEntry &entry)
   libmwaw::DebugStream f;
   f << "Entries(rsrcSpDo)[" << entry.id() << "]:";
   int dSz=(int) input->readULong(2);
-  int const expectedSz=vers>2 ? 0x4e : 0x4a;
   long endPos=pos+2+dSz;
-  if (dSz!=expectedSz || !input->checkPosition(endPos)) {
+  if (dSz<0x4a || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the size seems bad\n"));
     f << "###";
     ascii().addPos(pos);
@@ -2225,11 +2223,12 @@ bool RagTimeParser::readRsrcSpDo(MWAWEntry &entry)
     if (val!=expected[i])
       f << "h" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int const numVal=vers>2 ? 6:4;
+  int const numVal= int(endPos-4-input->tell())/2;
   for (int i=0; i<numVal; ++i) { // k0=small int, k1=k0+1, k2=k3=k4=0, k5=0|b7|e9|f3
     int val = (int) input->readLong(2);
     if (val) f << "k" << i << "=" << val << ",";
   }
+  input->seek(endPos-4, librevenge::RVNG_SEEK_SET);
   f << "id?=" << std::hex << input->readULong(4) << std::dec << ","; // a big number
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -2387,11 +2386,9 @@ bool RagTimeParser::checkHeader(MWAWHeader *header, bool /*strict*/)
       f << "v2[" << std::hex << val << std::dec << "],";
     break;
   case 1:
-    setVersion(3);
-    if (val==0x2c) {
+    setVersion(2);
+    if (val==0x2c)
       f << "v3.0,";
-      setVersion(2);
-    }
     else if (val==0x90) f << "v3.[12],";
     else
       f << "v3[" << std::hex << val << std::dec << "],";

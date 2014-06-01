@@ -346,7 +346,9 @@ bool MsWksParser::checkHeader(MWAWHeader *header, bool strict)
 
   // now check for version 4 file
   MWAWInputStreamPtr mmOle = input->getSubStreamByName("MM");
-  if (!mmOle || mmOle->readULong(2) != 0x444e) return false;
+  if (!mmOle) return false;
+  mmOle->seek(0, librevenge::RVNG_SEEK_SET);
+  if (mmOle->readULong(2) != 0x444e) return false;
 
   MWAWInputStreamPtr mainOle = m_document->getInput();
   if (!mainOle) return false;
