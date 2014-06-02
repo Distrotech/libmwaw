@@ -533,7 +533,9 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       ord &= 0xFE;
     }
   }
-  if (ok && ord!=0x20) {
+  format.m_digits=(ord>>4);
+  ord &= 0xF;
+  if (ok && ord) {
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: find unexpected order\n"));
     f << "###ord=" << std::hex << ord << std::dec;
     ok = false;
@@ -590,7 +592,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         break;
       }
       record.m_valueType=MWAWCellContent::C_NUMBER;
-      content.setValue(double(2+2*type));
+      content.setValue(double(input->readLong(2+2*type)));
       f << "val=" << content.m_value << ",";
       break;
     case 2: {
