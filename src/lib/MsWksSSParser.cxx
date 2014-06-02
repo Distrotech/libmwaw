@@ -859,34 +859,40 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
     fl[i] = (int) input->readULong(1);
   MWAWCell::Format format;
   MWAWCellContent &content=cell.m_content;
-  int style = 0;
-  int subformat = 0;
+  int style = 0, align = 0, subformat = 0;
   if (vers >= 3) {
     style = (fl[4]>>1) & 0x1f;
-    switch (fl[4] >> 6) {
-    case 0:
-      cell.setHAlignement(MWAWCell::HALIGN_LEFT);
-      break;
-    case 1:
-      cell.setHAlignement(MWAWCell::HALIGN_CENTER);
-      break;
-    case 2:
-      cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
-      break;
-    default:
-    case 3:
-      break; // default
-    }
+    align = (fl[4]>>6);
     fl[4] &= 1;
     subformat = fl[2] >> 4;
     cell.setBorders(fl[2] & 0xF, MWAWBorder()); // checkme
     fl[2] = 0;
   }
+  else {
+    style = fl[4] & 0x18;
+    align = (fl[4]>>5)&3;
+    subformat= (fl[4]&7);
+    fl[4] &= 0x80;
+  }
+  switch (align) {
+  case 0:
+    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    break;
+  case 1:
+    cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+    break;
+  case 2:
+    cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+    break;
+  default:
+  case 3:
+    break; // default
+  }
   cell.m_noteId = fl[1] & 0xf;
   fl[1] >>= 4;
   int type = fl[3] >> 4;
   format.m_digits=(fl[3] & 0xf);
-  fl[3] = 0;
+  fl[3] &= 1;
 
   MWAWFont font=m_state->m_spreadsheet.m_font;
   MWAWColor col;
@@ -906,131 +912,137 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   cell.setFont(font);
 
   content.m_contentType=MWAWCellContent::C_NONE;
-  if (type & 2) {
+  if (type & 2) { // checkme: is this also ok for v2?
     cell.setProtected(true);
     type &= 0xFD;
   }
-  switch (type) {
+  switch (type>>2) {
   case 0:
     content.m_contentType=MWAWCellContent::C_TEXT;
     format.m_format=MWAWCell::F_TEXT;
     break;
   case 1:
-    if (subformat < 4)
-      format.m_format=MWAWCell::F_TIME;
-    else
-      format.m_format=MWAWCell::F_DATE;
-    content.m_contentType=MWAWCellContent::C_TEXT;
-    break;
-  case 4:
     format.m_format=MWAWCell::F_NUMBER;
     content.m_contentType=MWAWCellContent::C_NUMBER;
     break;
-  case 5:
-    if (subformat < 4)
-      format.m_format=MWAWCell::F_TIME;
-    else
-      format.m_format=MWAWCell::F_DATE;
-    content.m_contentType=MWAWCellContent::C_NUMBER;
-    break;
-  case 12:
+  case 3:
     f << "type" << type << ",";
-  case 8: //number general
+  case 2: //number general
     format.m_format=MWAWCell::F_NUMBER;
-    content.m_contentType=MWAWCellContent::C_FORMULA;
-    break;
-  case 13: // date or time
-    f << "type" << type << ",";
-  case 9: // date or time
-    if (subformat < 4)
-      format.m_format=MWAWCell::F_TIME;
-    else
-      format.m_format=MWAWCell::F_DATE;
     content.m_contentType=MWAWCellContent::C_FORMULA;
     break;
   default:
-    MWAW_DEBUG_MSG(("MsWksSSParser::readCell: unknown type:%d for a cell\n", type));
-    f << "typ[##unk"<<type << "],";
-    content.m_contentType=MWAWCellContent::C_UNKNOWN;
     break;
   }
-  switch (format.m_format) {
-  case  MWAWCell::F_NUMBER:
-    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+  if (vers <= 2 && format.m_format==MWAWCell::F_NUMBER) {
     switch (subformat) {
     case 0:
-      break;
-    case 1:
       format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
       break;
-    case 2:
+    case 1:
       format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
       break;
-    case 3:
-      format.m_thousandHasSeparator=true;
+    case 2:
+      format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
       break;
     case 4:
-      format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
-      format.m_thousandHasSeparator=true;
-      break;
-    case 5:
       format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
       break;
-    case 6:
-      format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
-      break;
-    case 7:
-      format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
-      format.m_thousandHasSeparator=true;
-      break;
-    default:
-      f << ",subform==##unkn" << subformat;
-      break;
-    }
-    break;
-  case MWAWCell::F_TIME:
-    if (subformat >= 0 && subformat < 4) {
-      static char const *(wh[])= {"%I:%M:%S %p", "%I:%M %p", "%H:%M:%S", "%H:%M"};
-      format.m_DTFormat=wh[subformat];
-    }
-    else
-      f << ",subform==##unkn" << subformat;
-    break;
-  case MWAWCell::F_DATE:
-    switch (subformat) {
-    case 4:
     case 5:
     case 6:
+      format.m_format=MWAWCell::F_DATE;
+      break;
     case 7:
-    case 8: {
-      static char const *(wh[])= {"%m/%d/%y", "%b %d, %Y", "%b, %d", "%b, %Y", "%a, %d %b, %Y" };
-      format.m_DTFormat=wh[subformat-4];
+      format.m_format=MWAWCell::F_TIME;
+      break;
+    case 3: // generic
+    default:
+      format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
       break;
     }
-    case 10:
-    case 11:
-      format.m_DTFormat="%B %d %Y";
+  }
+  else if (vers>2) {
+    if (type&1) {
+      format.m_format= (subformat < 4) ? MWAWCell::F_TIME : MWAWCell::F_DATE;
+      fl[3] = 0;
+    }
+    switch (format.m_format) {
+    case  MWAWCell::F_NUMBER:
+      format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+      switch (subformat) {
+      case 0:
+        break;
+      case 1:
+        format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+        break;
+      case 2:
+        format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+        break;
+      case 3:
+        format.m_thousandHasSeparator=true;
+        break;
+      case 4:
+        format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY;
+        format.m_thousandHasSeparator=true;
+        break;
+      case 5:
+        format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+        break;
+      case 6:
+        format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+        break;
+      case 7:
+        format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+        format.m_thousandHasSeparator=true;
+        break;
+      default:
+        f << ",subform==##unkn" << subformat;
+        break;
+      }
       break;
-    case 12:
-    case 13:
-      format.m_DTFormat="%A, %B %d, %Y";
+    case MWAWCell::F_TIME:
+      if (subformat >= 0 && subformat < 4) {
+        static char const *(wh[])= {"%I:%M:%S %p", "%I:%M %p", "%H:%M:%S", "%H:%M"};
+        format.m_DTFormat=wh[subformat];
+      }
+      else
+        f << ",subform==##unkn" << subformat;
+      break;
+    case MWAWCell::F_DATE:
+      switch (subformat) {
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8: {
+        static char const *(wh[])= {"%m/%d/%y", "%b %d, %Y", "%b, %d", "%b, %Y", "%a, %d %b, %Y" };
+        format.m_DTFormat=wh[subformat-4];
+        break;
+      }
+      case 10:
+      case 11:
+        format.m_DTFormat="%B %d %Y";
+        break;
+      case 12:
+      case 13:
+        format.m_DTFormat="%A, %B %d, %Y";
+        break;
+      default:
+        f << ",subform==##unkn" << subformat;
+        break;
+      }
+      break;
+    case MWAWCell::F_TEXT:
+      break;
+    case MWAWCell::F_BOOLEAN:
+    case MWAWCell::F_UNKNOWN:
+      MWAW_DEBUG_MSG(("MsWksSSParser::readCell: unexpected format\n"));
       break;
     default:
       f << ",subform==##unkn" << subformat;
       break;
     }
-    break;
-  case MWAWCell::F_TEXT:
-    break;
-  case MWAWCell::F_BOOLEAN:
-  case MWAWCell::F_UNKNOWN:
-    MWAW_DEBUG_MSG(("MsWksSSParser::readCell: unexpected format\n"));
-    break;
-  default:
-    f << ",subform==##unkn" << subformat;
-    break;
   }
-
   long pos = debPos;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
