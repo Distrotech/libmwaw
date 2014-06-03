@@ -1322,6 +1322,10 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
   pos = input->tell();
   bool ok = input->readULong(1) == 255;
   if (ok && ptrSize == 2) ok = input->readULong(1) == 0;
+  if (ok && input->tell()<endPos) {
+    ascFile.addDelimiter(input->tell(),'#');
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  }
 
   if (!ok || input->tell() != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1442,12 +1446,15 @@ bool MsWksDBParser::readRecords(bool onlyCheck)
       }
     }
 
-    if (!ok || input->tell() != endPos) {
+    if (ok && input->tell()<endPos) {
+      ascFile.addDelimiter(input->tell(),'#');
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    }
+    if (!ok || input->tell()!=endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("MsWksDBParser::readRecords: End of Record is odd\n"));
       return false;
     }
-
     if (!onlyCheck) ascFile.addDelimiter(pos,'|');
   }
 
@@ -2342,6 +2349,12 @@ bool MsWksDBParser::readFormula()
         ok = true;
       }
     }
+    else if (fVal == -1) { // end
+      input->seek(-1, librevenge::RVNG_SEEK_CUR);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      break;
+    }
     else if (fVal < 0);   // error
     else if (fVal == 0) ok = true;
     else {
@@ -2369,6 +2382,10 @@ bool MsWksDBParser::readFormula()
   bool ok = input->readULong(1) == 255;
   if (ptrSz==2 && ok) ok = input->readULong(1) == 0;
 
+  if (ok && input->tell()<endPos) {
+    ascFile.addDelimiter(input->tell(),'#');
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  }
   if (!ok || input->tell() != endPos) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MsWksDBParser::readFormula: End of Record is odd\n"));
