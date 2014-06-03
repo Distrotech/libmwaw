@@ -805,7 +805,7 @@ bool GreatWksDBParser::readHeader()
       MWAWEntry entry;
       entry.setBegin(ptr);
       zones.push_back(entry);
-      if (!ptr) continue;
+      if (!ptr || ptr==0xFFFF) continue;
       f << "Zone" << 9+i << "A=" << std::hex << ptr << std::dec << ",";
     }
   }
@@ -818,7 +818,7 @@ bool GreatWksDBParser::readHeader()
 
   for (size_t i=0; i<zones.size(); ++i) {
     MWAWEntry &entry=zones[i];
-    if (!entry.begin()) continue;
+    if (!entry.begin() || entry.begin()==0xFFFF) continue;
     if (!checkSmallZone(entry)) {
       MWAW_DEBUG_MSG(("GreatWksDBParser::readHeader: find a bad zone %d\n", (int) i));
       entry.setLength(0);
@@ -1262,6 +1262,9 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       }
       double value;
       bool isNan;
+      /*fixme: this does not work for time's field as value is a very
+        big number and the double precision is too small, ie. we do not
+        retrieve the decimal part -> time is always 0:0:0 */
       if (!input->readDouble10(value, isNan)) {
         static bool first=true;
         if (first) {

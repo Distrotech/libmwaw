@@ -304,12 +304,10 @@ bool MWAWInputStream::readDouble10(double &res, bool &isNotANumber)
       return false;
     }
   }
-  double value=double(mantisse);
-  value+=double(readULong(4))/65536./65536.;
-  res = std::ldexp(value/double(0x80000000), exp);
-  if (sign == -1) {
+  // or std::ldexp((total value)/double(0x80000000), exp);
+  res=std::ldexp(double(readULong(4)),exp-63)+std::ldexp(double(mantisse),exp-31);
+  if (sign == -1)
     res *= -1.;
-  }
   return true;
 }
 
