@@ -436,6 +436,9 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
       cell.setFormat(rec.m_format);
       cell.setHAlignement(rec.m_hAlign);
       cell.setFont(rec.m_font);
+      // change the reference date from 1/1/1904 to 1/1/1900
+      if (rec.m_format.m_format==MWAWCell::F_DATE && rec.m_content.isValueSet())
+        rec.m_content.setValue(rec.m_content.m_value+1462);
       if (rec.m_borders) {
         int wh=0;
         for (int i=0, bit=1; i < 4; ++i, bit*=2) {
