@@ -198,6 +198,7 @@ bool MWAWCell::Format::convertDTFormat(std::string const &dtFormat, librevenge::
       break;
     case 'e':
       list.insert("number:style", "long");
+    // fall-through intended
     case 'd':
       list.insert("librevenge:value-type", "day");
       propVect.append(list);
