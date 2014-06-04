@@ -125,6 +125,8 @@ public:
 
     diff = (int) m_empty - (int) aPict.m_empty;
     if (diff) return (diff < 0) ? -1 : 1;
+    else if (m_empty) // both empty
+      return 0;
     // the type
     diff = getSubType() - aPict.getSubType();
     if (diff) return (diff < 0) ? -1 : 1;
