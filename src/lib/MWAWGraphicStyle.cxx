@@ -191,7 +191,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
       list.insert("draw:dots2", nDots2);
       list.insert("draw:dots2-length", size2, librevenge::RVNG_POINT);
     }
-    list.insert("draw:distance", totalGap/float(nDots1+nDots2), librevenge::RVNG_POINT);;
+    const double distance = ((nDots1 + nDots2) > 0) ? totalGap/float(nDots1+nDots2) : totalGap;
+    list.insert("draw:distance", distance, librevenge::RVNG_POINT);;
   }
   else
     list.insert("draw:stroke", "solid");
