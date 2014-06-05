@@ -58,6 +58,7 @@ public:
   MWAWPictBitmapContainer(Vec2i const &sz) : m_size(sz), m_data(0L)
   {
     if (m_size[0]*m_size[1] != 0) m_data = new T[size_t(m_size[0]*m_size[1])];
+    std::uninitialized_fill_n(m_data, m_size[0] * m_size[1], T());
   }
   //! destructor
   virtual ~MWAWPictBitmapContainer()
