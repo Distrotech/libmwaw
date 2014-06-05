@@ -1501,7 +1501,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
         continue;
       }
       f << c;
-      if (seeToken && c >= 0 && c < 32) continue;
+      if (seeToken && static_cast<unsigned char>(c) < 32) continue;
       switch (c) {
       case 0x1: // fixme: column break
         if (numCols) {

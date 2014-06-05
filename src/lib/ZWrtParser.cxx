@@ -949,7 +949,7 @@ bool ZWField::getDebugString(MWAWInputStreamPtr &input, std::string &str) const
   std::stringstream ss;
   while (!input->isEnd() && input->tell()!=m_pos.end()) {
     char c=(char) input->readULong(1);
-    if (c>=0 && c<=0x1f && c!= 0x9)
+    if (static_cast<unsigned char>(c)<=0x1f && c!= 0x9)
       ss << "##[" << std::hex << int(c) << std::dec << "]";
     else
       ss << c;
