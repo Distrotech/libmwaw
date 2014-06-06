@@ -554,7 +554,7 @@ bool MWAWCellContent::double2Date(double val, int &Y, int &M, int &D)
   long numDaysSinceOrigin=long(val+0.4);
   // find the century
   int century=19;
-  while (numDaysSinceOrigin>36500+24) {
+  while (numDaysSinceOrigin>=36500+24) {
     long numDaysInCentury=36500+24+((century%4)?0:1);
     if (numDaysSinceOrigin<numDaysInCentury) break;
     numDaysSinceOrigin-=numDaysInCentury;
