@@ -1195,7 +1195,7 @@ bool BeagleWksSSParser::readCellSheet(BeagleWksSSParserInternal::Cell &cell)
     else if (type!=4) {
       // change the reference date from 1/1/1904 to 1/1/1900
       if (format.m_format==MWAWCell::F_DATE)
-        content.setValue(value+1462.);
+        content.setValue(value+1460.);
       else if (format.m_format==MWAWCell::F_TIME)
         content.setValue(std::fmod(value,1));
       else

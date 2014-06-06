@@ -1108,7 +1108,7 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
   }
   std::string value("");
   // FIXME: must not be here, change the reference date from 1/1/1904 to 1/1/1900
-  if (MWAWCellContent::double2String(format.m_format==MWAWCell::F_DATE ? val+1462 : val, format, value))
+  if (MWAWCellContent::double2String(format.m_format==MWAWCell::F_DATE ? val+1460 : val, format, value))
     s << value;
   else {
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::send: can not convert the actual value\n"));

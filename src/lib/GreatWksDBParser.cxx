@@ -253,7 +253,7 @@ bool Field::updateCell(int row, int numRow, Cell &cell) const
   }
   // change the reference date from 1/1/1904 to 1/1/1900
   if (m_type==F_Date && cell.m_content.isValueSet())
-    cell.m_content.setValue(cell.m_content.m_value+1462.);
+    cell.m_content.setValue(cell.m_content.m_value+1460.);
   // and try to update the 1D formula in 2D
   for (size_t i=0; i<formula.size(); ++i) {
     MWAWCellContent::FormulaInstruction &instr=formula[i];
@@ -2196,7 +2196,7 @@ bool GreatWksDBParser::checkHeader(MWAWHeader *header, bool strict)
   input->seek(16, librevenge::RVNG_SEEK_SET);
   for (int i=0; i<3; ++i) {
     GreatWksDBParserInternal::BlockHeader block;
-    if (!readBlockHeader(block) || block.m_ptr[0]==0 || (block.m_ptr[0]&0x0FF)) return false;
+    if (!readBlockHeader(block) || block.m_ptr[0]==0 || (block.m_ptr[0]&0xFF)) return false;
     input->seek(8, librevenge::RVNG_SEEK_CUR);
   }
   return true;

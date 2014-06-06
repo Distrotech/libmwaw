@@ -550,41 +550,41 @@ bool MWAWCell::sendContent(MWAWListenerPtr, MWAWTable &)
 ////////////////////////////////////////////////////////////
 bool MWAWCellContent::double2Date(double val, int &Y, int &M, int &D)
 {
-  int diffYear=1900;
-  /* let translate the date since 1/1/1900 to a date since 1/1/1970. */
-  double numberOfSecondsSinceOrigin=(val-24107-1462+0.4)*24.*3600;
-  /*  check for potential conversion's problems: date less than
-      1902 or date greater than 2038, ie. a date which needs a 64bit time_t
-
-      Note:
-        - as such dates have almost no chance to appear, let process
-        crudly (ie. very badly)... This must give a result "almost"
-        correct for the dates between 1766 and 2194 (ie. precise up to 1/2
-        day except maybe for some seconds near boundaries -2^31 or 2^31)
-        - at least 136 is divisible by 4 so bisectile years will be almost
-        ok..
-  */
-  if (numberOfSecondsSinceOrigin>2147483647) {
-    /* these means that Y>2038, so just remove the number of days
-       between 1/1/2038 and 1/1/1902, then we will need to add 136 year
-    */
-    numberOfSecondsSinceOrigin-=49674*24.*3600;
-    diffYear+=136;
+  /* first convert the date in long*/
+  long numDaysSinceOrigin=long(val+0.4);
+  // find the century
+  int century=19;
+  while (numDaysSinceOrigin>36500+24) {
+    long numDaysInCentury=36500+24+((century%4)?0:1);
+    if (numDaysSinceOrigin<numDaysInCentury) break;
+    numDaysSinceOrigin-=numDaysInCentury;
+    ++century;
   }
-  else if (numberOfSecondsSinceOrigin<-2147483647) {
-    /* these means that Y<1902, so just remove the number of days
-       between 1/1/1902 and 1/1/1766, then we will need to remove 136 year
-     */
-    numberOfSecondsSinceOrigin+=49672*24.*3600;
-    diffYear-=136;
+  while (numDaysSinceOrigin<0) {
+    --century;
+    numDaysSinceOrigin+=36500+24+((century%4)?0:1);
   }
-  time_t date= time_t(numberOfSecondsSinceOrigin);
-  struct tm dateTm;
-  if (!gmtime_r(&date,&dateTm)) return false;
+  // now compute the year
+  Y=int(numDaysSinceOrigin/365);
+  long numDaysToEndY1=Y*365+(Y>0 ? (Y-1)/4+((century%4)?0:1) : 0);
+  if (numDaysToEndY1>numDaysSinceOrigin) {
+    --Y;
+    numDaysToEndY1=Y*365+(Y>0 ? (Y-1)/4+((century%4)?0:1) : 0);
+  }
+  // finish to compute the date
+  int numDaysFrom1Jan=int(numDaysSinceOrigin-numDaysToEndY1);
+  Y+=century*100;
+  bool isLeap=(Y%4)==0 && ((Y%400)==0 || (Y%100)!=0);
 
-  Y = dateTm.tm_year+diffYear;
-  M=dateTm.tm_mon+1;
-  D=dateTm.tm_mday;
+  for (M=0; M<12; ++M) {
+    static const int days[2][12] = {
+      { 0,31,59,90,120,151,181,212,243,273,304,334},
+      { 0,31,60,91,121,152,182,213,244,274,305,335}
+    };
+    if (M<11 && days[isLeap ? 1 : 0][M+1]<=numDaysFrom1Jan) continue;
+    D=(numDaysFrom1Jan-days[isLeap ? 1 : 0][M++])+1;
+    break;
+  }
   return true;
 }
 

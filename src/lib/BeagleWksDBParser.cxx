@@ -155,7 +155,7 @@ void Database::updateWithContent(Cell &cell, Vec2i const &pos, MWAWCellContent c
   MWAWCell::Format const &format=cell.getFormat();
   // change the reference date from 1/1/1904 to 1/1/1900
   if (format.m_format==MWAWCell::F_DATE && cell.m_content.isValueSet())
-    cell.m_content.setValue(cell.m_content.m_value+1462.);
+    cell.m_content.setValue(cell.m_content.m_value+1460.);
   // and try to update the 1D formula in 2D
   std::vector<MWAWCellContent::FormulaInstruction> &formula=cell.m_content.m_formula;
   for (size_t i=0; i<formula.size(); ++i) {

@@ -1,5 +1,9 @@
 CHANGES:
 
+6/6/2014:
+- rewrite MWAWCellContent::double2Date to avoid problem with 32/64 time_t values
+- correct many <<small>> problems
+
 -------- version 0.3.2 (start)  -------------
 
 23/5/2014

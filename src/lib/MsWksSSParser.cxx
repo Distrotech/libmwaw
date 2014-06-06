@@ -1097,7 +1097,7 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   cell.setFormat(format);
   // change the reference date from 1/1/1904 to 1/1/1900
   if (format.m_format==MWAWCell::F_DATE && content.isValueSet())
-    content.setValue(content.m_value+1462.);
+    content.setValue(content.m_value+1460.);
 
   std::string extra = f.str();
   f.str("");

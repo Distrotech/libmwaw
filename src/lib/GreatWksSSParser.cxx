@@ -1040,7 +1040,7 @@ bool GreatWksSSParser::readCell(GreatWksSSParserInternal::Cell &cell)
         f << "###";
       }
       else if (format.m_format==MWAWCell::F_DATE) // change the reference date from 1/1/1904 to 1/1/1900
-        content.setValue(value+1462.);
+        content.setValue(value+1460.);
       else
         content.setValue(value);
       f << value << ",";
@@ -1079,7 +1079,7 @@ bool GreatWksSSParser::readCell(GreatWksSSParserInternal::Cell &cell)
       }
       long value=input->readLong(4);
       if (format.m_format==MWAWCell::F_DATE) // change the reference date from 1/1/1904 to 1/1/1900
-        content.setValue(double(value)+1462.);
+        content.setValue(double(value)+1460.);
       else
         content.setValue(double(value));
       f << value << ",";

@@ -975,7 +975,7 @@ bool WingzParser::readSpreadsheetCellList()
     cell.setFormat(format);
     // change the reference date from 1/1/1904 to 1/1/1900
     if (format.m_format==MWAWCell::F_DATE && content.isValueSet())
-      content.setValue(content.m_value+1462.);
+      content.setValue(content.m_value+1460.);
 
     m_state->m_spreadsheet.m_cells.push_back(cell);
     if (!ok) {
