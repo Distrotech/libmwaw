@@ -552,6 +552,16 @@ bool MWAWCellContent::double2Date(double val, int &Y, int &M, int &D)
 {
   /* first convert the date in long*/
   long numDaysSinceOrigin=long(val+0.4);
+  // checkme: do we need to check before for isNan(val) ?
+  if (numDaysSinceOrigin<-10000*365 || numDaysSinceOrigin>10000*365) {
+    /* normally, we can expect documents to contain date between 1904
+       and 2004. So even if such a date can make sense, storing it as
+       a number of days is clearly abnormal */
+    MWAW_DEBUG_MSG(("MWAWCellContent::double2Date: using a double to represent the date %ld seems odd\n", numDaysSinceOrigin));
+    Y=1904;
+    M=D=1;
+    return false;
+  }
   // find the century
   int century=19;
   while (numDaysSinceOrigin>=36500+24) {

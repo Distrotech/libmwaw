@@ -420,7 +420,8 @@ public:
   {
     return m_textEntry.valid();
   }
-  /** conversion beetween double days since 1900 and date */
+  /** conversion beetween double days since 1900 and a date, ie val=0
+      corresponds to 1/1/1900, val=365 to 1/1/1901, ... */
   static bool double2Date(double val, int &Y, int &M, int &D);
   /** conversion beetween double: second since 0:00 and time */
   static bool double2Time(double val, int &H, int &M, int &S);
