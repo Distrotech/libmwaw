@@ -44,6 +44,7 @@
 
 namespace RagTimeParserInternal
 {
+struct Picture;
 struct State;
 class SubDocument;
 }
@@ -84,6 +85,10 @@ protected:
 
   //! returns the ith color ( if possible)
   bool getColor(int colId, MWAWColor &color, int listId=-1) const;
+  //! returns the ith date format or ""
+  bool getDateTimeFormat(int dtId, std::string &dtFormat) const;
+  //! returns a new unique zone id
+  int getNewZoneId();
 
   //
   // interface with text parser
@@ -91,6 +96,10 @@ protected:
 
   //! returns a mac font id corresponding to a local id
   int getFontId(int localId) const;
+  //! returns font style corresponding to a char style id
+  bool getCharStyle(int charId, MWAWFont &font) const;
+  //! try to read a text zone (knowing the zone width in point and the font color)
+  bool readTextZone(MWAWEntry &entry, int width, MWAWColor const &fontColor=MWAWColor::black());
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
@@ -122,6 +131,8 @@ protected:
 
   //! sends the picture
   bool sendPicture(int zId, MWAWPosition const &pos);
+  //! sends a bitmap
+  bool sendBitmap(RagTimeParserInternal::Picture const &pict, MWAWPosition const &pos);
   //! sends a basic shape
   bool sendBasicPicture(int zId, MWAWPosition const &pos);
   //! flush unsent zone (debugging function)
@@ -144,11 +155,11 @@ protected:
   //! try to read the color map:v3
   bool readColorsMap();
   //! read a printInfo block (a PREC rsrc)
-  bool readPrintInfo(MWAWEntry &entry);
+  bool readPrintInfo(MWAWEntry &entry, bool inRSRCFork=false);
   /** try to read the File Link zone: FLink */
   bool readLinks(MWAWEntry &entry);
-  //! try to read the format table zone: FoTa
-  bool readRsrcFormat(MWAWEntry &entry);
+  //! try to read the format map:v3
+  bool readFormatsMap();
   //! try to read the macro format zone: RTml zones
   bool readMacroFormats(MWAWEntry &entry);
   //! try to read the color table zone: CHTa zones
@@ -165,8 +176,6 @@ protected:
 
   //! try to read a structured zone
   bool readRsrcStructured(MWAWEntry &entry);
-  //! try to read a unamed zone (5 by file, all with id=0)
-  bool readRsrcUnamed(MWAWEntry &entry);
 
   //! try to read the Btch zone (zone with id=0)
   bool readRsrcBtch(MWAWEntry &entry);
@@ -176,10 +185,6 @@ protected:
   bool readRsrcfppr(MWAWEntry &entry);
   //! try to read the Sele zone (zone with id=0), maybe related to selection
   bool readRsrcSele(MWAWEntry &entry);
-  //! try to read the SpDo zone (a spreadsheet zone with id=0)
-  bool readRsrcSpDo(MWAWEntry &entry);
-  //! try to read the SpDI zone (a spreadsheet zone zone with id=0)
-  bool readRsrcSpDI(MWAWEntry &entry);
   // maybe FH=footer/header zone
   //! try to read the FHwl zone ( one by file with id=0), maybe width length?
   bool readRsrcFHwl(MWAWEntry &entry);

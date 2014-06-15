@@ -535,6 +535,10 @@ SOURCE=..\..\src\lib\RagTimeSpreadsheet.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\RagTimeStruct.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\RagTimeText.cxx
 # End Source File
 # Begin Source File
@@ -1040,6 +1044,10 @@ SOURCE=..\..\src\lib\RagTimeParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTimeSpreadsheet.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTimeStruct.hxx
 # End Source File
 # Begin Source File
 

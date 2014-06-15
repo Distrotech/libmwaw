@@ -624,7 +624,7 @@ bool MWAWCellContent::date2Double(int Y, int M, int D, double &val)
     { 0,31,60,91,121,152,182,213,244,274,305,335}
   };
   int32_t daysFrom1Jan=days[isLeap ? 1 : 0][M] + D;
-  val=double(daysFrom0-daysFrom1900+daysFrom1Jan)*24.*3600.;
+  val=double(daysFrom0-daysFrom1900+daysFrom1Jan);
   return true;
 }
 

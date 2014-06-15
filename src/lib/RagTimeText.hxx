@@ -55,6 +55,7 @@
 namespace RagTimeTextInternal
 {
 struct TextZone;
+struct Token;
 
 struct State;
 }
@@ -80,6 +81,8 @@ public:
 
   //! returns a mac font id corresponding to a local id
   int getFontId(int localId) const;
+  //! returns font style corresponding to a char style id
+  bool getCharStyle(int charId, MWAWFont &font) const;
 
 protected:
   /** try to read the font name: the FHFo structure: FileH?Font zone */
@@ -95,6 +98,7 @@ protected:
   bool readParagraphs(RagTimeTextInternal::TextZone &zone, int width, long endPos);
   //! try to read the token zones
   bool readTokens(RagTimeTextInternal::TextZone &zone, long endPos);
+
   //! try to send a text zone
   bool send(int id);
   //! flush extra zone

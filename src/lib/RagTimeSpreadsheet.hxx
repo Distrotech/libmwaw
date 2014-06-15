@@ -81,18 +81,37 @@ public:
   int version() const;
 
 protected:
+  // generic resource ( used mainly by spreadsheet )
+
+  //! returns the ith date format or ""
+  bool getDateTimeFormat(int dtId, std::string &dtFormat) const;
+  //! try to read the numeric/date format table zone: FoTa
+  bool readNumericFormat(MWAWEntry &entry);
+
+  // specific spreadsheet resource
+
+  //! try to read a SpXX resource
+  bool readResource(MWAWEntry &entry);
+  //! try to read the SpDo zone (a spreadsheet zone with id=0)
+  bool readRsrcSpDo(MWAWEntry &entry);
+  //! try to read the SpDI zone (a spreadsheet zone zone with id=0)
+  bool readRsrcSpDI(MWAWEntry &entry);
+
+  //
+
   //! try to read a spreadsheet zone: v3-...
   bool readSpreadsheet(MWAWEntry &entry);
-  //! try to read spreadsheet cells
-  bool readSpreadsheetCells(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
-  //! try to read spreadsheet cell's formats
-  bool readSpreadsheetCellFormats(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read a the last spreadsheet zone
   bool readSpreadsheetZone9(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read a simple structured spreadsheet zone
   bool readSpreadsheetSimpleStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read a complex structured spreadsheet zone
   bool readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+
+  //! try to read a spreadsheet cells content
+  bool readSpreadsheetCellContent(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  //! try to read a spreadsheet cell's format
+  bool readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
 
   //! try to read a list of position
   bool readPositionsList(MWAWEntry const &entry, std::vector<long> &posList, long &lastDataPos);
@@ -118,6 +137,8 @@ protected:
   //! try to read a cell :v2
   bool readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
   //! try to read a formula
+  bool readFormulaV2(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
+  //! try to read a formula: v3...
   bool readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
   //! try to read a cell in a formula
   bool readCellInFormula(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);

@@ -54,10 +54,106 @@
 /** Internal: the structures of a RagTimeText */
 namespace RagTimeTextInternal
 {
+//! Internal: a token of a RagTimeText
+struct Token {
+  //! the token's types
+  enum Type { List, Page, PageCount, PageAfter, Date, Time, Unknown };
+  //! constructor
+  Token() : m_type(Unknown), m_listLevel(0), m_DTFormat(""), m_extra("")
+  {
+    for (int i=0; i<4; ++i) m_listIndices[i]=0;
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Token const &tkn)
+  {
+    switch (tkn.m_type) {
+    case Token::List:
+      o << "list[" << tkn.m_listLevel << "]=[";
+      for (int i=0; i<4 && i<tkn.m_listLevel; ++i)
+        o << tkn.m_listIndices[i] << ",";
+      o << "],";
+      break;
+    case Token::Page:
+      o << "page,";
+      break;
+    case Token::PageAfter:
+      o << "page+1,";
+      break;
+    case Token::PageCount:
+      o << "page[num],";
+      break;
+    case Token::Date:
+      o << "date[" << tkn.m_DTFormat << "],";
+      break;
+    case Token::Time:
+      o << "time[" << tkn.m_DTFormat << "],";
+      break;
+    case Token::Unknown:
+    default:
+      o << "#type[unkn],";
+      break;
+    }
+    o << tkn.m_extra;
+    return o;
+  }
+  //! returns a field corresponding to the token if possible
+  bool getField(MWAWField &field) const
+  {
+    switch (m_type) {
+    case Page:
+      field=MWAWField(MWAWField::PageNumber);
+      break;
+    case PageCount:
+      field=MWAWField(MWAWField::PageCount);
+      break;
+    case Date:
+      field=MWAWField(MWAWField::Date);
+      field.m_DTFormat=m_DTFormat;
+      break;
+    case Time:
+      field=MWAWField(MWAWField::Time);
+      field.m_DTFormat=m_DTFormat;
+      break;
+    case PageAfter:
+    case Unknown:
+    case List:
+    default:
+      return false;
+    }
+    return true;
+  }
+  //! returns a string corresponding to the list indices
+  bool getIndicesString(std::string &str) const
+  {
+    if (m_type!=List) {
+      MWAW_DEBUG_MSG(("RagTimeTextInternal::Token::getIndicesString: must only be called on list token\n"));
+      return false;
+    }
+    std::stringstream s;
+    for (int i=0; i<4 && i<m_listLevel; ++i) {
+      s << m_listIndices[i];
+      if (i==0 || i+1<m_listLevel) s << ".";
+    }
+    str=s.str();
+    return true;
+  }
+
+  //! the token type
+  Type m_type;
+  //! the list level(for a list)
+  int m_listLevel;
+  //! the four list indices
+  int m_listIndices[4];
+  //! the date time format
+  std::string m_DTFormat;
+  //! extra data
+  std::string m_extra;
+};
+
 //! Internal: a text's zone of a RagTimeText
 struct TextZone {
   //! constructor
-  TextZone() : m_textPos(), m_fontPosList(), m_fontList(), m_paragraphPosList(), m_paragraphList(), m_isSent(false)
+  TextZone() : m_textPos(), m_fontPosList(), m_fontList(), m_paragraphPosList(), m_paragraphList(), m_tokenList(), m_isSent(false)
   {
   }
   //! the text zone
@@ -70,6 +166,8 @@ struct TextZone {
   std::vector<long> m_paragraphPosList;
   //! the list of paragraph's properties
   std::vector<MWAWParagraph> m_paragraphList;
+  //! the list of tokens
+  std::vector<Token> m_tokenList;
   //! true if the zone is sent to the listener
   mutable bool m_isSent;
 };
@@ -123,6 +221,16 @@ int RagTimeText::version() const
 int RagTimeText::getFontId(int localId) const
 {
   return m_state->getFontId(localId);
+}
+
+bool RagTimeText::getCharStyle(int charId, MWAWFont &font) const
+{
+  if (charId<0 || charId>=int(m_state->m_charPropList.size())) {
+    MWAW_DEBUG_MSG(("RagTimeText::readFontNames: can not find char style %d\n", charId));
+    return false;
+  }
+  font=m_state->m_charPropList[size_t(charId)];
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -317,11 +425,14 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(TextZone):";
-  int dSz=(int) input->readULong(2);
+  long endPos=entry.end();
+  if (!entry.valid()) {
+    int dSz=(int) input->readULong(2);
+    endPos=pos+2+dSz;
+  }
   int numChar=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
   f << "N=" << numChar << ",";
-  if (!input->checkPosition(endPos) || numChar>dSz) {
+  if (!input->checkPosition(endPos) || pos+2+numChar>endPos) {
     MWAW_DEBUG_MSG(("RagTimeText::readTextZone: the numChar seems bad\n"));
     f << "###";
     ascFile.addPos(pos);
@@ -341,13 +452,19 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
     ++numChar;
   input->seek(pos+numChar, librevenge::RVNG_SEEK_SET);
 
-  if (!readFonts(*zone, color, endPos) || !readParagraphs(*zone, width, endPos))
+  if (!readFonts(*zone, color, endPos))
     return false;
+
   if (m_state->m_idTextMap.find(entry.id())!=m_state->m_idTextMap.end()) {
     MWAW_DEBUG_MSG(("RagTimeText::readTextZone: a zone with id=%d already exists\n", entry.id()));
   }
   else
     m_state->m_idTextMap[entry.id()]=zone;
+  if (input->tell()==endPos)
+    return true;
+
+  if (!readParagraphs(*zone, width, endPos))
+    return false;
   pos=input->tell();
   if (vers==1) {
     if (pos!=endPos) {
@@ -357,7 +474,7 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
     }
     return true;
   }
-  dSz=(int) input->readULong(2);
+  int dSz=(int) input->readULong(2);
   f.str("");
   f << "TextZone[A]:";
   if (pos+2+dSz>endPos) {
@@ -385,7 +502,7 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
     return true;
 
   if (input->tell()!=endPos) {
-    MWAW_DEBUG_MSG(("RagTimeText::readTextZone: find extra datad\n"));
+    MWAW_DEBUG_MSG(("RagTimeText::readTextZone: find extra data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("TextZone[extra]:###");
   }
@@ -573,11 +690,18 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, int width,
     f << "pos=" << textPos << ",";
     MWAWParagraph para;
     para.m_marginsUnit=librevenge::RVNG_POINT;
-    para.m_margins[1]=(double)input->readLong(2);
-    if (vers<=1)
-      para.m_margins[2]=(double)(width-(int)input->readULong(2));
-    else // CHECKME:
-      /*para.m_margins[2]=(double)(int)*/input->readULong(2);
+    // add a default border to mimick frame distance to text
+    double const borderSize=4;
+    para.m_margins[1]=borderSize+(double)input->readLong(2);
+    para.m_margins[2]=(double)(width-(int)input->readULong(2))-2*borderSize;
+    if (*para.m_margins[2]<-borderSize) {
+      if (*para.m_margins[2]<-borderSize*2) {
+        MWAW_DEBUG_MSG(("RagTimeText::readParagraphs: the right margins seems bad\n"));
+        f << "##";
+      }
+      f << "margins[right]=" << *para.m_margins[2] << ",";
+      para.m_margins[2]=0;
+    }
     int align=(int) input->readULong(1);
     switch (align) {
     case 0: // left
@@ -588,8 +712,8 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, int width,
     case 2:
       para.m_justify = MWAWParagraph::JustificationRight;
       break;
-    case 3:
-      para.m_justify = MWAWParagraph::JustificationFull;
+    case 3: // in pratical, look like basic left justification
+      f << "justify,";
       break;
     default:
       MWAW_DEBUG_MSG(("RagTimeText::readParagraphs: find unknown align value\n"));
@@ -625,7 +749,7 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, int width,
       break;
     }
 
-    para.m_margins[0]=(double)input->readLong(2);
+    para.m_margins[0]=(double)input->readLong(2)-*para.m_margins[1];
     for (int j=0; j<numTabs; ++j) {
       int tabPos=(int) input->readLong(2);
       MWAWTabStop tab;
@@ -688,7 +812,7 @@ bool RagTimeText::readParagraphs(RagTimeTextInternal::TextZone &zone, int width,
 }
 
 
-bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPos)
+bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &zone, long endPos)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
@@ -718,58 +842,60 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPo
     pos=input->tell();
     if (pos>=endPos) break;
     f.str("");
-    f << "TextToken-" << n++ << ",";
     dSz=(int) input->readULong(2);
     long fEndPos=pos+dSz;
     if (dSz<3 || fEndPos>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeText::readTextZone: the token zone size seems bad\n"));
-      f << "###";
+      MWAW_DEBUG_MSG(("RagTimeText::readTokens: the token zone size seems bad\n"));
+      f << "###TextToken";
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
       return true;
     }
     int val;
+    RagTimeTextInternal::Token token;
     if (dSz==4) {
-      f << "field,";
       val=(int) input->readLong(1);
       if (val!=1) f << "f0=" << 1 << ",";
       val=(int) input->readLong(1);
       switch (val) {
       case 0x2c:
-        f << "page,";
+        token.m_type=RagTimeTextInternal::Token::Page;
         break;
       case 0x2d:
-        f << "page+1,";
+        token.m_type=RagTimeTextInternal::Token::PageAfter;
         break;
       case 0x2e:
-        f << "page[num],";
+        token.m_type=RagTimeTextInternal::Token::PageCount;
         break;
       default:
-        MWAW_DEBUG_MSG(("RagTimeText::readTextZone: find unknown field\n"));
+        MWAW_DEBUG_MSG(("RagTimeText::readTokens: find unknown field\n"));
         f << "#f1=" << val << ",";
       }
     }
     else if (dSz==6) {
-      f << "date,";
       val=(int) input->readLong(2);
       if (val!=100) f << "f0=" << val << ",";
-      // numFormat -1
-      f << "F" << input->readLong(2)-1 << ",";
+      int format=(int) input->readLong(2)-1;
+      // using default, fixme: use file format type here,
+      token.m_type=(format==4 || format==5) ? RagTimeTextInternal::Token::Time :
+                   RagTimeTextInternal::Token::Date;
+      if (!m_mainParser->getDateTimeFormat(format, token.m_DTFormat))
+        f << "#";
+      f << "F" << format << ",";
     }
     else if (dSz>14) {
-      f << "item,";
       f << "id?=" << input->readLong(2) << ",";
-      f << "value=[";
+      token.m_type=RagTimeTextInternal::Token::List;
+      token.m_listLevel=0;
       for (int i=0; i< 4; ++i) { // small number
-        val=(int) input->readLong(2);
-        if (val) f << val << ",";
-        else f << "_,";
+        token.m_listIndices[i]=(int) input->readLong(2);
+        if (token.m_listIndices[i])
+          token.m_listLevel=i+1;
       }
-      f << "],";
       int sSz=(int) input->readULong(1);
       if (sSz+13>dSz) {
-        MWAW_DEBUG_MSG(("RagTimeText::readTextZone: can not find the item format name\n"));
+        MWAW_DEBUG_MSG(("RagTimeText::readTokens: can not find the item format name\n"));
         f << "###";
       }
       else {
@@ -783,9 +909,13 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &/*zone*/, long endPo
         ascFile.addDelimiter(input->tell(),'|');
     }
     else {
-      MWAW_DEBUG_MSG(("RagTimeText::readTextZone: can not determine the token type\n"));
+      MWAW_DEBUG_MSG(("RagTimeText::readTokens: can not determine the token type\n"));
       f << "###";
     }
+    token.m_extra=f.str();
+    zone.m_tokenList.push_back(token);
+    f.str("");
+    f << "TextToken-" << n++ << ":" << token;
     input->seek(fEndPos, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -837,6 +967,7 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
   if (numPara>zone.m_paragraphList.size()) numPara=zone.m_paragraphList.size();
 
   f << "TextZone:";
+  int actToken=0;
   for (long tPos=0; tPos<entry.length(); ++tPos, ++pos) {
     if (input->isEnd()) {
       MWAW_DEBUG_MSG(("RagTimeText::send: oops, find end of file\n"));
@@ -870,12 +1001,27 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
       break;
     case 1: {
       if (vers>=2) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("RagTimeText::send: sending token is not implemented\n"));
-          first=false;
+        if (actToken>=int(zone.m_tokenList.size())) {
+          MWAW_DEBUG_MSG(("RagTimeText::send: can not find token %d\n", actToken));
+          f << "[#token]";
+          break;
         }
-        f << "[#token]";
+        RagTimeTextInternal::Token const &token=zone.m_tokenList[size_t(actToken++)];
+        f << "[" << token << "]";
+        MWAWField field(MWAWField::None);
+        if (token.getField(field))
+          listener->insertField(field);
+        else if (token.m_type==RagTimeTextInternal::Token::PageAfter)
+          listener->insertUnicodeString("#P+1#");
+        else if (token.m_type==RagTimeTextInternal::Token::List) {
+          std::string indices;
+          if (token.getIndicesString(indices))
+            listener->insertUnicodeString(indices.c_str());
+        }
+        else {
+          MWAW_DEBUG_MSG(("RagTimeText::send: does not know how to send a token\n"));
+          f << "##";
+        }
         break;
       }
       f << "[date]";
@@ -935,8 +1081,9 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
       listener->insertTab();
       f << c;
       break;
+    case 0xb:
     case 0xd:
-      listener->insertEOL();
+      listener->insertEOL(c==0xb);
       ascFile.addPos(lPos);
       ascFile.addNote(f.str().c_str());
       lPos=pos+1;

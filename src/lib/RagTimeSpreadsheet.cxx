@@ -51,16 +51,117 @@
 #include "MWAWTextListener.hxx"
 
 #include "RagTimeParser.hxx"
+#include "RagTimeStruct.hxx"
 
 #include "RagTimeSpreadsheet.hxx"
 
 /** Internal: the structures of a RagTimeSpreadsheet */
 namespace RagTimeSpreadsheetInternal
 {
+//! Internal: date/time format of a RagTimeSpreadsheet
+struct DateTime {
+  //! constructor
+  DateTime() : m_isDate(true), m_DTFormat("")
+  {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, DateTime const &dt)
+  {
+    o << dt.m_DTFormat;
+    if (!dt.m_isDate) o << "[time],";
+    else o << ",";
+    return o;
+  }
+  //! true if this is a date field
+  bool m_isDate;
+  //! the date time format
+  std::string m_DTFormat;
+};
+
+//! Internal: cell number format of a RagTimeSpreadsheet (SpVa block)
+struct CellFormat {
+  //! constructor
+  CellFormat() : m_numeric(), m_dateTime(), m_align(MWAWCell::HALIGN_DEFAULT), m_rotation(0), m_flags(0), m_extra("")
+  {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, CellFormat const &form)
+  {
+    if (form.m_rotation) o << "rot=" << form.m_rotation << ",";
+    if (form.m_flags&2) o << "protect[all],";
+    if (form.m_flags&4) o << "protect[format,formula],";
+    if (form.m_flags&0x8) o << "invisible,";
+    if (form.m_flags&0x20) o << "zero[dontshow],";
+    if (form.m_flags&0x40) o << "prec[variable],"; // precision depend on display
+    if (form.m_flags&0x80) o << "print[no],";
+
+    if (form.m_flags&0xFF11) o << "fl=" << std::hex << (form.m_flags&0xFF11) << std::dec << ",";
+    o << form.m_extra;
+    return o;
+  }
+  //! the numeric format
+  MWAWCell::Format m_numeric;
+  //! the date/time format
+  DateTime m_dateTime;
+  //! the cell's alignment
+  MWAWCell::HorizontalAlignment m_align;
+  //! the rotation angle
+  int m_rotation;
+  //! some flags
+  int m_flags;
+  //! extra data (for debugging)
+  std::string m_extra;
+};
+
+//! Internal: cell border of a RagTimeSpreadsheet (SpVa block)
+struct CellBorder {
+  //! constructor
+  CellBorder() : m_extra("")
+  {
+    m_borders[0]=m_borders[1]=MWAWBorder();
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, CellBorder const &border)
+  {
+    for (int i=0; i<2; ++i) {
+      if (border.m_borders[i]==MWAWBorder()) continue;
+      o << (i==0 ? "top=" : "left=") << border.m_borders[i] << ",";
+    }
+    o << border.m_extra;
+    return o;
+  }
+  //! the top and left border
+  MWAWBorder m_borders[2];
+  //! extra data
+  std::string m_extra;
+};
+
+//! Internal: extra cell format of a RagTimeSpreadsheet (SpCe block)
+struct CellExtra {
+  //! constructor
+  CellExtra():m_isTransparent(false), m_color(MWAWColor::white()), m_extra("")
+  {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, CellExtra const &st)
+  {
+    if (st.m_isTransparent) o << "noColor,";
+    else if (!st.m_color.isWhite()) o << "color[back]=" << st.m_color << ",";
+    o << st.m_extra;
+    return o;
+  }
+  //! true if the cell is transparent
+  bool m_isTransparent;
+  //! the background color
+  MWAWColor m_color;
+  //! extra data
+  std::string m_extra;
+};
+
 //! Internal: header of a complex block of a RagTimeSpreadsheet
 struct ComplexBlock {
   //! constructor
-  ComplexBlock() : m_zones()
+  ComplexBlock() : m_zones(), m_intList()
   {
   }
   //! a small zone of a ComplexBlock
@@ -75,8 +176,9 @@ struct ComplexBlock {
     {
       o << "pos=" << std::hex << z.m_pos << std::dec << ",";
       for (int i=0; i<3; ++i) {
-        if (z.m_data[i])
-          o << "f" << i << "=" << z.m_data[i] << ",";
+        if (!z.m_data[i]) continue;
+        char const *(wh[])= {"firstVal","N", "Nsub"};
+        o << wh[i] << "=" << z.m_data[i] << ",";
       }
       return o;
     }
@@ -87,6 +189,8 @@ struct ComplexBlock {
   };
   //! the list of zone
   std::vector<Zone> m_zones;
+  //! a list of unknown counter
+  std::vector<int> m_intList;
 };
 
 //! Internal: a cell of a RagTimeSpreadsheet
@@ -120,7 +224,6 @@ struct Cell : public MWAWCell {
   //! the cell content
   MWAWCellContent m_content;
 };
-
 
 //! Internal: a spreadsheet's zone of a RagTimeSpreadsheet
 struct Spreadsheet {
@@ -190,12 +293,26 @@ struct Spreadsheet {
 //! Internal: the state of a RagTimeSpreadsheet
 struct State {
   //! constructor
-  State() : m_version(-1), m_idSpreadsheetMap()
+  State() : m_version(-1), m_numericFormatList(), m_dateTimeList(), m_cellFontList(), m_cellFormatList(), m_cellBorderList(), m_cellExtraList(), m_cellDEList(), m_idSpreadsheetMap()
   {
   }
 
   //! the file version
   mutable int m_version;
+  //! a list of numeric format
+  std::vector<MWAWCell::Format> m_numericFormatList;
+  //! a list dateTimeFormatId -> dateTimeFormat;
+  std::vector<DateTime> m_dateTimeList;
+  //! a list SpTe -> font
+  std::vector<MWAWFont> m_cellFontList;
+  //! a list SpVaId -> cellFormat
+  std::vector<CellFormat> m_cellFormatList;
+  //! a list SpBoId -> cellBorder
+  std::vector<CellBorder> m_cellBorderList;
+  //! a list SpCeId -> cellExtra
+  std::vector<CellExtra> m_cellExtraList;
+  //! a list SpDEId -> unknown data
+  std::vector<std::string> m_cellDEList;
   //! map id -> spreadsheet
   std::map<int, shared_ptr<Spreadsheet> > m_idSpreadsheetMap;
 };
@@ -218,6 +335,639 @@ int RagTimeSpreadsheet::version() const
   if (m_state->m_version < 0)
     m_state->m_version = m_parserState->m_version;
   return m_state->m_version;
+}
+
+////////////////////////////////////////////////////////////
+// resource
+////////////////////////////////////////////////////////////
+bool RagTimeSpreadsheet::getDateTimeFormat(int dtId, std::string &dtFormat) const
+{
+  if (dtId<0||dtId>=int(m_state->m_dateTimeList.size())) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::getDateTimeFormat: can not find the date/format %d\n", dtId));
+    return false;
+  }
+  dtFormat=m_state->m_dateTimeList[size_t(dtId)].m_DTFormat;
+  return !dtFormat.empty();
+}
+
+bool RagTimeSpreadsheet::readNumericFormat(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: the size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // 0 (except last)
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2); // always 1 ?
+    if (val!=1) f << "f1=" << val << ",";
+    int fPos=(int) input->readULong(2);
+    f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+    posSet.insert(entry.begin()+2+fPos);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    long nextPos=it==posSet.end() ? endPos : *it;
+    f.str("");
+    f << entry.type() << "[def]:";
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    int depl[4];
+    f << "depl=[";
+    for (int i=0; i<4; ++i) {
+      depl[i]=(int) input->readULong(1);
+      if (depl[i]) f << depl[i] << ",";
+      else f << "_,";
+    }
+    f << "],";
+    if (entry.id()==0) {
+      MWAWCell::Format format;
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
+      if (depl[0]<16 || pos+depl[0]>endPos) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: the first zone seems bad\n"));
+        f << "#header,";
+      }
+      else {
+        int val=(int) input->readULong(1);
+        if (val==1) {
+          format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+          f << "standart,";
+        }
+        else if (val) f << "#standart=" << val << ",";
+        format.m_digits=(int) input->readULong(1);
+        for (int i=0; i<10; ++i) {
+          val=(int) input->readULong(1);
+          if (val) f << "f" << i << "=" << val << ",";
+        }
+      }
+      if (depl[0]<depl[1] && pos+depl[1]<endPos) {
+        input->seek(pos+depl[0], librevenge::RVNG_SEEK_SET);
+        ascFile.addDelimiter(input->tell(),'|');
+        f << "format=[";
+        for (int i=depl[0]; i<depl[1]; ++i) {
+          int c=(int) input->readULong(1);
+          switch (c) {
+          case 1: // end
+            break;
+          case 6:
+            f << "#";
+            break;
+          case 7: // int
+            f << "0";
+            break;
+          case 9: // fix
+            f << ",";
+            break;
+          case 0xa:
+            format.m_thousandHasSeparator=true;
+            f << " ";
+            break;
+          case 0xc:
+            format.m_numberFormat=MWAWCell::F_NUMBER_SCIENTIFIC;
+            f << "E+";
+            break;
+          case 0xe:
+            format.m_numberFormat=MWAWCell::F_NUMBER_PERCENT;
+            f << "%";
+            break;
+          case 0xf:
+            format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+            f << "[standart]";
+            break;
+          default:
+            if (c<0x1f) {
+              f << "#[" << std::hex << c << std::dec << "]";
+            }
+            else {
+              format.m_numberFormat=MWAWCell::F_NUMBER_CURRENCY; // only probable
+              f << char(c);
+            }
+          }
+        }
+        f << "],";
+      }
+      else {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: the compress format zone seems bad\n"));
+        f << "#format,";
+      }
+      f << format;
+      m_state->m_numericFormatList.push_back(format);
+    }
+    else if (depl[3]<8 || pos+depl[3]>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: the first zone seems bad\n"));
+      f << "#header,";
+      m_state->m_dateTimeList.push_back(RagTimeSpreadsheetInternal::DateTime());
+    }
+    else {
+      f << "depl2=[";
+      for (int i=0; i<4; ++i) { // f0=small number, f1=f2=f3=0
+        int val=(int) input->readULong(1);
+        if (val) f << val << ",";
+        else f << "_,";
+      }
+      f << "],";
+      bool ok=true, isDate=false;;
+      std::string dtFormat("");
+      for (int i=8; i<depl[3]; ++i) {
+        int c=(int) input->readULong(1);
+        switch (c) {
+        case 0: // probably next field...
+          break;
+        case 1: // end
+          break;
+        case 7:
+          dtFormat+="%S";
+          break;
+        case 9:
+          dtFormat+="%M";
+          break;
+        case 0xa:
+          dtFormat+="%H";
+          break;
+        case 0xc:
+        case 0xd: // with 2 digits
+          dtFormat+="%d";
+          isDate=true;
+          break;
+        case 0xe: // checkme
+          dtFormat+="%a";
+          isDate=true;
+          break;
+        case 0xf:
+          dtFormat+="%A";
+          isDate=true;
+          break;
+        case 0x10:
+        case 0x11: // with 2 digits
+          dtFormat+="%m";
+          isDate=true;
+          break;
+        case 0x12:
+          dtFormat+="%b";
+          isDate=true;
+          break;
+        case 0x13:
+          dtFormat+="%B";
+          isDate=true;
+          break;
+        case 0x14:
+          dtFormat+="%y";
+          isDate=true;
+          break;
+        case 0x15:
+          dtFormat+="%Y";
+          isDate=true;
+          break;
+        default:
+          if (c<0x1f) {
+            std::stringstream s;
+            s << "#[" << std::hex << c << std::dec << "]";
+            dtFormat+=s.str();
+            ok=false;
+          }
+          else
+            dtFormat+=char(c);
+        }
+      }
+      f << "format=[" << dtFormat << "],";
+      if (ok) {
+        RagTimeSpreadsheetInternal::DateTime dt;
+        dt.m_DTFormat=dtFormat;
+        dt.m_isDate=isDate;
+        m_state->m_dateTimeList.push_back(dt);
+      }
+      else
+        m_state->m_dateTimeList.push_back(RagTimeSpreadsheetInternal::DateTime());
+    }
+    // fixme: read the 3 other potential header zones
+    headerSz=depl[3];
+    if ((headerSz&1)) ++headerSz;
+    input->seek(pos+headerSz, librevenge::RVNG_SEEK_SET);
+    int cSz=(int) input->readULong(1);
+    if (headerSz<4||cSz<=0||pos+headerSz+1+cSz!=nextPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readNumericFormat: can not read a format\n"));
+      f << "###";
+    }
+    else {
+      ascFile.addDelimiter(input->tell()-1,'|');
+      std::string name("");
+      for (int i=0; i<cSz; ++i) name += (char) input->readULong(1);
+      f << name << ",";
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readResource(MWAWEntry &entry)
+{
+  if (entry.begin()<=0) return false;
+
+  std::string const &type=entry.type();
+  if (type.length()!=8 || type.compare(0,6,"rsrcSp")!=0)
+    return false;
+  if (entry.type()=="rsrcSpDI")
+    return readRsrcSpDI(entry);
+  if (entry.type()=="rsrcSpDo")
+    return readRsrcSpDo(entry);
+
+  RagTimeStruct::ResourceList::Type resType=RagTimeStruct::ResourceList::Undef;
+  for (int i=RagTimeStruct::ResourceList::SpBo; i<=RagTimeStruct::ResourceList::SpVa; ++i) {
+    std::string name("rsrc");
+    name+=RagTimeStruct::ResourceList::getName(RagTimeStruct::ResourceList::Type(i));
+    if (entry.type()!=name) continue;
+    resType=RagTimeStruct::ResourceList::Type(i);
+    break;
+  }
+  if (resType==RagTimeStruct::ResourceList::Undef)
+    return false;
+
+  entry.setParsed(true);
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  RagTimeStruct::ResourceList zone;
+  if (!zone.read(input, entry)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: the size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  f << zone;
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  input->seek(zone.m_dataPos, librevenge::RVNG_SEEK_SET);
+  if (zone.m_type!=resType && zone.m_dataNumber) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: find unexpected data size\n"));
+    for (int i=0; i<zone.m_dataNumber; ++i) {
+      pos=input->tell();
+      f.str("");
+      f << entry.type() << "-" << i << ":##";
+      input->seek(pos+zone.m_dataSize, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+  }
+  else {
+    int val;
+    for (int i=0; i<zone.m_dataNumber; ++i) {
+      pos=input->tell();
+      f.str("");
+      switch (resType) {
+      case RagTimeStruct::ResourceList::SpBo: {
+        RagTimeSpreadsheetInternal::CellBorder borders;
+        libmwaw::DebugStream f2;
+        val=(int) input->readLong(2); // always 0
+        if (val) f << "f0=" << val << ",";
+        val=(int) input->readLong(2);
+        if (val!=1) f << "used=" << val << ",";
+        for (int j=0; j<2; ++j) {
+          MWAWBorder border;
+          val=(int) input->readULong(2);
+          f2.str("");
+          // val&0x8000: def in cell
+          if (val&0x4000) if (j) f2 << "third[bottom],";
+          switch (val&3) {
+          case 0:
+            f2 << "pos[exterior],";
+            break;
+          case 1:
+            f2 << "pos[interior],";
+            break;
+          case 2: // normal
+            break;
+          default:
+            f2 << "##pos=3,";
+            break;
+          }
+          val &= 0x3FFC;
+          if (val) f2 << "fl=" << std::hex << val << std::dec << ",";
+          border.m_width=float(input->readLong(4))/65536.f;
+          val=(int) input->readLong(2);
+          if (val && !m_mainParser->getColor(val-1, border.m_color)) {
+            MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find border color %d\n", val-1));
+            f2 << "#color=" << val-1 << ",";
+          }
+          border.m_extra=f2.str();
+          borders.m_borders[j]=border;
+        }
+        borders.m_extra=f.str();
+        m_state->m_cellBorderList.push_back(borders);
+        f.str("");
+        f << borders;
+        break;
+      }
+      case RagTimeStruct::ResourceList::SpCe: {
+        RagTimeSpreadsheetInternal::CellExtra extra;
+        val=(int) input->readLong(2); // always 0
+        if (val) f << "f0=" << val << ",";
+        val=(int) input->readLong(2);
+        if (val!=1) f << "used=" << val << ",";
+        val=(int) input->readULong(2);
+        if (val&0x8000) extra.m_isTransparent=true;
+        if (val&0x4000) f << "bottom[color],";
+        if (val&0x2000) f << "top[color],";
+        val &= 0x1FFF;
+        if (val) f << "fl=" << std::hex << val << std::dec << ",";
+        val=(int) input->readLong(2);
+        if (val && !m_mainParser->getColor(val-1, extra.m_color)) {
+          MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find color %d\n", val-1));
+          f << "#color=" << val-1 << ",";
+        }
+        extra.m_extra=f.str();
+        m_state->m_cellExtraList.push_back(extra);
+        f.str("");
+        f << extra;
+        break;
+      }
+      case RagTimeStruct::ResourceList::SpDE:
+        for (int j=0; j<2; ++j) { // f0=2, f1=1-b
+          val=(int) input->readLong(2);
+          if (val) f << "f" << j << "=" << val << ",";
+        }
+        for (int j=0; j<2; ++j) { // two big number ?
+          val=(int) input->readULong(2);
+          if (val) f << "g" << j << "=" << std::hex << val << std::dec << ",";
+        }
+        val=(int) input->readLong(2);
+        if (val) f << "f2=" << val << ",";
+        m_state->m_cellDEList.push_back(f.str());
+        break;
+      case RagTimeStruct::ResourceList::SpTe: {
+        MWAWFont font;
+        val=(int) input->readLong(2); // always 0
+        if (val) f << "f0=" << val << ",";
+        val=(int) input->readLong(2);
+        if (val!=1) f << "used=" << val << ",";
+        val=(int) input->readLong(2);
+        if (val>0 && !m_mainParser->getCharStyle(val-1, font)) {
+          MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find a char format\n"));
+          f << "##id[CharId]=" << val << ",";
+        }
+        val=(int) input->readLong(1);
+        if (val) font.setDeltaLetterSpacing(float(val));
+        val=(int) input->readLong(1); // 1|5
+        if (val!=1) f << "f1=" << val << ",";
+        val=(int) input->readLong(1);
+        if (val) font.set(MWAWFont::Script(-float(val),librevenge::RVNG_POINT));
+        val=(int) input->readULong(1);
+        f << "lang=" << val << ",";
+        font.m_extra=f.str();
+        m_state->m_cellFontList.push_back(font);
+        f.str("");
+        f << font.getDebugString(m_parserState->m_fontConverter);
+        break;
+      }
+      case RagTimeStruct::ResourceList::SpVa: {
+        RagTimeSpreadsheetInternal::CellFormat format;
+        val=(int) input->readLong(2); // always 0
+        if (val) f << "f0=" << val << ",";
+        val=(int) input->readLong(2);
+        if (val!=1) f << "used=" << val << ",";
+        format.m_flags=(int) input->readULong(2); // small number
+        val=(int) input->readLong(2);
+        if (val<=0 || val>int(m_state->m_numericFormatList.size())) {
+          MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find a numeric format\n"));
+          f << "##id[NumFormat]=" << val << ",";
+        }
+        else {
+          format.m_numeric=m_state->m_numericFormatList[size_t(val-1)];
+          if (val!=1) // default
+            f << format.m_numeric << ",";
+        }
+        val=(int) input->readLong(2);
+        if (val<=0 || val>int(m_state->m_dateTimeList.size())) {
+          MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find a date/time format\n"));
+          f << "##id[DTFormat]=" << val << ",";
+        }
+        else {
+          format.m_dateTime=m_state->m_dateTimeList[size_t(val-1)];
+          if (val!=1)
+            f << format.m_dateTime << ",";
+        }
+        val=(int) input->readLong(1);
+        switch (val) {
+        case 1: // normal
+          break;
+        case 2:
+          format.m_align=MWAWCell::HALIGN_LEFT;
+          f << "left,";
+          break;
+        case 3:
+          format.m_align=MWAWCell::HALIGN_CENTER;
+          f << "center,";
+          break;
+        case 4:
+          format.m_align=MWAWCell::HALIGN_RIGHT;
+          f << "right,";
+          break;
+        case 5:
+          f << "comma[justify],";
+          break;
+        case 6:
+          f << "repeat,";
+          break;
+        default:
+          f << "#align=" << val << ",";
+          break;
+        }
+        val=(int) input->readLong(1);
+        if (val>=1&&val<=4)
+          format.m_rotation=90*(val-1);
+        else
+          f << "#rotation=" << val << ",";
+
+        format.m_extra=f.str();
+        m_state->m_cellFormatList.push_back(format);
+        f.str("");
+        f << format;
+        break;
+      }
+      case RagTimeStruct::ResourceList::BuSl:
+      case RagTimeStruct::ResourceList::BuGr:
+      case RagTimeStruct::ResourceList::gray:
+      case RagTimeStruct::ResourceList::colr:
+      case RagTimeStruct::ResourceList::res_:
+      case RagTimeStruct::ResourceList::Undef:
+      default:
+        break;
+      }
+      std::string data=f.str();
+      f.str("");
+      f << entry.type() << "-" << i << ":" << data;
+      input->seek(pos+zone.m_dataSize, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+  }
+  // last field is always empty
+  pos=input->tell();
+  ascFile.addPos(pos);
+  ascFile.addNote("_");
+  input->seek(pos+zone.m_dataSize, librevenge::RVNG_SEEK_SET);
+
+  if (input->tell()!=zone.m_endPos) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: find some extra data\n"));
+    f.str("");
+    f << entry.type() << "-end:";
+    ascFile.addPos(input->tell());
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readRsrcSpDI(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x20)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readRsrcSpDI: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  int headerSz=(int) input->readULong(2);
+  int fSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (headerSz<0x20 || fSz<0x8 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readRsrcSpDI: the size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  std::set<long> posSet;
+  posSet.insert(endPos);
+  for (int i=0; i<=N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    int val=(int) input->readLong(2); // 0 (except last)
+    if (val) f << "f0=" << val << ",";
+    int fPos=(int) input->readULong(2);
+    if (fPos) {
+      f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
+      posSet.insert(entry.begin()+2+fPos);
+    }
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
+    pos=*(it++);
+    if (pos>=endPos) break;
+    f.str("");
+    f << entry.type() << "[data]:";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool RagTimeSpreadsheet::readRsrcSpDo(MWAWEntry &entry)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos=entry.begin();
+  if (pos<=0 || !input->checkPosition(pos+2+0x4a)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readRsrcSpDo: the position seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(rsrcSpDo)[" << entry.id() << "]:";
+  int dSz=(int) input->readULong(2);
+  long endPos=pos+2+dSz;
+  if (dSz<0x4a || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readRsrcSpDo: the size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  for (int i=0; i<2; ++i) { // f1=0|80
+    int val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  int val0;
+  for (int i=0; i<10; ++i) { // find g0=3+10*k, g1=10+g0, g2=10+g1, g3=10+g2, other 0|3+10*k1
+    int val = (int) input->readLong(4);
+    if (i==0) {
+      val0=val;
+      f << "g0=" << val << ",";
+    }
+    else if (i<4 && val!=val0+10*i)
+      f << "g" << i << "=" << val << ",";
+    else if (i>=4 && val)
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i<9; ++i) {
+    int val = (int) input->readULong(2);
+    static int const expected[]= {0,0,0,0x64,0x3ff5,0x8312,0x6e97,0x8d4f,0xdf3b};
+    if (val!=expected[i])
+      f << "h" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  int const numVal= int(endPos-4-input->tell())/2;
+  for (int i=0; i<numVal; ++i) { // k0=small int, k1=k0+1, k2=k3=k4=0, k5=0|b7|e9|f3
+    int val = (int) input->readLong(2);
+    if (val) f << "k" << i << "=" << val << ",";
+  }
+  input->seek(endPos-4, librevenge::RVNG_SEEK_SET);
+  f << "id?=" << std::hex << input->readULong(4) << std::dec << ","; // a big number
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
 }
 
 
@@ -251,10 +1001,12 @@ bool RagTimeSpreadsheet::readBlockHeader(MWAWEntry const &entry, RagTimeSpreadsh
     ascFile.addNote(f.str().c_str());
     return false;
   }
-  int val;
-  f << "unkn=[";
-  for (int i=0; i<2+N; ++i) {
+  int val=(int) input->readLong(2);
+  f << "f0=" << val << ",";
+  f << "flags=[";
+  for (int i=0; i<=N; ++i) {
     val=(int) input->readLong(2);
+    block.m_intList.push_back(val);
     if (val) f << val << ",";
     else f << "_,";
   }
@@ -441,8 +1193,8 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
     zone.setBegin(zoneBegin[i]);
     zone.setEnd(zoneBegin[i+1]);
     zone.setId(i);
-    if (i<2) {
-      char const *(what[])= {"SpreadsheetCell", "SpreadsheetCFormat" };
+    if (i<3) {
+      char const *(what[])= {"SpreadsheetContent", "SpreadsheetCFormat", "SpreadsheetFormula" };
       zone.setType(what[i]);
     }
     else {
@@ -453,11 +1205,7 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
     bool ok=true;
     switch (i) {
     case 0:
-      ok=readSpreadsheetCells(zone, *sheet);
-      break;
     case 1:
-      ok=readSpreadsheetCellFormats(zone, *sheet);
-      break;
     case 2:
     case 3:
     case 4:
@@ -485,93 +1233,207 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCells(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool RagTimeSpreadsheet::readSpreadsheetCellContent(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
-  RagTimeSpreadsheetInternal::ComplexBlock block;
-  if (!readBlockHeader(entry, block)) return false;
-
   MWAWInputStreamPtr input = m_parserState->m_input;
-  long endPos=entry.end();
-
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
-  ascFile.addPos(endPos);
-  ascFile.addNote("_");
 
-  for (size_t i=0; i< block.m_zones.size(); ++i) {
-    long pos=block.m_zones[i].m_pos;
-    if (pos<entry.begin() || pos>=endPos) continue;
+  long pos=input->tell();
 
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    std::vector<long> posList;
-    long lastDataPos;
-    if (!readPositionsList(entry, posList, lastDataPos))
-      continue;
-
-    // the cell
-    for (size_t j=0; j<posList.size(); ++j) {
-      long zEndPos=(j+1==posList.size()) ? lastDataPos:posList[j+1];
-      if (!posList[j] || posList[j]>=zEndPos) continue;
-      f.str("");
-      f << entry.type() << "-C" << i << "-" << j << ":";
-      ascFile.addPos(posList[j]);
-      ascFile.addNote(f.str().c_str());
+  f << "SpreadsheetContent-C" << cellPos<< "]:";
+  bool ok=true;
+  if (cellPos[1]==0) {
+    f << "colDim,";
+    if (pos+16>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: can not read a row height\n"));
+      ok=false;
+    }
+    else {
+      f << "dim=[";
+      // col dim, followed by some margins?, no sure if v3~15/16 is or not a dim
+      for (int j=0; j<4; ++j) {
+        long dim=(long) input->readULong(4);
+        f << float(dim&0x7FFFFFFF)/65536.f;
+        if (dim&0x80000000) f << "/h";
+        f << ",";
+      }
+      f << "],";
     }
   }
-  return true;
+  else if (cellPos[0]==0) {
+    f << "rowDim,";
+    if (pos+8>endPos) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: can not read a row height\n"));
+      ok=false;
+    }
+    else {
+      f << "dim=[";
+      for (int j=0; j<2; ++j) { // row dim, followed by cell height
+        long dim=(long) input->readULong(4);
+        f << float(dim&0x7FFFFFFF)/65536.f;
+        if (dim&0x80000000) f << "/h";
+        f << ",";
+      }
+      f << "],";
+    }
+  }
+  else {
+    int val, type=(int) input->readULong(1);
+    switch (type) {
+    case 0: // not frequent, but can happens
+      break;
+    case 0x81:
+      f << "float81,";
+    // fall through intended
+    case 3:
+      if (type==3)
+        f << "date/time,";
+    // fall through intended
+    case 1: {
+      if (pos+11>endPos) {
+        ok=false;
+        break;
+      }
+      double res;
+      bool isNan;
+      if (!input->readDouble10(res, isNan))
+        f << "#value,";
+      else
+        f << res << ",";
+      break;
+    }
+    case 0x24:
+      f << "text2,";
+    // fall through intended
+    case 4: {
+      std::string text("");
+      for (int j=0; j<endPos-1-pos; ++j) {
+        char c=(char) input->readLong(1);
+        if (c==0)
+          break;
+        text+=c;
+      }
+      f << text << ",";
+      break;
+    }
+    case 5:
+      if (pos+2>endPos) {
+        ok=false;
+        break;
+      }
+      val=(int)input->readLong(1);
+      f << val << ",";
+      break;
+    case 6:
+    case 0x14: {
+      f << "textZone,";
+      MWAWEntry textEntry;
+      textEntry.setBegin(input->tell());
+      textEntry.setEnd(endPos);
+      textEntry.setId(m_mainParser->getNewZoneId());
+      textEntry.setType("SpreadsheetText");
+      // fixme: set the column width here
+      ok=m_mainParser->readTextZone(textEntry, 0);
+      break;
+    }
+    case 0x51:
+      f << "long51,";
+    // fall through intended
+    case 0x11: // or 2 int?
+      if (pos+5>endPos) {
+        ok=false;
+        break;
+      }
+      val=(int)input->readLong(4);
+      f << val << ",";
+      break;
+    default:
+      ok=false;
+      break;
+    }
+  }
+  if (!ok) f<< "##";
+  else if ((input->tell()+1==endPos && input->readLong(1)!=0) || input->tell()!=endPos)
+    f<<"#";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return ok;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCellFormats(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
 {
-  RagTimeSpreadsheetInternal::ComplexBlock block;
-  if (!readBlockHeader(entry, block)) return false;
-
   MWAWInputStreamPtr input = m_parserState->m_input;
-  long endPos=entry.end();
+  long pos=input->tell();
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
-  ascFile.addPos(endPos);
-  ascFile.addNote("_");
 
-  int numBlocks=(int) block.m_zones.size();
-  if (numBlocks>3) {
-    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormats: the number of block seems bad\n"));
-    ascFile.addPos(entry.begin());
-    ascFile.addNote("###N");
+  f << "SpreadsheetCFormat-C" << cellPos << "]:";
+  if (cellPos[1]==0) f << "col,";
+  else if (cellPos[0]==0) f << "row,";
+  if (pos+8>endPos) {
+    f << "###";
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: a block definition seems bad\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
   }
-  for (size_t i=0; i<block.m_zones.size(); ++i) {
-    if (i>=3) break;
-    long pos=block.m_zones[i].m_pos;
-    if (pos<entry.begin() || pos>=endPos) continue;
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    std::vector<long> posList;
-    long lastDataPos;
-    if (!readPositionsList(entry, posList, lastDataPos))
+  for (int j=0; j<4; ++j) {
+    int val=(int) input->readULong(2);
+    if (val==0) {
+      if (cellPos[0] && cellPos[1]) {
+        char const(*wh[])= {"SpTe","SpVa", "SpBo", "SpCe"};
+        f << wh[j] << "=#undef,";
+      }
       continue;
-    for (size_t j=0; j<posList.size(); ++j) {
-      long zEndPos=(j+1==posList.size()) ? lastDataPos:posList[j+1];
-      char const(*what[])= {"Cell","Col", "Row"};
-      if (!posList[j] || posList[j]>=zEndPos) continue;
-      f.str("");
-      f << entry.type() << "[" << what[i] << j << "]:";
-      if (posList[j]+8>zEndPos) {
-        f << "###";
-        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormats: a block definition seems bad\n"));
-        ascFile.addPos(posList[j]);
-        ascFile.addNote(f.str().c_str());
-        continue;
-      }
-      input->seek(posList[j], librevenge::RVNG_SEEK_SET);
-      for (int k=0; k<4; ++k) {
-        int val=(int) input->readULong(2);
-        // f0=SpTe, SpDo ?
-        char const(*wh[])= {"f0","rsrcSpVa", "rsrcSpBo", "rsrcSpCe"};
-        if (val!=1) f << wh[k] << "-" << val-1 << ",";
-      }
-      ascFile.addPos(posList[j]);
-      ascFile.addNote(f.str().c_str());
     }
+    switch (j) {
+    case 0:
+      if (val<=0 || val >(int) m_state->m_cellFontList.size()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpTe index\n"));
+        f << "id[SpTe]=##" << val-1 << ",";
+        break;
+      }
+      if (val==1) break;
+      f << "te=[" << m_state->m_cellFontList[size_t(val-1)].getDebugString(m_parserState->m_fontConverter) << "],";
+      break;
+    case 1:
+      if (val<=0 || val>(int) m_state->m_cellFormatList.size()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpVa index\n"));
+        f << "id[SpVa]=##" << val-1 << ",";
+        break;
+      }
+      if (val==1) break;
+      f << "va=[" << m_state->m_cellFormatList[size_t(val-1)] << "],";
+      break;
+    case 2:
+      if (val <= 0 || val>(int) m_state->m_cellBorderList.size()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpBoindex\n"));
+        f << "id[SpBo]=##" << val-1 << ",";
+        break;
+      }
+      if (val==1) break;
+      f << "bo=[" << m_state->m_cellBorderList[size_t(val-1)] <<  "],";
+      break;
+    case 3:
+      if (val<=0 || val>(int) m_state->m_cellExtraList.size()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpCe index\n"));
+        f << "id[SpCe]=##" << val-1 << ",";
+        break;
+      }
+      if (val==1) break;
+      f << "ce=[" << m_state->m_cellExtraList[size_t(val-1)] << "],";
+      break;
+    default:
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected type\n"));
+      f << "###";
+      break;
+    }
+
   }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
   return true;
 }
 
@@ -702,7 +1564,7 @@ bool RagTimeSpreadsheet::readSpreadsheetSimpleStructure(MWAWEntry const &entry, 
   return true;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet)
 {
   RagTimeSpreadsheetInternal::ComplexBlock block;
   if (!readBlockHeader(entry, block)) return false;
@@ -715,32 +1577,126 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
   ascFile.addPos(endPos);
   ascFile.addNote("_");
 
-  for (size_t i=0; i< block.m_zones.size(); ++i) {
-    long pos=block.m_zones[i].m_pos;
-    if (pos<entry.begin() || pos>=endPos) continue;
+  /* first sort data by first value ( as we need to parse first the
+     column definition before parsing a cell content ) */
+  std::map<int,size_t> sortZones;
+  for (size_t z=0; z< block.m_zones.size(); ++z) {
+    int const fValue=block.m_zones[z].m_data[0];
+    if (sortZones.find(fValue)!=sortZones.end()) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: oops, a zone with firstVal=%d already exists\n", fValue));
+      f.str("");
+      f << entry.type() << "-unparsed:###";
+      ascFile.addPos(block.m_zones[z].m_pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    else
+      sortZones[fValue]=z;
+  }
+
+  long lastEndPos=input->tell(); // end of last block to check for unparsed data
+  for (std::map<int,size_t>::iterator it=sortZones.begin(); it!=sortZones.end(); ++it) {
+    size_t const z=it->second;
+    RagTimeSpreadsheetInternal::ComplexBlock::Zone &contentZone=block.m_zones[z];
+    long contentEndPos=(block.m_zones.size()>z+1 && block.m_zones[z+1].m_pos<entry.begin()) ?
+                       block.m_zones[z+1].m_pos : endPos;
+
+    long pos=contentZone.m_pos;
+    if (pos<entry.begin() || pos>=contentEndPos) continue;
+
+    MWAWEntry content(entry);
+    content.setEnd(contentEndPos);
     input->seek(pos, librevenge::RVNG_SEEK_SET);
+
     std::vector<long> posList;
     long lastDataPos;
     if (!readPositionsList(entry, posList, lastDataPos))
       return true;
 
-    for (size_t j=0; j<posList.size(); ++j) {
-      if (posList[j]>=lastDataPos) continue;
-      f.str("");
-      f << "SpreadsheetZon" << entry.id() << "-B" << j << ":";
-      ascFile.addPos(posList[j]);
-      ascFile.addNote(f.str().c_str());
+    int const numCellsByRows=contentZone.m_data[2];
+    if (!posList.empty() && numCellsByRows<=0) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: can not find determine the cell's positions\n"));
+      continue;
     }
-    input->seek(lastDataPos, librevenge::RVNG_SEEK_SET);
+
+    int row=contentZone.m_data[0]-1, prevActiveRow=-1, rowType=1;
+    for (size_t i=0; i<posList.size(); ++i) {
+      f.str("");
+      int col=int(i)%numCellsByRows;
+      if (int(i)/numCellsByRows!=prevActiveRow) {
+        while (1) {
+          if (++row >= int(block.m_intList.size()) || row<0) {
+            MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: can not find determine a cell's row\n"));
+            f << "###";
+            break;
+          }
+          if (!block.m_intList[size_t(row)]) continue;
+          if (rowType==2) --row;
+          if (rowType!=1 && rowType!=2) {
+            MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: find unknown row type\n"));
+            f << "###";
+          }
+          break;
+        }
+        prevActiveRow=int(i)/numCellsByRows;
+      }
+
+      long zEndPos=(i+1==posList.size()) ? lastDataPos:posList[i+1];
+      if (!posList[i] || posList[i]>=zEndPos) continue;
+
+      input->seek(posList[i], librevenge::RVNG_SEEK_SET);
+      Vec2i cellPos(col,row);
+      bool ok=true;
+      switch (entry.id()) {
+      case 0:
+        ok=readSpreadsheetCellContent(cellPos, zEndPos, sheet);
+        break;
+      case 1:
+        ok=readSpreadsheetCellFormat(cellPos, zEndPos, sheet);
+        break;
+#if 0
+      case 2: {
+        f << entry.type() << "-C" << col << "x" << row << "]:";
+        std::string extra("");
+        std::vector<MWAWCellContent::FormulaInstruction> formula;
+        int val=(int) input->readULong(1);
+        if (val) f << "f0=" << std::hex << val << std::dec << ",";
+        if (!readFormula(cellPos, formula, zEndPos, extra))
+          f << "###";
+        f << "formula=[";
+        for (size_t j=0; j<formula.size(); ++j)
+          f << formula[j];
+        f << "]";
+        if (!extra.empty()) f << ":" << extra;
+        f << ",";
+        ascFile.addPos(posList[i]);
+        ascFile.addNote(f.str().c_str());
+        break;
+      }
+#endif
+      default:
+        ok=false;
+        break;
+      }
+      if (!ok) {
+        f << entry.type() << "-C" << col << "x" << row << "]:";
+        if (row==0) f << "col,";
+        else if (col==0) f << "row,";
+
+        ascFile.addPos(posList[i]);
+        ascFile.addNote(f.str().c_str());
+      }
+    }
+    if (lastDataPos>lastEndPos) lastEndPos=lastDataPos;
   }
-  long pos=input->tell();
-  if (pos<endPos) {
+
+  if (lastEndPos<endPos) {
     MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: find some extra data\n"));
     f.str("");
-    f << "SpreadsheetZon" << entry.id() << "-extra:###";
-    ascFile.addPos(pos);
+    f << entry.type() << "-extra:###";
+    ascFile.addPos(lastEndPos);
     ascFile.addNote(f.str().c_str());
   }
+  input->seek(lastEndPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -994,7 +1950,6 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
       f << "decimal,";
       format.m_numberFormat=MWAWCell::F_NUMBER_DECIMAL;
       break;
-      break;
     case 0:
       hasDigits=false;
       break;
@@ -1065,7 +2020,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
   if (hasPreFormula) {
     std::string extra("");
     std::vector<MWAWCellContent::FormulaInstruction> &formula=content.m_formula;
-    bool ok=readFormula(cell.position(), formula, endPos, extra);
+    bool ok=readFormulaV2(cell.position(), formula, endPos, extra);
     f << "formula=[";
     for (size_t i=0; i<formula.size(); ++i)
       f << formula[i];
@@ -1114,7 +2069,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     std::string extra("");
     std::vector<MWAWCellContent::FormulaInstruction> condition;
     std::vector<MWAWCellContent::FormulaInstruction> &formula=hasPreFormula ? condition : content.m_formula;
-    bool ok=readFormula(cell.position(), formula, endPos, extra);
+    bool ok=readFormulaV2(cell.position(), formula, endPos, extra);
     if (hasPreFormula)
       f << "condition=[";
     else
@@ -1541,21 +2496,21 @@ bool RagTimeSpreadsheet::readCellInFormula(Vec2i const &cellPos, bool canBeList,
   return ok;
 }
 
-bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
+bool RagTimeSpreadsheet::readFormulaV2(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
 {
   formula.resize(0);
 
+  int const vers=version();
   MWAWInputStreamPtr input=m_parserState->m_input;
   long pos=input->tell();
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  long formulaEndPos=pos+1+(long) input->readULong(1);
+  long formulaEndPos=vers==1 ? pos+1+(long) input->readULong(1) : endPos;
   if (formulaEndPos>endPos) {
-    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: the formula size seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormulaV2: the formula size seems bad\n"));
     return false;
   }
   ascFile.addDelimiter(pos,'|');
-  std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
   bool ok=true;
   while (!input->isEnd()) {
     pos=input->tell();
@@ -1610,7 +2565,7 @@ bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellC
       }
       val=(char) input->readULong(1);
       if (val!='"' && val!='\'') {
-        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: the first string char seems odd\n"));
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormulaV2: the first string char seems odd\n"));
         f << "##fChar=" << val << ",";
       }
       std::string text("");
@@ -1711,7 +2666,7 @@ bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellC
     if (!ok) {
       ascFile.addDelimiter(pos,'#');
       f << "###";
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormula: can not read a formula\n"));
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readFormulaV2: can not read a formula\n"));
       break;
     }
     formula.push_back(instr);

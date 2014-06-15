@@ -546,6 +546,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\RagTimeStruct.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\RagTimeText.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -704,6 +708,7 @@
     <ClInclude Include="..\..\src\lib\NisusWrtText.hxx" />
     <ClInclude Include="..\..\src\lib\RagTimeParser.hxx" />
     <ClInclude Include="..\..\src\lib\RagTimeSpreadsheet.hxx" />
+    <ClInclude Include="..\..\src\lib\RagTimeStruct.hxx" />
     <ClInclude Include="..\..\src\lib\RagTimeText.hxx" />
     <ClInclude Include="..\..\src\lib\SuperPaintParser.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />

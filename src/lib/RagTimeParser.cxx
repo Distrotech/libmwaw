@@ -53,6 +53,7 @@
 #include "MWAWSubDocument.hxx"
 
 #include "RagTimeSpreadsheet.hxx"
+#include "RagTimeStruct.hxx"
 #include "RagTimeText.hxx"
 
 #include "RagTimeParser.hxx"
@@ -103,7 +104,7 @@ struct Picture {
   //! the data position
   MWAWEntry m_pos;
   //! the dimension
-  Box2i m_dim;
+  Box2f m_dim;
   //! the beginning of the header(for debugging)
   long m_headerPos;
   //! a flag to know if the picture is sent
@@ -116,7 +117,7 @@ struct Zone {
   //! the zone type
   enum Type { Text, Page, Picture, Line, Spreadsheet, Unknown };
   //! constructor
-  Zone(): m_type(Unknown), m_subType(0), m_dimension(), m_page(0),
+  Zone(): m_type(Unknown), m_subType(0), m_read32Size(false), m_dimension(), m_page(0), m_rotation(0),
     m_style(MWAWGraphicStyle::emptyStyle()), m_fontColor(MWAWColor::black()), m_arrowFlags(0), m_isSent(false), m_extra("")
   {
     for (int i=0; i<4; ++i) m_linkZones[i]=0;
@@ -164,10 +165,14 @@ struct Zone {
   Type m_type;
   //! the zone sub type
   int m_subType;
+  //! flag to know if the datasize in uint16 or uint32
+  bool m_read32Size;
   //! the dimension
   Box2f m_dimension;
   //! the page
   int m_page;
+  //! the rotation
+  int m_rotation;
   //! the style
   MWAWGraphicStyle m_style;
   //! the font color (for text)
@@ -205,8 +210,10 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
     o << "zone" << z.m_subType << ",";
     break;
   }
+  if (z.m_read32Size) o << "32[dataSize],";
   o << "dim=" << z.m_dimension << ",";
   if (z.m_page>0) o << "page=" << z.m_page << ",";
+  if (z.m_rotation) o << "rot=" << z.m_rotation << ",";
   o << "style=[" << z.m_style << "],";
   if (!z.m_fontColor.isBlack())
     o << "color[font]=" << z.m_fontColor << ",";
@@ -229,8 +236,8 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
 //! Internal: the state of a RagTimeParser
 struct State {
   //! constructor
-  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_idColorsMap(), m_patternList(), m_idZoneMap(), m_pageZonesIdMap(),
-    m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+  State() : m_numDataZone(0), m_dataZoneMap(), m_RSRCZoneMap(), m_idColorsMap(), m_patternList(),
+    m_actualZoneId(-1), m_idZoneMap(), m_pageZonesIdMap(), m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
   //! init the pattern to default
@@ -246,6 +253,8 @@ struct State {
   std::map<int, std::vector<MWAWColor> > m_idColorsMap;
   //! a list patternId -> pattern
   std::vector<Pattern> m_patternList;
+  //! the actual zone id
+  int m_actualZoneId;
   //! a map: zoneId->zone (datafork)
   std::map<int, Zone> m_idZoneMap;
   //! a map: page->main zone id
@@ -364,6 +373,11 @@ int RagTimeParser::getFontId(int localId) const
   return m_textParser->getFontId(localId);
 }
 
+bool RagTimeParser::getCharStyle(int charId, MWAWFont &font) const
+{
+  return m_textParser->getCharStyle(charId, font);
+}
+
 bool RagTimeParser::getColor(int colId, MWAWColor &color, int listId) const
 {
   if (listId==-1) listId=version()>=2 ? 1 : 0;
@@ -378,6 +392,21 @@ bool RagTimeParser::getColor(int colId, MWAWColor &color, int listId) const
   }
   color=colors[size_t(colId)];
   return true;
+}
+
+int RagTimeParser::getNewZoneId()
+{
+  return ++m_state->m_actualZoneId;
+}
+
+bool RagTimeParser::readTextZone(MWAWEntry &entry, int width, MWAWColor const &fontColor)
+{
+  return m_textParser->readTextZone(entry, width, fontColor);
+}
+
+bool RagTimeParser::getDateTimeFormat(int dtId, std::string &dtFormat) const
+{
+  return m_spreadsheetParser->getDateTimeFormat(dtId,dtFormat);
 }
 
 bool RagTimeParser::sendText(int zId)
@@ -487,31 +516,39 @@ bool RagTimeParser::createZones()
   libmwaw::DebugStream f;
   std::multimap<std::string,MWAWEntry>::iterator it;
 
-  // print info
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcPREC");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcPREC")
-    readPrintInfo(it++->second);
-  // the font
-  it=m_state->m_RSRCZoneMap.lower_bound("FontName");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="FontName")
-    m_textParser->readFontNames(it++->second);
-  // the character properties
-  it=m_state->m_RSRCZoneMap.lower_bound("CharProp");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="CharProp")
-    m_textParser->readCharProperties(it++->second);
-  // the numbering format
-  it=m_state->m_RSRCZoneMap.lower_bound("NumFormat");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="NumFormat")
-    readRsrcFormat(it++->second);
-  // the file link
-  it=m_state->m_RSRCZoneMap.lower_bound("Link");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Link")
-    readLinks(it++->second);
-  // puce, ...
-  it=m_state->m_RSRCZoneMap.lower_bound("Macro");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Macro")
-    readMacroFormats(it++->second);
-
+  if (vers<=1) {
+    MWAWRSRCParserPtr rsrcParser = getRSRCParser();
+    if (rsrcParser) {
+      std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
+      it=entryMap.find("PREC");
+      if (it!=entryMap.end())
+        readPrintInfo(it->second, true);
+    }
+  }
+  else if (vers==2) {
+    // print info
+    it=m_state->m_RSRCZoneMap.lower_bound("rsrcPREC");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcPREC")
+      readPrintInfo(it++->second);
+    // the font
+    it=m_state->m_RSRCZoneMap.lower_bound("FontName");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="FontName")
+      m_textParser->readFontNames(it++->second);
+    // the character properties
+    it=m_state->m_RSRCZoneMap.lower_bound("CharProp");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="CharProp")
+      m_textParser->readCharProperties(it++->second);
+    // the numeric and spreadsheet formats
+    readFormatsMap();
+    // the file link
+    it=m_state->m_RSRCZoneMap.lower_bound("Link");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Link")
+      readLinks(it++->second);
+    // puce, ...
+    it=m_state->m_RSRCZoneMap.lower_bound("Macro");
+    while (it!=m_state->m_RSRCZoneMap.end() && it->first=="Macro")
+      readMacroFormats(it++->second);
+  }
   it=m_state->m_dataZoneMap.lower_bound("TextZone");
   while (it!=m_state->m_dataZoneMap.end() && it->first=="TextZone") {
     MWAWEntry entry=it++->second;
@@ -519,7 +556,10 @@ bool RagTimeParser::createZones()
     MWAWColor fontColor;
     if (m_state->m_idZoneMap.find(entry.id())!=m_state->m_idZoneMap.end()) {
       RagTimeParserInternal::Zone const &zone=m_state->m_idZoneMap.find(entry.id())->second;
-      width=int(zone.m_dimension.size()[0]);
+      if (zone.m_rotation==90 || zone.m_rotation==270)
+        width=int(zone.m_dimension.size()[1]);
+      else
+        width=int(zone.m_dimension.size()[0]);
       fontColor=zone.m_fontColor;
     }
     else {
@@ -565,36 +605,21 @@ bool RagTimeParser::createZones()
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcCalc");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcCalc")
     readRsrcCalc(it++->second);
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcUnamed");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcUnamed")
-    readRsrcUnamed(it++->second);
 
   it=m_state->m_RSRCZoneMap.lower_bound("rsrcFHwl");
   while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcFHwl")
     readRsrcFHwl(it++->second);
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcSpDI");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcSpDI")
-    readRsrcSpDI(it++->second);
-  it=m_state->m_RSRCZoneMap.lower_bound("rsrcSpDo");
-  while (it!=m_state->m_RSRCZoneMap.end() && it->first=="rsrcSpDo")
-    readRsrcSpDo(it++->second);
-  for (int i=0; i<10; ++i) {
+  for (int i=0; i<6; ++i) {
     /* gray [2bytes]:color,0,26
        color [2bytes]*3:color
        res_ [2bytes]*3: sometimes string?
        BuSl: [small 2bytes int]*3
        BuGr : structure with many data of size 0x1a
-
-       SpBo :  structure with many data of size 0x14
-       SpCe :  structure with many data of size 0x8
-       SpDE :  structure with many data of size 0xa ( 2int, unknown, 1int)
-       SpTe :  structure with many data of size 0xa
-       SpVa:  structure with many data of size 0xc
+       Unamed: sometimes structured
      */
     static char const *(what[])= {
       "rsrcgray", "rsrccolr", "rsrcres_",
-      "rsrcBuSl", "rsrcBuGr",
-      "rsrcSpBo", "rsrcSpCe", "rsrcSpDE", "rsrcSpTe", "rsrcSpVa"
+      "rsrcBuSl", "rsrcBuGr", "rsrcUnamed"
     };
     it=m_state->m_RSRCZoneMap.lower_bound(what[i]);
     while (it!=m_state->m_RSRCZoneMap.end() && it->first==what[i])
@@ -613,7 +638,9 @@ bool RagTimeParser::createZones()
     MWAWEntry const &entry=it->second;
     if (entry.isParsed()) continue;
     f.str("");
-    f << "Entries(" << entry.type() << "):";
+    f << "Entries(" << entry.type() << ")";
+    if (entry.id()) f << "[" << entry.id() << "]";
+    f << ":";
     ascii().addPos(entry.begin());
     ascii().addNote(f.str().c_str());
   }
@@ -776,42 +803,52 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     }
   }
   input->seek(pos+1, librevenge::RVNG_SEEK_SET);
-  if (vers>=2) {
-    // TODO
-    zone.m_extra=f.str();
-    m_state->m_idZoneMap[id]=zone;
-
-    f.str("");
-    f << "Zones-Z" << id << ":" << zone;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(pos+zoneLength, librevenge::RVNG_SEEK_SET);
-    return true;
-  }
 
   MWAWGraphicStyle &style=zone.m_style;
   style.m_lineWidth=float(input->readULong(1))/8.f;
   int val;
-  for (int i=0; i<4; ++i) {
+  if (vers>=2) {
+    val=(int) input->readLong(2);
+    if (val) f << "d0=" << val << ",";
+  }
+  for (int i=0; i< 4; ++i) {
     // fl0=0|80|81|83|a0|b0|c0,fl1=0|2|80,fl2=1|3|5|9|b|19|1d, fl3=0|1|28|2a|38|...|f8
     val=(int) input->readULong(1);
-    if (i==1) {
+    switch (i) {
+    case 0:
+      style.m_rotate=float(zone.m_rotation=((val>>2)&3)*90);
+      val&=0xF3;
+      break;
+    case 1:
       if (val&4) f << "round,";
       if (val&2) {
         style.m_shadowOffset=Vec2f(5,5);
         style.setShadowColor(MWAWColor(128,128,128));
       }
       val&=0xF9;
+      break;
+    case 2:
+      if (val&2)
+        f << "selected,";
+      if (val&0x80)
+        zone.m_read32Size=true;
+      val &= 0x7D;
+      break;
+    default:
+      break;
     }
-    if (i==2 && (val&2)) {
-      f << "selected,";
-      val &= 0xFD;
-    }
+
     if (val) f << "fl" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int dim[4];
-  for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  zone.m_dimension=Box2i(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+  float dim[4];
+  for (int i=0; i<4; ++i) {
+    if (vers >= 2)
+      dim[i]=float(input->readLong(4))/65536.f;
+    else
+      dim[i]=(float) input->readLong(2);
+  }
+  zone.m_dimension=Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+
   int numZones=m_state->m_numDataZone;
   val=(int) input->readLong(2); // 0, find also 6 for a line ?
   if (val) f << "f0=" << val << ",";
@@ -831,7 +868,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     val=(int) input->readLong(2); //f1=(-20)-14|8001
     if (val) f << "f1=" << val << ",";
   }
-  for (int i=0; i<2; ++i) { // fl5=0|1|2|3|10, fl6=0|1
+  for (int i=0; i<(vers>=2 ? 4 : 2); ++i) { // fl5=0|1|2|3|10, fl6=0|1
     val=(int) input->readULong(1);
     if (val) f << "fl" << i+5 << "=" << std::hex << val << std::dec << ",";
   }
@@ -852,6 +889,10 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       zone.m_linkZones[0]=val;
     val=(int) input->readULong(1);
     if (val) f << "fl7=" << std::hex << val << std::dec << ",";
+    if (vers>=2) {
+      val=(int) input->readULong(2);
+      if (val) f << "f3=" << val << ",";
+    }
     int pattern=(int) input->readLong(1);
     if (pattern!=7) f << "pattern=" << pattern << ",";
     int percentValues[2]= {100,100};
@@ -861,26 +902,33 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     int const numColorsInFile=isLine ? 1 : 2;
     for (int i=0; i<numColorsInFile; ++i) {
       static char const *(wh[])= {"line", "surf"};
-      percentValues[i]=(int) input->readLong(1);
+      int col;
+      if (vers<2) {
+        percentValues[i]=(int) input->readLong(1);
+        col=(int) input->readULong(1);
+        if (col==255) col=-1;
+      }
+      else
+        col=(int) input->readLong(2)-1;
       // 255 means default, ...
       if (percentValues[i]<=0 || percentValues[i]>=100) percentValues[i]=100;
       else if (i) percentValues[i]=100-percentValues[i];
       if (percentValues[i]!=100) f << "gray[" << wh[i] << "]=" << percentValues[i] << "%,";
-      int col=(int) input->readULong(1);
-      if (col==1-i) continue;
-      if (i==1 && col==255) { // none ?
+
+      if (i==1 && col==-1) { // none ?
         hasSurfaceColor=false;
         f << "noColors,";
         continue;
       }
-      if (col!=255 && !getColor(col, colors[i]))
+      if (col!=-1 && !getColor(col, colors[i]))
         f << "##color[" << wh[i] << "]=" << col << ",";
       else
         f << "color[" << wh[i] << "]=" << colors[i] << ",";
-    }
-    for (int i=0; i<numColorsInFile; ++i)
+
       colors[i]=MWAWColor::barycenter(float(percentValues[i])/100.f,colors[i],
                                       1.f-float(percentValues[i])/100.f, i==0 ? MWAWColor::white() : MWAWColor::black());
+    }
+
     if (pattern >=0 && pattern<int(m_state->m_patternList.size())) {
       RagTimeParserInternal::Pattern pat=m_state->m_patternList[size_t(pattern)];
       if (isLine)
@@ -909,9 +957,11 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
         style.setBackgroundColor(colors[1]);
     }
     if (isLine) {
-      for (int i=0; i<2; ++i) {
-        val=(int) input->readULong(1);
-        if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
+      if (vers<2) {
+        for (int i=0; i<2; ++i) {
+          val=(int) input->readULong(1);
+          if (val) f << "g" << i << "=" << std::hex << val << std::dec << ",";
+        }
       }
       val=(int) input->readULong(1);
       zone.m_arrowFlags=((val>>3)&3);
@@ -947,6 +997,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   }
   zone.m_extra=f.str();
   m_state->m_idZoneMap[id]=zone;
+  if (id>m_state->m_actualZoneId) m_state->m_actualZoneId=id;
   f.str("");
   f << "Zones-Z" << id << ":" << zone;
 
@@ -976,6 +1027,8 @@ bool RagTimeParser::findRsrcZones()
   f << "N=" << N << ",";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  std::vector<MWAWEntry> entriesList;
+  std::set<std::string> seensSet;
   for (int i=0; i<N; ++i) {
     long fPos=input->tell();
     f.str("");
@@ -989,13 +1042,20 @@ bool RagTimeParser::findRsrcZones()
       if (ch==' ') what += '_';
       else what+=ch;
     }
-    if (what=="rsrc____") what="rsrcUnamed";
-    else if (what=="rsrcCHTa") what="Color";
+    if (what=="rsrcCHTa") what="Color";
     else if (what=="rsrcFHfl") what="FontName";
     else if (what=="rsrcFHsl") what="CharProp";
     else if (what=="rsrcFLin") what="Link";
     else if (what=="rsrcFoTa") what="NumFormat";
     else if (what=="rsrcRTml") what="Macro";
+    /* not really sure, find in v3.2 with value:
+      id=2:0011000200000000000c00010647656e6576610000
+      id=4:000e00042e0000060000000c000000000000
+      id=5:000a00050000000d000100000000
+      id=6:00060006000000000000
+      id=7:00060007000000030000
+      id=8:00060008000000020000
+     */
     else if (what=="rsrcRtPr") what="Reserved";
     entry.setType(what);
     entry.setId((int) input->readLong(2));
@@ -1006,14 +1066,40 @@ bool RagTimeParser::findRsrcZones()
       if (!entry.begin() || !input->checkPosition(entry.begin())) {
         f << "###";
         MWAW_DEBUG_MSG(("RagTimeParser::findRsrcZones: the entry position seems bad\n"));
+        entry=MWAWEntry();
       }
-      else
-        m_state->m_RSRCZoneMap.insert
-        (std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
     }
+    else
+      entry=MWAWEntry();
+    entriesList.push_back(entry);
+    if (!entry.type().empty())
+      seensSet.insert(entry.type());
     input->seek(fPos+10, librevenge::RVNG_SEEK_SET);
     ascii().addPos(fPos);
     ascii().addNote(f.str().c_str());
+  }
+  /* FIXME: some rsrc does not have a name, ie. have "    " as name,
+     let use an heuristic to name them...
+   */
+  for (size_t i=0; i<entriesList.size(); ++i) {
+    MWAWEntry entry=entriesList[i];
+    if (entry.begin()<=0) continue;
+    if (entry.type() != "rsrc____") {
+      m_state->m_RSRCZoneMap.insert(std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
+      continue;
+    }
+    entry.setType("rsrcUnamed");
+    RagTimeStruct::ResourceList zone;
+    if (zone.read(input, entry) && zone.m_type!=RagTimeStruct::ResourceList::Undef) {
+      std::string newType("rsrc");
+      newType+=RagTimeStruct::ResourceList::getName(zone.m_type);
+      if (seensSet.find(newType)==seensSet.end()) {
+        MWAW_DEBUG_MSG(("RagTimeParser::findRsrcZones: set the rsrc zone %d to %s\n", int(i), newType.c_str()));
+        entry.setType(newType);
+      }
+    }
+    entry.setParsed(false);
+    m_state->m_RSRCZoneMap.insert(std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
   }
   return true;
 }
@@ -1030,7 +1116,11 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+0x4a)) {
+  int dataFieldSize=2;
+  if (m_state->m_idZoneMap.find(entry.id())!=m_state->m_idZoneMap.end() &&
+      m_state->m_idZoneMap.find(entry.id())->second.m_read32Size)
+    dataFieldSize=4;
+  if (pos<=0 || !input->checkPosition(pos+0x48+dataFieldSize)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the position seems bad\n"));
     return false;
   }
@@ -1042,8 +1132,8 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(PictZone):";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
+  int dSz=(int) input->readULong(dataFieldSize);
+  long endPos=pos+dataFieldSize+dSz;
   if (dSz<76 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the header size seems bad\n"));
     f << "###dSz=" << dSz << ",";
@@ -1064,7 +1154,59 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
     return false;
   }
 
-  input->seek(pos+74, librevenge::RVNG_SEEK_SET);
+  RagTimeParserInternal::Picture pict;
+  pict.m_headerPos=entry.begin();
+
+  int val;
+  for (int i=0; i<6; ++i) { // f1=0|1|9|10|20
+    val=(int) input->readULong(2);
+    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  int bitmapDim[4];
+  for (int i=0; i<4; ++i) bitmapDim[i]=(int) input->readLong(2);
+  if (bitmapDim[0]||bitmapDim[1]||bitmapDim[2]||bitmapDim[3])
+    f << "dim[bitmap?]=" << bitmapDim[1] << "x" << bitmapDim[0] << "<->"
+      << bitmapDim[3] << "x" << bitmapDim[2] << ",";
+
+  float dim[4];
+  for (int i=0; i<4; ++i) dim[i]=float(input->readULong(4))/65536.f;
+  pict.m_dim=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  f << "dim=" << pict.m_dim << ",";
+  for (int i=0; i<2; ++i) {
+    float dim2[2];
+    for (int j=0; j<2; ++j) dim2[j]=float(input->readULong(4))/65536.f;
+    if (dim2[0]<dim[2]-dim[0] || dim2[0]>dim[2]-dim[0] ||
+        dim2[1]<dim[3]-dim[1] || dim2[1]>dim[3]-dim[1])
+      f << "dim" << i+1 << "=" << dim2[1] << "x" << dim2[0] << ",";
+  }
+  /* checkme: no sure what the different type of pict can be
+     - pict[bitmap]:  f4=1-4, f5=1
+     - pict: f5=1|3
+   */
+  for (int i=0; i<7; ++i) {
+    val=(int) input->readULong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  pict.m_type=(int) input->readULong(1);
+  switch (pict.m_type) {
+  case 2:
+    f << "pict,";
+    break;
+  case 3:
+    f << "pict+label,";
+    break;
+  case 6:
+    f << "pict[bitmap],";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: find unexpected type\n"));
+    f << "#type=" << pict.m_type << ",";
+    break;
+  }
+
+  ascii().addDelimiter(input->tell(),'|');
+
+  input->seek(pos+72+dataFieldSize, librevenge::RVNG_SEEK_SET);
   ascii().addDelimiter(input->tell(),'|');
   long pictSz=(long) input->readULong(2);
   if (headerSz+pictSz>dSz) {
@@ -1077,19 +1219,16 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  input->seek(pos+dataFieldSize+headerSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
-  RagTimeParserInternal::Picture pict;
-  pict.m_headerPos=entry.begin();
+
   pict.m_pos.setBegin(pos);
   pict.m_pos.setLength(pictSz);
   m_state->m_idPictureMap[entry.id()]=pict;
 
-  ascii().skipZone(pict.m_pos.begin(), pict.m_pos.end()-1);
   input->seek(pos+pictSz, librevenge::RVNG_SEEK_SET);
   pos=input->tell();
   if (pos!=endPos) {
-    // find one time another struct: a label?
     MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: find some extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("PictZone[end]");
@@ -1138,7 +1277,7 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   pict.m_headerPos=entry.begin();
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readULong(2);
-  pict.m_dim=Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+  pict.m_dim=Box2f(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     int dim2[2];
@@ -1329,9 +1468,9 @@ bool RagTimeParser::readColorMapV2(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 // print info
 ////////////////////////////////////////////////////////////
-bool RagTimeParser::readPrintInfo(MWAWEntry &entry)
+bool RagTimeParser::readPrintInfo(MWAWEntry &entry, bool inRSRCFork)
 {
-  MWAWInputStreamPtr input = getInput();
+  MWAWInputStreamPtr input = inRSRCFork ? getRSRCParser()->getInput() : getInput();
   long pos=entry.begin();
   if (pos<=0 || !input->checkPosition(pos+2+120)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPrintInfo: the position seems bad\n"));
@@ -1339,16 +1478,17 @@ bool RagTimeParser::readPrintInfo(MWAWEntry &entry)
   }
   entry.setParsed(true);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugFile &ascFile=inRSRCFork ? getRSRCParser()->ascii() : ascii();
   libmwaw::DebugStream f;
   f << "Entries(rsrcPREC):";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
+  long dSz=inRSRCFork ? entry.length() : (int) input->readULong(2);
+  long endPos=input->tell()+dSz;
   libmwaw::PrinterInfo info;
   if (dSz<120 || !input->checkPosition(endPos) || !info.read(input)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPrintInfo: the zone seems too short\n"));
     f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
     return false;
   }
   f << info;
@@ -1380,16 +1520,16 @@ bool RagTimeParser::readPrintInfo(MWAWEntry &entry)
   getPageSpan().setMarginRight(rightMarg/72.0);
   getPageSpan().setFormLength(paperSize.y()/72.);
   getPageSpan().setFormWidth(paperSize.x()/72.);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   pos=input->tell();
   if (pos==endPos) return true;
   // TODO read the last part 0x20(size?) + page dim + some flags
   f.str("");
   f << "rsrcPREC[data]:";
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
 
   return true;
 }
@@ -1610,85 +1750,18 @@ bool RagTimeParser::readLinks(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeParser::readRsrcFormat(MWAWEntry &entry)
+////////////////////////////////////////////////////////////
+// rsrc zone: numeric format
+////////////////////////////////////////////////////////////
+bool RagTimeParser::readFormatsMap()
 {
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2+0x26)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: the position seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  int headerSz=(int) input->readULong(2);
-  int fSz=(int) input->readULong(2);
-  int N=(int) input->readULong(2);
-  f << "N=" << N << ",";
-  if (headerSz<0x20 || fSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  std::set<long> posSet;
-  posSet.insert(endPos);
-  for (int i=0; i<=N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << entry.type() << "-" << i << ":";
-    int val=(int) input->readLong(2); // 0 (except last)
-    if (val) f << "f0=" << val << ",";
-    val=(int) input->readLong(2); // always 1 ?
-    if (val!=1) f << "f1=" << val << ",";
-    int fPos=(int) input->readULong(2);
-    f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
-    posSet.insert(entry.begin()+2+fPos);
-    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-
-  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
-    pos=*(it++);
-    if (pos>=endPos) break;
-    long nextPos=it==posSet.end() ? endPos : *it;
-    f.str("");
-    f << entry.type() << "[def]:";
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    int depl[4];
-    f << "depl=[";
-    for (int i=0; i<4; ++i) {
-      depl[i]=(int) input->readULong(1);
-      if (depl[i]) f << depl[i] << ",";
-      else f << "_,";
-    }
-    f << "],";
-    // fixme: parser the 4 potential header zones
-    headerSz=depl[3];
-    if ((headerSz&1)) ++headerSz;
-    input->seek(pos+headerSz, librevenge::RVNG_SEEK_SET);
-    int cSz=(int) input->readULong(1);
-    if (headerSz<4||cSz<=0||pos+headerSz+1+cSz!=nextPos) {
-      MWAW_DEBUG_MSG(("RagTimeParser::readRsrcFormat: can not read a format\n"));
-      f << "###";
-    }
-    else {
-      ascii().addDelimiter(input->tell()-1,'|');
-      std::string name("");
-      for (int i=0; i<cSz; ++i) name += (char) input->readULong(1);
-      f << name << ",";
-    }
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
+  std::multimap<std::string,MWAWEntry>::iterator it;
+  for (it=m_state->m_RSRCZoneMap.begin(); it!=m_state->m_RSRCZoneMap.end(); ++it) {
+    std::string const &type=it->first;
+    if (type=="NumFormat")
+      m_spreadsheetParser->readNumericFormat(it->second);
+    else if (type.length()>=7 && type.compare(0,6,"rsrcSp")==0)
+      m_spreadsheetParser->readResource(it->second);
   }
   return true;
 }
@@ -1766,7 +1839,7 @@ bool RagTimeParser::readColorTable(MWAWEntry &entry)
       if (val) f << "used?=" << val << ",";
       int colId=(int) input->readULong(2)-1;
       MWAWColor col=MWAWColor::white();
-      if (!getColor(colId,col,0)) {
+      if (!getColor(colId,col,0) && val) { // ie. if the color is not used, this can be normal
         MWAW_DEBUG_MSG(("RagTimeParser::readColorTable: unexpected color id=%d\n", colId));
         f << "###";
       }
@@ -1965,63 +2038,6 @@ bool RagTimeParser::readRsrcFHwl(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeParser::readRsrcSpDI(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2+0x20)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDI: the position seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  int headerSz=(int) input->readULong(2);
-  int fSz=(int) input->readULong(2);
-  int N=(int) input->readULong(2);
-  f << "N=" << N << ",";
-  if (headerSz<0x20 || fSz<0x8 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDI: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  std::set<long> posSet;
-  posSet.insert(endPos);
-  for (int i=0; i<=N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << entry.type() << "-" << i << ":";
-    int val=(int) input->readLong(2); // 0 (except last)
-    if (val) f << "f0=" << val << ",";
-    int fPos=(int) input->readULong(2);
-    if (fPos) {
-      f << "pos[def]=" << std::hex << entry.begin()+2+fPos << std::dec << ",";
-      posSet.insert(entry.begin()+2+fPos);
-    }
-    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  for (std::set<long>::const_iterator it=posSet.begin(); it!=posSet.end();) {
-    pos=*(it++);
-    if (pos>=endPos) break;
-    f.str("");
-    f << entry.type() << "[data]:";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
 bool RagTimeParser::readRsrcBeDc(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
@@ -2180,66 +2196,11 @@ bool RagTimeParser::readRsrcSele(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeParser::readRsrcSpDo(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2+0x4a)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the position seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(rsrcSpDo)[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  long endPos=pos+2+dSz;
-  if (dSz<0x4a || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcSpDo: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  for (int i=0; i<2; ++i) { // f1=0|80
-    int val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  int val0;
-  for (int i=0; i<10; ++i) { // find g0=3+10*k, g1=10+g0, g2=10+g1, g3=10+g2, other 0|3+10*k1
-    int val = (int) input->readLong(4);
-    if (i==0) {
-      val0=val;
-      f << "g0=" << val << ",";
-    }
-    else if (i<4 && val!=val0+10*i)
-      f << "g" << i << "=" << val << ",";
-    else if (i>=4 && val)
-      f << "g" << i << "=" << val << ",";
-  }
-  for (int i=0; i<9; ++i) {
-    int val = (int) input->readULong(2);
-    static int const expected[]= {0,0,0,0x64,0x3ff5,0x8312,0x6e97,0x8d4f,0xdf3b};
-    if (val!=expected[i])
-      f << "h" << i << "=" << std::hex << val << std::dec << ",";
-  }
-  int const numVal= int(endPos-4-input->tell())/2;
-  for (int i=0; i<numVal; ++i) { // k0=small int, k1=k0+1, k2=k3=k4=0, k5=0|b7|e9|f3
-    int val = (int) input->readLong(2);
-    if (val) f << "k" << i << "=" << val << ",";
-  }
-  input->seek(endPos-4, librevenge::RVNG_SEEK_SET);
-  f << "id?=" << std::hex << input->readULong(4) << std::dec << ","; // a big number
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-  return true;
-}
-
 bool RagTimeParser::readRsrcStructured(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2)) {
+  if (pos<=0) {
     MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: the position seems bad\n"));
     return false;
   }
@@ -2247,87 +2208,37 @@ bool RagTimeParser::readRsrcStructured(MWAWEntry &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  if (dSz==0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos=pos+2+dSz;
-  int headerSz=(int) input->readULong(2);
-  int fSz=(int) input->readULong(2);
-  int N=(int) input->readULong(2);
-  f << "N=" << N << ",";
-  if (headerSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: the size seems bad\n"));
-    f << "###";
+  RagTimeStruct::ResourceList zone;
+  if (!zone.read(input, entry)) {
+    static bool first=true;
+    if (first) {
+      first=false;
+      MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: find some no list field\n"));
+    }
+    f << "#";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
   }
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
+  f << zone;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  for (int i=0; i<=N; ++i) {
+  input->seek(zone.m_dataPos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<=zone.m_dataNumber; ++i) {
     pos=input->tell();
     f.str("");
     f << entry.type() << "-" << i << ":";
-    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    input->seek(pos+zone.m_dataSize, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
   }
-  return true;
-}
-
-/* this field has often a standart formula: header[size], field[size], N but sometimes
-   it is a string or something else. Ie. we must find where the field format is stored...
- */
-bool RagTimeParser::readRsrcUnamed(MWAWEntry &entry)
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+2)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcUnamed: the position seems bad\n"));
-    return false;
-  }
-  entry.setParsed(true);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(rsrcUnamed)[" << entry.id() << "]:";
-  int dSz=(int) input->readULong(2);
-  if (dSz==0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
-  long endPos=pos+2+dSz;
-  int headerSz=(int) input->readULong(2);
-  int fSz=(int) input->readULong(2);
-  int N=(int) input->readULong(2);
-  f << "N=" << N << ",";
-  if (headerSz<6 || dSz<headerSz+(N+1)*fSz || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcUnamed: the size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    return false;
-  }
-  input->seek(pos+2+headerSz, librevenge::RVNG_SEEK_SET);
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
-
-  for (int i=0; i<=N; ++i) {
-    pos=input->tell();
+  if (input->tell()!=zone.m_endPos) {
+    MWAW_DEBUG_MSG(("RagTimeParser::readRsrcStructured: find some extra data\n"));
     f.str("");
-    f << "rsrcUnamed-" << i << ":";
-    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  if (input->tell()!=endPos) {
+    f << entry.type() << "-end:";
     ascii().addPos(input->tell());
-    ascii().addNote("rsrcUnamed-end");
+    ascii().addNote(f.str().c_str());
   }
   return true;
 }
@@ -2420,17 +2331,21 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the listener\n"));
     return false;
   }
-  if (version()>=2) {
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: sorry not implemented\n"));
-      first=false;
-    }
-    return false;
-  }
   if (m_state->m_idPictureMap.find(zId)==m_state->m_idPictureMap.end()) {
-    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture: %d\n", zId));
-    return false;
+    // can be an empty textbox
+    if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
+      MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not find the picture and zone %d\n", zId));
+      return false;
+    }
+    MWAWGraphicStyle style=m_state->m_idZoneMap.find(zId)->second.m_style;
+    if (style.hasLine()) {
+      MWAWBorder border;
+      border.m_width=style.m_lineWidth;
+      border.m_color=style.m_lineColor;
+      style.setBorders(0xf, border);
+    }
+    listener->insertTextBox(position, MWAWSubDocumentPtr(), style);
+    return true;
   }
   RagTimeParserInternal::Picture const &pict=m_state->m_idPictureMap.find(zId)->second;
   pict.m_isSent=true;
@@ -2439,7 +2354,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
   MWAWInputStreamPtr input = getInput();
   Box2f box;
   input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
-  if (pict.m_type==2 || pict.m_type==3) {
+  if (pict.m_type==2 || pict.m_type==3 || pict.m_type==6) {
     // first read the picture
     int pictSize=(int) pict.m_pos.length();
     if (pict.m_type==3) {
@@ -2472,10 +2387,17 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     libmwaw::DebugStream f;
     f << "PICT-" << ++pictName;
     libmwaw::Debug::dumpFile(file, f.str().c_str());
-    if (pict.m_type==2 || pictSize>=(int) pict.m_pos.length()) return ok;
+    if (pict.m_type!=3 || pictSize>=(int) pict.m_pos.length()) return ok;
 
-    // ok, now a eps file
     long pos=pict.m_pos.begin()+pictSize;
+    if (version()>=2) {
+      // FIXME: read the label which is a text zone
+      MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: sending a label is not implemented\n"));
+      ascii().addPos(pos);
+      ascii().addNote("PictZone[label]");
+      return ok;
+    }
+    // ok, now a eps file
     ascii().skipZone(pos, pict.m_pos.end()-1);
     file.clear();
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -2487,13 +2409,28 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
 
     return ok;
   }
-  else if (pict.m_type!=1 || pict.m_pos.length()<14) {
-    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: do not known how to read the picture\n"));
-    ascii().addPos(pict.m_pos.begin());
-    ascii().addNote("PictZone-data:###");
+  else if (pict.m_type==1)
+    return sendBitmap(pict, position);
+
+  MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: do not known how to read the picture\n"));
+  ascii().addPos(pict.m_pos.begin());
+  ascii().addNote("PictZone-data:###");
+  return false;
+}
+
+bool RagTimeParser::sendBitmap(RagTimeParserInternal::Picture const &pict, MWAWPosition const &position)
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendBitmap: can not find the listener\n"));
     return false;
   }
-  // ok, either we did something wrong or this is a bitmap
+  if (pict.m_pos.length()<14) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendBitmap: the picture size seems bad\n"));
+    return false;
+  }
+  int const vers=version();
+  MWAWInputStreamPtr input = getInput();
   input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "PictZone-data:";
@@ -2508,7 +2445,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
   for (int i=0; i<2; ++i) dim[i]=(int) input->readULong(2);
   f << "dim=" << dim[1] << "x" << dim[0] << ",";
   if (14+dim[0]*rowSize!=pict.m_pos.length() || dim[1]>8*rowSize) {
-    MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not read a bitmap\n"));
+    MWAW_DEBUG_MSG(("RagTimeParser::sendBitmap: can not read a bitmap\n"));
     f << "###";
     ascii().addPos(pict.m_pos.begin());
     ascii().addNote(f.str().c_str());
@@ -2516,7 +2453,10 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
   }
   ascii().addPos(pict.m_pos.begin());
   ascii().addNote(f.str().c_str());
-
+  if (vers>=2) {
+    MWAW_DEBUG_MSG(("RagTimeParser::sendBitmap: send bitmap is not implemented\n"));
+    return false;
+  }
   ascii().skipZone(input->tell(), pict.m_pos.end()-1);
   MWAWPictBitmapBW bitmap(Vec2i(dim[1],dim[0]));
   for (int r=0; r<dim[0]; ++r) {
@@ -2524,7 +2464,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     unsigned long numReads;
     uint8_t const *values=input->read(size_t(rowSize), numReads);
     if (!values || numReads!=(unsigned long) rowSize) {
-      MWAW_DEBUG_MSG(("RagTimeParser::sendPicture: can not read row %d\n", r));
+      MWAW_DEBUG_MSG(("RagTimeParser::sendBitmap: can not read row %d\n", r));
       return false;
     }
     bitmap.setRowPacked(r, (unsigned char const *) values);
@@ -2534,8 +2474,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
   std::string type;
   if (bitmap.getBinary(data,type))
     listener->insertPicture(position, data, type);
-
-  return  true;
+  return true;
 }
 
 bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
@@ -2543,14 +2482,6 @@ bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
   MWAWListenerPtr listener=getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: can not find the listener\n"));
-    return false;
-  }
-  if (version()>=2) {
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: sorry not implemented\n"));
-      first=false;
-    }
     return false;
   }
   if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
@@ -2625,6 +2556,13 @@ bool RagTimeParser::send(int zId)
       style.setBorders(0xf, border);
     }
     pos.setSize(Vec2f((float)box.size()[0],(float)-box.size()[1]));
+    if (zone.m_rotation) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("RagTimeParser::send: some rotation will be ignored\n"));
+        first=false;
+      }
+    }
     listener->insertTextBox(pos, doc, style);
     return true;
   }

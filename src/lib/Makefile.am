@@ -243,6 +243,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTimeParser.hxx		\
 	RagTimeSpreadsheet.cxx		\
 	RagTimeSpreadsheet.hxx		\
+	RagTimeStruct.cxx		\
+	RagTimeStruct.hxx		\
 	RagTimeText.cxx			\
 	RagTimeText.hxx			\
 	SuperPaintParser.cxx		\
