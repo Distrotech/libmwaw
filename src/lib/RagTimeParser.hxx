@@ -87,6 +87,8 @@ protected:
   bool getColor(int colId, MWAWColor &color, int listId=-1) const;
   //! returns the ith date format or ""
   bool getDateTimeFormat(int dtId, std::string &dtFormat) const;
+  //! returns the size of a zone data field
+  int getZoneDataFieldSize(int zId) const;
   //! returns a new unique zone id
   int getNewZoneId();
 

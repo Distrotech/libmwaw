@@ -242,7 +242,6 @@ struct State {
   }
   //! init the pattern to default
   void initDefaultPatterns(int vers);
-
   //! the number of data zone
   int m_numDataZone;
   //! a map: type->entry (datafork)
@@ -392,6 +391,15 @@ bool RagTimeParser::getColor(int colId, MWAWColor &color, int listId) const
   }
   color=colors[size_t(colId)];
   return true;
+}
+
+int RagTimeParser::getZoneDataFieldSize(int zId) const
+{
+  if (m_state->m_idZoneMap.find(zId)==m_state->m_idZoneMap.end()) {
+    MWAW_DEBUG_MSG(("RagTimeParser::getZoneDataSize: can not find the zone %d\n", zId));
+    return 2;
+  }
+  return m_state->m_idZoneMap.find(zId)->second.m_read32Size ? 4 : 2;
 }
 
 int RagTimeParser::getNewZoneId()
@@ -1116,10 +1124,7 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
 {
   MWAWInputStreamPtr input = getInput();
   long pos=entry.begin();
-  int dataFieldSize=2;
-  if (m_state->m_idZoneMap.find(entry.id())!=m_state->m_idZoneMap.end() &&
-      m_state->m_idZoneMap.find(entry.id())->second.m_read32Size)
-    dataFieldSize=4;
+  int dataFieldSize=getZoneDataFieldSize(entry.id());
   if (pos<=0 || !input->checkPosition(pos+0x48+dataFieldSize)) {
     MWAW_DEBUG_MSG(("RagTimeParser::readPictZone: the position seems bad\n"));
     return false;
@@ -2262,9 +2267,10 @@ bool RagTimeParser::checkHeader(MWAWHeader *header, bool /*strict*/)
     return false;
   }
   input->seek(0,librevenge::RVNG_SEEK_SET);
-  if (input->readLong(2)) return false;
+  /* the document dimension, but find also a spreadsheet size which was remained opened */
   int dim[2];
-  for (int i=0; i< 2; ++i) dim[i]=(int) input->readLong(2);
+  dim[0]=(int) input->readULong(4);
+  dim[1]=(int) input->readULong(2);
   f << "dim=" << dim[1] << "x" << dim[0] << ",";
   int val=(int) input->readLong(2); // related to page?
   if (val!=1) f << "f0=" << val << ",";

@@ -141,6 +141,8 @@ protected:
   //! try to read a formula: v3...
   bool readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
   //! try to read a cell in a formula
+  bool readCellInFormulaV2(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
+  //! try to read a cell in a formula
   bool readCellInFormula(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
   //! send a spreadsheet to a listener
   bool send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MWAWSpreadsheetListenerPtr listener);

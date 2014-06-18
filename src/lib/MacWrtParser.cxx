@@ -713,15 +713,6 @@ bool MacWrtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   case 3:
     vName="v1.0-2.2";
     break;
-  case 1:
-  case 2:
-  case 4:
-  case 5:
-  case 7:
-#ifndef DEBUG
-    return false;
-#endif
-    break;
   case 6: // version 4.5 ( also version 5.01 of Claris MacWrite )
     vName="v4.5-5.01";
     break;
@@ -772,6 +763,9 @@ bool MacWrtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   //
   input->seek(headerSize, librevenge::RVNG_SEEK_SET);
   if (!readPrintInfo()) {
+    input->seek(headerSize, librevenge::RVNG_SEEK_SET);
+    for (int i=0; i<10; ++i) // allow print info to be zero
+      if (input->readLong(2)) return false;
     input->seek(headerSize+0x78, librevenge::RVNG_SEEK_SET);
     for (int i=0; i<3; ++i)
       if (!readWindowsInfo(i) && i==2) return false;

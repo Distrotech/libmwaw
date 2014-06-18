@@ -415,8 +415,9 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
+  int dataFieldSize=vers==1 ? 2 : m_mainParser->getZoneDataFieldSize(entry.id());
   long pos=entry.begin();
-  if (pos<=0 || !input->checkPosition(pos+5+2+2+6)) {
+  if (pos<=0 || !input->checkPosition(pos+5+dataFieldSize+2+6)) {
     MWAW_DEBUG_MSG(("RagTimeText::readTextZone: the position seems bad\n"));
     return false;
   }
@@ -427,12 +428,13 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
   f << "Entries(TextZone):";
   long endPos=entry.end();
   if (!entry.valid()) {
-    int dSz=(int) input->readULong(2);
-    endPos=pos+2+dSz;
+    int dSz=(int) input->readULong(dataFieldSize);
+    endPos=pos+dataFieldSize+dSz;
   }
+  long begTextZonePos=input->tell();
   int numChar=(int) input->readULong(2);
   f << "N=" << numChar << ",";
-  if (!input->checkPosition(endPos) || pos+2+numChar>endPos) {
+  if (!input->checkPosition(endPos) || begTextZonePos+numChar>endPos) {
     MWAW_DEBUG_MSG(("RagTimeText::readTextZone: the numChar seems bad\n"));
     f << "###";
     ascFile.addPos(pos);
@@ -474,6 +476,7 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
     }
     return true;
   }
+  // checkme: can this size be a uint32 ?
   int dSz=(int) input->readULong(2);
   f.str("");
   f << "TextZone[A]:";
