@@ -577,7 +577,7 @@ struct TextBox : public Zone {
   std::vector<int> m_formats;
   //! the text
   std::string m_text;
-  //! the paragraph alignement
+  //! the paragraph alignment
   MWAWParagraph::Justification m_justify;
 private:
   TextBox(TextBox const &);

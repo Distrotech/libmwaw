@@ -1682,7 +1682,7 @@ bool HanMacWrdJGraph::readTable(MWAWEntry const &entry, int actZone)
       cell->m_zId = (long) input->readULong(4);
       cell->m_flags = (int) input->readULong(2);
       if (cell->m_flags&0x80)
-        cell->setVAlignement(MWAWCell::VALIGN_CENTER);
+        cell->setVAlignment(MWAWCell::VALIGN_CENTER);
       switch ((cell->m_flags>>9)&3) {
       case 1:
         cell->setExtraLine(MWAWCell::E_Line1);

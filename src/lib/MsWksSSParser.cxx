@@ -876,13 +876,13 @@ bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal
   }
   switch (align) {
   case 0:
-    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    cell.setHAlignment(MWAWCell::HALIGN_LEFT);
     break;
   case 1:
-    cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+    cell.setHAlignment(MWAWCell::HALIGN_CENTER);
     break;
   case 2:
-    cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+    cell.setHAlignment(MWAWCell::HALIGN_RIGHT);
     break;
   default:
   case 3:

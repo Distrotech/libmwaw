@@ -879,15 +879,15 @@ bool WingzParser::readSpreadsheetCellList()
     case 0: // general
       break;
     case 1:
-      cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+      cell.setHAlignment(MWAWCell::HALIGN_LEFT);
       f << "align=left,";
       break;
     case 2:
-      cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+      cell.setHAlignment(MWAWCell::HALIGN_CENTER);
       f << "align=center,";
       break;
     case 3:
-      cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      cell.setHAlignment(MWAWCell::HALIGN_RIGHT);
       f << "align=right,";
       break;
     default:

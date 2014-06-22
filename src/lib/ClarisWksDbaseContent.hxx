@@ -88,7 +88,7 @@ public:
     int m_style;
     //! the format
     MWAWCell::Format m_format;
-    //! the cell alignement : by default nothing
+    //! the cell alignment : by default nothing
     MWAWCell::HorizontalAlignment m_hAlign;
     //! the format ( in a v1-3 spreadsheet)
     int m_fileFormat;

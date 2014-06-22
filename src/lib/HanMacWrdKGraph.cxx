@@ -1831,7 +1831,7 @@ shared_ptr<HanMacWrdKGraphInternal::Table> HanMacWrdKGraph::readTable(shared_ptr
       f << "#backPattern=" << pattern << ",";
 
     cell->m_flags = (int) input->readULong(2);
-    if (cell->m_flags&1) cell->setVAlignement(MWAWCell::VALIGN_CENTER);
+    if (cell->m_flags&1) cell->setVAlignment(MWAWCell::VALIGN_CENTER);
     switch ((cell->m_flags>>2) & 3) {
     case 1:
       cell->setExtraLine(MWAWCell::E_Line1);

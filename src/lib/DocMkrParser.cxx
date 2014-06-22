@@ -73,7 +73,7 @@ struct PictInfo {
   int m_id;
   //! the sound id
   int m_sndId;
-  //! the alignement ( 1:center, ... )
+  //! the alignment ( 1:center, ... )
   int m_align;
   //! true if the picture is printed
   bool m_print;

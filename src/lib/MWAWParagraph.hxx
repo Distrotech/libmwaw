@@ -45,7 +45,7 @@
 
 /** class to store a tab use by MWAWParagraph */
 struct MWAWTabStop {
-  //! the tab alignement
+  //! the tab alignment
   enum Alignment { LEFT, RIGHT, CENTER, DECIMAL, BAR };
   //! constructor
   MWAWTabStop(double position = 0.0, Alignment alignment = LEFT, uint16_t leaderCharacter='\0', uint16_t decimalCharacter = '.')  :
@@ -70,7 +70,7 @@ struct MWAWTabStop {
   int cmp(MWAWTabStop const &tabs) const;
   //! the tab position
   double m_position;
-  //! the alignement ( left, center, ...)
+  //! the alignment ( left, center, ...)
   Alignment m_alignment;
   //! the leader char
   uint16_t m_leaderCharacter;

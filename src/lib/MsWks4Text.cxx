@@ -1367,7 +1367,7 @@ bool MsWks4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
       parag.m_listLevelIndex = 1;
       break;
     }
-    case 0x23: { // alignement -2 (up space), -3 (large?)
+    case 0x23: { // alignment -2 (up space), -3 (large?)
       if (pos + 2 > endPos) {
         ok = false;
         break;
@@ -1458,7 +1458,7 @@ bool MsWks4Text::readParagraph(MWAWInputStreamPtr &input, long endPos,
       input->seek(pos+42, librevenge::RVNG_SEEK_SET);
       break;
     }
-    case 0x28: { // alignement: exact or not
+    case 0x28: { // alignment: exact or not
       if (pos + 1 > endPos) {
         ok = false;
         break;

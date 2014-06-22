@@ -488,7 +488,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     input->seek(pos+2+sz, librevenge::RVNG_SEEK_SET);
     return true;
   }
-  case 0x92: // table alignement
+  case 0x92: // table alignment
     if (dSz < 3) return false;
     val = (int) input->readULong(2);
     switch (val&3) {
@@ -509,7 +509,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     }
     if (val&0xFFFC) f << "#align=" << std::hex << (val&0xFFFC) << std::dec << ",";
     break;
-  case 0x93: // table alignement indent
+  case 0x93: // table alignment indent
     if (dSz < 3) return false;
     m_indent = float(input->readLong(2))/1440.f;
     return true;
@@ -954,7 +954,7 @@ bool Paragraph::read(MWAWInputStreamPtr &input, long endPos)
     else if (c == 0x11) m_margins[1] = val/1440.;
     else m_margins[2] = val/1440.;
     return true;
-  case 0x14: // alignement : 240 normal, 480 : double, ..
+  case 0x14: // alignment : 240 normal, 480 : double, ..
     if (dSz < 3) return false;
     val = (int) input->readLong(2);
     m_interline=double(val)/1440.;

@@ -1504,13 +1504,13 @@ bool MsWksDBParser::readFieldTypes()
     format.m_digits = (val>>2) & 0xF;
     switch ((val&3)) {
     case 0:
-      fieldType.setHAlignement(MWAWCell::HALIGN_LEFT);
+      fieldType.setHAlignment(MWAWCell::HALIGN_LEFT);
       break;
     case 1:
-      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      fieldType.setHAlignment(MWAWCell::HALIGN_RIGHT);
       break;
     case 2:
-      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
+      fieldType.setHAlignment(MWAWCell::HALIGN_CENTER);
       break;
     default:
       f << "#align=3,";
@@ -1691,13 +1691,13 @@ bool MsWksDBParser::readFieldTypesV2()
     int subFormat = val & 7;
     switch (((val>>5) & 3)) {
     case 0:
-      fieldType.setHAlignement(MWAWCell::HALIGN_LEFT);
+      fieldType.setHAlignment(MWAWCell::HALIGN_LEFT);
       break;
     case 1:
-      fieldType.setHAlignement(MWAWCell::HALIGN_CENTER);
+      fieldType.setHAlignment(MWAWCell::HALIGN_CENTER);
       break;
     case 2:
-      fieldType.setHAlignement(MWAWCell::HALIGN_RIGHT);
+      fieldType.setHAlignment(MWAWCell::HALIGN_RIGHT);
       break;
     default:
       f << "#align=3,";

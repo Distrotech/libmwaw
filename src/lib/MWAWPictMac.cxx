@@ -1950,7 +1950,7 @@ struct OpCode : public libmwaw_applepict1::OpCode {
       return false;
     }
     long actualPos = input.tell();
-    // we must check alignement
+    // we must check alignment
     if ((actualPos - debPos)%2 == 1) input.seek(1, librevenge::RVNG_SEEK_CUR);
     return true;
   }

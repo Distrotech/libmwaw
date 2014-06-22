@@ -58,6 +58,7 @@
 /** Internal: the structures of a RagTimeSpreadsheet */
 namespace RagTimeSpreadsheetInternal
 {
+struct Cell;
 //! Internal: date/time format of a RagTimeSpreadsheet
 struct DateTime {
   //! constructor
@@ -84,6 +85,8 @@ struct CellFormat {
   CellFormat() : m_numeric(), m_dateTime(), m_align(MWAWCell::HALIGN_DEFAULT), m_rotation(0), m_flags(0), m_extra("")
   {
   }
+  //! update the cell format if needed
+  void update(Cell &cell) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, CellFormat const &form)
   {
@@ -120,6 +123,13 @@ struct CellBorder {
   {
     m_borders[0]=m_borders[1]=MWAWBorder();
   }
+  //! returns true if the cell has some border
+  bool hasBorders() const
+  {
+    return !m_borders[0].isEmpty() && !m_borders[1].isEmpty();
+  }
+  //! update the cell border if need
+  void update(Cell &cell) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, CellBorder const &border)
   {
@@ -142,6 +152,8 @@ struct CellExtra {
   CellExtra():m_isTransparent(false), m_color(MWAWColor::white()), m_extra("")
   {
   }
+  //! update the cell color if need
+  void update(Cell &cell) const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, CellExtra const &st)
   {
@@ -196,7 +208,7 @@ struct ComplexBlock {
 //! Internal: a cell of a RagTimeSpreadsheet
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content()
+  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_textEntry(), m_rotation(0)
   {
     setPosition(pos);
   }
@@ -223,45 +235,78 @@ struct Cell : public MWAWCell {
   }
   //! the cell content
   MWAWCellContent m_content;
+  //! the text entry if the cell is a zone of text zone
+  MWAWEntry m_textEntry;
+  //! the content's rotation angle
+  int m_rotation;
 };
+
+void CellFormat::update(Cell &cell) const
+{
+  MWAWCell::Format format=cell.getFormat();
+  if (format.m_format==MWAWCell::F_NUMBER)
+    format=m_numeric;
+  else if (format.m_format==MWAWCell::F_DATE) {
+    format.m_DTFormat=m_dateTime.m_DTFormat;
+    if (!m_dateTime.m_isDate)
+      format.m_format=MWAWCell::F_TIME;
+  }
+  cell.setFormat(format);
+  cell.setHAlignment(m_align);
+  if (m_flags&6) cell.setProtected(true);
+  cell.m_rotation=m_rotation;
+}
+
+void CellBorder::update(Cell &cell) const
+{
+  if (!m_borders[0].isEmpty()) cell.setBorders(libmwaw::Top, m_borders[0]);
+  if (!m_borders[1].isEmpty()) cell.setBorders(libmwaw::Left, m_borders[1]);
+}
+
+void CellExtra::update(Cell &cell) const
+{
+  if (!m_isTransparent) cell.setBackgroundColor(m_color);
+}
 
 //! Internal: a spreadsheet's zone of a RagTimeSpreadsheet
 struct Spreadsheet {
+  //! a map a cell sorted by row
+  typedef std::map<Vec2i,Cell,Vec2i::PosSizeLtY> Map;
   //! constructor
-  Spreadsheet() : m_rows(0), m_columns(0), m_widthDefault(74), m_widthCols(), m_heightDefault(12), m_heightRows(),
-    m_cellsBegin(0), m_cellsList(), m_rowPositionsList(), m_name("Sheet0"), m_isSent(false)
+  Spreadsheet() : m_rows(0), m_columns(0), m_widthDefault(72), m_widthCols(), m_heightDefault(12), m_heightRows(),
+    m_cellsBegin(0), m_cellsMap(), m_rowPositionsList(), m_name("Sheet0"), m_isSent(false)
   {
   }
   //! returns the row size in point
   float getRowHeight(int row) const
   {
-    if (row>=0&&row<(int) m_heightRows.size())
+    if (row>=0&&row<(int) m_heightRows.size()&&m_heightRows[size_t(row)]>0)
       return m_heightRows[size_t(row)];
     return m_heightDefault;
   }
-  /** returns the columns dimension in point: TO DO */
+  /** returns the columns dimension in point */
   std::vector<float> getColumnsWidth() const
   {
     size_t numCols=size_t(getRightBottomPosition()[0]+1);
-    std::vector<float> res(numCols, 72.f);
+    std::vector<float> res(numCols, float(m_widthDefault));
     if (m_widthCols.size()<numCols)
       numCols=m_widthCols.size();
-    for (size_t i = 0; i < numCols; i++) {
+    for (size_t i=0; i<numCols; ++i) {
       if (m_widthCols[i] > 0)
-        res[i] = float(m_widthCols[i]);
+        res[i] = m_widthCols[i];
     }
     return res;
-
   }
   /** returns the spreadsheet dimension */
   Vec2i getRightBottomPosition() const
   {
     Vec2i res(0,0);
-    for (size_t i=0; i<m_cellsList.size(); ++i) {
-      if (m_cellsList[i].position()[0] >= res[0])
-        res[0]=m_cellsList[i].position()[0]+1;
-      if (m_cellsList[i].position()[1] >= res[1])
-        res[1]=m_cellsList[i].position()[1]+1;
+    for (Map::const_iterator it=m_cellsMap.begin(); it!=m_cellsMap.begin(); ++it) {
+      Cell const &cell=it->second;
+      if (cell.position()[0] >= res[0])
+        res[0]=cell.position()[0]+1;
+      if (cell.position()[1] >= res[1])
+        res[1]=cell.position()[1]+1;
     }
     return res;
   }
@@ -279,8 +324,8 @@ struct Spreadsheet {
   std::vector<float> m_heightRows;
   /** the positions of the cells in the file */
   long m_cellsBegin;
-  /** the list of not empty cells */
-  std::vector<Cell> m_cellsList;
+  /** the map cell position to not empty cells */
+  Map m_cellsMap;
   /** the positions of row in the file */
   std::vector<long> m_rowPositionsList;
   /** the sheet name */
@@ -1210,6 +1255,8 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
     case 3: // condition
     case 4: // list of cell which used which have a ref the current cell
       ok=readSpreadsheetComplexStructure(zone, *sheet);
+      if (ok && i<=2)
+        m_state->m_idSpreadsheetMap[entry.id()]=sheet;
       break;
     case 5:
     // case 6: never seens
@@ -1234,21 +1281,23 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCellContent(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet)
 {
+  if (cellPos[0] && cellPos[1]) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellDimension: expect cellPos[0] or cellPos[1] = 0\n"));
+    return false;
+  }
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
 
   long pos=input->tell();
-
-  f << "SpreadsheetContent-C" << cellPos<< "]:";
-  bool ok=true;
+  f << "SpreadsheetContent-";
   if (cellPos[1]==0) {
-    f << "colDim,";
-    if (pos+16>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: can not read a row height\n"));
-      ok=false;
+    f << "colDim[" << cellPos[0] << "]:";
+    if (pos+16>endPos || cellPos[0]<=0) {
+      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellDimension: can not read a row height\n"));
+      f << "##";
     }
     else {
       f << "dim=[";
@@ -1258,109 +1307,171 @@ bool RagTimeSpreadsheet::readSpreadsheetCellContent(Vec2i const &cellPos, long e
         f << float(dim&0x7FFFFFFF)/65536.f;
         if (dim&0x80000000) f << "/h";
         f << ",";
+        if (j) continue;
+        if (cellPos[0]>int(sheet.m_widthCols.size()))
+          sheet.m_widthCols.resize(size_t(cellPos[0]),0);
+        sheet.m_widthCols[size_t(cellPos[0]-1)]=float(dim&0x7FFFFFFF)/65536.f;
       }
       f << "],";
     }
+    if ((input->tell()+1==endPos && input->readLong(1)!=0) || input->tell()!=endPos)
+      f<<"#";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return true;
   }
-  else if (cellPos[0]==0) {
-    f << "rowDim,";
-    if (pos+8>endPos) {
-      MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: can not read a row height\n"));
-      ok=false;
-    }
-    else {
-      f << "dim=[";
-      for (int j=0; j<2; ++j) { // row dim, followed by cell height
-        long dim=(long) input->readULong(4);
-        f << float(dim&0x7FFFFFFF)/65536.f;
-        if (dim&0x80000000) f << "/h";
-        f << ",";
-      }
-      f << "],";
-    }
+
+  f << "-rowDim[" << cellPos[1] << "]:";
+  if (pos+8>endPos||cellPos[1]<=0) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellDimension: can not read a row height\n"));
+    f << "##";
   }
   else {
-    int val, type=(int) input->readULong(1);
-    switch (type) {
-    case 0: // not frequent, but can happens
-      break;
-    case 0x40:
-    case 0x44: // find with 44244131
-      f << "Nan[circ],";
-      break;
-    case 0x80:
+    f << "dim=[";
+    for (int j=0; j<2; ++j) { // row dim, followed by cell height
+      long dim=(long) input->readULong(4);
+      f << float(dim&0x7FFFFFFF)/65536.f;
+      if (dim&0x80000000) f << "/h";
+      f << ",";
+      if (j) continue;
+      if (cellPos[1]>int(sheet.m_heightRows.size()))
+        sheet.m_heightRows.resize(size_t(cellPos[1]),0);
+      sheet.m_heightRows[size_t(cellPos[1]-1)]=float(dim&0x7FFFFFFF)/65536.f;
+    }
+    f << "],";
+  }
+  if ((input->tell()+1==endPos && input->readLong(1)!=0) || input->tell()!=endPos)
+    f<<"#";
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool RagTimeSpreadsheet::readSpreadsheetCellContent(RagTimeSpreadsheetInternal::Cell &cell, long endPos)
+{
+  Vec2i const &cellPos=cell.position();
+  if (cellPos[0]<0 || cellPos[1]<0) {
+    MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: expect cellPos[0] and cellPos[1] >= 0\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+
+  long pos=input->tell();
+
+  f << "SpreadsheetContent-C" << cellPos<< "]:";
+  bool ok=true;
+  MWAWCell::Format format=cell.getFormat();
+  MWAWCellContent &content=cell.m_content;
+  int val, type=(int) input->readULong(1);
+  switch (type) {
+  case 0: // not frequent, but can happens
+    break;
+  case 0x40:
+  case 0x44: // find with 44244131
+  case 0x80:
+    if (type==0x80)
       f << "Nan[eval],";
-      break;
-    case 0x81:
-      f << "float81,";
-    // fall through intended
-    case 3:
-      if (type==3)
-        f << "date/time,";
-    // fall through intended
-    case 1: {
-      if (pos+11>endPos) {
-        ok=false;
-        break;
-      }
-      double res;
-      bool isNan;
-      if (!input->readDouble10(res, isNan))
-        f << "#value,";
-      else
-        f << res << ",";
-      break;
+    else
+      f << "Nan[circ],";
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    content.setValue(std::numeric_limits<double>::quiet_NaN());
+    break;
+  case 0x81:
+    f << "float81,";
+  // fall through intended
+  case 3:
+  // fall through intended
+  case 1: {
+    if (type==3) {
+      format.m_format=MWAWCell::F_DATE; // we need the format to choose between date and time
+      f << "date/time,";
     }
-    case 0x24:
-      f << "text2,";
-    // fall through intended
-    case 4: {
-      std::string text("");
-      for (int j=0; j<endPos-1-pos; ++j) {
-        char c=(char) input->readLong(1);
-        if (c==0)
-          break;
-        text+=c;
-      }
-      f << text << ",";
-      break;
+    else {
+      format.m_format=MWAWCell::F_NUMBER;
+      format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
     }
-    case 5:
-      if (pos+2>endPos) {
-        ok=false;
-        break;
-      }
-      val=(int)input->readLong(1);
-      f << val << ",";
-      break;
-    case 6:
-    case 0x14: {
-      f << "textZone,";
-      MWAWEntry textEntry;
-      textEntry.setBegin(input->tell());
-      textEntry.setEnd(endPos);
-      textEntry.setId(m_mainParser->getNewZoneId());
-      textEntry.setType("SpreadsheetText");
-      // fixme: set the column width here
-      ok=m_mainParser->readTextZone(textEntry, 0);
-      break;
-    }
-    case 0x51:
-      f << "long51,";
-    // fall through intended
-    case 0x11: // or 2 int?
-      if (pos+5>endPos) {
-        ok=false;
-        break;
-      }
-      val=(int)input->readLong(4);
-      f << val << ",";
-      break;
-    default:
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    if (pos+11>endPos) {
       ok=false;
       break;
     }
+    double res;
+    bool isNan;
+    if (input->readDouble10(res, isNan)) {
+      content.setValue(res);
+      f << res << ",";
+    }
+    else
+      f << "#value,";
+    break;
   }
+  case 0x24:
+    f << "text2,";
+  // fall through intended
+  case 4: {
+    format.m_format=MWAWCell::F_TEXT;
+    content.m_textEntry.setBegin(input->tell());
+    content.m_textEntry.setEnd(endPos);
+
+    std::string text("");
+    for (int j=0; j<endPos-1-pos; ++j) {
+      char c=(char) input->readLong(1);
+      if (c==0) {
+        content.m_textEntry.setEnd(input->tell()-1);
+        break;
+      }
+      text+=c;
+    }
+    f << text << ",";
+    break;
+  }
+  case 5:
+    if (pos+2>endPos) {
+      ok=false;
+      break;
+    }
+    val=(int)input->readLong(1);
+    f << val << ",";
+    break;
+  case 6:
+  case 0x14: {
+    f << "textZone,";
+    MWAWEntry textEntry;
+    textEntry.setBegin(input->tell());
+    textEntry.setEnd(endPos);
+    textEntry.setId(m_mainParser->getNewZoneId());
+    textEntry.setType("SpreadsheetText");
+    format.m_format=MWAWCell::F_TEXT;
+    cell.m_textEntry=textEntry;
+    // fixme: set the column width here
+    ok=m_mainParser->readTextZone(textEntry, 0);
+    break;
+  }
+  case 0x51:
+    f << "long51,";
+  // fall through intended
+  case 0x11: // or 2 int?
+    if (pos+5>endPos) {
+      ok=false;
+      break;
+    }
+    val=(int)input->readLong(4);
+    format.m_format=MWAWCell::F_NUMBER;
+    format.m_numberFormat=MWAWCell::F_NUMBER_GENERIC;
+    content.m_contentType=MWAWCellContent::C_NUMBER;
+    content.setValue(double(val));
+    f << val << ",";
+    break;
+  default:
+    ok=false;
+    break;
+  }
+  cell.setFormat(format);
   if (!ok) f<< "##";
   else if ((input->tell()+1==endPos && input->readLong(1)!=0) || input->tell()!=endPos)
     f<<"#";
@@ -1369,7 +1480,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellContent(Vec2i const &cellPos, long e
   return ok;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &/*sheet*/)
+bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos=input->tell();
@@ -1386,6 +1497,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
     ascFile.addNote(f.str().c_str());
     return true;
   }
+  MWAWCell::Format format;
   for (int j=0; j<4; ++j) {
     int val=(int) input->readULong(2);
     if (val==0) {
@@ -1396,42 +1508,55 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
       continue;
     }
     switch (j) {
-    case 0:
+    case 0: {
       if (val<=0 || val >(int) m_state->m_cellFontList.size()) {
         MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpTe index\n"));
         f << "id[SpTe]=##" << val-1 << ",";
         break;
       }
+
+      MWAWFont const &font=m_state->m_cellFontList[size_t(val-1)];
+      cell.setFont(font);
       if (val==1) break;
-      f << "te=[" << m_state->m_cellFontList[size_t(val-1)].getDebugString(m_parserState->m_fontConverter) << "],";
+      f << "te=[" << font.getDebugString(m_parserState->m_fontConverter) << "],";
       break;
-    case 1:
+    }
+    case 1: {
       if (val<=0 || val>(int) m_state->m_cellFormatList.size()) {
         MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpVa index\n"));
         f << "id[SpVa]=##" << val-1 << ",";
         break;
       }
+      RagTimeSpreadsheetInternal::CellFormat const &cFormat=m_state->m_cellFormatList[size_t(val-1)];
+      cFormat.update(cell);
       if (val==1) break;
-      f << "va=[" << m_state->m_cellFormatList[size_t(val-1)] << "],";
+      f << "va=[" << cFormat << "],";
       break;
-    case 2:
+    }
+    case 2: {
       if (val <= 0 || val>(int) m_state->m_cellBorderList.size()) {
         MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpBoindex\n"));
         f << "id[SpBo]=##" << val-1 << ",";
         break;
       }
+      RagTimeSpreadsheetInternal::CellBorder const &borders=m_state->m_cellBorderList[size_t(val-1)];
       if (val==1) break;
-      f << "bo=[" << m_state->m_cellBorderList[size_t(val-1)] <<  "],";
+      borders.update(cell);
+      f << "bo=[" << borders <<  "],";
       break;
-    case 3:
+    }
+    case 3: {
       if (val<=0 || val>(int) m_state->m_cellExtraList.size()) {
         MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected SpCe index\n"));
         f << "id[SpCe]=##" << val-1 << ",";
         break;
       }
+      RagTimeSpreadsheetInternal::CellExtra const &extras=m_state->m_cellExtraList[size_t(val-1)];
+      extras.update(cell);
       if (val==1) break;
-      f << "ce=[" << m_state->m_cellExtraList[size_t(val-1)] << "],";
+      f << "ce=[" << extras << "],";
       break;
+    }
     default:
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: find unexpected type\n"));
       f << "###";
@@ -1439,6 +1564,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
     }
 
   }
+  cell.setFormat(format);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
@@ -1610,9 +1736,6 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
 
     long pos=contentZone.m_pos;
     if (pos<entry.begin() || pos>=contentEndPos) continue;
-
-    MWAWEntry content(entry);
-    content.setEnd(contentEndPos);
     input->seek(pos, librevenge::RVNG_SEEK_SET);
 
     std::vector<long> posList;
@@ -1654,12 +1777,24 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
       input->seek(posList[i], librevenge::RVNG_SEEK_SET);
       Vec2i cellPos(col,row);
       bool ok=true;
+      RagTimeSpreadsheetInternal::Cell emptyCell;
+      RagTimeSpreadsheetInternal::Cell *cell = 0;
+      if (col>0 && row>0 && entry.id()<=2) {
+        if (sheet.m_cellsMap.find(cellPos-Vec2i(1,1))==sheet.m_cellsMap.end())
+          sheet.m_cellsMap[cellPos-Vec2i(1,1)]=RagTimeSpreadsheetInternal::Cell();
+        cell=&sheet.m_cellsMap.find(cellPos-Vec2i(1,1))->second;
+      }
+      if (!cell) cell=&emptyCell;
+      cell->setPosition(cellPos-Vec2i(1,1));
       switch (entry.id()) {
       case 0:
-        ok=readSpreadsheetCellContent(cellPos, zEndPos, sheet);
+        if (cellPos[0]<=0 || cellPos[1]<=0)
+          ok=readSpreadsheetCellDimension(cellPos, zEndPos, sheet);
+        else
+          ok=readSpreadsheetCellContent(*cell, zEndPos);
         break;
       case 1:
-        ok=readSpreadsheetCellFormat(cellPos, zEndPos, sheet);
+        ok=readSpreadsheetCellFormat(cellPos, zEndPos, *cell);
         break;
       case 2: // formula
       case 3: { // condition
@@ -1668,8 +1803,14 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
         std::vector<MWAWCellContent::FormulaInstruction> formula;
         int val=(int) input->readULong(1);
         if (val) f << "f0=" << std::hex << val << std::dec << ",";
-        if (!readFormula(cellPos-Vec2i(1,1), formula, zEndPos, extra))
-          f << "###";
+        ok=readFormula(cellPos-Vec2i(1,1), formula, zEndPos, extra);
+        if (ok && entry.id()==2) {
+          MWAWCellContent &content=cell->m_content;
+          content.m_formula=formula;
+          if (cell && cell->validateFormula())
+            content.m_contentType=MWAWCellContent::C_FORMULA;
+        }
+        if (!ok) f << "###";
         f << "formula=[";
         for (size_t j=0; j<formula.size(); ++j)
           f << formula[j];
@@ -1678,6 +1819,7 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
         f << ",";
         ascFile.addPos(posList[i]);
         ascFile.addNote(f.str().c_str());
+        ok=true;
         break;
       }
       // case 4: list of cell which reference this cell, ok to ignore
@@ -1800,7 +1942,6 @@ bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreads
     }
     if (pos+2>=rEndPos) continue;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    std::map<int, RagTimeSpreadsheetInternal::Cell> cellsMap;
     while (1) {
       pos=input->tell();
       if (pos+2>rEndPos) break;
@@ -1825,19 +1966,16 @@ bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreads
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
       }
-      else if (cellsMap.find(cellPos[0]) != cellsMap.end()) {
-        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: already find a cell in %d\n", cellPos[0]));
+      else if (sheet.m_cellsMap.find(cellPos) != sheet.m_cellsMap.end()) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellsV2: already find a cell in (%d,%d)\n", cellPos[0],cellPos[1]));
         ascFile.addPos(pos);
         ascFile.addNote("###duplicated");
       }
       else
-        cellsMap[cellPos[0]]=cell;
+        sheet.m_cellsMap[cellPos]=cell;
       if ((dSz%2)==1) ++zEndPos;
       input->seek(zEndPos, librevenge::RVNG_SEEK_SET);
     }
-    std::map<int, RagTimeSpreadsheetInternal::Cell>::const_iterator mIt;
-    for (mIt=cellsMap.begin(); mIt!=cellsMap.end(); ++mIt)
-      sheet.m_cellsList.push_back(mIt->second);
   }
   return true;
 }
@@ -2052,19 +2190,19 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
   case 0:
     break;
   case 2:
-    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    cell.setHAlignment(MWAWCell::HALIGN_LEFT);
     f << "left,";
     break;
   case 3:
-    cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+    cell.setHAlignment(MWAWCell::HALIGN_CENTER);
     f << "center,";
     break;
   case 4:
-    cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+    cell.setHAlignment(MWAWCell::HALIGN_RIGHT);
     f << "right,";
     break;
   case 5: // full(repeat)
-    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    cell.setHAlignment(MWAWCell::HALIGN_LEFT);
     f << "repeat,";
     break;
   default:
@@ -2248,11 +2386,13 @@ bool RagTimeSpreadsheet::readSpreadsheetExtraV2(MWAWEntry &entry, RagTimeSpreads
       if (dim<prevDim) {
         f << "###dim, ";
         MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetExtraV2: problem reading some position\n"));
+        dims.push_back(0);
       }
       else {
         dims.push_back(float(dim-prevDim));
         prevDim=dim;
       }
+      f << "dim=" << float(dim-prevDim) << ",";
       if (i==0) {
         f << "height=" << input->readULong(2) << ",";
         long rowPos=sheet.m_cellsBegin+(long)input->readULong(4);
@@ -2301,8 +2441,9 @@ bool RagTimeSpreadsheet::send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MW
 
   MWAWInputStreamPtr &input=m_parserState->m_input;
   int prevRow = -1;
-  for (size_t i = 0; i < sheet.m_cellsList.size(); i++) {
-    RagTimeSpreadsheetInternal::Cell cell= sheet.m_cellsList[i];
+  RagTimeSpreadsheetInternal::Spreadsheet::Map::const_iterator cIt;
+  for (cIt=sheet.m_cellsMap.begin(); cIt!=sheet.m_cellsMap.end(); ++cIt) {
+    RagTimeSpreadsheetInternal::Cell cell= cIt->second;
     if (cell.position()[1] != prevRow) {
       while (cell.position()[1] > prevRow) {
         if (prevRow != -1)

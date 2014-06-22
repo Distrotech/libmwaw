@@ -43,6 +43,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWFontConverter.hxx"
 #include "MWAWListener.hxx"
 
 #include "MWAWCell.hxx"
@@ -365,8 +366,8 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFont
     propList.insert("fo:background-color", backgroundColor().str().c_str());
   if (isProtected())
     propList.insert("style:cell-protect","protected");
-  // alignement
-  switch (hAlignement()) {
+  // alignment
+  switch (hAlignment()) {
   case HALIGN_LEFT:
     propList.insert("fo:text-align", "first");
     propList.insert("style:text-align-source", "fix");
@@ -383,12 +384,12 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFont
     break; // default
   case HALIGN_FULL:
   default:
-    MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown halign=%d\n", hAlignement()));
+    MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown halign=%d\n", hAlignment()));
   }
   // no padding
   propList.insert("fo:padding", 0, librevenge::RVNG_POINT);
-  // alignement
-  switch (vAlignement()) {
+  // alignment
+  switch (vAlignment()) {
   case VALIGN_TOP:
     propList.insert("style:vertical-align", "top");
     break;
@@ -401,7 +402,7 @@ void MWAWCell::addTo(librevenge::RVNGPropertyList &propList, shared_ptr<MWAWFont
   case VALIGN_DEFAULT:
     break; // default
   default:
-    MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown valign=%d\n", vAlignement()));
+    MWAW_DEBUG_MSG(("MWAWCell::addTo: called with unknown valign=%d\n", vAlignment()));
   }
 }
 
@@ -759,7 +760,7 @@ std::ostream &operator<<(std::ostream &o, MWAWCellContent const &content)
 }
 
 // ---------- WKSContentListener::FormulaInstruction ------------------
-librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyList() const
+librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyList(MWAWFontConverter &fontConverter, int fontId) const
 {
   librevenge::RVNGPropertyList pList;
   switch (m_type) {
@@ -771,10 +772,26 @@ librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyLis
     pList.insert("librevenge:type","librevenge-function");
     pList.insert("librevenge:function",m_content.c_str());
     break;
-  case F_Text:
+  case F_Text: {
+    // we must use the font converter here to get the final string
     pList.insert("librevenge:type","librevenge-text");
-    pList.insert("librevenge:text",m_content.c_str());
+    librevenge::RVNGString finalStr("");
+    for (size_t i=0; i<m_content.size(); ++i) {
+      char c=m_content[i];
+      int unicode=fontConverter.unicode(fontId,(unsigned char)c);
+      if (unicode==-1) {
+        if (c < 0x20 && c!=9) {
+          MWAW_DEBUG_MSG(("MWAWCellContent::FormulaInstruction: Find odd char %x\n", int(c)));
+        }
+        else
+          finalStr.append(char(c));
+      }
+      else if (unicode != 0xfffd)
+        libmwaw::appendUnicode((uint32_t) unicode, finalStr);
+    }
+    pList.insert("librevenge:text",finalStr);
     break;
+  }
   case F_Double:
     pList.insert("librevenge:type","librevenge-number");
     pList.insert("librevenge:number",m_doubleValue, librevenge::RVNG_GENERIC);

@@ -152,7 +152,7 @@ public:
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, CellFormat const &form);
-    //! the cell alignement : by default nothing
+    //! the cell alignment : by default nothing
     MWAWCell::HorizontalAlignment m_hAlign;
     //! the field format: number, string, currency, ..
     int m_fileFormat;
@@ -172,7 +172,7 @@ public:
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, KSEN const &ksen);
-    //! the vertical alignement
+    //! the vertical alignment
     int m_valign;
     //! the line type
     MWAWBorder::Style m_lineType;

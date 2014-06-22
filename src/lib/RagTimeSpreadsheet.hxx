@@ -109,9 +109,11 @@ protected:
   bool readSpreadsheetComplexStructure(MWAWEntry const &entry, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
 
   //! try to read a spreadsheet cells content
-  bool readSpreadsheetCellContent(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  bool readSpreadsheetCellContent(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
+  //! try to read a spreadsheet cells dimension
+  bool readSpreadsheetCellDimension(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read a spreadsheet cell's format
-  bool readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  bool readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell);
 
   //! try to read a list of position
   bool readPositionsList(MWAWEntry const &entry, std::vector<long> &posList, long &lastDataPos);

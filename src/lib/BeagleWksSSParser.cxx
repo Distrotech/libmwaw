@@ -1126,15 +1126,15 @@ bool BeagleWksSSParser::readCellSheet(BeagleWksSSParserInternal::Cell &cell)
       }
       switch ((wh>>5)&3) {
       case 0:
-        cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+        cell.setHAlignment(MWAWCell::HALIGN_LEFT);
         f << "left,";
         break;
       case 1:
-        cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+        cell.setHAlignment(MWAWCell::HALIGN_RIGHT);
         f << "right,";
         break;
       case 2:
-        cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+        cell.setHAlignment(MWAWCell::HALIGN_CENTER);
         f << "center,";
         break;
       case 3: // default

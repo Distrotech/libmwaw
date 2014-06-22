@@ -112,14 +112,14 @@ public:
       return c1.compare(c2) < 0;
     }
   };
-  /** the default horizontal alignement.
+  /** the default horizontal alignment.
 
   \note actually mainly used for table/spreadsheet cell, FULL is not yet implemented */
   enum HorizontalAlignment { HALIGN_LEFT, HALIGN_RIGHT, HALIGN_CENTER,
                              HALIGN_FULL, HALIGN_DEFAULT
                            };
 
-  /** the default vertical alignement.
+  /** the default vertical alignment.
   \note actually mainly used for table/spreadsheet cell,  not yet implemented */
   enum VerticalAlignment { VALIGN_TOP, VALIGN_CENTER, VALIGN_BOTTOM, VALIGN_DEFAULT };
 
@@ -247,24 +247,24 @@ public:
     m_protected = fl;
   }
 
-  //! returns the horizontal alignement
-  HorizontalAlignment hAlignement() const
+  //! returns the horizontal alignment
+  HorizontalAlignment hAlignment() const
   {
     return m_hAlign;
   }
-  //! sets the horizontal alignement
-  void setHAlignement(HorizontalAlignment align)
+  //! sets the horizontal alignment
+  void setHAlignment(HorizontalAlignment align)
   {
     m_hAlign = align;
   }
 
-  //! returns the vertical alignement
-  VerticalAlignment vAlignement() const
+  //! returns the vertical alignment
+  VerticalAlignment vAlignment() const
   {
     return m_vAlign;
   }
-  //! sets the vertical alignement
-  void setVAlignement(VerticalAlignment align)
+  //! sets the vertical alignment
+  void setVAlignment(VerticalAlignment align)
   {
     m_vAlign = align;
   }
@@ -335,9 +335,9 @@ protected:
   MWAWFont m_font;
   //! a flag to know if the font has been set
   bool m_fontSet;
-  //! the cell alignement : by default nothing
+  //! the cell alignment : by default nothing
   HorizontalAlignment m_hAlign;
-  //! the vertical cell alignement : by default nothing
+  //! the vertical cell alignment : by default nothing
   VerticalAlignment m_vAlign;
   //! the backgroung color
   MWAWColor m_backgroundColor;
@@ -367,8 +367,8 @@ public:
         m_positionRelative[i]=Vec2b(false,false);
       }
     }
-    //! return a proplist corresponding to a instruction
-    librevenge::RVNGPropertyList getPropertyList() const;
+    /** returns a proplist corresponding to a instruction using a font converter to send the text */
+    librevenge::RVNGPropertyList getPropertyList(MWAWFontConverter &fontConverter, int fontId) const;
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, FormulaInstruction const &inst);
     //! the type

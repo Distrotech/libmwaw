@@ -608,10 +608,10 @@ bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
       if (style.m_ksenId >= 0 && m_document.getStyleManager()->get(style.m_ksenId, ksen)) {
         switch (ksen.m_valign) {
         case 1:
-          cell->setVAlignement(MWAWCell::VALIGN_CENTER);
+          cell->setVAlignment(MWAWCell::VALIGN_CENTER);
           break;
         case 2:
-          cell->setVAlignement(MWAWCell::VALIGN_BOTTOM);
+          cell->setVAlignment(MWAWCell::VALIGN_BOTTOM);
           break;
         default:
           break;

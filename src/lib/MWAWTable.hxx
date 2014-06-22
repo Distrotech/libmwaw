@@ -55,7 +55,7 @@ public:
   enum DataSet {
     CellPositionBit=1, BoxBit=2, SizeBit=4, TableDimBit=8, TablePosToCellBit=0x10
   };
-  /** an enum do define the table alignement.
+  /** an enum do define the table alignment.
 
   \note Paragraph means using the default alignment, left page alignment and use left margin */
   enum Alignment {

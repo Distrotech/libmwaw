@@ -434,7 +434,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
       MWAWCell cell;
       cell.setPosition(Vec2i(fC,fR));
       cell.setFormat(rec.m_format);
-      cell.setHAlignement(rec.m_hAlign);
+      cell.setHAlignment(rec.m_hAlign);
       cell.setFont(rec.m_font);
       // change the reference date from 1/1/1904 to 1/1/1900
       if (rec.m_format.m_format==MWAWCell::F_DATE && rec.m_content.isValueSet())
@@ -509,7 +509,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheetAsTable(int zId, MWAWListenerPtr liste
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       MWAWCell cell;
       cell.setPosition(Vec2i(fC,fR));
-      cell.setVAlignement(MWAWCell::VALIGN_BOTTOM); // always ?
+      cell.setVAlignment(MWAWCell::VALIGN_BOTTOM); // always ?
       listener->openTableCell(cell);
       sheet.m_content->send(Vec2i(c, r));
       listener->closeTableCell();

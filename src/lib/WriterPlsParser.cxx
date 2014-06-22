@@ -1562,7 +1562,7 @@ bool WriterPlsParser::readTable(WriterPlsParserInternal::ParagraphInfo const &in
     }
     MWAWTable table(MWAWTable::TableDimBit);
     table.setColsSize(colSize);
-    // use the same function than getParagraph to respect alignement
+    // use the same function than getParagraph to respect alignment
     int left=columns[0].m_colX[0]-20-int(72.*getPageSpan().getMarginLeft());
     if (left)
       table.setAlignment(MWAWTable::Left, float(left));

@@ -46,7 +46,7 @@ struct MWAWListLevel {
   enum Type { DEFAULT, NONE, BULLET, DECIMAL, LOWER_ALPHA, UPPER_ALPHA,
               LOWER_ROMAN, UPPER_ROMAN, LABEL
             };
-  //! the item alignement
+  //! the item alignment
   enum Alignment { LEFT, RIGHT, CENTER };
 
   /** basic constructor */
@@ -89,7 +89,7 @@ struct MWAWListLevel {
   double m_labelAfterSpace /** the minimum distance between the label and the text */;
   /** the number of label to show before this */
   int m_numBeforeLabels;
-  //! the alignement ( left, center, ...)
+  //! the alignment ( left, center, ...)
   Alignment m_alignment;
   /** the actual value (if this is an ordered level ) */
   int m_startValue;

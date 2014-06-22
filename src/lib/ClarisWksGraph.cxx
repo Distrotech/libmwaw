@@ -368,7 +368,7 @@ struct Bitmap : public ClarisWksStruct::DSET {
   int m_numBytesPerPixel;
   //! the bitmap size
   Vec2i m_bitmapSize;
-  //! the bitmap row size in the file ( with potential alignement)
+  //! the bitmap row size in the file ( with potential alignment)
   int m_bitmapRowSize;
   //! the bitmap entry
   MWAWEntry m_entry;
@@ -2069,7 +2069,7 @@ bool ClarisWksGraph::readBitmapData(ClarisWksGraphInternal::Bitmap &zone)
     }
   }
   else if (sz > numBytesPerPixel*numPixels) {
-    // check for different row alignement: 2 and 4
+    // check for different row alignment: 2 and 4
     for (int align=2; align <= 4; align*=2) {
       int diffToAlign=align-(zone.m_bitmapSize[0]%align);
       if (diffToAlign==align) continue;

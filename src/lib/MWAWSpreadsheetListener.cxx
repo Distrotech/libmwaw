@@ -1660,7 +1660,7 @@ void MWAWSpreadsheetListener::openSheetCell(MWAWCell const &cell, MWAWCellConten
   if (content.m_formula.size()) {
     librevenge::RVNGPropertyListVector formulaVect;
     for (size_t i=0; i < content.m_formula.size(); ++i)
-      formulaVect.append(content.m_formula[i].getPropertyList());
+      formulaVect.append(content.m_formula[i].getPropertyList(*m_parserState.m_fontConverter, m_ps->m_font.id()));
     propList.insert("librevenge:formula", formulaVect);
   }
   bool hasFormula=!content.m_formula.empty();

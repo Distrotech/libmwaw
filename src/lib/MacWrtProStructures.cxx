@@ -1470,7 +1470,7 @@ bool MacWrtProStructures::readParagraph(MacWrtProStructuresInternal::Paragraph &
     ascii().addDelimiter(m_input->tell(),'|');
   }
   /* Note: when no extra tab the justification,
-           if there is a extra tab, this corresponds to the extra tab alignement :-~ */
+           if there is a extra tab, this corresponds to the extra tab alignment :-~ */
   switch (just & 0x3) {
   case 0:
     break;

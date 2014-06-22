@@ -893,21 +893,21 @@ bool BeagleWksDBParser::readFormat(MWAWCell &cell, std::string &extra)
   val=(int) input->readULong(1);
   switch ((val>>5)&7) {
   case 0:
-    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    cell.setHAlignment(MWAWCell::HALIGN_LEFT);
     f << "left,";
     break;
   case 1:
-    cell.setHAlignement(MWAWCell::HALIGN_RIGHT);
+    cell.setHAlignment(MWAWCell::HALIGN_RIGHT);
     f << "right,";
     break;
   case 2:
-    cell.setHAlignement(MWAWCell::HALIGN_CENTER);
+    cell.setHAlignment(MWAWCell::HALIGN_CENTER);
     f << "center,";
     break;
   case 3: // default
     break;
   case 4:
-    cell.setHAlignement(MWAWCell::HALIGN_LEFT);
+    cell.setHAlignment(MWAWCell::HALIGN_LEFT);
     f << "filled,";
     break;
   default:
