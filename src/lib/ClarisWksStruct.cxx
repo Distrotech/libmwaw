@@ -110,14 +110,14 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     break;
   }
   o << "id=" << doc.m_id << ",";
-  if (doc.m_fathersList.size()) {
+  if (!doc.m_fathersList.empty()) {
     o << "fathers=[";
     std::set<int>::const_iterator it = doc.m_fathersList.begin();
     for (; it != doc.m_fathersList.end(); ++it)
       o << *it << ",";
     o << "],";
   }
-  if (doc.m_validedChildList.size()) {
+  if (!doc.m_validedChildList.empty()) {
     o << "child[valided]=[";
     std::set<int>::const_iterator it = doc.m_validedChildList.begin();
     for (; it != doc.m_validedChildList.end(); ++it)

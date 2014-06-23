@@ -1643,9 +1643,8 @@ bool RagTimeSpreadsheet::readSpreadsheetSimpleStructure(MWAWEntry const &entry, 
   int fSz=(int) input->readULong(2);
   int N=(int) input->readULong(2);
   f << "N=" << N << "[" << fSz << "],";
-  int val;
   for (int i=0; i<2; ++i) { // f0=4|c
-    val=(int) input->readLong(2);
+    int val=(int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
   }
   int ptrSz=(int) input->readLong(2);
@@ -1803,7 +1802,7 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
         if (ok && entry.id()==2) {
           MWAWCellContent &content=cell->m_content;
           content.m_formula=formula;
-          if (cell && cell->validateFormula())
+          if (cell->validateFormula())
             content.m_contentType=MWAWCellContent::C_FORMULA;
         }
         if (!ok) f << "###";

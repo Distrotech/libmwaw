@@ -452,7 +452,7 @@ struct TextBox : public Frame {
   //! constructor
   TextBox(Frame const &orig, bool isComment)
     : Frame(orig), m_commentBox(isComment), m_textFileId(-1),
-      m_linkedIdList(), m_isLinked(false), m_extra()
+      m_linkedIdList(), m_isLinked(false)
   {
     for (int i = 0; i < 2; ++i) m_dim[i] = 0;
   }
@@ -550,8 +550,6 @@ struct TextBox : public Frame {
   std::vector<long> m_linkedIdList;
   //! a flag to know if this textbox is linked to a previous box
   bool m_isLinked;
-  //! extra data
-  std::string m_extra;
 };
 
 bool TableCell::sendContent(MWAWListenerPtr, MWAWTable &table)

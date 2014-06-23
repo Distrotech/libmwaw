@@ -1621,8 +1621,6 @@ bool WingzParser::readSpreadsheetSize()
     if (id) f << "id=" << id << ",";
   }
   f << "pos=[";
-  float &defaultDim= type==1 ? m_state->m_spreadsheet.m_widthDefault :
-                     m_state->m_spreadsheet.m_heightDefault;
   std::vector<float> &dimList=type==1 ? m_state->m_spreadsheet.m_widthCols :
                               m_state->m_spreadsheet.m_heightRows;
   for (int i=0; i<dSz/4; ++i) {
@@ -1630,7 +1628,8 @@ bool WingzParser::readSpreadsheetSize()
     float dim=float(input->readULong(2))/20.f;  // in TWIP
     if (cell==0xFFFF) f << "-inf";
     else if (cell==0x7FFF) {
-      defaultDim =dim;
+      if (type==1) m_state->m_spreadsheet.m_widthDefault=dim;
+      else m_state->m_spreadsheet.m_heightDefault=dim;
       f << "inf";
     }
     else {
