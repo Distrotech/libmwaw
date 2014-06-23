@@ -100,7 +100,7 @@ protected:
   bool readTokens(RagTimeTextInternal::TextZone &zone, long endPos);
 
   //! try to send a text zone
-  bool send(int id);
+  bool send(int id, MWAWListenerPtr listener);
   //! flush extra zone
   void flushExtra();
 
@@ -109,7 +109,7 @@ protected:
   //
 
   //! try to send a text zone
-  bool send(RagTimeTextInternal::TextZone const &zone);
+  bool send(RagTimeTextInternal::TextZone const &zone, MWAWListenerPtr listener);
 
 private:
   RagTimeText(RagTimeText const &orig);

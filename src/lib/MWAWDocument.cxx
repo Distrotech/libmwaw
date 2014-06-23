@@ -702,9 +702,7 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new NisusWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_RAGTIME:
-#ifdef DEBUG
       parser.reset(new RagTimeParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:

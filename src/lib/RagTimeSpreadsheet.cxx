@@ -259,8 +259,8 @@ void CellFormat::update(Cell &cell) const
 
 void CellBorder::update(Cell &cell) const
 {
-  if (!m_borders[0].isEmpty()) cell.setBorders(libmwaw::Top, m_borders[0]);
-  if (!m_borders[1].isEmpty()) cell.setBorders(libmwaw::Left, m_borders[1]);
+  if (!m_borders[0].isEmpty()) cell.setBorders(libmwaw::TopBit, m_borders[0]);
+  if (!m_borders[1].isEmpty()) cell.setBorders(libmwaw::LeftBit, m_borders[1]);
 }
 
 void CellExtra::update(Cell &cell) const
@@ -301,7 +301,7 @@ struct Spreadsheet {
   Vec2i getRightBottomPosition() const
   {
     Vec2i res(0,0);
-    for (Map::const_iterator it=m_cellsMap.begin(); it!=m_cellsMap.begin(); ++it) {
+    for (Map::const_iterator it=m_cellsMap.begin(); it!=m_cellsMap.end(); ++it) {
       Cell const &cell=it->second;
       if (cell.position()[0] >= res[0])
         res[0]=cell.position()[0]+1;
@@ -1294,7 +1294,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long
   long pos=input->tell();
   f << "SpreadsheetContent-";
   if (cellPos[1]==0) {
-    f << "colDim[" << cellPos[0] << "]:";
+    f << "colDim[" << cellPos[0]-1 << "]:";
     if (pos+16>endPos || cellPos[0]<=0) {
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellDimension: can not read a row height\n"));
       f << "##";
@@ -1441,15 +1441,12 @@ bool RagTimeSpreadsheet::readSpreadsheetCellContent(RagTimeSpreadsheetInternal::
   case 6:
   case 0x14: {
     f << "textZone,";
-    MWAWEntry textEntry;
-    textEntry.setBegin(input->tell());
-    textEntry.setEnd(endPos);
-    textEntry.setId(m_mainParser->getNewZoneId());
-    textEntry.setType("SpreadsheetText");
+    cell.m_textEntry.setBegin(input->tell());
+    cell.m_textEntry.setEnd(endPos);
+    cell.m_textEntry.setId(m_mainParser->getNewZoneId());
+    cell.m_textEntry.setType("SpreadsheetText");
     format.m_format=MWAWCell::F_TEXT;
-    cell.m_textEntry=textEntry;
-    // fixme: set the column width here
-    ok=m_mainParser->readTextZone(textEntry, 0);
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
     break;
   }
   case 0x51:
@@ -1487,9 +1484,10 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
 
-  f << "SpreadsheetCFormat-C" << cellPos << "]:";
-  if (cellPos[1]==0) f << "col,";
-  else if (cellPos[0]==0) f << "row,";
+  f << "SpreadsheetCFormat-";
+  if (cellPos[1]==0) f << "col:";
+  else if (cellPos[0]==0) f << "row:";
+  else f << cell.position() << ":";
   if (pos+8>endPos) {
     f << "###";
     MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellFormat: a block definition seems bad\n"));
@@ -1497,7 +1495,6 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
     ascFile.addNote(f.str().c_str());
     return true;
   }
-  MWAWCell::Format format;
   for (int j=0; j<4; ++j) {
     int val=(int) input->readULong(2);
     if (val==0) {
@@ -1564,7 +1561,6 @@ bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long en
     }
 
   }
-  cell.setFormat(format);
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
 
@@ -2437,10 +2433,12 @@ bool RagTimeSpreadsheet::send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MW
     return false;
   }
   sheet.m_isSent=true;
-  listener->openSheet(sheet.getColumnsWidth(), librevenge::RVNG_POINT, sheet.m_name);
+  std::vector<float> colWidth=sheet.getColumnsWidth();
+  listener->openSheet(colWidth, librevenge::RVNG_POINT, sheet.m_name);
 
   MWAWInputStreamPtr &input=m_parserState->m_input;
   int prevRow = -1;
+  float rowHeight=0;
   RagTimeSpreadsheetInternal::Spreadsheet::Map::const_iterator cIt;
   for (cIt=sheet.m_cellsMap.begin(); cIt!=sheet.m_cellsMap.end(); ++cIt) {
     RagTimeSpreadsheetInternal::Cell cell= cIt->second;
@@ -2449,11 +2447,33 @@ bool RagTimeSpreadsheet::send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MW
         if (prevRow != -1)
           listener->closeSheetRow();
         prevRow++;
-        listener->openSheetRow(sheet.getRowHeight(prevRow), librevenge::RVNG_POINT);
+        rowHeight=sheet.getRowHeight(prevRow);
+        listener->openSheetRow(rowHeight, librevenge::RVNG_POINT);
       }
     }
-    listener->openSheetCell(cell, cell.m_content);
-    if (cell.m_content.m_textEntry.valid()) {
+    MWAWCellContent content=cell.m_content;
+    // change the reference date from 1/1/1904 to 1/1/1900
+    if (cell.getFormat().m_format==MWAWCell::F_DATE && content.isValueSet())
+      content.setValue(content.m_value+1460.);
+    listener->openSheetCell(cell, content);
+    if (cell.m_textEntry.valid()) {
+      listener->setFont(cell.getFont());
+      int width=0;
+      if ((cell.m_rotation>45 && cell.m_rotation<145)||
+          (cell.m_rotation>225 && cell.m_rotation<315))
+        width=int(rowHeight);
+      else if (cell.position()[0]>=0 || cell.position()[0]<int(colWidth.size()))
+        width=int(colWidth[size_t(cell.position()[0])]);
+      else {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::send: can not determine the text width zone\n"));
+      }
+      if (m_mainParser->readTextZone(cell.m_textEntry, width))
+        m_mainParser->sendText(cell.m_textEntry.id(), listener);
+      else {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::send: can not find a text zone\n"));
+      }
+    }
+    else if (cell.m_content.m_textEntry.valid()) {
       listener->setFont(cell.getFont());
       input->seek(cell.m_content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
       while (!input->isEnd() && input->tell()<cell.m_content.m_textEntry.end()) {

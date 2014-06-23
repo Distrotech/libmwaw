@@ -133,7 +133,7 @@ public:
     MWAW_T_OVERVUE /** OverVUE: TODO*/,
     MWAW_T_PAGEMAKER /** PageMaker: TODO*/,
     MWAW_T_PIXELPAINT /** PixelPaint: TODO*/,
-    MWAW_T_RAGTIME /** RagTime: TODO*/,
+    MWAW_T_RAGTIME /** RagTime: (Mac v2.1-v3.2)*/,
     MWAW_T_READYSETGO /** Ready,Set,Go!: TODO*/,
     /** SuperPaint: export drawing and paint v1 document
 

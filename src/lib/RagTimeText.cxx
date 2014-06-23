@@ -415,7 +415,7 @@ bool RagTimeText::readTextZone(MWAWEntry &entry, int width, MWAWColor const &col
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   int const vers=version();
-  int dataFieldSize=vers==1 ? 2 : m_mainParser->getZoneDataFieldSize(entry.id());
+  int dataFieldSize=(vers==1||entry.valid()) ? 2 : m_mainParser->getZoneDataFieldSize(entry.id());
   long pos=entry.begin();
   if (pos<=0 || !input->checkPosition(pos+5+dataFieldSize+2+6)) {
     MWAW_DEBUG_MSG(("RagTimeText::readTextZone: the position seems bad\n"));
@@ -934,19 +934,20 @@ bool RagTimeText::readTokens(RagTimeTextInternal::TextZone &zone, long endPos)
 
 ////////////////////////////////////////////////////////////
 // send data to the listener
-bool RagTimeText::send(int zId)
+bool RagTimeText::send(int zId, MWAWListenerPtr listener)
 {
   if (m_state->m_idTextMap.find(zId)==m_state->m_idTextMap.end() ||
       !m_state->m_idTextMap.find(zId)->second) {
     MWAW_DEBUG_MSG(("RagTimeText::send: can not find the text zone %d\n", zId));
     return false;
   }
-  return send(*m_state->m_idTextMap.find(zId)->second);
+  return send(*m_state->m_idTextMap.find(zId)->second, listener);
 }
 
-bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone)
+bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone, MWAWListenerPtr listener)
 {
-  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener)
+    listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("RagTimeText::send: can not find the listener\n"));
     return false;
@@ -1132,7 +1133,7 @@ void RagTimeText::flushExtra()
       MWAW_DEBUG_MSG(("RagTimeText::flushExtra: find some unsend zone\n"));
       first=false;
     }
-    send(zone);
+    send(zone, listener);
     listener->insertEOL();
   }
 }

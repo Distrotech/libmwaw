@@ -129,7 +129,7 @@ protected:
   //! try to send a zone
   bool send(int zId);
   //! try to send the text zone (interface of RagTimeText)
-  bool sendText(int zId);
+  bool sendText(int zId, MWAWListenerPtr listener);
 
   //! sends the picture
   bool sendPicture(int zId, MWAWPosition const &pos);

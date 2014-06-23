@@ -115,12 +115,12 @@ struct Picture {
 //! Internal: a zone of a RagTimeParser
 struct Zone {
   //! the zone type
-  enum Type { Text, Page, Picture, Line, Spreadsheet, Unknown };
+  enum Type { Text, Page, Picture, Line, Spreadsheet, Chart, Unknown };
   //! constructor
   Zone(): m_type(Unknown), m_subType(0), m_read32Size(false), m_dimension(), m_page(0), m_rotation(0),
-    m_style(MWAWGraphicStyle::emptyStyle()), m_fontColor(MWAWColor::black()), m_arrowFlags(0), m_isSent(false), m_extra("")
+    m_style(MWAWGraphicStyle::emptyStyle()), m_fontColor(MWAWColor::black()), m_arrowFlags(0), m_sharedWith(0), m_isSent(false), m_extra("")
   {
-    for (int i=0; i<4; ++i) m_linkZones[i]=0;
+    for (int i=0; i<5; ++i) m_linkZones[i]=0;
   }
   //! returns the bounding box
   Box2f getBoundingBox() const
@@ -138,6 +138,8 @@ struct Zone {
   std::string getTypeString() const
   {
     switch (m_type) {
+    case Chart:
+      return "Chart";
     case Spreadsheet:
       return "SheetZone";
     case Page:
@@ -179,8 +181,10 @@ struct Zone {
   MWAWColor m_fontColor;
   //! arrow flag 1:begin, 2:end
   int m_arrowFlags;
-  //! the link zones ( parent, prev, next, child)
-  int m_linkZones[4];
+  //! the link zones ( parent, prev, next, child, linked)
+  int m_linkZones[5];
+  //! the zone which contains the content
+  int m_sharedWith;
   //! a flag to know if the picture is sent
   mutable bool m_isSent;
   //! extra data
@@ -190,6 +194,9 @@ struct Zone {
 std::ostream &operator<<(std::ostream &o, Zone const &z)
 {
   switch (z.m_type) {
+  case Zone::Chart:
+    o << "chart,";
+    break;
   case Zone::Line:
     o << "line,";
     break;
@@ -222,12 +229,14 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
   if (z.m_arrowFlags&2)
     o << "arrows[end],";
   o << "ids=[";
-  for (int i=0; i<4; ++i) {
-    static char const *(wh[])= {"parent", "prev", "next", "child"};
+  for (int i=0; i<5; ++i) {
+    static char const *(wh[])= {"parent", "prev", "next", "child", "linked"};
     if (z.m_linkZones[i])
       o <<  wh[i] << "=Z" << z.m_linkZones[i] << ",";
   }
   o << "],";
+  if (z.m_sharedWith)
+    o << "#shared=Z" << z.m_sharedWith << ",";
   o << z.m_extra << ",";
   return o;
 }
@@ -325,7 +334,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
   assert(m_parser);
 
   long pos = m_input->tell();
-  static_cast<RagTimeParser *>(m_parser)->sendText(m_id);
+  static_cast<RagTimeParser *>(m_parser)->sendText(m_id, listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -417,9 +426,9 @@ bool RagTimeParser::getDateTimeFormat(int dtId, std::string &dtFormat) const
   return m_spreadsheetParser->getDateTimeFormat(dtId,dtFormat);
 }
 
-bool RagTimeParser::sendText(int zId)
+bool RagTimeParser::sendText(int zId, MWAWListenerPtr listener)
 {
-  return m_textParser->send(zId);
+  return m_textParser->send(zId, listener);
 }
 
 ////////////////////////////////////////////////////////////
@@ -787,6 +796,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     hasPointer=false;
     break;
   case 6:
+    zone.m_type=RagTimeParserInternal::Zone::Chart;
     break;
   default:
     if ((zone.m_subType&0xf)==0xF)
@@ -799,13 +809,26 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
   if (hasPointer) {
     input->seek(pos+zoneLength-4, librevenge::RVNG_SEEK_SET);
     long filePos=(long) input->readULong(4);
-    if (filePos && (filePos<endPos || !input->checkPosition(filePos))) {
+    if (filePos==0) {
+      // checkme: is it normal or not ?
+    }
+    else if (filePos>0 && filePos<=long(m_state->m_numDataZone)) {
+      /* TODO: rare but we must manage that, this seems easy for
+         shared text zone, more difficult for other shared zones */
+      zone.m_sharedWith=int(filePos);
+      static bool first=true;
+      if (zone.m_sharedWith && first) {
+        first=false;
+        MWAW_DEBUG_MSG(("RagTimeParser::findDataZones: find potential shared zones, not implemented\n"));
+      }
+    }
+    else if (filePos<endPos || !input->checkPosition(filePos)) {
       f << "###";
       MWAW_DEBUG_MSG(("RagTimeParser::findDataZones: find an odd zone\n"));
     }
     else if (filePos) {
+      // checkme: does vers==1 has some flags which explains +4
       entry.setBegin(filePos+(vers==1 ? 4 : 0));
-      // checkme: some time in v3 the zones pos is decaled by 2, if *(pos+6)&0x80?
       m_state->m_dataZoneMap.insert
       (std::multimap<std::string,MWAWEntry>::value_type(entry.type(),entry));
     }
@@ -873,8 +896,13 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     // todo: data probably differs from here
     zone.m_linkZones[3]=(int) input->readLong(2);
   else {
-    val=(int) input->readLong(2); //f1=(-20)-14|8001
-    if (val) f << "f1=" << val << ",";
+    val=(int) input->readULong(2); //f1=(-20)-14|8001
+    if (val==0x8001) // use to indicated the last main zone
+      f << "linked=last,";
+    else if (val >=0 && val <= numZones)
+      zone.m_linkZones[4]=val;
+    else
+      f << "#linked=" << val << ",";
   }
   for (int i=0; i<(vers>=2 ? 4 : 2); ++i) { // fl5=0|1|2|3|10, fl6=0|1
     val=(int) input->readULong(1);
@@ -2545,6 +2573,14 @@ bool RagTimeParser::send(int zId)
     pos.setPage(zone.m_page);
   pos.m_wrapping=MWAWPosition::WRunThrough;
   switch (zone.m_type) {
+  case RagTimeParserInternal::Zone::Chart: {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTimeParser::send: this file contains some charts which will be ignored\n"));
+      first=false;
+    }
+    break;
+  }
   case RagTimeParserInternal::Zone::Line:
     return sendBasicPicture(zId, pos);
   case RagTimeParserInternal::Zone::Picture:

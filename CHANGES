@@ -1,5 +1,8 @@
 CHANGES:
 
+22/6/2014:
+- RagTime: add a parser to parse v2 and v3 documents
+
 6/6/2014:
 - rewrite MWAWCellContent::double2Date to avoid problem with 32/64 time_t values
 - correct many <<small>> problems
