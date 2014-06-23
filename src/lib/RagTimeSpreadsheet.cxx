@@ -1303,7 +1303,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long
       f << "dim=[";
       // col dim, followed by some margins?, no sure if v3~15/16 is or not a dim
       for (int j=0; j<4; ++j) {
-        long dim=(long) input->readULong(4);
+        uint32_t dim=(uint32_t) input->readULong(4);
         f << float(dim&0x7FFFFFFF)/65536.f;
         if (dim&0x80000000) f << "/h";
         f << ",";
@@ -1329,7 +1329,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long
   else {
     f << "dim=[";
     for (int j=0; j<2; ++j) { // row dim, followed by cell height
-      long dim=(long) input->readULong(4);
+      uint32_t dim=(uint32_t) input->readULong(4);
       f << float(dim&0x7FFFFFFF)/65536.f;
       if (dim&0x80000000) f << "/h";
       f << ",";
