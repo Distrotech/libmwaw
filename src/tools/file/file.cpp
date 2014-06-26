@@ -324,8 +324,8 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   }
-  else if (m_fInfoCreator=="MACD") {   // checkme
-    checkFInfoType("DRWG","MacDraw[unsure]");
+  else if (m_fInfoCreator=="MACD") {
+    checkFInfoType("DRWG","MacDraft") || checkFInfoType("MacDraft");
   }
   else if (m_fInfoCreator=="MDsr") {
     checkFInfoType("APPL","MacDoc(appli)");
@@ -575,6 +575,20 @@ bool File::readDataInformation()
     m_dataResult.push_back("Mariner Write");
     return true;
   }
+  if (val[0]==0x4452 && val[1]==0x5747) { // DRWG
+    if (val[2]==0x4d44) { // MD
+      m_dataResult.push_back("MacDraw");
+      return true;
+    }
+    if (val[2]==0x4432) { // D2
+      m_dataResult.push_back("MacDraw II");
+      return true;
+    }
+  }
+  if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
+    m_dataResult.push_back("MacDraw Pro");
+    return true;
+  }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     m_dataResult.push_back("HanMac Word-K");
     return true;
@@ -718,6 +732,9 @@ bool File::readDataInformation()
   if (val[0]==0xdba5 && val[1]==0x2d00) {
     m_dataResult.push_back("Microsoft Word 2.0[pc]");
     return true;
+  }
+  if (val[0]==0x4D44) { // MD
+    m_dataResult.push_back("MacDraw v0[unsure]");
   }
   if (val[0] == 3 || val[0] == 6) {
     int numParaPos = val[0] == 3 ? 2 : 1;

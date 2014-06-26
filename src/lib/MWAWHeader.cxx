@@ -189,6 +189,18 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="MDRW") {
+      if (type=="DRWG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
+    else if (creator=="MDPL") { // MacDraw II
+      if (type=="DRWG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 2, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
     else if (creator=="MDsr") {
       if (type=="APPL") { // auto content
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDOC, 1));
@@ -384,6 +396,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="dPro") {
+      if (type=="dDoc") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
     else if (creator=="eDcR") {
       if (type=="eDoc") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_EDOC, 1));
@@ -519,6 +537,23 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_BEAGLEWORKS, 1, MWAWDocument::MWAW_K_SPREADSHEET));
       return res;
     }
+  }
+  if (val[0]==0x4452 && val[1]==0x5747) { // DRWG
+    if (val[2]==0x4d44) { // MD
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    }
+    if (val[2]==0x4432) { // D2
+      MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw II file\n"));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 2, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    }
+  }
+  if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+    return res;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
@@ -679,6 +714,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         break;
       }
     }
+  }
+  if (val[0]==0x4d44 && input->size()>=512) { // maybe a MacDraw 0 file, will be check later
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 0, MWAWDocument::MWAW_K_DRAW));
   }
   if (val[0] == 3 || val[0] == 6) {
     // version will be print by MacWrtParser::check

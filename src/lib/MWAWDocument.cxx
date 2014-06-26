@@ -65,6 +65,7 @@
 #include "HanMacWrdKParser.hxx"
 #include "LightWayTxtParser.hxx"
 #include "MacDocParser.hxx"
+#include "MacDrawParser.hxx"
 #include "MacPaintParser.hxx"
 #include "MacWrtParser.hxx"
 #include "MacWrtProParser.hxx"
@@ -139,6 +140,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_HANMACWORDK:
     case MWAW_T_LIGHTWAYTEXT:
     case MWAW_T_MACDOC:
+    case MWAW_T_MACDRAW:
     case MWAW_T_MACPAINT:
     case MWAW_T_MACWRITE:
     case MWAW_T_MACWRITEPRO:
@@ -169,7 +171,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_INFOGENIE:
     case MWAW_T_KALEIDAGRAPH:
     case MWAW_T_MACDRAFT:
-    case MWAW_T_MACDRAW:
     case MWAW_T_MACDRAWPRO:
     case MWAW_T_MICROSOFTFILE:
     case MWAW_T_MICROSOFTMULTIPLAN:
@@ -444,6 +445,11 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       else
         parser.reset(new GreatWksDRParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_MACDRAW:
+#ifdef DEBUG
+      parser.reset(new MacDrawParser(input, rsrcParser, header));
+#endif
+      break;
     case MWAWDocument::MWAW_T_MACPAINT:
       parser.reset(new MacPaintParser(input, rsrcParser, header));
       break;
@@ -474,7 +480,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_LIGHTWAYTEXT:
     case MWAWDocument::MWAW_T_MACDOC:
     case MWAWDocument::MWAW_T_MACDRAFT:
-    case MWAWDocument::MWAW_T_MACDRAW:
     case MWAWDocument::MWAW_T_MACDRAWPRO:
     case MWAWDocument::MWAW_T_MACWRITE:
     case MWAWDocument::MWAW_T_MACWRITEPRO:

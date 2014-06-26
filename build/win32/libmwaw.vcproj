@@ -364,6 +364,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MacDrawParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MacPaintParser.cxx"
 				>
 			</File>
@@ -858,6 +862,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MacDocParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawParser.hxx"
 				>
 			</File>
 			<File
