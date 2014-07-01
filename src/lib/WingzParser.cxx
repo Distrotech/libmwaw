@@ -50,7 +50,6 @@
 #include "MWAWPrinter.hxx"
 #include "MWAWSpreadsheetListener.hxx"
 #include "MWAWStringStream.hxx"
-#include "MWAWSubDocument.hxx"
 
 #include "WingzParser.hxx"
 
@@ -1119,7 +1118,7 @@ bool WingzParser::readSpreadsheetStyle()
     val=(int) input->readULong(4);
     int col=((val>>16)&0xFF)|(val&0xFF00)|((val<<16)&0xFFFFFF);
     int high=(val>>24);
-    colors[i]=MWAWColor(uint32_t(col));
+    colors[i]=MWAWColor(uint32_t(col)|0xFF000000);
     switch (i) {
     case 0:
       patId=high;

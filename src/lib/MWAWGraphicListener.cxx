@@ -115,13 +115,17 @@ struct State {
   //! the list of list
   shared_ptr<MWAWList> m_list;
 
-  bool m_isTextBoxOpened;
   //! a flag to know if openFrame was called
   bool m_isFrameOpened;
   //! the frame position
   MWAWPosition m_framePosition;
   //! the frame style
   MWAWGraphicStyle m_frameStyle;
+
+  //! a flag to know if we are in a textbox
+  bool m_isTextBoxOpened;
+  //! a flag to know if openLayer was called
+  bool m_isLayerOpened;
 
   bool m_isSpanOpened;
   bool m_isParagraphOpened;
@@ -153,7 +157,7 @@ private:
 
 State::State() : m_origin(0,0),
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_isPageSpanOpened(false), m_list(),
-  m_isTextBoxOpened(false), m_isFrameOpened(false), m_framePosition(), m_frameStyle(),
+  m_isFrameOpened(false), m_framePosition(), m_frameStyle(), m_isTextBoxOpened(false), m_isLayerOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
@@ -1244,7 +1248,7 @@ void MWAWGraphicListener::closeTableCell()
 }
 
 ///////////////////
-// frame
+// frame/layer
 ///////////////////
 bool MWAWGraphicListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
@@ -1275,6 +1279,43 @@ void MWAWGraphicListener::closeFrame()
     return;
   }
   m_ps->m_isFrameOpened = false;
+}
+
+bool  MWAWGraphicListener::openLayer(MWAWPosition const &pos)
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLayer: the document is not started\n"));
+    return false;
+  }
+  if (m_ps->m_isTableOpened || m_ps->isInTextZone()) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLayer: called in table or in a text zone\n"));
+    return false;
+  }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_isPageSpanOpened=true;
+
+  m_ps->m_isLayerOpened = true;
+
+  librevenge::RVNGPropertyList propList;
+  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
+  m_documentInterface->startLayer(propList);
+
+  return true;
+}
+
+void  MWAWGraphicListener::closeLayer()
+{
+  if (!m_ps->m_isLayerOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::closeLayer: called but no layer is already opened\n"));
+    return;
+  }
+  m_documentInterface->endLayer();
+  _endSubDocument();
+  _popParsingState();
 }
 
 void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &list, MWAWPosition const &pos, MWAWGraphicStyle const &style)

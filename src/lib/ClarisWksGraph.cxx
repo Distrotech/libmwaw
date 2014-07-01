@@ -2772,7 +2772,7 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWList
         bmapColor->set(c,r, MWAWColor((unsigned char)(((val>>10)&0x1F) << 3),(unsigned char)(((val>>5)&0x1F) << 3),(unsigned char)(((val>>0)&0x1F) << 3)));
         break;
       case 4:
-        bmapColor->set(c,r, MWAWColor(uint32_t(val)));
+        bmapColor->set(c,r, MWAWColor(uint32_t(val)|0xFF000000)); // checkme
         break;
       default: {
         static bool first = true;

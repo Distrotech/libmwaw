@@ -101,6 +101,10 @@ public:
   bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** close a frame */
   void closeFrame();
+  /** open a layer */
+  bool openLayer(MWAWPosition const &pos);
+  /** close a layer */
+  void closeLayer();
 
   // ------ page --------
   /** returns true if a page is opened */

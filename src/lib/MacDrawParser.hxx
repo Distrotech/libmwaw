@@ -46,6 +46,7 @@
 
 namespace MacDrawParserInternal
 {
+struct Shape;
 struct State;
 
 class SubDocument;
@@ -91,8 +92,16 @@ protected:
   // low level
   //
 
-  //! try to read an object (v0-v1)
-  bool readObject();
+  //! try to read an object (v0-v1). \return the object index or -1 if some error happens
+  int readObject();
+
+  //! try to send a shape
+  bool send(MacDrawParserInternal::Shape const &shape);
+  //! try to send a bitmap to the listener
+  bool sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPosition const &pos);
+  //! try to send a text zone to the listener
+  bool sendText(int zoneId);
+
   //
   // data
   //

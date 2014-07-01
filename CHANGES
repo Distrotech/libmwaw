@@ -1,5 +1,8 @@
 CHANGES:
 
+1/7/2014:
+- MacDraw: add a parser for v0 and v1 documents
+
 22/6/2014:
 - RagTime: add a parser to parse v2 and v3 documents
 

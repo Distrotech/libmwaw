@@ -424,7 +424,13 @@ protected:
   std::vector<MWAWColor> m_colors;
 };
 
-/** a bitmap of Vec3u to store true color bitmap */
+/** a bitmap of MWAWColor to store true color bitmap
+
+    \note: this class is actually the only class which can create
+    bitmap with transparency (by creating a BMP), but as
+    LibreOffice/OpenOffice seem to ignore the alpha channel when
+    importing BMP pictures...
+ */
 class MWAWPictBitmapColor : public MWAWPictBitmap
 {
 public:
@@ -452,7 +458,7 @@ public:
   }
 
   //! the constructor
-  MWAWPictBitmapColor(Vec2i const &sz) : MWAWPictBitmap(sz), m_data(sz) { }
+  MWAWPictBitmapColor(Vec2i const &sz, bool useAlphaChannel=false) : MWAWPictBitmap(sz), m_data(sz), m_hasAlpha(useAlphaChannel) { }
 
   //! the picture size
   Vec2i const &size() const
@@ -502,6 +508,9 @@ protected:
 
   //! the data
   MWAWPictBitmapContainer<MWAWColor> m_data;
+
+  //! true if the bitmap has alpha color
+  bool m_hasAlpha;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

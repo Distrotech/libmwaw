@@ -14,6 +14,7 @@
 - HanMacWrdK*   : parser of HanMac Word-K documents
 - LightWayTxt*  : parser of LightWay Text documents
 - MacDoc*       : parser of MacDoc documents
+- MacDraw*      : parser of MacDraw documents
 - MacWrt*       : parser of MacWrite documents
 - MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
 - MarinerWrt*   : parser of Mariner Write documents
@@ -117,7 +118,7 @@ These files defined basic structures which must be used by the parsers :
 
 ------------------------------------------------------------------------
 ---  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
----  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacPaint/MacWrt/          ---
+---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacDraw/MacPaint/MacWrt/  ---
 ---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/RagTime            ---
 ---  SuperPaint/TeachTxt/Wingz/WriteNow/WriterPls/ZWrt               ---
 ------------------------------------------------------------------------
@@ -183,6 +184,8 @@ LightWayTxtParser : parser of LightWay Text v4.5
 -   LightWayTxtText : class which reads the text
 
 MacDocParser : parser of MacDoc document: v1.3
+
+MacDrawParser : parser of MacDraw document: v0-v1
 
 MacPaintParser: parser of MacPaint v1-2 files (ie. of PNTG mac file)
 

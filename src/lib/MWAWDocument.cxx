@@ -446,9 +446,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
         parser.reset(new GreatWksDRParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_MACDRAW:
-#ifdef DEBUG
       parser.reset(new MacDrawParser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_MACPAINT:
       parser.reset(new MacPaintParser(input, rsrcParser, header));

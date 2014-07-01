@@ -169,7 +169,7 @@ struct MWAWColor {
   {
   }
   //! constructor from color
-  MWAWColor(unsigned char r, unsigned char g,  unsigned char b, unsigned char a=0) :
+  MWAWColor(unsigned char r, unsigned char g,  unsigned char b, unsigned char a=255) :
     m_value(uint32_t((a<<24)+(r<<16)+(g<<8)+b))
   {
   }
@@ -182,12 +182,12 @@ struct MWAWColor {
   //! return the back color
   static MWAWColor black()
   {
-    return MWAWColor(0);
+    return MWAWColor(0,0,0);
   }
   //! return the white color
   static MWAWColor white()
   {
-    return MWAWColor(0xFFFFFF);
+    return MWAWColor(255,255,255);
   }
 
   //! return alpha*colA+beta*colB
