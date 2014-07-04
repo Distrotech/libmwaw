@@ -553,7 +553,6 @@ bool ClarisWksDocument::readZone()
   entry.setLength(4+sz);
 
   long actPos = input->tell();
-  input->seek(sz, librevenge::RVNG_SEEK_CUR);
   if (!input->checkPosition(entry.end())) return false;
   bool parsed = false;
   if (name.length()) {
@@ -573,10 +572,8 @@ bool ClarisWksDocument::readZone()
     f << "Entries(" << name << ")";
   }
   else {
-    //
-    input->seek(actPos, librevenge::RVNG_SEEK_SET);
     int firstOffset = (int) input->readULong(2);
-    if (sz >= 16) {
+    if (sz >= 16) { // check for a picture .pct
       input->seek(8, librevenge::RVNG_SEEK_CUR);
       int val = (int) input->readULong(2);
       if (val == 0x1101  && firstOffset == sz)
@@ -594,9 +591,9 @@ bool ClarisWksDocument::readZone()
         static int volatile pictName = 0;
         f2 << "Parser" << ++pictName << ".pct";
         libmwaw::Debug::dumpFile(file, f2.str().c_str());
+        ascFile.skipZone(actPos, actPos+sz-1);
 #endif
         f << "Entries(PICT)";
-        ascFile.skipZone(actPos, actPos+sz-1);
       }
     }
     if (!parsed)

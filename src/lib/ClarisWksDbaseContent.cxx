@@ -559,7 +559,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
         content.m_formula=formula;
       }
       else {
-        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a formule\n"));
+        MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: can not read a formula\n"));
         f << "###";
       }
       f << "form=";
@@ -658,7 +658,9 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
       break;
     case 7: // empty
       break;
-    // type 8: find with 206b*: maybe to indicate an empty cell recovered by neighbour...
+    case 8: // checkme: does such cell can have data?
+      f << "recovered,";
+      break;
     default:
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordSSV1: unexpected type\n"));
       f << "###type=" << type << ",";
@@ -1234,6 +1236,13 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
     if (!ok) break;
     break;
   }
+  case 0x1b:
+    /* found in some web files followed by a cell list, but do not
+       find any ClarisWorks/AppleWorks which accepts to read this...
+     */
+    MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readFormula: find instruction 0x1b\n"));
+    f << "##[code=1b],";
+  // fail through expected
   case 0x14: {
     if (pos+1+8 > endPos || !readCellInFormula(cPos, instr)) {
       f << "###list cell short";
