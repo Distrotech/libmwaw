@@ -77,6 +77,8 @@ public:
   bool readGradientList(long endPos=-1);
   /** try to read the styles definition (in v4-6) */
   bool readStyles(MWAWEntry const &entry);
+  /** read the font name style zone (method to store font names in v2/v3 files) */
+  bool readFontNames();
   //! update a style using a gradiant id
   bool updateGradient(int grad, MWAWGraphicStyle &style) const;
   //! update a style using a wall paper id
@@ -119,7 +121,7 @@ protected:
 
   /* read the STYL CELL sequence */
   bool readCellStyles(int N, int fSz);
-  /** read the font name style zone */
+  /** read the font name style zone (in the style zones) */
   bool readFontNames(int N, int fSz);
   /** read a GraphicStyle sequence */
   bool readGraphStyles(int N, int fSz);

@@ -2168,6 +2168,95 @@ bool ClarisWksStyleManager::readLookUp(int N, int fSz)
 ////////////////////////////////////////////////////////////
 // small structure
 ////////////////////////////////////////////////////////////
+bool ClarisWksStyleManager::readFontNames()
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  if (!input->checkPosition(pos+8)) return false;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(FNTM):";
+  if (input->readULong(4) != 0x464e544d)
+    return false;
+  long sz = (long) input->readULong(4);
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    return true;
+  }
+  long endPos=pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (!fSz || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: unexpected field/header size\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  if (long(input->tell()) != pos+8+12+hSz) {
+    ascFile.addDelimiter(input->tell(), '|');
+    input->seek(pos+8+12+hSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (fSz!=72) {
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: no sure how to read the data\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("FNTM-data:###");
+    return true;
+  }
+
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "FNTM-" << i << ":";
+    int fId=(int) input->readULong(2);
+    f << "fId=" << fId << ",";
+    val=(int) input->readULong(2); // always fId?
+    if (val!=fId) f << "fId2=" << fId << ",";
+    for (int j=0; j<2; ++j) { // always 0?
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    int sSz=(int) input->readULong(1);
+    if (!sSz || sSz>63) {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: the string size seems bad\n"));
+      f << "###";
+    }
+    else {
+      std::string name("");
+      for (int s=0; s<sSz; ++s) name+=(char) input->readULong(1);
+      f << "'" << name << "'";
+      m_state->m_localFIdMap[i]=m_parserState->m_fontConverter->getId(name, "");
+    }
+    input->seek(pos+72, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
 bool ClarisWksStyleManager::readFontNames(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;

@@ -554,7 +554,7 @@ bool ClarisWksDocument::readZone()
 
   long actPos = input->tell();
   input->seek(sz, librevenge::RVNG_SEEK_CUR);
-  if (long(input->tell()) != actPos+sz) return false;
+  if (!input->checkPosition(entry.end())) return false;
   bool parsed = false;
   if (name.length()) {
     if (name == "DSET") {
@@ -564,8 +564,8 @@ bool ClarisWksDocument::readZone()
         return true;
     }
     if (name == "FNTM") {
-      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-      if (readStructZone("FNTM", true))
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      if (m_styleManager->readFontNames())
         return true;
     }
     if (name == "HDNI" && m_parserState->m_version <= 4)
@@ -1069,6 +1069,7 @@ bool ClarisWksDocument::readDocHeader()
       ascFile.addNote(f.str().c_str());
       return false;
     }
+    pos=input->tell();
     if (!readStructZone("DocUnkn1", false)) { // related to link/filename?
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       return false;
@@ -1082,18 +1083,9 @@ bool ClarisWksDocument::readDocHeader()
       return false;
     }
     pos=input->tell();
-    f.str("");
-    f << "Entries(DocUnkn3):";
-    sz=input->readLong(4);
-    if (sz) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: oops find a size for DocUnkn3, we may have a problem\n"));
-      f << sz << "###";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-    }
-    else {
-      ascFile.addPos(pos);
-      ascFile.addNote("_");
+    if (!readStructZone("DocUnkn3", false)) { // related to struct ?
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      return false;
     }
     break;
   }
@@ -1299,6 +1291,11 @@ bool ClarisWksDocument::readEndTable(long &eof)
     }
     else if (entry.type() == "MARK") {
       readMARKList(entry);
+      parsed = true;
+    }
+    else if (entry.type() == "FNTM") {
+      input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+      m_styleManager->readFontNames();
       parsed = true;
     }
 
