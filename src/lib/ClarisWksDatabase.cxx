@@ -181,8 +181,9 @@ struct Field {
       return 1;
     case F_PopupMenu :
     case F_RadioButton :
-    case F_ValueList :
       return 2;
+    case F_ValueList :
+      return (version >= 3) ? 2 : 1;
     case F_Unknown :
     default:
       break;
@@ -300,7 +301,8 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
 
   long dataEnd = entry.end()-N*data0Length;
   int numLast = -1;
-  switch (version()) {
+  int const vers=version();
+  switch (vers) {
   case 1:
   case 2:
   case 3:
@@ -369,22 +371,76 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
     ok = content->readContent();
     if (ok) databaseZone->m_content=content;
   }
+  std::vector<int> listLayout;
   if (ok) {
     pos = input->tell();
-    // a list of int32 ( almost always one int )
-    ok = m_document.readStructZone("DatabaseListUnkn1", false);
+    ok = m_document.readStructIntZone("DatabaseLayout", false, 4, listLayout);
+  }
+  if (ok) {
+    for (size_t i=0; i<listLayout.size(); ++i) {
+      pos = input->tell();
+      if (!readLayout(*databaseZone)) {
+        MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: can not read some ListLayout data file\n"));
+        ok=false;
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        ascFile.addPos(pos);
+        ascFile.addNote("DatabaseLayout:###");
+        break;
+      }
+    }
   }
   if (ok) {
     pos = input->tell();
-    // contains sometimes the string "Layout " : LayoutPref?
-    ok = m_document.readStructZone("DatabaseListLayout", false);
+    // in v1-v4 list of id block?, in v5-v6 list of block id+?
+    ok = m_document.readStructZone("DatabaseListUnkn3", false);
+  }
+
+  if (ok) { // never seems,
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (input->checkPosition(pos+4+sz)) {
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      if (sz) {
+        MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn4 block\n"));
+        ascFile.addNote("Entries(DatabaseListUnkn4):");
+      }
+      else
+        ascFile.addNote("_");
+    }
+    else {
+      ok=false;
+      MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn4 block does not know how to read it\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    }
+  }
+  if (ok && vers>1) {
+    pos=input->tell();
+    std::vector<std::string> listString;
+    ok=m_document.readStringList("DatabaseListString", false, listString);
   }
   if (ok) {
     pos = input->tell();
-    /* a list of int16(increasing + 0xFFFF), 3 char (unknown), 1 char=id
-       + an int16 for v6
-     */
-    ok = m_document.readStructZone("DatabaseListUnkn2", false);
+    ok = m_document.readStructZone("DatabaseUnkn5", false);
+  }
+  if (ok) {
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (input->checkPosition(pos+4+sz)) {
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      if (sz) {
+        MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn6 block\n"));
+        ascFile.addNote("Entries(DatabaseListUnkn6):");
+      }
+      else
+        ascFile.addNote("_");
+    }
+    else {
+      ok=false;
+      MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn6 block does not know how to read it\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    }
   }
   // now the following seems to be different
   if (!ok)
@@ -403,14 +459,12 @@ bool ClarisWksDatabase::readFields(ClarisWksDatabaseInternal::Database &dBase)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != endPos) {
+  if (sz<12 || !input->checkPosition(endPos)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("ClarisWksDatabase::readFields: file is too short\n"));
     return false;
   }
 
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(DatabaseField):";
@@ -429,7 +483,6 @@ bool ClarisWksDatabase::readFields(ClarisWksDatabaseInternal::Database &dBase)
   for (int i = 2; i < 4; i++) {
     val = (int) input->readLong(2);
     if (val) f << "f" << i << "=" << val << ",";
-
   }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -537,10 +590,14 @@ bool ClarisWksDatabase::readFields(ClarisWksDatabaseInternal::Database &dBase)
       }
       int subType = (int) input->readULong(2);
       if (version() == 2) {
+        if ((subType & 0x80) && field.m_type == ClarisWksDatabaseInternal::Field::F_Text) {
+          field.m_type = ClarisWksDatabaseInternal::Field::F_ValueList;
+          subType &= 0xFF7F;
+        }
         if (subType) f << "f17=" << std::hex << subType << std::dec << ",";
       }
       else {
-        if (subType & 0x80 && field.m_type == ClarisWksDatabaseInternal::Field::F_Text) {
+        if ((subType & 0x80) && field.m_type == ClarisWksDatabaseInternal::Field::F_Text) {
           field.m_type = ClarisWksDatabaseInternal::Field::F_ValueList;
           subType &= 0xFF7F;
         }
@@ -604,13 +661,11 @@ bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
       long sz = (long) input->readULong(4);
 
       long endPos = pos+4+sz;
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
-      if (long(input->tell()) != endPos) {
+      if (!input->checkPosition(endPos)) {
         MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find value for field: %d\n", fi));
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         return false;
       }
-      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long length = (vers <= 2 && field.isText()) ? sz : (int) input->readULong(1);
       f.str("");
       f << "Entries(DatabaseDft)[" << v << "]:";
@@ -637,6 +692,8 @@ bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
           long actPos = input->tell();
           if (actPos+length > endPos) {
             MWAW_DEBUG_MSG(("ClarisWksDatabase::readDefaults: can not find strings for field: %ld\n", long(v)));
+            ascFile.addPos(pos);
+            ascFile.addNote("DatabaseDft:###");
 
             input->seek(pos, librevenge::RVNG_SEEK_SET);
             return true;
@@ -654,6 +711,93 @@ bool ClarisWksDatabase::readDefaults(ClarisWksDatabaseInternal::Database &dBase)
       ascFile.addNote(f.str().c_str());
       input->seek(endPos, librevenge::RVNG_SEEK_SET);
     }
+  }
+  return true;
+}
+
+
+bool ClarisWksDatabase::readLayout(ClarisWksDatabaseInternal::Database &dBase)
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  if (sz<16 || !input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readLayout: file is too short\n"));
+    return false;
+  }
+
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "DatabaseLayout-A:";
+  int N = (int) input->readULong(2);
+  f << "N=" << N << ",";
+  int val = (int) input->readLong(2);
+  if (val != -1) f << "f0=" << val << ",";
+  val = (int) input->readLong(2);
+  if (val) f << "f1=" << val << ",";
+  int fSz = (int) input->readLong(2);
+  int hSz = (int) input->readULong(2);
+  if (fSz<6 || hSz<52 || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readLayout: find odd data size\n"));
+    return false;
+  }
+  for (int i = 0; i < 2; ++i) { // f2=1, f3=0
+    val = (int) input->readLong(2);
+    if (val!=1-i) f << "f" << i+2 << "=" << val << ",";
+  }
+  int childId=(int) input->readULong(2);
+  f << "childId=" << childId << ",";
+  dBase.m_otherChilds.push_back(childId);
+  for (int i = 0; i < 2; ++i) { // f4=1-3, f5=0|c6|12a
+    val = (int) input->readLong(2);
+    if (val) f << "f" << i+4 << "=" << val << ",";
+  }
+  for (int i = 0; i<4; ++i) { // always 0|1
+    val = (int) input->readLong(1);
+    if (val==1) f << "fl" << i << ",";
+    else if (val) f << "#fl" << i << "=" << val << ",";
+  }
+  int sSz=(int) input->readULong(1);
+  if (sSz>31) {
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readLayout: find odd string size\n"));
+    f << "#sSz=" << sSz << ",";
+  }
+  else {
+    std::string name("");
+    for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
+    f << "\"" << name << "\",";
+  }
+  input->seek(pos+60, librevenge::RVNG_SEEK_SET);
+  val = (int) input->readLong(2); // always 0
+  if (val) f << "g0=" << val << ",";
+  childId=(int) input->readULong(2);
+  f << "childId2=" << childId << ",";
+  dBase.m_otherChilds.push_back(childId);
+
+  ascFile.addDelimiter(input->tell(),'|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
+  for (int i = 0; i < N; i++) {
+    pos=input->tell();
+    f.str("");
+    f << "DatabaseLayout-A" << i << ":";
+
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+  }
+
+  pos=input->tell();
+  if (!m_document.readStructZone("DatabaseLayout", false)) {
+    MWAW_DEBUG_MSG(("ClarisWksDatabase::readLayout: can not read the layout second part\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("DatabaseLayout-B:###");
+    return false;
   }
   return true;
 }

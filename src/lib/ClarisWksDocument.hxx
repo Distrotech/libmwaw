@@ -185,7 +185,6 @@ public:
   /* read the temporary file name ? */
   bool readTNAM(MWAWEntry const &entry);
 
-
   //
   // low level
   //
@@ -208,6 +207,11 @@ public:
   /** try to read a int structured zone
       where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
   bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
+  /* read a list of string zone */
+  bool readStringList(char const *zoneName, bool hasEntete, std::vector<std::string> &res);
+
+  //! try to read a unknown zone which appear to be filled at least in some v2 database file
+  bool readZoneA();
   /** small fonction used to check unusual endian ordering of a list of int16_t, int32_t*/
   void checkOrdering(std::vector<int16_t> &vec16, std::vector<int32_t> &vec32) const;
 

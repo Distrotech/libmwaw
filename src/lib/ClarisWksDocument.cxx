@@ -1080,7 +1080,7 @@ bool ClarisWksDocument::readDocHeader()
       return false;
     }
     pos=input->tell();
-    if (!readStructZone("DocUnkn3", false)) { // related to struct ?
+    if (!readZoneA()) { // related to struct ?
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1188,7 +1188,7 @@ bool ClarisWksDocument::readDocHeader()
         break;
       case 3: // checkme
         ascFile.addPos(pos);
-        ascFile.addNote("DocUnkn4");
+        ascFile.addNote("DocUnkn3");
         break;
       default:
         break;
@@ -1835,6 +1835,60 @@ bool ClarisWksDocument::readDSUM(MWAWEntry const &entry, bool inHeader)
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// a generic list of strings
+////////////////////////////////////////////////////////////
+bool ClarisWksDocument::readStringList(char const *zoneName, bool hasEntete, std::vector<std::string> &res)
+{
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos = input->tell();
+  long sz=(long) input->readULong(4);
+  long endPos=pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStringList: the zone size seems bad\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  if (sz==0) {
+    ascFile.addPos(pos-(hasEntete?4:0));
+    ascFile.addNote("_");
+    return true;
+  }
+  f << "Entries(" << zoneName << "):strings=[";
+  while (!input->isEnd() && input->tell()<endPos) {
+    long actPos = input->tell();
+    int strSize = (int) input->readULong(1);
+    std::string name("");
+    if (!strSize) {
+      res.push_back(name);
+      f << "\"\",";
+      continue;
+    }
+    if (actPos+1+strSize>endPos) {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readStringList: unexpected string size\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    for (int i = 0; i < strSize; i++) {
+      char c = (char) input->readULong(1);
+      if (c) {
+        name += c;
+        continue;
+      }
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readStringList: unexpected string char\n"));
+      f << "#[0]";
+    }
+    res.push_back(name);
+    f << "\"" << name << "\",";
+  }
+  f << "],";
+  ascFile.addPos(pos-(hasEntete?4:0));
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
 ///////////////////////////////////////////////////////////
 // a list of snapshot
 ////////////////////////////////////////////////////////////
@@ -2108,6 +2162,115 @@ bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, 
   ascFile.addNote(f.str().c_str());
 
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool ClarisWksDocument::readZoneA()
+{
+  if (!m_parserState) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not find the parser state\n"));
+    return false;
+  }
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: unexpected size\n"));
+    return false;
+  }
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(ZoneA):";
+
+  if (sz == 0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("NOP");
+    return true;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (!fSz || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: unexpected size\n"));
+    return false;
+  }
+  if (long(input->tell()) != pos+4+hSz)
+    ascFile.addDelimiter(input->tell(), '|');
+
+  input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
+  if (fSz==4) {
+    f << "ptrs=[";
+    for (int i = 0; i < N; i++) f << std::hex << input->readULong(4) << std::dec << ",";
+    f << "],";
+  }
+  else {
+    for (int i = 0; i < N; i++) {
+      pos=input->tell();
+      f.str("");
+      f << "ZoneA-" << i << ":";
+
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: unexpected field size\n"));
+    return true;
+  }
+
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (!readStructZone("ZoneA",false)) { // find one time a list of id, 0x10
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not read ZoneA-A\n"));
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote("ZoneA-A:");
+
+  for (int i=0; i<2*N; ++i) {
+    pos = input->tell();
+    if ((i%2)==0) {
+      // the header contains a string: some chart/figure name?
+      if (!readStructZone("ZoneA",false)) {
+        MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not read ZoneA-B\n"));
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        return true;
+      }
+      f.str("");
+      f << "ZoneA-B" << i/2 << ":";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      continue;
+    }
+    f.str("");
+    f << "ZoneA-C" << i/2 << "]:";
+    // normally a block a 128 bytes: 8 block of 16 bytes?
+    sz=(long) input->readULong(4);
+    if (!input->checkPosition(pos+sz+4)) {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not find a child field\n"));
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      return false;
+    }
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+  }
   return true;
 }
 

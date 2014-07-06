@@ -105,6 +105,9 @@ protected:
   //! try to read the default structure
   bool readDefaults(ClarisWksDatabaseInternal::Database &dBase);
 
+  //! try to read the layout structures
+  bool readLayout(ClarisWksDatabaseInternal::Database &dBase);
+
   //
   // low level
   //

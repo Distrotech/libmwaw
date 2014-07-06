@@ -1237,12 +1237,18 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
     break;
   }
   case 0x1b:
-    /* found in some web files followed by a cell list, but do not
-       find any ClarisWorks/AppleWorks which accepts to read this...
-     */
+    if (pos+1+8 > endPos) {
+      MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readFormula: find instruction 0x1b, unknown size\n"));
+      f << "##[code=1b,short],";
+      ok = false;
+      break;
+    }
+    /* found in some web files followed by a bad cell list */
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readFormula: find instruction 0x1b\n"));
     f << "##[code=1b],";
-  // fail through expected
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
+    input->seek(8, librevenge::RVNG_SEEK_SET);
+    break;
   case 0x14: {
     if (pos+1+8 > endPos || !readCellInFormula(cPos, instr)) {
       f << "###list cell short";
@@ -1251,7 +1257,7 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
     }
     MWAWCellContent::FormulaInstruction instr2;
     if (!readCellInFormula(cPos, instr2)) {
-      f << "###list cell short";
+      f << "###list cell short2";
       ok = false;
       break;
     }
