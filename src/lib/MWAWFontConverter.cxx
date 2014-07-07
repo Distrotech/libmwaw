@@ -730,7 +730,7 @@ void State::initMaps()
   m_idNameMap[2] = "NewYork";
   m_idNameMap[3] = "Geneva";
   m_idNameMap[4] = "Monaco";
-  m_idNameMap[5] = "Venise";
+  m_idNameMap[5] = "Venice";
   m_idNameMap[6] = "London";
   m_idNameMap[7] = "Athens";
   m_idNameMap[8] = "SanFran";
@@ -902,7 +902,7 @@ void State::getOdtInfo(int macId, std::string &nm, int &deltaSize)
   static int lastUnknownId = -1;
   if (macId != lastUnknownId) {
     lastUnknownId = macId;
-    MWAW_DEBUG_MSG(("Unknown font with id=%d\n",macId));
+    MWAW_DEBUG_MSG(("MWAWFontConverterInternal::State::getOdtInfo: Unknown font with id=%d\n",macId));
   }
 #endif
   nm = "Times New Roman";

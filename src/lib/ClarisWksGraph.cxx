@@ -173,7 +173,7 @@ struct Style : public MWAWGraphicStyle {
 //! Internal: the generic structure used to store a zone of a ClarisWksGraph
 struct Zone {
   //! the list of types
-  enum Type { T_Zone, T_Shape, T_Picture, T_Chart, T_DataBox, T_Unknown,
+  enum Type { T_Zone, T_Zone2, T_Shape, T_Picture, T_Chart, T_DataBox, T_Unknown,
               /* basic subtype */
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly,
               /* picture subtype */
@@ -301,6 +301,7 @@ struct ZonePict : public Zone {
       o << "MOVIE,";
       break;
     case T_Zone:
+    case T_Zone2:
     case T_Shape:
     case T_Picture:
     case T_Chart:
@@ -379,7 +380,7 @@ struct Bitmap : public ClarisWksStruct::DSET {
 //! Internal: structure to store a link to a zone of a ClarisWksGraph
 struct ZoneZone : public Zone {
   //! constructor
-  ZoneZone(Zone const &z) : Zone(z), m_id(-1), m_subId(-1), m_styleId(-1), m_wrappingSep(5)
+  ZoneZone(Zone const &z, Type fileType) : Zone(z), m_subType(fileType), m_id(-1), m_subId(-1), m_styleId(-1), m_wrappingSep(5)
   {
     for (int i = 0; i < 9; i++)
       m_flags[i] = 0;
@@ -387,6 +388,10 @@ struct ZoneZone : public Zone {
   //! print the zone
   virtual void print(std::ostream &o) const
   {
+    if (m_subType==T_Zone2) {
+      o << "ZONE2" << ",";
+      return;
+    }
     o << "ZONE, id=" << m_id << ",";
     if (m_subId > 0) o << "subId=" << m_subId << ",";
     if (m_styleId >= 0) o << "styleId=" << m_styleId << ",";
@@ -403,7 +408,12 @@ struct ZoneZone : public Zone {
   //! return the sub type Zone
   virtual Type getSubType() const
   {
-    return T_Zone;
+    return m_subType;
+  }
+  //! return the number of data to define this zone in the file
+  virtual int getNumData() const
+  {
+    return m_subType==T_Zone ? 0 : 1;
   }
 
   //! return a child corresponding to this zone
@@ -416,6 +426,8 @@ struct ZoneZone : public Zone {
     return child;
   }
 
+  //! the file type ( zone or zone2 )
+  Type m_subType;
   //! the zoneId
   int m_id;
   //! the zoneSubId: can be page/column/frame linked number
@@ -445,6 +457,7 @@ struct ZoneUnknown : public Zone {
       o << "CHART,";
       break;
     case T_Zone:
+    case T_Zone2:
     case T_Shape:
     case T_Picture:
     case T_Line:
@@ -783,7 +796,6 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readGroupZone
 
   input->seek(beginDefGroup, librevenge::RVNG_SEEK_SET);
 
-  group->m_childs.resize(size_t(N));
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     MWAWEntry gEntry;
@@ -792,9 +804,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readGroupZone
     shared_ptr<ClarisWksGraphInternal::Zone> def = readGroupDef(gEntry);
     group->m_zones.push_back(def);
 
-    if (def)
-      group->m_childs[size_t(i)] = def->getChild();
-    else {
+    if (!def) {
       f.str("");
       f << "GroupDef#";
       ascFile.addPos(pos);
@@ -807,6 +817,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readGroupZone
 
   if (readGroupData(*group, entry.begin())) {
     // fixme: do something here
+  }
+
+  group->m_childs.resize(group->m_zones.size());
+  for (size_t i = 0; i < group->m_zones.size(); ++i) {
+    if (!group->m_zones[i]) continue;
+    group->m_childs[size_t(i)] = group->m_zones[i]->getChild();
   }
 
   if (m_state->m_groupMap.find(group->m_id) != m_state->m_groupMap.end()) {
@@ -1027,6 +1043,9 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     case 10:
       type = ClarisWksGraphInternal::Zone::T_DataBox;
       break;
+    case 11: // old method to define a textbox ?
+      type = ClarisWksGraphInternal::Zone::T_Zone2;
+      break;
     case 14:
       type = ClarisWksGraphInternal::Zone::T_Movie;
       break;
@@ -1120,7 +1139,7 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
   switch (type) {
   case ClarisWksGraphInternal::Zone::T_Zone: {
     int nFlags = 0;
-    ClarisWksGraphInternal::ZoneZone *z = new ClarisWksGraphInternal::ZoneZone(zone);
+    ClarisWksGraphInternal::ZoneZone *z = new ClarisWksGraphInternal::ZoneZone(zone, type);
     res.reset(z);
     z->m_flags[nFlags++] = (int) input->readLong(2);
     z->m_id = (int) input->readULong(2);
@@ -1146,6 +1165,11 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
         break;
       }
     }
+    break;
+  }
+  case ClarisWksGraphInternal::Zone::T_Zone2:  { // checkme: read the end of the zone
+    ClarisWksGraphInternal::ZoneZone *z = new ClarisWksGraphInternal::ZoneZone(zone, type);
+    res.reset(z);
     break;
   }
   case ClarisWksGraphInternal::Zone::T_Pict:
@@ -1252,6 +1276,46 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
         if (z->getNumData() && !readPolygonData(z))
           return false;
         break;
+      case ClarisWksGraphInternal::Zone::T_Zone2: {
+        ClarisWksGraphInternal::ZoneZone *child=dynamic_cast<ClarisWksGraphInternal::ZoneZone *>(z.get());
+        if (!child) {
+          MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: can not retrieve the zone for type 11\n"));
+          parsed=false;
+          break;
+        }
+        if (!input->checkPosition(pos+4+sz) || sz< 0x1a) {
+          MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: the size of the 11 zone seems bad\n"));
+          parsed=false;
+          break;
+        }
+        if (vers!=2) {
+          // checkme: only find in v2, so may cause problem for other version
+          MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: called on a type 11 zone\n"));
+        }
+        input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+        f.str("");
+        f << "Entries(Zone2Data):";
+        int val;
+        for (int j=0; j<2; ++j) { // f0=2, f1=1
+          val=(int) input->readULong(1);
+          if (val) f << "f" << j << "=" << val << ",";
+        }
+        val=(int) input->readULong(2); // 6e
+        if (val) f << "f2=" << val << ",";
+        f << "ids=[";
+        for (int j=0; j<2; ++j)
+          f << input->readULong(4) << ",";;
+        f << "],";
+        val=(int) input->readULong(2); // always 0
+        if (val) f << "f3=" << val << ",";
+        child->m_id=(int) input->readULong(2);
+        f << "child=" << child->m_id << ",";
+        ascFile.addDelimiter(input->tell(),'|');
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+        break;
+      }
       case ClarisWksGraphInternal::Zone::T_Line:
       case ClarisWksGraphInternal::Zone::T_Rect:
       case ClarisWksGraphInternal::Zone::T_RectOval:
@@ -1269,8 +1333,7 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
       }
 
       if (!parsed) {
-        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-        if (long(input->tell()) != pos+4+sz) {
+        if (!input->checkPosition(pos+4+sz)) {
           input->seek(pos, librevenge::RVNG_SEEK_SET);
           MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find a odd zone for type: %d\n",
                           z->getSubType()));
@@ -1417,6 +1480,7 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
     break;
   }
   case ClarisWksGraphInternal::Zone::T_Zone:
+  case ClarisWksGraphInternal::Zone::T_Zone2:
   case ClarisWksGraphInternal::Zone::T_Shape:
   case ClarisWksGraphInternal::Zone::T_Picture:
   case ClarisWksGraphInternal::Zone::T_Chart:
@@ -2620,7 +2684,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     (cType == ClarisWksStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page &&
      (!dset || dset->m_fileType!=2));
   if (!isLinked && childZone.m_subId) {
-    MWAW_DEBUG_MSG(("find old subs zone\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: find odd subs zone\n"));
     return false;
   }
   MWAWGraphicStyle style=MWAWGraphicStyle::emptyStyle();
@@ -2849,6 +2913,7 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPos
     case ClarisWksGraphInternal::Zone::T_Arc:
     case ClarisWksGraphInternal::Zone::T_Poly:
     case ClarisWksGraphInternal::Zone::T_Zone:
+    case ClarisWksGraphInternal::Zone::T_Zone2:
     case ClarisWksGraphInternal::Zone::T_Shape:
     case ClarisWksGraphInternal::Zone::T_Picture:
     case ClarisWksGraphInternal::Zone::T_Chart:

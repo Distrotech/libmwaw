@@ -2248,7 +2248,7 @@ bool ClarisWksStyleManager::readFontNames()
       std::string name("");
       for (int s=0; s<sSz; ++s) name+=(char) input->readULong(1);
       f << "'" << name << "'";
-      m_state->m_localFIdMap[i]=m_parserState->m_fontConverter->getId(name, "");
+      m_parserState->m_fontConverter->setCorrespondance(fId, name);
     }
     input->seek(pos+72, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
