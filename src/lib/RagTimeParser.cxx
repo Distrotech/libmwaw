@@ -2404,7 +2404,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
     }
     input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
     shared_ptr<MWAWPict> thePict(MWAWPictData::get(input, pictSize));
-    bool ok=thePict;
+    bool ok=bool(thePict);
     if (ok) {
       librevenge::RVNGBinaryData data;
       std::string type;
