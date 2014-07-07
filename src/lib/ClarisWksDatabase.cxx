@@ -423,7 +423,8 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
     pos = input->tell();
     ok = m_document.readStructZone("DatabaseUnkn5", false);
   }
-  if (ok) {
+  if (ok && vers>=4) {
+    // version 4 can contains more block
     pos=input->tell();
     long sz=(long) input->readULong(4);
     if (input->checkPosition(pos+4+sz)) {

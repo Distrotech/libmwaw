@@ -399,7 +399,7 @@ bool ClarisWksDocument::createZones()
     input->popLimit();
   exploreZonesGraph();
   typeMainZones();
-  return getMainZonesList().size() != 0;
+  return !getMainZonesList().empty();
 }
 
 ////////////////////////////////////////////////////////////
@@ -2339,29 +2339,11 @@ bool ClarisWksDocument::exploreZonesGraph()
   }
 
   m_state->m_mainZonesList = rootList;
-  size_t numMain = rootList.size();
-  if (1 && numMain == 1)
-    return true;
-#ifdef DEBUG
-  // we have do not have find the root note : probably a database...
-  iter = m_state->m_zonesMap.begin();
-  std::cerr << "--------------------------------------------------------\n";
-  std::cerr << "List of potential main zones : ";
-  for (size_t i = 0; i < numMain; i++)
-    std::cerr << rootList[i] << ",";
-  std::cerr << "\n";
-  for (; iter != m_state->m_zonesMap.end(); ++iter) {
-    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
-    std::cerr << *zone << "\n";
-  }
-  std::cerr << "--------------------------------------------------------\n";
-#endif
-  if (numMain == 0) {
+  if (rootList.empty()) {
     // we have a big problem here, no way to continue
     MWAW_DEBUG_MSG(("ClarisWksDocument::exploreZonesGraph: the graph contains no tree...\n"));
     return false;
   }
-
 
   return true;
 }
@@ -2463,18 +2445,53 @@ void ClarisWksDocument::typeMainZones()
         m_state->m_headerId=fId;
       else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
         m_state->m_footerId=fId;
+      else if (type==ClarisWksStruct::DSET::T_Header || type==ClarisWksStruct::DSET::T_Footer) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find more than one header/footer, some header/footer will be ignored\n"));
+          first=false;
+        }
+      }
     }
   }
+
+  // time to do to remove header/footer's zones in the main zones list
+  std::vector<int> rootList=m_state->m_mainZonesList;
+  m_state->m_mainZonesList.resize(0);
+  for (size_t i=0; i<rootList.size(); ++i) {
+    shared_ptr<ClarisWksStruct::DSET> zone=getZone(rootList[i]);
+    if (zone && (zone->m_type==ClarisWksStruct::DSET::T_Footer || zone->m_type==ClarisWksStruct::DSET::T_Header))
+      continue;
+    m_state->m_mainZonesList.push_back(rootList[i]);
+  }
+
+#ifdef DEBUG
+  // let check if all is ok
+  size_t numMain=m_state->m_mainZonesList.size();
+  if (1 && numMain == 1)
+    return;
+  MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find %d main zones\n", int(numMain)));
+  // we have do not have find the root note : probably a database...
+  iter = m_state->m_zonesMap.begin();
+  std::cerr << "--------------------------------------------------------\n";
+  std::cerr << "List of potential main zones : ";
+  for (size_t i = 0; i < numMain; i++)
+    std::cerr << m_state->m_mainZonesList[i] << ",";
+  std::cerr << "\n";
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+    std::cerr << *zone << "\n";
+  }
+  std::cerr << "--------------------------------------------------------\n";
+#endif
 }
 
 int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight)
 {
   if (maxHeight < 0) return 0;
 
-  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter= m_state->m_zonesMap.find(zId);
-  if (iter == m_state->m_zonesMap.end() || !iter->second)
-    return 0;
-  shared_ptr<ClarisWksStruct::DSET> node = iter->second;
+  shared_ptr<ClarisWksStruct::DSET> node = getZone(zId);
+  if (!node) return 0;
   if (node->m_type == ClarisWksStruct::DSET::T_Unknown)
     node->m_type = type;
   else if (node->m_type != type)

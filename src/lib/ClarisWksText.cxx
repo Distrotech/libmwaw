@@ -1798,17 +1798,7 @@ bool ClarisWksText::readParagraph(int id)
     val &= 0x1F00;
     break;
   case 2:
-    interline = val&0xFF;
-    if (interline & 0x80) {
-      inPoint = true;
-      interline &= 0x7F;
-      val &= 0x3F00;
-    }
-    else {
-      interline >>= 3;
-      val &= 0x3F07;
-    }
-    break;
+  case 3:
   case 4:
   case 5:
   case 6: {
