@@ -241,15 +241,48 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
       ok = m_document.readStructZone("SpreadsheetRowHeight", false);
     }
   }
-
-  if (!ok)
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-#if 0
-  else {
-    ascFile.addPos(input->tell());
-    ascFile.addNote("Entries(UUSpreadSheetNext)");
+  if (ok && vers <= 2) { // field with size 0xa in v2
+    pos = input->tell();
+    ok = m_document.readStructZone("SpreadsheetUnkn1", false);
   }
-#endif
+  /* checkme: now a sequence of 5/6 lists: when filed the first two zones are a list of cell,
+   while the last 2 lists contains only 4 numbers */
+  while (ok) {
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (!input->checkPosition(pos+4+sz)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    // empty or list of 2*uint16_t ?
+    if (!sz) {
+      ascFile.addPos(pos);
+      ascFile.addNote("Entries(SpreadsheetListCell):_");
+      continue;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    std::vector<Vec2i> res;
+    ok = m_document.readStructCellZone("SpreadsheetListCell", false, res);
+  }
+  if (ok) {
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (input->checkPosition(pos+4+sz)) {
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone::ClarisWksDatabase: find some extra block\n"));
+      ascFile.addNote("Entries(SpreadsheetEnd):###");
+    }
+    else
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
+
+  if (!ok) {
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone::ClarisWksDatabase: find a bad block\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("Entries(SpreadsheetEnd):###");
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
   return sheet;
 }
 
@@ -341,7 +374,7 @@ bool ClarisWksSpreadsheet::readRowHeightZone(ClarisWksSpreadsheetInternal::Sprea
   libmwaw::DebugStream f;
   if (sz == 0) {
     ascFile.addPos(pos);
-    ascFile.addNote("NOP");
+    ascFile.addNote("_");
     return true;
   }
 

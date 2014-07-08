@@ -2092,7 +2092,7 @@ bool ClarisWksDocument::readStructZone(char const *zoneName, bool hasEntete)
 bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
 {
   if (!m_parserState) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructZone: can not find the parser state\n"));
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: can not find the parser state\n"));
     return false;
   }
   res.resize(0);
@@ -2154,7 +2154,84 @@ bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, 
   for (int i = 0; i < N; i++) {
     val = input->readLong(fSz);
     res.push_back((int) val);
-    f << val << ",";
+    if (val>1000) f << "0x" << std::hex << val << std::dec << ",";
+    else f << val << ",";
+  }
+  f << "]";
+
+  ascFile.addPos(hasEntete ? pos-4 : pos);
+  ascFile.addNote(f.str().c_str());
+
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+// try to read a list of cell's zone
+bool ClarisWksDocument::readStructCellZone(char const *zoneName, bool hasEntete, std::vector<Vec2i> &res)
+{
+  if (!m_parserState) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructCellZone: can not find the parser state\n"));
+    return false;
+  }
+  res.resize(0);
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructCellZone: unexpected size for %s\n", zoneName ? zoneName : "unamed"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  if (zoneName && strlen(zoneName))
+    f << "Entries(" << zoneName << "):";
+
+  if (sz == 0) {
+    if (hasEntete) {
+      ascFile.addPos(pos-4);
+      ascFile.addNote(f.str().c_str());
+    }
+    else {
+      ascFile.addPos(pos);
+      ascFile.addNote("_");
+    }
+    return true;
+  }
+
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  long val = input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (fSz != 4 || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructCellZone: unexpected field size\n"));
+    return false;
+  }
+
+  long debPos = endPos-N*fSz;
+  if (long(input->tell()) != debPos) {
+    ascFile.addDelimiter(input->tell(), '|');
+    if (N) ascFile.addDelimiter(debPos, '|');
+  }
+  input->seek(debPos, librevenge::RVNG_SEEK_SET);
+  f << "[";
+  for (int i = 0; i < N; i++) {
+    int dim[2];
+    for (int j = 0; j < 2; j++) dim[j]= (int) input->readLong(2);
+    // checkme: do we need to invert the coordinate
+    Vec2i cell(dim[0],dim[1]);
+    res.push_back(cell);
+    f << cell << ",";
   }
   f << "]";
 
@@ -2445,7 +2522,8 @@ void ClarisWksDocument::typeMainZones()
         m_state->m_headerId=fId;
       else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
         m_state->m_footerId=fId;
-      else if (type==ClarisWksStruct::DSET::T_Header || type==ClarisWksStruct::DSET::T_Footer) {
+      else if ((type==ClarisWksStruct::DSET::T_Header && m_state->m_headerId !=fId) ||
+               (type==ClarisWksStruct::DSET::T_Footer && m_state->m_footerId !=fId)) {
         static bool first=true;
         if (first) {
           MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find more than one header/footer, some header/footer will be ignored\n"));

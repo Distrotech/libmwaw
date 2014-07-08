@@ -207,6 +207,8 @@ public:
   /** try to read a int structured zone
       where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
   bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
+  /** try to read a structured zone list of cells */
+  bool readStructCellZone(char const *zoneName, bool hasEntete, std::vector<Vec2i> &res);
   /* read a list of string zone */
   bool readStringList(char const *zoneName, bool hasEntete, std::vector<std::string> &res);
 
