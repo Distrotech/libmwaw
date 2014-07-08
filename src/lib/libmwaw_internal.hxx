@@ -367,7 +367,7 @@ template <class T> struct Variable {
   //! constructor
   Variable() : m_data(), m_set(false) {}
   //! constructor with a default value
-  Variable(T def) : m_data(def), m_set(false) {}
+  Variable(T const &def) : m_data(def), m_set(false) {}
   //! copy constructor
   Variable(Variable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
   //! copy operator
@@ -379,7 +379,8 @@ template <class T> struct Variable {
     return *this;
   }
   //! set a value
-  Variable &operator=(T val) {
+  Variable &operator=(T const &val)
+  {
     m_data = val;
     m_set = true;
     return *this;
