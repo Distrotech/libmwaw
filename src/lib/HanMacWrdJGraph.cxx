@@ -223,7 +223,7 @@ public:
       m_intWrap[i] = m_extWrap[i]=1.0;
   }
   //! add property to frame extra values
-  void addTo(MWAWGraphicStyle style) const
+  void addTo(MWAWGraphicStyle &style) const
   {
     if (m_style.hasLine()) {
       MWAWBorder border;
