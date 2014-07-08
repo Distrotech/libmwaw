@@ -263,6 +263,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     std::vector<Vec2i> res;
     ok = m_document.readStructCellZone("SpreadsheetListCell", false, res);
+    if (ok) continue;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    ok = m_document.readStructZone("SpreadsheetUnkn2", false);
+    if (ok) {
+      MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: find unexpected Unkn2 zone\n"));
+    }
   }
   if (ok) {
     pos=input->tell();
@@ -270,7 +276,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
     if (input->checkPosition(pos+4+sz)) {
       input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
       ascFile.addPos(pos);
-      MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone::ClarisWksDatabase: find some extra block\n"));
+      MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: find some extra block\n"));
       ascFile.addNote("Entries(SpreadsheetEnd):###");
     }
     else
@@ -278,7 +284,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
   }
 
   if (!ok) {
-    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone::ClarisWksDatabase: find a bad block\n"));
+    MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: find a bad block\n"));
     ascFile.addPos(pos);
     ascFile.addNote("Entries(SpreadsheetEnd):###");
     input->seek(pos, librevenge::RVNG_SEEK_SET);

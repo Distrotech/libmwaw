@@ -605,6 +605,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
   input->seek(entry.end()-N*data0Length, librevenge::RVNG_SEEK_SET);
   ClarisWksTextInternal::PLC plc;
   plc.m_type = ClarisWksTextInternal::P_Child;
+  int numExtraHId=0;
   if (data0Length) {
     for (int i = 0; i < N; i++) {
       /* definition of a list of text zone ( one by column and one by page )*/
@@ -636,6 +637,13 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
       if (what)
         f << "what=" << what << ",";
 
+      if (vers>=2) {
+        long id=(int) input->readULong(4);
+        if (id) {
+          f << "ID=" << std::hex << id << std::dec << ",";
+          ++numExtraHId;
+        }
+      }
       long actPos = input->tell();
       if (actPos != pos && actPos != pos+data0Length)
         ascFile.addDelimiter(input->tell(),'|');
@@ -648,7 +656,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
 
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
 
-  // now normally three zones: paragraph, font, ???
+  // now normally three zones: paragraph, font, token
   bool ok = true;
   for (int z = 0; z < 4+textZone->m_numTextZone; z++) {
     pos = input->tell();
@@ -716,7 +724,30 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
     if (!readTextSection(*textZone))
       input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
-
+  for (int i=0; ok && i<numExtraHId; ++i) {
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (sz<10 || !input->checkPosition(pos+4+sz)) {
+      MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone:: can not read an extra block\n"));
+      ascFile.addPos(pos);
+      ascFile.addNote("DSETT-extra:###");
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      ok=false;
+      break;
+    }
+    f.str("");
+    f << "DSETT-extra:";
+    /* Checkme: no sure how to read this unfrequent structures */
+    int val=(int) input->readLong(2); // 2 (with size=34 or 4c)|a(with size=a or e)|3c (with size 3c)
+    f << "type?=" << val << ",";
+    int dim[4];
+    for (int j=0; j<4; ++j) dim[j]=(int) input->readLong(2);
+    f << "dim=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
+    if (sz!=10) ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+  }
   for (size_t tok = 0; tok < textZone->m_tokenList.size(); tok++) {
     ClarisWksTextInternal::Token const &token = textZone->m_tokenList[tok];
     if (token.m_zoneId > 0)
@@ -729,6 +760,26 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
   else
     m_state->m_zoneMap[textZone->m_id] = textZone;
 
+  if (ok) {
+    // look for unparsed zone
+    pos=input->tell();
+    long sz=(long) input->readULong(4);
+    if (input->checkPosition(pos+4+sz)) {
+      if (sz) {
+        MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone:: find some extra block\n"));
+        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+        ascFile.addPos(pos);
+        ascFile.addNote("Entries(TextEnd):###");
+      }
+      else {
+        // probably a problem, but...
+        ascFile.addPos(pos);
+        ascFile.addNote("_");
+      }
+    }
+    else
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
   complete = ok;
   return textZone;
 }
@@ -1120,8 +1171,7 @@ bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
   long pos = input->tell();
   long sz = (long) input->readULong(4);
   long endPos = pos+4+sz;
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != endPos || (sz && sz < 12)) {
+  if (!input->checkPosition(endPos) || (sz && sz < 12)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("ClarisWksText::readTextSection: unexpected size\n"));
     return false;
@@ -1135,7 +1185,6 @@ bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
   libmwaw::DebugStream f;
   f << "Entries(TextSection):";
 
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   int N = (int) input->readLong(2);
   f << "N=" << N << ",";
   int type = (int) input->readLong(2);
@@ -1231,7 +1280,6 @@ bool ClarisWksText::readTextZoneSize(MWAWEntry const &entry, ClarisWksTextIntern
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
-
 
   ClarisWksTextInternal::PLC plc;
   plc.m_type = ClarisWksTextInternal::P_TextZone;
