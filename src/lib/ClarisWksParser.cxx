@@ -193,7 +193,6 @@ bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT ||
          getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_PAINT ||
          getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
 }
 

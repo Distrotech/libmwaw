@@ -442,7 +442,7 @@ bool ClarisWksDocument::checkHeader(MWAWHeader *header, bool strict)
   int typePos = 0;
   switch (vers) {
   case 1:
-    typePos = 243;
+    typePos = 242;
     break;
   case 2:
   case 3:

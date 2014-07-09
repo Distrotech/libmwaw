@@ -731,7 +731,7 @@ bool ClarisWksDatabase::readLayout(ClarisWksDatabaseInternal::Database &dBase)
 
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  f << "DatabaseLayout-A:";
+  f << "DatabaseLayout-Part:";
   int N = (int) input->readULong(2);
   f << "N=" << N << ",";
   int val = (int) input->readLong(2);
@@ -786,7 +786,7 @@ bool ClarisWksDatabase::readLayout(ClarisWksDatabaseInternal::Database &dBase)
   for (int i = 0; i < N; i++) {
     pos=input->tell();
     f.str("");
-    f << "DatabaseLayout-A" << i << ":";
+    f << "DatabaseLayout-Part" << i << ":";
 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());

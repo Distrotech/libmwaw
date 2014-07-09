@@ -11,6 +11,7 @@ Other contributors to libmwaw
 The following people have contributed fixes or enhancements:
 David Hislop                                            Metadata for mwaw2html
 fruhulda                                                Audit libmwaw with many ClarisWorks files
+Caolan McNamara						Coverity check...
 
 Contributors to libwps
 -----------------------------------------------

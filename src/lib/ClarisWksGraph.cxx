@@ -1008,6 +1008,8 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
       type = ClarisWksGraphInternal::Zone::T_DataBox;
       break;
     default:
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: find unknown type=%d!!!\n", typeId));
+      f << "###typeId=" << typeId << ",";
       break;
     }
     break;
@@ -1053,6 +1055,8 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
       type = ClarisWksGraphInternal::Zone::T_QTim;
       break;
     default:
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: find unknown type=%d!!!\n", typeId));
+      f << "###typeId=" << typeId << ",";
       break;
     }
     break;
@@ -1247,7 +1251,7 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
         MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find a nop zone for type: %d\n",
                         z->getSubType()));
         ascFile.addPos(pos);
-        ascFile.addNote("#Nop");
+        ascFile.addNote("GroupDef-before:###");
         if (!numError++) {
           ascFile.addPos(beginGroupPos);
           ascFile.addNote("###");
@@ -1369,7 +1373,11 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
         ascFile.addNote("Nop");
         continue;
       }
-      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
+      else if (numZoneExpected) {
+        MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find not null entry for a end of zone: %d\n", z->getSubType()));
+        ascFile.addPos(pos);
+        ascFile.addNote("GroupDef[##extra2]");
+      }
       input->seek(pos, librevenge::RVNG_SEEK_SET);
     }
   }
@@ -1377,14 +1385,28 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
   if (input->isEnd())
     return true;
   // sanity check: normaly no zero except maybe for the last zone
-  pos = input->tell();
-  sz = (long) input->readULong(4);
-  if (sz == 0 && !input->isEnd()) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find unexpected nop data at end of zone\n"));
-    ascFile.addPos(beginGroupPos);
-    ascFile.addNote("###");
+  pos=input->tell();
+  sz=(long) input->readULong(4);
+  int numUnparsed=0;
+  while (input->checkPosition(pos+4+sz)) {
+    // this can happens at the end of the file (and it is normal)
+    if (!input->checkPosition(pos+4+sz+10))
+      break;
+    static bool isFirst=true;
+    if (isFirst) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find some extra block\n"));
+      isFirst=false;
+    }
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+    f.str("");
+    f << "GroupDef[end-" << numUnparsed++ << "]: ###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    pos=input->tell();
+    sz=(long) input->readULong(4);
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
+
   return true;
 }
 
@@ -1575,24 +1597,22 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
     input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
-  /** a list of int16 : find
-      00320060 00480060 0048ffe9 013a0173 01ba0173 01ea02a0
-      01f8ffe7 02080295 020c012c 02140218 02ae01c1
-      02ca02c9-02cc02c6-02400000
-      03f801e6
-      8002e3ff e0010000 ee02e6ff */
-  int numHeader = N+1;//vers >=6 ? N+1 : 2*N;
-  for (int i = 0; i < numHeader; i++) {
+  int const numHeaders= N==0 ? 1 : N;
+  for (int i = 0; i < numHeaders; i++) {
     pos = input->tell();
     std::vector<int> res;
+    /** not frequent but we can find a list of int16 as
+        00320060 00480060 0048ffe9 013a0173 01ba0173 01ea02a0
+        01f8ffe7 02080295 020c012c 02140218 02ae01c1
+        02ca02c9-02cc02c6-02400000
+        03f801e6
+        8002e3ff e0010000 ee02e6ff */
     bool ok = m_document.readStructIntZone("", false, 2, res);
     f.str("");
     f << "[GroupDef(data" << i << ")]";
     if (ok) {
-      if (input->tell() != pos+4) {
-        ascFile.addPos(pos);
-        ascFile.addNote(f.str().c_str());
-      }
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
       continue;
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1601,6 +1621,24 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
     ascFile.addNote(f.str().c_str());
     MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupHeader: can not find data for %d\n", i));
     return true;
+  }
+  // normally, this is often followed by another list of nop zone (but not always...)
+  for (int i = 0; i < N; i++) {
+    pos = input->tell();
+    sz=(long) input->readULong(4);
+    f.str("");
+    f << "[GroupDef(dataB" << i << ")]:";
+    if (!sz) {
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      continue;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    if (i!=0) {
+      f << "###";
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupHeader: find some data for a dataB zone\n"));
+    }
+    break;
   }
 
   return true;
