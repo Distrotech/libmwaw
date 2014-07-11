@@ -215,7 +215,7 @@ struct Zone {
     return T_Unknown;
   }
   //! return the number of data to define this zone in the file
-  virtual int getNumData() const
+  virtual int getNumData(int /*version*/) const
   {
     return 0;
   }
@@ -259,7 +259,7 @@ struct ZoneShape : public Zone {
     return m_type;
   }
   //! return the number of data
-  virtual int getNumData() const
+  virtual int getNumData(int /*version*/) const
   {
     if (m_shape.m_type == MWAWGraphicShape::Polygon) return 1;
     return 0;
@@ -329,7 +329,7 @@ struct ZonePict : public Zone {
     return m_type;
   }
   //! return the number of data in a file
-  virtual int getNumData() const
+  virtual int getNumData(int /*version*/) const
   {
     return 2;
   }
@@ -411,7 +411,7 @@ struct ZoneZone : public Zone {
     return m_subType;
   }
   //! return the number of data to define this zone in the file
-  virtual int getNumData() const
+  virtual int getNumData(int /*version*/) const
   {
     return m_subType==T_Zone ? 0 : 1;
   }
@@ -440,6 +440,42 @@ struct ZoneZone : public Zone {
   int m_flags[9];
 };
 
+//! Internal: structure used to store a chart zone of a ClarisWksGraph
+struct Chart : public Zone {
+  //! construtor
+  Chart(Zone const &z) : Zone(z)
+  {
+  }
+  //! print the zone
+  virtual void print(std::ostream &o) const
+  {
+    o << "CHART,";
+  }
+  //! return the main type
+  virtual Type getType() const
+  {
+    return T_Chart;
+  }
+  //! return the sub type
+  virtual Type getSubType() const
+  {
+    return T_Chart;
+  }
+  //! return the number of data
+  virtual int getNumData(int version) const
+  {
+    return version==1 ? 1 : 2;
+  }
+  //! return a child corresponding to this zone
+  virtual ClarisWksStruct::DSET::Child getChild() const
+  {
+    ClarisWksStruct::DSET::Child child;
+    child.m_box = m_box;
+    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
+    return child;
+  }
+};
+
 //! Internal: structure used to store an unknown zone of a ClarisWksGraph
 struct ZoneUnknown : public Zone {
   //! construtor
@@ -454,8 +490,6 @@ struct ZoneUnknown : public Zone {
       o << "BOX(database),";
       break;
     case T_Chart:
-      o << "CHART,";
-      break;
     case T_Zone:
     case T_Zone2:
     case T_Shape:
@@ -486,9 +520,9 @@ struct ZoneUnknown : public Zone {
     return m_type;
   }
   //! return the number of data
-  virtual int getNumData() const
+  virtual int getNumData(int /*version*/) const
   {
-    return m_type == T_Chart ? 2 : 0;
+    return 0;
   }
   //! return a child corresponding to this zone
   virtual ClarisWksStruct::DSET::Child getChild() const
@@ -685,7 +719,7 @@ int ClarisWksGraph::numPages() const
   if (m_state->m_numAccrossPages<=0) {
     m_state->m_numAccrossPages=1;
     if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW) {
-      m_state->m_numAccrossPages=m_document.getDocumentPages()[0];
+      m_state->m_numAccrossPages=m_document.getDocumentHeaderPages()[0];
       if (m_state->m_numAccrossPages<=1) {
         // info not always fill so we must check it
         for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
@@ -1004,6 +1038,10 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     case 11:
       type = ClarisWksGraphInternal::Zone::T_Pict;
       break;
+    case 12:
+      type = ClarisWksGraphInternal::Zone::T_Chart;
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: find some chart, not implemented!\n"));
+      break;
     case 13:
       type = ClarisWksGraphInternal::Zone::T_DataBox;
       break;
@@ -1041,6 +1079,7 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
       break;
     case 9:
       type = ClarisWksGraphInternal::Zone::T_Chart;
+      MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: find some chart, not implemented!\n"));
       break;
     case 10:
       type = ClarisWksGraphInternal::Zone::T_DataBox;
@@ -1192,8 +1231,10 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     readShape(entry, *z);
     break;
   }
-  case ClarisWksGraphInternal::Zone::T_DataBox:
   case ClarisWksGraphInternal::Zone::T_Chart:
+    res.reset(new ClarisWksGraphInternal::Chart(zone));
+    break;
+  case ClarisWksGraphInternal::Zone::T_DataBox:
   case ClarisWksGraphInternal::Zone::T_Shape:
   case ClarisWksGraphInternal::Zone::T_Picture:
   case ClarisWksGraphInternal::Zone::T_Unknown:
@@ -1241,7 +1282,7 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
   int numError = 0;
   for (size_t i = 0; i < numChilds; i++) {
     shared_ptr<ClarisWksGraphInternal::Zone> z = group.m_zones[i];
-    int numZoneExpected = z ? z->getNumData() : 0;
+    int numZoneExpected = z ? z->getNumData(vers) : 0;
 
     if (numZoneExpected) {
       pos = input->tell();
@@ -1277,7 +1318,7 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
           return false;
         break;
       case ClarisWksGraphInternal::Zone::T_Poly:
-        if (z->getNumData() && !readPolygonData(z))
+        if (z->getNumData(vers) && !readPolygonData(z))
           return false;
         break;
       case ClarisWksGraphInternal::Zone::T_Zone2: {
@@ -1320,6 +1361,10 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
         input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
         break;
       }
+      case ClarisWksGraphInternal::Zone::T_Chart:
+        if (!readChartData(z))
+          return false;
+        break;
       case ClarisWksGraphInternal::Zone::T_Line:
       case ClarisWksGraphInternal::Zone::T_Rect:
       case ClarisWksGraphInternal::Zone::T_RectOval:
@@ -1328,7 +1373,6 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
       case ClarisWksGraphInternal::Zone::T_Zone:
       case ClarisWksGraphInternal::Zone::T_Shape:
       case ClarisWksGraphInternal::Zone::T_Picture:
-      case ClarisWksGraphInternal::Zone::T_Chart:
       case ClarisWksGraphInternal::Zone::T_DataBox:
       case ClarisWksGraphInternal::Zone::T_Unknown:
       default:
@@ -1344,10 +1388,7 @@ bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long be
           return false;
         }
         f.str("");
-        if (z->getSubType() == ClarisWksGraphInternal::Zone::T_Chart)
-          f << "Entries(ChartData)";
-        else
-          f << "Entries(UnknownDATA)-" << z->getSubType();
+        f << "Entries(UnknownDATA)-" << z->getSubType();
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
         input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
@@ -1607,7 +1648,7 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
         02ca02c9-02cc02c6-02400000
         03f801e6
         8002e3ff e0010000 ee02e6ff */
-    bool ok = m_document.readStructIntZone("", false, 2, res);
+    bool ok = m_document.readStructIntZone("GroupDef", false, 2, res);
     f.str("");
     f << "[GroupDef(data" << i << ")]";
     if (ok) {
@@ -1622,7 +1663,7 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
     MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupHeader: can not find data for %d\n", i));
     return true;
   }
-  // normally, this is often followed by another list of nop zone (but not always...)
+  // normally, this is often followed by another list of nop/list of int zone (but not always...)
   for (int i = 0; i < N; i++) {
     pos = input->tell();
     sz=(long) input->readULong(4);
@@ -1632,6 +1673,18 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
       continue;
+    }
+    if (sz>12) { // test if this is a list of int
+      input->seek(pos+10, librevenge::RVNG_SEEK_SET);
+      if (input->readLong(2)==2) {
+        std::vector<int> res;
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        if (sz>12 && m_document.readStructIntZone("GroupDef", false, 2, res)) {
+          ascFile.addPos(pos);
+          ascFile.addNote(f.str().c_str());
+          continue;
+        }
+      }
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (i!=0) {
@@ -1804,6 +1857,68 @@ bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zo
     if (hasPrevPoint) prevPoint =  pt.m_controlPoints[1];
   }
 
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read some chart
+////////////////////////////////////////////////////////////
+bool ClarisWksGraph::readChartData(shared_ptr<ClarisWksGraphInternal::Zone> zone)
+{
+  if (!zone || zone->getSubType() != ClarisWksGraphInternal::Zone::T_Chart)
+    return false;
+
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  if (sz==0 || !input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readChartData: unexpected size\n"));
+    return false;
+  }
+  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(ChartData):";
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (hSz<0x70 || fSz<0x10 || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readChartData: unexpected size for chart header\n"));
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+hSz)
+    ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  input->seek(endPos-N*fSz, librevenge::RVNG_SEEK_SET);
+  for (int i = 0; i < N; i++) {
+    pos=input->tell();
+    f.str("");
+    f << "ChartData-" << i << ":";
+
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  if (version()==1)
+    return true;
+  std::vector<std::string> names;
+  if (!m_document.readStringList("ChartData", false, names)) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupData: find unexpected second zone\n"));
+    input->seek(endPos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
   return true;
 }
 

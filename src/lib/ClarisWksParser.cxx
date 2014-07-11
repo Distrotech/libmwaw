@@ -269,18 +269,7 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
   else
     ps.setMarginBottom(0);
 
-  int numPage = m_document->getTextParser()->numPages();
-  if (m_document->getDatabaseParser()->numPages() > numPage)
-    numPage = m_document->getDatabaseParser()->numPages();
-  if (m_document->getPresentationParser()->numPages() > numPage)
-    numPage = m_document->getPresentationParser()->numPages();
-  if (m_document->getGraphParser()->numPages() > numPage)
-    numPage = m_document->getGraphParser()->numPages();
-  if (m_document->getSpreadsheetParser()->numPages() > numPage)
-    numPage = m_document->getSpreadsheetParser()->numPages();
-  if (m_document->getTableParser()->numPages() > numPage)
-    numPage = m_document->getTableParser()->numPages();
-  m_state->m_numPages = numPage;
+  m_state->m_numPages = m_document->numPages();
 
   int headerId, footerId;
   m_document->getHeaderFooterId(headerId,footerId);

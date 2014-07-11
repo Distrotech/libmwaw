@@ -87,6 +87,8 @@ public:
 
   /** returns the number of pages */
   int numPages() const;
+  /** updates the page span list and returns true if this is possible */
+  bool updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
 
   //! reads the zone Text DSET
   shared_ptr<ClarisWksStruct::DSET> readDSETZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);

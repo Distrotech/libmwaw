@@ -267,8 +267,9 @@ struct ParagraphPLC {
 /** internal class used to store a section */
 struct Section {
   //! the constructor
-  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_extra("")
+  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_firstPage(0), m_hasTitlePage(false), m_continuousHF(true), m_leftRightHF(false), m_extra("")
   {
+    for (int i=0; i<4; ++i) m_HFId[i]=0;
   }
   //! returns a section
   MWAWSection getSection() const
@@ -313,6 +314,14 @@ struct Section {
         o << sec.m_columnsSep[c] << ",";
       o << "],";
     }
+    if (sec.m_firstPage) o << "first[page]=" << sec.m_firstPage << ",";
+    if (sec.m_hasTitlePage) o << "title[page],";
+    if (sec.m_continuousHF) o << "continuousHF,";
+    if (sec.m_leftRightHF) o << "leftRightHF,";
+    if (sec.m_HFId[0]) o << "id[header]=" << sec.m_HFId[0] << ",";
+    if (sec.m_HFId[1] || sec.m_HFId[0]!=sec.m_HFId[1]) o << "id[header2]=" << sec.m_HFId[1] << ",";
+    if (sec.m_HFId[2]) o << "id[footer]=" << sec.m_HFId[2] << ",";
+    if (sec.m_HFId[3] || sec.m_HFId[2]!=sec.m_HFId[3]) o << "id[footer2]=" << sec.m_HFId[3] << ",";
     if (sec.m_extra.length()) o << sec.m_extra;
     return o;
   }
@@ -324,6 +333,16 @@ struct Section {
   std::vector<int> m_columnsWidth;
   /** the columns separator */
   std::vector<int> m_columnsSep;
+  /** the first page */
+  int m_firstPage;
+  /** true if the first page is a title page(ie. no header/footer) */
+  bool m_hasTitlePage;
+  /** true if the header/footer are shared with previous sections */
+  bool m_continuousHF;
+  /** true if the left/right header/footer are different */
+  bool m_leftRightHF;
+  /** the header/footer id*/
+  int m_HFId[4];
   /** a string to store unparsed data */
   std::string m_extra;
 };
@@ -1221,9 +1240,10 @@ bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
     pos = input->tell();
     f.str("");
     sec.m_pos  = input->readLong(4);
-    for (int j = 0; j < 4; j++) {
-      /** find f0=0|1, f1=O| (for second section)[1|2|4]
-      f2=0| (for second section [2e,4e,5b] , f3=0|2d|4d|5a */
+    sec.m_firstPage= (int) input->readLong(2);
+    for (int j = 0; j < 3; j++) {
+      /** find f0=O| (for second section)[1|2|4]
+      f1=0| (for second section [2e,4e,5b] , f2=0|2d|4d|5a */
       val = input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
@@ -1239,10 +1259,44 @@ bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
     for (int c = 0; c < sec.m_numColumns; c++)
       sec.m_columnsSep.push_back((int)input->readLong(2));
     input->seek(pos+52, librevenge::RVNG_SEEK_SET);
-    for (int j = 0; j < 4; j++) {
-      // find g0=0|1, g1=0|1, g2=100, g3=0|e0|7b
-      val = (int) input->readULong(2);
-      if (val) f << "g" << j << "=" << std::hex << val << std::dec << ",";
+    val = (int) input->readULong(2);
+    switch ((val&3)) {
+    case 1:
+      f << "newPage[begin],";
+      break;
+    case 2: // checkme
+      f << "leftPage[begin],";
+      break;
+    case 3: // checkme
+      f << "rightPage[begin],";
+      break;
+    case 0: // begin on new line
+    default:
+      break;
+    }
+    val &=0xFFFC;
+    if (val) f << "g0=" << std::hex << val << std::dec << ",";
+    val = (int) input->readULong(2); // 0|1
+    if (val) f << "g1=" << std::hex << val << std::dec << ",";
+    val = (int) input->readULong(2); // 0 or 1
+    sec.m_hasTitlePage=(val&1);
+    val &= 0xFFFE;
+    if (val) f << "g2=" << std::hex << val << std::dec << ",";
+
+    val = (int) input->readULong(2); // 0 or 100
+    sec.m_continuousHF=(val&0x100);
+    sec.m_leftRightHF=(val&1);
+    val &= 0xFEFE;
+    if (val) f << "g3=" << std::hex << val << std::dec << ",";
+    val = (int) input->readULong(2); // 0 ?
+    if (val) f << "g4=" << std::hex << val << std::dec << ",";
+    int prevHFId=0;
+    for (int j=0; j<4; ++j) {
+      int hFId=(int) input->readLong(4);
+      sec.m_HFId[j]=hFId;
+      if (!hFId || prevHFId==hFId) continue;
+      zone.m_otherChilds.push_back(hFId);
+      prevHFId=hFId;
     }
     sec.m_extra = f.str();
     zone.m_sectionList.push_back(sec);

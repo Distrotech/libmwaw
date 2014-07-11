@@ -50,6 +50,8 @@ class MWAWSection;
 
 namespace ClarisWksDocumentInternal
 {
+class SubDocument;
+
 struct State;
 }
 
@@ -72,6 +74,7 @@ public:
   friend class ClarisWksParser;
   friend class ClarisWksBMParser;
   friend class ClarisWksSSParser;
+  friend class ClarisWksDocumentInternal::SubDocument;
   //! constructor
   ClarisWksDocument(MWAWParser &parser);
   //! virtual destructor
@@ -83,14 +86,18 @@ public:
   //! finds the different objects zones
   bool createZones();
 
+  //! returns the document number of page
+  int numPages() const;
   //! returns the number of expected pages ( accross pages x down page)
-  Vec2i getDocumentPages() const;
+  Vec2i getDocumentHeaderPages() const;
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
   //! returns the header/footer id
   void getHeaderFooterId(int &headerId, int &footerId) const;
+  /** updates the page span list */
+  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
 
   //! returns the main document section
   MWAWSection getMainSection() const;

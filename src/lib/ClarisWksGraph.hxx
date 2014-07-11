@@ -57,6 +57,7 @@ struct Group;
 struct State;
 struct Style;
 struct Zone;
+struct Chart;
 struct ZoneShape;
 struct Bitmap;
 struct ZonePict;
@@ -149,12 +150,14 @@ protected:
      \note \a beginGroupPos is only used to help debugging */
   bool readGroupData(ClarisWksGraphInternal::Group &group, long beginGroupPos);
 
-  /* try to read the polygon data */
-  bool readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
+  /* try to read the chart data */
+  bool readChartData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
 
-  /////////////
   /* try to read a pict data zone */
   bool readPictData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
+
+  /* try to read the polygon data */
+  bool readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zone);
 
   /* read a picture */
   bool readPICT(ClarisWksGraphInternal::ZonePict &zone);

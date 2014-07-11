@@ -44,6 +44,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWHeader.hxx"
 #include "MWAWInputStream.hxx"
+#include "MWAWListener.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPrinter.hxx"
 #include "MWAWSection.hxx"
@@ -94,6 +95,63 @@ struct State {
   /** the list of main group */
   std::vector<int> m_mainZonesList;
 };
+
+////////////////////////////////////////
+//! Internal: the subdocument of a ClarisWksDocument
+class SubDocument : public MWAWSubDocument
+{
+public:
+  SubDocument(ClarisWksDocument &doc, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
+    MWAWSubDocument(0, input, MWAWEntry()), m_document(doc), m_id(zoneId), m_position(pos) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
+    if (MWAWSubDocument::operator!=(doc)) return true;
+    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+    if (!sDoc) return true;
+    if (&m_document != &sDoc->m_document) return true;
+    if (m_id != sDoc->m_id) return true;
+    return false;
+  }
+
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  //! the document manager
+  ClarisWksDocument &m_document;
+  //! the subdocument id
+  int m_id;
+  //! the subdocument position if defined
+  MWAWPosition m_position;
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("ClarisWksDocumentInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  if (m_id == -1) { // a number used to send linked frame
+    listener->insertChar(' ');
+    return;
+  }
+  if (m_id == 0) {
+    MWAW_DEBUG_MSG(("ClarisWksDocumentInternal::SubDocument::parse: unknown zone\n"));
+    return;
+  }
+
+  m_document.sendZone(m_id, listener, m_position);
+}
 }
 
 ClarisWksDocument::ClarisWksDocument(MWAWParser &parser) :
@@ -119,9 +177,25 @@ ClarisWksDocument::~ClarisWksDocument()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2i ClarisWksDocument::getDocumentPages() const
+Vec2i ClarisWksDocument::getDocumentHeaderPages() const
 {
   return m_state->m_pages;
+}
+
+int ClarisWksDocument::numPages() const
+{
+  int numPage = m_textParser->numPages();
+  if (m_databaseParser->numPages() > numPage)
+    numPage = m_databaseParser->numPages();
+  if (m_presentationParser->numPages() > numPage)
+    numPage = m_presentationParser->numPages();
+  if (m_graphParser->numPages() > numPage)
+    numPage = m_graphParser->numPages();
+  if (m_spreadsheetParser->numPages() > numPage)
+    numPage = m_spreadsheetParser->numPages();
+  if (m_tableParser->numPages() > numPage)
+    numPage = m_tableParser->numPages();
+  return numPage;
 }
 
 double ClarisWksDocument::getTextHeight() const
@@ -446,7 +520,7 @@ bool ClarisWksDocument::checkHeader(MWAWHeader *header, bool strict)
     break;
   case 2:
   case 3:
-    typePos = 249;
+    typePos = 248;
     break;
   case 4:
     typePos = 256;
@@ -2522,14 +2596,6 @@ void ClarisWksDocument::typeMainZones()
         m_state->m_headerId=fId;
       else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
         m_state->m_footerId=fId;
-      else if ((type==ClarisWksStruct::DSET::T_Header && m_state->m_headerId !=fId) ||
-               (type==ClarisWksStruct::DSET::T_Footer && m_state->m_footerId !=fId)) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find more than one header/footer, some header/footer will be ignored\n"));
-          first=false;
-        }
-      }
     }
   }
 

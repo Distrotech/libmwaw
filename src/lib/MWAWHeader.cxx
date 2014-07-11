@@ -451,7 +451,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[2] == 0x424F && val[3] == 0x424F && (val[0]>>8) < 7) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Claris Works file\n"));
     int vers= (val[0] >> 8);
-    static int const(typePos[7])= {0, 242, 249, 249, 256, 268, 278};
+    static int const(typePos[7])= {0, 242, 248, 248, 256, 268, 278};
     int typeFile=-1;
     if (vers >= 1 && vers <= 6 && input->checkPosition(typePos[vers])) {
       input->seek(typePos[vers], librevenge::RVNG_SEEK_SET);

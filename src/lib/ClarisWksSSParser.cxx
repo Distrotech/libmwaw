@@ -247,6 +247,7 @@ void ClarisWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *doc
     ps.setMarginBottom(0);
 
   m_state->m_numPages=1;
+  // removeme: use to update the group position
   m_document->m_graphParser->numPages();
   int headerId, footerId;
   m_document->getHeaderFooterId(headerId,footerId);
