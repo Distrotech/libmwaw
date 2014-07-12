@@ -52,7 +52,6 @@
 
 namespace ClarisWksBMParserInternal
 {
-class SubDocument;
 struct State;
 }
 
@@ -65,7 +64,6 @@ class ClarisWksDocument;
  */
 class ClarisWksBMParser : public MWAWGraphicParser
 {
-  friend class ClarisWksBMParserInternal::SubDocument;
   friend class ClarisWksDocument;
 public:
   //! constructor

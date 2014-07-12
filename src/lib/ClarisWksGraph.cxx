@@ -2577,6 +2577,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector
 
 bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position)
 {
+  group.m_parsed=true;
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));
@@ -2932,6 +2933,7 @@ bool ClarisWksGraph::sendBitmap(int number, MWAWListenerPtr listener, MWAWPositi
 
 bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWListener &listener, MWAWPosition pos)
 {
+  bitmap.m_parsed=true;
   if (!bitmap.m_entry.valid() || !bitmap.m_numBytesPerPixel)
     return false;
   int bytesPerPixel = bitmap.m_numBytesPerPixel;
@@ -3106,8 +3108,13 @@ void ClarisWksGraph::flushExtra()
     = m_state->m_groupMap.begin();
   for (; iter !=  m_state->m_groupMap.end(); ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> zone = iter->second;
-    if (zone->m_parsed)
+    if (!zone || zone->m_parsed)
       continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::flushExtra: find some extra graph %d\n", zone->m_id));
+      first=false;
+    }
     listener->insertEOL();
     MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);

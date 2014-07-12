@@ -67,7 +67,7 @@ namespace ClarisWksDocumentInternal
 //! Internal: the state of a ClarisWksDocument
 struct State {
   //! constructor
-  State() : m_pageSpanSet(false), m_pages(0,0), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
+  State() : m_pageSpanSet(false), m_numPages(0), m_pages(0,0), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_zonesMap(), m_mainZonesList()
   {
@@ -76,7 +76,9 @@ struct State {
   //! a flag to know if pageSpan is filled
   bool m_pageSpanSet;
 
-  //! the document number of pages ( if known )
+  //! the number of pages (computed)
+  int m_numPages;
+  //! the number of pages find in the header ( if known )
   Vec2i m_pages;
   int m_headerId /** the header zone if known */,
       m_footerId /** the footer zone if known */;
@@ -101,8 +103,8 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ClarisWksDocument &doc, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
-    MWAWSubDocument(0, input, MWAWEntry()), m_document(doc), m_id(zoneId), m_position(pos) {}
+  SubDocument(ClarisWksDocument &doc, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(0, input, MWAWEntry()), m_document(doc), m_id(zoneId) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -131,8 +133,6 @@ protected:
   ClarisWksDocument &m_document;
   //! the subdocument id
   int m_id;
-  //! the subdocument position if defined
-  MWAWPosition m_position;
 };
 
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
@@ -150,7 +150,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
 
-  m_document.sendZone(m_id, listener, m_position);
+  m_document.sendZone(m_id, listener);
 }
 }
 
@@ -184,6 +184,7 @@ Vec2i ClarisWksDocument::getDocumentHeaderPages() const
 
 int ClarisWksDocument::numPages() const
 {
+  if (m_state->m_numPages>0) return m_state->m_numPages;
   int numPage = m_textParser->numPages();
   if (m_databaseParser->numPages() > numPage)
     numPage = m_databaseParser->numPages();
@@ -195,7 +196,36 @@ int ClarisWksDocument::numPages() const
     numPage = m_spreadsheetParser->numPages();
   if (m_tableParser->numPages() > numPage)
     numPage = m_tableParser->numPages();
+  m_state->m_numPages=numPage;
   return numPage;
+}
+
+void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList)
+{
+  MWAWPageSpan ps(m_parserState->m_pageSpan);
+
+  // decrease right | bottom
+  if (ps.getMarginRight()>50./72.)
+    ps.setMarginRight(ps.getMarginRight()-50./72.);
+  else
+    ps.setMarginRight(0);
+  if (ps.getMarginBottom()>50./72.)
+    ps.setMarginBottom(ps.getMarginBottom()-50./72.);
+  else
+    ps.setMarginBottom(0);
+  if (m_textParser->updatePageSpanList(ps, pageList))
+    return;
+  pageList.resize(0);
+  for (int i = 0; i < 2; i++) {
+    int zoneId = i == 0 ? m_state->m_headerId : m_state->m_footerId;
+    if (zoneId == 0)
+      continue;
+    MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
+    hF.m_subDocument.reset(new ClarisWksDocumentInternal::SubDocument(*this, m_parserState->m_input, zoneId));
+    ps.setHeaderFooter(hF);
+  }
+  ps.setPageSpan(numPages());
+  pageList=std::vector<MWAWPageSpan>(1,ps);
 }
 
 double ClarisWksDocument::getTextHeight() const
@@ -1045,7 +1075,16 @@ bool ClarisWksDocument::readDocHeader()
   int type = (int) input->readULong(1);
   f << "type=" << type << ",";
   val = (int) input->readULong(1);
-  if (type != val) f << "#unkn=" << val << ",";
+  if (type != val) {
+    if (val >= 0 && val < 7) {
+      static char const *(wh[])= { "draw", "text", "spreadsheet", "database", "paint", "presentation", "table" };
+      f << "type[display]=" << wh[val] << ",";
+    }
+    else {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: find unknown display type\n"));
+      f << "##unkn=" << val << ",";
+    }
+  }
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   if (vers <= 2) {

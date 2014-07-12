@@ -349,10 +349,11 @@ struct Section {
 
 /** internal class used to store a text zone */
 struct TextZoneInfo {
+  //! constructor
   TextZoneInfo() : m_pos(0), m_N(0), m_extra("")
   {
   }
-
+  //! operator<<
   friend std::ostream &operator<<(std::ostream &o, TextZoneInfo const &info)
   {
     o << "pos=" << info.m_pos << ",";
@@ -361,7 +362,9 @@ struct TextZoneInfo {
     return o;
   }
   long m_pos;
+  //! the number of character
   int m_N;
+  //! extra data
   std::string m_extra;
 };
 
@@ -496,6 +499,61 @@ struct State {
   std::map<int, shared_ptr<Zone> > m_zoneMap;
 };
 
+////////////////////////////////////////
+//! Internal: the subdocument of a ClarisWksDocument
+class SubDocument : public MWAWSubDocument
+{
+public:
+  SubDocument(ClarisWksText &parser, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(0, input, MWAWEntry()), m_textParser(parser), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
+    if (MWAWSubDocument::operator!=(doc)) return true;
+    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+    if (!sDoc) return true;
+    if (&m_textParser != &sDoc->m_textParser) return true;
+    if (m_id != sDoc->m_id) return true;
+    return false;
+  }
+
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  //! the document manager
+  ClarisWksText &m_textParser;
+  //! the subdocument id
+  int m_id;
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("ClarisWksTextInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  if (m_id == -1) { // a number used to send linked frame
+    listener->insertChar(' ');
+    return;
+  }
+  if (m_id == 0) {
+    MWAW_DEBUG_MSG(("ClarisWksTextInternal::SubDocument::parse: unknown zone\n"));
+    return;
+  }
+
+  m_textParser.m_document.sendZone(m_id, listener);
+}
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -538,6 +596,75 @@ int ClarisWksText::numPages() const
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   return numPage;
+}
+
+bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList)
+{
+  if (m_state->m_zoneMap.find(1)==m_state->m_zoneMap.end() || !m_state->m_zoneMap.find(1)->second)
+    return false;
+  ClarisWksTextInternal::Zone const &zone=*m_state->m_zoneMap.find(1)->second;
+  size_t numSection=zone.m_sectionList.size();
+  if (!numSection) return false;
+  int numPages=m_document.numPages();
+  int actPage=0;
+  spanList.resize(0);
+  for (size_t i=0; i<numSection; ++i) {
+    ClarisWksTextInternal::Section const &sec=zone.m_sectionList[i];
+    int lastPage=numPages;
+    bool ok=true;
+    while (i+1<numSection) {
+      if (zone.m_sectionList[i+1].m_continuousHF) {
+        ++i;
+        continue;
+      }
+      if (zone.m_sectionList[i+1].m_firstPage<actPage) {
+        MWAW_DEBUG_MSG(("ClarisWksText::updatePageSpanList: problem with the %d first page\n", int(i+1)));
+        ok=false;
+        break;
+      }
+      lastPage=zone.m_sectionList[i+1].m_firstPage;
+      break;
+    }
+    if (!ok)
+      break;
+    if (lastPage>numPages) {
+      MWAW_DEBUG_MSG(("ClarisWksText::updatePageSpanList: some first page seems to big\n"));
+      lastPage=numPages;
+    }
+    if (sec.m_hasTitlePage && actPage<lastPage) {
+      // title page have no header/footer
+      MWAWPageSpan ps(page);
+      ps.setPageSpan(1);
+      spanList.push_back(ps);
+      ++actPage;
+    }
+    if (actPage<lastPage) {
+      MWAWPageSpan ps(page);
+      ps.setPageSpan(lastPage-actPage);
+      for (int j=0; j<4; ++j) {
+        int zId=sec.m_HFId[j];
+        if (!zId) continue;
+        if ((j%2)==1 && zId==sec.m_HFId[j-1]) continue;
+        // try to retrieve the father group zone
+        if (m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() && m_state->m_zoneMap.find(zId)->second &&
+            m_state->m_zoneMap.find(zId)->second->m_fatherId)
+          zId=m_state->m_zoneMap.find(zId)->second->m_fatherId;
+        MWAWHeaderFooter hF(j<2 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
+                            (j%2) ? MWAWHeaderFooter::EVEN : sec.m_HFId[j]==sec.m_HFId[j+1] ?
+                            MWAWHeaderFooter::ALL : MWAWHeaderFooter::ODD);
+        hF.m_subDocument.reset(new ClarisWksTextInternal::SubDocument(*this, m_parserState->m_input, zId));
+        ps.setHeaderFooter(hF);
+      }
+      spanList.push_back(ps);
+    }
+    actPage=lastPage;
+  }
+  if (actPage<numPages) {
+    MWAWPageSpan ps(page);
+    ps.setPageSpan(numPages-actPage);
+    spanList.push_back(ps);
+  }
+  return true;
 }
 
 ////////////////////////////////////////////////////////////

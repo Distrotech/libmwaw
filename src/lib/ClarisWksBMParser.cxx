@@ -76,61 +76,6 @@ struct State {
 
   int m_actPage /** the actual page */, m_numPages /** the number of page of the final document */;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a ClarisWksBMParser
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(ClarisWksBMParser &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition const &pos=MWAWPosition()) :
-    MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_position(pos) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const
-  {
-    if (MWAWSubDocument::operator!=(doc)) return true;
-    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-    if (!sDoc) return true;
-    if (m_id != sDoc->m_id) return true;
-    return false;
-  }
-
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const
-  {
-    return !operator!=(doc);
-  }
-  //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  //! the subdocument id
-  int m_id;
-  //! the subdocument position if defined
-  MWAWPosition m_position;
-};
-
-void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
-{
-  if (!listener.get()) {
-    MWAW_DEBUG_MSG(("ClarisWksBMParserInternal::SubDocument::parse: no listener\n"));
-    return;
-  }
-  if (m_id == -1) { // a number used to send linked frame
-    listener->insertChar(' ');
-    return;
-  }
-  if (m_id == 0) {
-    MWAW_DEBUG_MSG(("ClarisWksBMParserInternal::SubDocument::parse: unknown zone\n"));
-    return;
-  }
-
-  assert(m_parser);
-  static_cast<ClarisWksBMParser *>(m_parser)->m_document->sendZone(m_id, listener, m_position);
-}
 }
 
 ////////////////////////////////////////////////////////////
@@ -226,35 +171,12 @@ void ClarisWksBMParser::createDocument(librevenge::RVNGDrawingInterface *documen
 
   // update the page
   m_state->m_actPage = 0;
-
-  // create the page list
-  MWAWPageSpan ps(getPageSpan());
-
-  // decrease right | bottom
-  if (ps.getMarginRight()>50./72.)
-    ps.setMarginRight(ps.getMarginRight()-50./72.);
-  else
-    ps.setMarginRight(0);
-  if (ps.getMarginBottom()>50./72.)
-    ps.setMarginBottom(ps.getMarginBottom()-50./72.);
-  else
-    ps.setMarginBottom(0);
-
   m_state->m_numPages=1;
-  // removeme: use to update the group position
+  // removeme: force updating the page's positions
   m_document->m_graphParser->numPages();
-  int headerId, footerId;
-  m_document->getHeaderFooterId(headerId,footerId);
-  for (int i = 0; i < 2; i++) {
-    int zoneId = i == 0 ? headerId : footerId;
-    if (zoneId == 0)
-      continue;
-    MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new ClarisWksBMParserInternal::SubDocument(*this, getInput(), zoneId));
-    ps.setHeaderFooter(hF);
-  }
-  ps.setPageSpan(m_state->m_numPages);
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  std::vector<MWAWPageSpan> pageList;
+  m_document->updatePageSpanList(pageList);
+
   //
   MWAWGraphicListenerPtr listen(new MWAWGraphicListener(*getParserState(), pageList, documentInterface));
   setGraphicListener(listen);

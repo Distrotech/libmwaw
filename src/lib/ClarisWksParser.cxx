@@ -216,16 +216,9 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
       createDocument(docInterface);
       MWAWPosition pos;
       //pos.m_anchorTo=MWAWPosition::Page;
-      int headerId, footerId;
-      m_document->getHeaderFooterId(headerId,footerId);
       std::vector<int> const &mainZonesList=m_document->getMainZonesList();
-      for (size_t i = 0; i < mainZonesList.size(); i++) {
-        // can happens if mainZonesList is not fully reconstruct
-        if (mainZonesList[i]==headerId ||
-            mainZonesList[i]==footerId)
-          continue;
+      for (size_t i = 0; i < mainZonesList.size(); i++)
         m_document->sendZone(mainZonesList[i], MWAWListenerPtr(), pos);
-      }
       m_document->getPresentationParser()->flushExtra();
       m_document->getGraphParser()->flushExtra();
       m_document->getTableParser()->flushExtra();
@@ -255,34 +248,11 @@ void ClarisWksParser::createDocument(librevenge::RVNGTextInterface *documentInte
 
   // update the page
   m_state->m_actPage = 0;
-
-  // create the page list
-  MWAWPageSpan ps(getPageSpan());
-
-  // decrease right | bottom
-  if (ps.getMarginRight()>50./72.)
-    ps.setMarginRight(ps.getMarginRight()-50./72.);
-  else
-    ps.setMarginRight(0);
-  if (ps.getMarginBottom()>50./72.)
-    ps.setMarginBottom(ps.getMarginBottom()-50./72.);
-  else
-    ps.setMarginBottom(0);
-
   m_state->m_numPages = m_document->numPages();
 
-  int headerId, footerId;
-  m_document->getHeaderFooterId(headerId,footerId);
-  for (int i = 0; i < 2; i++) {
-    int zoneId = i == 0 ? headerId : footerId;
-    if (zoneId == 0)
-      continue;
-    MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new ClarisWksParserInternal::SubDocument(*this, getInput(), zoneId));
-    ps.setHeaderFooter(hF);
-  }
-  ps.setPageSpan(m_state->m_numPages);
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  // create the page list
+  std::vector<MWAWPageSpan> pageList;
+  m_document->updatePageSpanList(pageList);
   //
   MWAWTextListenerPtr listen(new MWAWTextListener(*getParserState(), pageList, documentInterface));
   setTextListener(listen);

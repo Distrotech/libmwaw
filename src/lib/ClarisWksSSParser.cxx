@@ -232,35 +232,12 @@ void ClarisWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *doc
 
   // update the page
   m_state->m_actPage = 0;
-
-  // create the page list
-  MWAWPageSpan ps(getPageSpan());
-
-  // decrease right | bottom
-  if (ps.getMarginRight()>50./72.)
-    ps.setMarginRight(ps.getMarginRight()-50./72.);
-  else
-    ps.setMarginRight(0);
-  if (ps.getMarginBottom()>50./72.)
-    ps.setMarginBottom(ps.getMarginBottom()-50./72.);
-  else
-    ps.setMarginBottom(0);
-
   m_state->m_numPages=1;
-  // removeme: use to update the group position
+
+  // removeme: force updating the page's positions
   m_document->m_graphParser->numPages();
-  int headerId, footerId;
-  m_document->getHeaderFooterId(headerId,footerId);
-  for (int i = 0; i < 2; i++) {
-    int zoneId = i == 0 ? headerId : footerId;
-    if (zoneId == 0)
-      continue;
-    MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
-    hF.m_subDocument.reset(new ClarisWksSSParserInternal::SubDocument(*this, getInput(), zoneId));
-    ps.setHeaderFooter(hF);
-  }
-  ps.setPageSpan(m_state->m_numPages);
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  std::vector<MWAWPageSpan> pageList;
+  m_document->updatePageSpanList(pageList);
   //
   MWAWSpreadsheetListenerPtr listen(new MWAWSpreadsheetListener(*getParserState(), pageList, documentInterface));
   setSpreadsheetListener(listen);
