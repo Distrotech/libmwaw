@@ -47,6 +47,22 @@ namespace ClarisWksStruct
 //------------------------------------------------------------
 // DSET
 //------------------------------------------------------------
+Box2i DSET::getUnionChildBox() const
+{
+  Box2i res;
+  long maxX=1000;
+  for (size_t i=0; i<m_childs.size(); ++i) {
+    Child const &child=m_childs[i];
+    // highly spurious, better to ignore
+    if ((long) child.m_box[1][0]>3*maxX)
+      continue;
+    if ((long) child.m_box[1][0]>maxX)
+      maxX=(long) child.m_box[1][0];
+    res=child.m_box.getUnion(res);
+  }
+  return res;
+}
+
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
   switch (doc.m_type) {

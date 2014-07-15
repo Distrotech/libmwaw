@@ -230,12 +230,12 @@ void ClarisWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *doc
     return;
   }
 
+  m_document->m_graphParser->computePositions();
+
   // update the page
   m_state->m_actPage = 0;
   m_state->m_numPages=1;
 
-  // removeme: force updating the page's positions
-  m_document->m_graphParser->numPages();
   std::vector<MWAWPageSpan> pageList;
   m_document->updatePageSpanList(pageList);
   //

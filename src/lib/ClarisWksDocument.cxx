@@ -67,7 +67,7 @@ namespace ClarisWksDocumentInternal
 //! Internal: the state of a ClarisWksDocument
 struct State {
   //! constructor
-  State() : m_pageSpanSet(false), m_numPages(0), m_pages(0,0), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
+  State() : m_pageSpanSet(false), m_numPages(0), m_pages(0,0), m_pagesVerified(false), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
     m_zonesMap(), m_mainZonesList()
   {
@@ -80,6 +80,8 @@ struct State {
   int m_numPages;
   //! the number of pages find in the header ( if known )
   Vec2i m_pages;
+  //! true if the number pages of pages has been verified
+  bool m_pagesVerified;
   int m_headerId /** the header zone if known */,
       m_footerId /** the footer zone if known */;
   int m_headerHeight /** the header height if known */,
@@ -177,8 +179,28 @@ ClarisWksDocument::~ClarisWksDocument()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2i ClarisWksDocument::getDocumentHeaderPages() const
+Vec2i ClarisWksDocument::getDocumentPages()
 {
+  if (!m_state->m_pagesVerified && m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW) {
+    int numHPages=m_state->m_pages[0];
+    float textWidth=72.0f*(float)m_parser->getPageWidth();
+    std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
+    for (iter=m_state->m_zonesMap.begin() ; iter != m_state->m_zonesMap.end() ; ++iter) {
+      shared_ptr<ClarisWksStruct::DSET> group = iter->second;
+      if (!group || group->m_type != ClarisWksStruct::DSET::T_Main)
+        continue;
+      int maxX=group->getUnionChildBox()[1][0];
+      int page=int(maxX/textWidth-0.2)+1;
+      if (page > numHPages && page < numHPages+10) {
+        MWAW_DEBUG_MSG(("ClarisWksGraph::computePositions: increase num page accross to %d\n", page));
+        numHPages = page;
+      }
+    }
+    m_state->m_pages[0]=numHPages;
+  }
+  else if (m_state->m_pages[0]<=0)
+    m_state->m_pages[0]=1;
+  m_state->m_pagesVerified=true;
   return m_state->m_pages;
 }
 

@@ -71,6 +71,8 @@ struct DSET {
   {
     return m_validedChildList.find(zoneId) != m_validedChildList.end();
   }
+  //! returns the child box (ie. the union of the childs box)
+  Box2i getUnionChildBox() const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, DSET const &doc);

@@ -89,7 +89,7 @@ public:
   //! returns the document number of page
   int numPages() const;
   //! returns the number of expected pages ( accross pages x down page)
-  Vec2i getDocumentHeaderPages() const;
+  Vec2i getDocumentPages();
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
   //! returns the page left top point ( in inches)

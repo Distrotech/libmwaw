@@ -556,7 +556,24 @@ struct Group : public ClarisWksStruct::DSET {
     o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
-
+  /** returns the maximum page */
+  int getMaximumPage() const
+  {
+    if (m_type==ClarisWksStruct::DSET::T_Slide)
+      return m_page;
+    if (m_type!=ClarisWksStruct::DSET::T_Main)
+      return 0;
+    int nPages=0;
+    size_t numBlock = m_blockToSendList.size();
+    for (size_t b=0; b < numBlock; b++) {
+      size_t bId=m_blockToSendList[b];
+      ClarisWksGraphInternal::Zone const *child = m_zones[bId].get();
+      if (!child) continue;
+      if (child->m_page > nPages)
+        nPages = child->m_page;
+    }
+    return nPages;
+  }
   /** check if we need to send the frame is linked to another frmae */
   bool isLinked(int id) const
   {
@@ -626,16 +643,18 @@ struct Group : public ClarisWksStruct::DSET {
 //! Internal: the state of a ClarisWksGraph
 struct State {
   //! constructor
-  State() : m_numAccrossPages(-1), m_groupMap(), m_bitmapMap(), m_frameId(0) { }
+  State() : m_numPages(0), m_groupMap(), m_bitmapMap(), m_frameId(0), m_positionsComputed(false) { }
 
-  //! the number of accross pages ( draw document)
-  int m_numAccrossPages;
+  //! the number of pages
+  int m_numPages;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_groupMap;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Bitmap> > m_bitmapMap;
   //! a int used to defined linked frame
   int m_frameId;
+  //! true if the ClarisWksGraph::computePositions was called
+  bool m_positionsComputed;
 };
 
 ////////////////////////////////////////
@@ -711,46 +730,32 @@ int ClarisWksGraph::version() const
   return m_parserState->m_version;
 }
 
+void ClarisWksGraph::computePositions() const
+{
+  if (m_state->m_positionsComputed) return;
+  m_state->m_positionsComputed=true;
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
+  for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
+    shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
+    if (!group || group->m_type == ClarisWksStruct::DSET::T_Slide) continue;
+    updateGroup(*group);
+  }
+}
+
 int ClarisWksGraph::numPages() const
 {
+  if (m_state->m_numPages>0) return m_state->m_numPages;
+  computePositions();
+
   int nPages = 1;
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
-
-  if (m_state->m_numAccrossPages<=0) {
-    m_state->m_numAccrossPages=1;
-    if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW) {
-      m_state->m_numAccrossPages=m_document.getDocumentHeaderPages()[0];
-      if (m_state->m_numAccrossPages<=1) {
-        // info not always fill so we must check it
-        for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
-          shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
-          if (!group || group->m_type != ClarisWksStruct::DSET::T_Main)
-            continue;
-          checkNumberAccrossPages(*group);
-        }
-      }
-    }
-  }
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
     if (!group) continue;
-    if (group->m_type == ClarisWksStruct::DSET::T_Slide) {
-      if (group->m_page > nPages)
-        nPages = group->m_page;
-      continue;
-    }
-    if (group->m_type != ClarisWksStruct::DSET::T_Main)
-      continue;
-    updateInformation(*group);
-    size_t numBlock = group->m_blockToSendList.size();
-    for (size_t b=0; b < numBlock; b++) {
-      size_t bId=group->m_blockToSendList[b];
-      ClarisWksGraphInternal::Zone *child = group->m_zones[bId].get();
-      if (!child) continue;
-      if (child->m_page > nPages)
-        nPages = child->m_page;
-    }
+    int lastPage=group->getMaximumPage();
+    if (lastPage>nPages) nPages=lastPage;
   }
+  m_state->m_numPages=nPages;
   return nPages;
 }
 
@@ -2320,24 +2325,7 @@ bool ClarisWksGraph::readBitmapData(ClarisWksGraphInternal::Bitmap &zone)
 ////////////////////////////////////////////////////////////
 // update the group information
 ////////////////////////////////////////////////////////////
-void ClarisWksGraph::checkNumberAccrossPages(ClarisWksGraphInternal::Group &group) const
-{
-  m_state->m_numAccrossPages=1;
-  float textWidth=72.0f*(float)m_mainParser->getPageWidth();
-  for (size_t b=0; b < group.m_zones.size(); b++) {
-    ClarisWksGraphInternal::Zone *child = group.m_zones[b].get();
-    if (!child) continue;
-    if (child->m_box[1].y() >= 2000) // a little to suspicious
-      continue;
-    int page=int(child->m_box[1].x()/textWidth-0.2)+1;
-    if (page > m_state->m_numAccrossPages && page < 100) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::checkNumberAccrossPages: increase num page accross to %d\n", page));
-      m_state->m_numAccrossPages = page;
-    }
-  }
-}
-
-void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) const
+void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
 {
   if (!group.m_blockToSendList.empty() || !group.m_idLinkedZonesMap.empty())
     return;
@@ -2379,7 +2367,7 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
        (zId,ClarisWksGraphInternal::Group::LinkedZones(m_state->m_frameId++)));
     ClarisWksGraphInternal::Group::LinkedZones &lZone = group.m_idLinkedZonesMap.find(zId)->second;
     if (lZone.m_mapIdChild.find(childZone.m_subId) != lZone.m_mapIdChild.end()) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: zone %d already find with subId %d\n",
+      MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: zone %d already find with subId %d\n",
                       zId, childZone.m_subId));
       continue;
     }
@@ -2387,10 +2375,10 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
   }
 
   // try to fix the page position corresponding to the main zone
-  int numPagesAccross=m_state->m_numAccrossPages;
-  if (numPagesAccross <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: the number of accross pages is not set\n"));
-    numPagesAccross=1;
+  int numHorizontalPages=m_document.getDocumentPages()[0];
+  if (numHorizontalPages <= 0) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: the number of accross pages is not set\n"));
+    numHorizontalPages=1;
   }
   float textWidth=72.0f*(float)m_mainParser->getPageWidth();
   float textHeight = 0.0;
@@ -2400,7 +2388,7 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
   else
     textHeight=72.0f*(float)m_document.getTextHeight();
   if (textHeight <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not retrieve the form length\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not retrieve the form length\n"));
     return;
   }
   size_t numBlock = group.m_blockToSendList.size();
@@ -2427,14 +2415,14 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
           pageY--;
         }
         else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not find the page\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the page\n"));
           continue;
         }
       }
       child->m_box = Box2f(orig, orig+sz);
     }
     int pageX=1;
-    if (numPagesAccross>1) {
+    if (numHorizontalPages>1) {
       pageX=int(float(child->m_box[1].x())/textWidth);
       Vec2f orig = child->m_box[0];
       Vec2f sz = child->m_box.size();
@@ -2448,14 +2436,14 @@ void ClarisWksGraph::updateInformation(ClarisWksGraphInternal::Group &group) con
           pageX--;
         }
         else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateInformation: can not find the horizontal page\n"));
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the horizontal page\n"));
           continue;
         }
       }
       child->m_box = Box2f(orig, orig+sz);
       pageX++;
     }
-    int page=pageX+(pageY-1)*numPagesAccross;
+    int page=pageX+(pageY-1)*numHorizontalPages;
     if (!firstGroupFound) {
       groupPage=page;
       groupBox=child->getBdBox();
@@ -2507,7 +2495,7 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
 
 bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
-  updateInformation(group);
+  updateGroup(group);
   if ((group.m_type != ClarisWksStruct::DSET::T_Frame && group.m_type != ClarisWksStruct::DSET::T_Unknown)
       || group.m_page <= 0)
     return false;
@@ -2583,7 +2571,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));
     return false;
   }
-  updateInformation(group);
+  updateGroup(group);
   bool mainGroup = group.m_type == ClarisWksStruct::DSET::T_Main;
   bool isSlide = group.m_type == ClarisWksStruct::DSET::T_Slide;
   Vec2f leftTop(0,0);

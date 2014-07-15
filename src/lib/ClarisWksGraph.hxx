@@ -92,6 +92,9 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  //! compute the pages position
+  void computePositions() const;
+
   //! reads the zone Group DSET
   shared_ptr<ClarisWksStruct::DSET> readGroupZone
   (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
@@ -126,10 +129,8 @@ protected:
   // Intermediate level
   //
 
-  //! check the number of accross page ( for draw document )
-  void checkNumberAccrossPages(ClarisWksGraphInternal::Group &group) const;
   //! update the group information to choose how to send the group data
-  void updateInformation(ClarisWksGraphInternal::Group &group) const;
+  void updateGroup(ClarisWksGraphInternal::Group &group) const;
   //! check if we can send a group as graphic
   bool canSendAsGraphic(ClarisWksGraphInternal::Group &group) const;
   //! send a group
