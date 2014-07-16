@@ -56,7 +56,8 @@ struct DSET {
 
   //! constructor
   DSET() : m_size(0), m_numData(0), m_dataSz(-1), m_headerSz(-1),
-    m_type(T_Unknown), m_fileType(-1), m_id(0), m_fathersList(), m_validedChildList(),
+    m_type(T_Unknown), m_fileType(-1),
+    m_page(-1), m_box(), m_id(0), m_fathersList(), m_validedChildList(),
     m_beginSelection(0), m_endSelection(-1), m_textType(0),
     m_childs(), m_otherChilds(), m_parsed(false), m_internal(0)
   {
@@ -71,6 +72,22 @@ struct DSET {
   {
     return m_validedChildList.find(zoneId) != m_validedChildList.end();
   }
+
+  //! return the zone bdbox
+  Box2f getBdBox() const
+  {
+    Vec2f minPt(m_box[0][0], m_box[0][1]);
+    Vec2f maxPt(m_box[1][0], m_box[1][1]);
+    for (int c=0; c<2; ++c) {
+      if (m_box.size()[c]>=0) continue;
+      minPt[c]=m_box[1][c];
+      maxPt[c]=m_box[0][c];
+    }
+    return Box2f(minPt,maxPt);
+  }
+
+  //! try to update the child page and bounding box
+  void updateChildPositions(Vec2f const &pageDim, int numHorizontalPages=1);
   //! returns the child box (ie. the union of the childs box)
   Box2i getUnionChildBox() const;
 
@@ -79,34 +96,32 @@ struct DSET {
 
   //! the size of the DSET header
   long m_size;
-
   //! the number of header
   long m_numData;
-
   //! the data size
   long m_dataSz;
-
   //! the header size
   long m_headerSz;
 
-  //! the document type
+  //! the zone type
   Type m_type;
-
   //! the type ( 0: text, -1: graphic, ...)
   int m_fileType;
 
-  //! the identificator
-  int m_id;
+  //! the page (if known)
+  int m_page;
+  //! the bounding box (if known)
+  Box2f m_box;
 
+  //! the zone identificator
+  int m_id;
   //! the list of fathers
   std::set<int> m_fathersList;
-
   //! the list of verified child
   std::set<int> m_validedChildList;
 
   //! the begin of selection ( at least in text header)
   int m_beginSelection;
-
   //! the end of selection ( at least in text header)
   int m_endSelection;
 
@@ -118,13 +133,11 @@ struct DSET {
 
   //! the list of child zone
   std::vector<Child> m_childs;
-
   //! the list of other child
   std::vector<int> m_otherChilds;
 
   //! a flag to know if the entry is sent or not to the listener
   mutable bool m_parsed;
-
   //! an internal variable used to do some computation
   mutable int m_internal;
 
@@ -134,8 +147,20 @@ struct DSET {
     enum Type { ZONE, TEXT, GRAPHIC, TABLE, UNKNOWN };
 
     //! constructor
-    Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_box()
+    Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_page(-1), m_box()
     {
+    }
+    //! return the zone bdbox
+    Box2f getBdBox() const
+    {
+      Vec2f minPt(m_box[0][0], m_box[0][1]);
+      Vec2f maxPt(m_box[1][0], m_box[1][1]);
+      for (int c=0; c<2; ++c) {
+        if (m_box.size()[c]>=0) continue;
+        minPt[c]=m_box[1][c];
+        maxPt[c]=m_box[0][c];
+      }
+      return Box2f(minPt,maxPt);
     }
 
     //! operator<<
@@ -161,6 +186,7 @@ struct DSET {
       }
       if (ch.m_id != -1) o << "id=" << ch.m_id << ",";
       if (ch.m_posC != -1) o << "posC=" << ch.m_posC << ",";
+      if (ch.m_page>=0) o << "pg=" << ch.m_page << ",";
       if (ch.m_box.size().x() > 0 || ch.m_box.size().y() > 0)
         o << "box=" << ch.m_box << ",";
       return o;
@@ -172,8 +198,10 @@ struct DSET {
     int m_id;
     //! a position (used in text zone to store the character )
     long m_posC;
+    //! the page if known
+    int m_page;
     //! the bdbox
-    Box2i m_box;
+    Box2f m_box;
   };
 };
 }

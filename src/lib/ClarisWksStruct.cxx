@@ -63,6 +63,86 @@ Box2i DSET::getUnionChildBox() const
   return res;
 }
 
+void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
+{
+  float const &textWidth=pageDim[0];
+  float const &textHeight=pageDim[1];
+  if (textHeight<=0) {
+    MWAW_DEBUG_MSG(("DSET::updateChildPositions: the height can not be null\n"));
+    return;
+  }
+  if (numHorizontalPages>1 && textWidth<=0) {
+    MWAW_DEBUG_MSG(("DSET::updateChildPositions: the width can not be null\n"));
+    numHorizontalPages=1;
+  }
+  Box2f groupBox;
+  int groupPage=-1;
+  bool firstGroupFound=false;
+  for (size_t i=0; i < m_childs.size(); i++) {
+    Child &child=m_childs[i];
+    Box2f childBdBox=child.getBdBox();
+    int pageY=int(float(childBdBox[1].y())/textHeight);
+    if (pageY < 0)
+      continue;
+    if (++pageY > 1) {
+      Vec2f orig = child.m_box[0];
+      Vec2f sz = child.m_box.size();
+      orig[1]-=float(pageY-1)*textHeight;
+      if (orig[1] < 0) {
+        if (orig[1]>=-textHeight*0.1f)
+          orig[1]=0;
+        else if (orig[1]>-1.1*textHeight) {
+          orig[1]+=textHeight;
+          if (orig[1]<0) orig[1]=0;
+          pageY--;
+        }
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the page\n"));
+          continue;
+        }
+      }
+      child.m_box = Box2f(orig, orig+sz);
+    }
+    int pageX=1;
+    if (numHorizontalPages>1) {
+      pageX=int(float(childBdBox[1].x())/textWidth);
+      Vec2f orig = child.m_box[0];
+      Vec2f sz = child.m_box.size();
+      orig[0]-=float(pageX)*textWidth;
+      if (orig[0] < 0) {
+        if (orig[0]>=-textWidth*0.1f)
+          orig[0]=0;
+        else if (orig[0]>-1.1*textWidth) {
+          orig[0]+=textWidth;
+          if (orig[0]<0) orig[0]=0;
+          pageX--;
+        }
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the horizontal page\n"));
+          continue;
+        }
+      }
+      child.m_box = Box2f(orig, orig+sz);
+      pageX++;
+    }
+    int page=pageX+(pageY-1)*numHorizontalPages;
+    if (!firstGroupFound) {
+      groupPage=page;
+      groupBox=child.getBdBox();
+      firstGroupFound=true;
+    }
+    else if (groupPage==page)
+      groupBox=groupBox.getUnion(child.getBdBox());
+    else
+      groupPage=-1;
+    child.m_page = page;
+  }
+  if (groupPage>=0) {
+    m_page=groupPage;
+    m_box=groupBox;
+  }
+}
+
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
   switch (doc.m_type) {
@@ -125,6 +205,9 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     o << "#type=" << doc.m_fileType << ",";
     break;
   }
+  if (doc.m_page>= 0) o << "pg=" << doc.m_page << ",";
+  if (doc.m_box.size()[0]>0||doc.m_box.size()[1]>0)
+    o << "box=" << doc.m_box << ",";
   o << "id=" << doc.m_id << ",";
   if (!doc.m_fathersList.empty()) {
     o << "fathers=[";

@@ -366,6 +366,28 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDocument::getZone(int zId) const
   return shared_ptr<ClarisWksStruct::DSET>();
 }
 
+void ClarisWksDocument::updateChildPositions(ClarisWksStruct::DSET &zone, Vec2f const &pageDim)
+{
+  // try to fix the page position corresponding to the main zone
+  int numHorizontalPages=getDocumentPages()[0];
+  if (numHorizontalPages <= 0) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
+    numHorizontalPages=1;
+  }
+  float textWidth=72.0f*(float)m_parser->getPageWidth();
+  float textHeight = 0.0;
+  if (double(pageDim[1])>36.0*m_parser->getFormLength() &&
+      double(pageDim[1])<72.0*m_parser->getFormLength())
+    textHeight=float(pageDim[1]);
+  else
+    textHeight=72.0f*(float)getTextHeight();
+  if (textHeight <= 0) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::updateGroup: can not retrieve the form length\n"));
+    return;
+  }
+  zone.updateChildPositions(Vec2f(textWidth, textHeight), numHorizontalPages);
+}
+
 void ClarisWksDocument::forceParsed(int zoneId)
 {
   shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);

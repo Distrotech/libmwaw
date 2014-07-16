@@ -545,9 +545,10 @@ struct Group : public ClarisWksStruct::DSET {
   struct LinkedZones;
   //! constructor
   Group(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_box(), m_page(0), m_totalNumber(0),
+    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_totalNumber(0),
     m_blockToSendList(), m_idLinkedZonesMap()
   {
+    m_page=0;
   }
 
   //! operator<<
@@ -610,10 +611,6 @@ struct Group : public ClarisWksStruct::DSET {
   Vec2i m_headerDim;
   //! a flag to know if this zone contains or no the call to zone 1
   bool m_hasMainZone;
-  //! the group bdbox ( if known )
-  Box2f m_box;
-  //! the group page ( if known )
-  int m_page;
   //! the number of zone to send
   int m_totalNumber;
   //! the list of block to send
@@ -2374,90 +2371,18 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
     lZone.m_mapIdChild[childZone.m_subId] = g;
   }
 
-  // try to fix the page position corresponding to the main zone
-  int numHorizontalPages=m_document.getDocumentPages()[0];
-  if (numHorizontalPages <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: the number of accross pages is not set\n"));
-    numHorizontalPages=1;
-  }
-  float textWidth=72.0f*(float)m_mainParser->getPageWidth();
-  float textHeight = 0.0;
-  if (double(group.m_headerDim[1])>36.0*m_mainParser->getFormLength() &&
-      double(group.m_headerDim[1])<72.0*m_mainParser->getFormLength())
-    textHeight=float(group.m_headerDim[1]);
-  else
-    textHeight=72.0f*(float)m_document.getTextHeight();
-  if (textHeight <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not retrieve the form length\n"));
-    return;
-  }
+  m_document.updateChildPositions(group, group.m_headerDim);
   size_t numBlock = group.m_blockToSendList.size();
-  Box2f groupBox;
-  int groupPage=-1;
-  bool firstGroupFound=false;
   for (size_t b=0; b < numBlock; b++) {
     size_t bId=group.m_blockToSendList[b];
+    if (bId>=group.m_childs.size()) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: the zones list is not in correspondance with the childs list\n"));
+      continue;
+    }
     ClarisWksGraphInternal::Zone *child = group.m_zones[bId].get();
     if (!child) continue;
-    int pageY=int(float(child->m_box[1].y())/textHeight);
-    if (pageY < 0)
-      continue;
-    if (++pageY > 1) {
-      Vec2f orig = child->m_box[0];
-      Vec2f sz = child->m_box.size();
-      orig[1]-=float(pageY-1)*textHeight;
-      if (orig[1] < 0) {
-        if (orig[1]>=-textHeight*0.1f)
-          orig[1]=0;
-        else if (orig[1]>-1.1*textHeight) {
-          orig[1]+=textHeight;
-          if (orig[1]<0) orig[1]=0;
-          pageY--;
-        }
-        else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the page\n"));
-          continue;
-        }
-      }
-      child->m_box = Box2f(orig, orig+sz);
-    }
-    int pageX=1;
-    if (numHorizontalPages>1) {
-      pageX=int(float(child->m_box[1].x())/textWidth);
-      Vec2f orig = child->m_box[0];
-      Vec2f sz = child->m_box.size();
-      orig[0]-=float(pageX)*textWidth;
-      if (orig[0] < 0) {
-        if (orig[0]>=-textWidth*0.1f)
-          orig[0]=0;
-        else if (orig[0]>-1.1*textWidth) {
-          orig[0]+=textWidth;
-          if (orig[0]<0) orig[0]=0;
-          pageX--;
-        }
-        else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the horizontal page\n"));
-          continue;
-        }
-      }
-      child->m_box = Box2f(orig, orig+sz);
-      pageX++;
-    }
-    int page=pageX+(pageY-1)*numHorizontalPages;
-    if (!firstGroupFound) {
-      groupPage=page;
-      groupBox=child->getBdBox();
-      firstGroupFound=true;
-    }
-    else if (groupPage==page)
-      groupBox=groupBox.getUnion(child->getBdBox());
-    else
-      groupPage=-1;
-    child->m_page = page;
-  }
-  if (groupPage>=0) {
-    group.m_page=groupPage;
-    group.m_box=groupBox;
+    child->m_box = group.m_childs[bId].m_box;
+    child->m_page = group.m_childs[bId].m_page;
   }
 }
 
