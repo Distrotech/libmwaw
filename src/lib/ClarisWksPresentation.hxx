@@ -85,8 +85,8 @@ public:
   shared_ptr<ClarisWksStruct::DSET> readPresentationZone
   (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
 
-  //! returns the list of slide id
-  std::vector<int> getSlidesList() const;
+  //! update the slide zone types
+  void updateSlideTypes() const;
 
 protected:
   //! sends the zone data to the listener (if it exists )

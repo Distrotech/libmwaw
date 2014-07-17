@@ -94,8 +94,6 @@ public:
   double getTextHeight() const;
   //! returns the page left top point ( in inches)
   Vec2f getPageLeftTop() const;
-  //! returns the header/footer id
-  void getHeaderFooterId(int &headerId, int &footerId) const;
   /** updates the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
 
@@ -205,7 +203,7 @@ public:
   /** try to type the main zones */
   void typeMainZones();
   /** try to type the main zones recursif, returns the father id*/
-  int typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight);
+  int typeMainZonesRec(int zId, ClarisWksStruct::DSET::Position type, int maxHeight);
   /** try to find the zone dags structure... */
   bool exploreZonesGraph();
   /** try to find the zone tree graph ( DSF) function*/

@@ -187,7 +187,7 @@ Vec2i ClarisWksDocument::getDocumentPages()
     std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
     for (iter=m_state->m_zonesMap.begin() ; iter != m_state->m_zonesMap.end() ; ++iter) {
       shared_ptr<ClarisWksStruct::DSET> group = iter->second;
-      if (!group || group->m_type != ClarisWksStruct::DSET::T_Main)
+      if (!group || group->m_position != ClarisWksStruct::DSET::P_Main)
         continue;
       int maxX=group->getUnionChildBox()[1][0];
       int page=int(maxX/textWidth-0.2)+1;
@@ -261,11 +261,6 @@ Vec2f ClarisWksDocument::getPageLeftTop() const
                float(m_parserState->m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
-void ClarisWksDocument::getHeaderFooterId(int &headerId, int &footerId) const
-{
-  headerId = m_state->m_headerId;
-  footerId = m_state->m_footerId;
-}
 ////////////////////////////////////////////////////////////
 // interface via callback
 ////////////////////////////////////////////////////////////
@@ -2629,55 +2624,49 @@ bool ClarisWksDocument::exploreZonesGraphRec(int zId, std::set<int> &notDoneList
 void ClarisWksDocument::typeMainZones()
 {
   // first type the main zone and its father
-  typeMainZonesRec(1, ClarisWksStruct::DSET::T_Main, 100);
+  typeMainZonesRec(1, ClarisWksStruct::DSET::P_Main, 100);
 
-  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   // then type the slides
-  std::vector<int> slidesList = getPresentationParser()->getSlidesList();
-  getGraphParser()->setSlideList(slidesList);
-  for (size_t slide = 0; slide < slidesList.size(); slide++) {
-    iter = m_state->m_zonesMap.find(slidesList[slide]);
-    if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = ClarisWksStruct::DSET::T_Slide;
-  }
+  getPresentationParser()->updateSlideTypes();
   // now check the header/footer
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   if (m_state->m_headerId) {
     iter = m_state->m_zonesMap.find(m_state->m_headerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = ClarisWksStruct::DSET::T_Header;
+      iter->second->m_position = ClarisWksStruct::DSET::P_Header;
   }
   if (m_state->m_footerId) {
     iter = m_state->m_zonesMap.find(m_state->m_footerId);
     if (iter != m_state->m_zonesMap.end() && iter->second)
-      iter->second->m_type = ClarisWksStruct::DSET::T_Footer;
+      iter->second->m_position = ClarisWksStruct::DSET::P_Footer;
   }
   iter = m_state->m_zonesMap.begin();
-  std::vector<int> listZonesId[ClarisWksStruct::DSET::T_Unknown];
+  std::vector<int> listZonesId[ClarisWksStruct::DSET::P_Unknown];
   while (iter != m_state->m_zonesMap.end()) {
     int id = iter->first;
     shared_ptr<ClarisWksStruct::DSET> node = iter++->second;
-    ClarisWksStruct::DSET::Type type = node ? node->m_type : ClarisWksStruct::DSET::T_Unknown;
-    if (type == ClarisWksStruct::DSET::T_Unknown || type == ClarisWksStruct::DSET::T_Main)
+    ClarisWksStruct::DSET::Position pos = node ? node->m_position : ClarisWksStruct::DSET::P_Unknown;
+    if (pos == ClarisWksStruct::DSET::P_Unknown || pos == ClarisWksStruct::DSET::P_Main)
       continue;
     if (node->m_fileType != 1) // only propage data from a text node
       continue;
-    if (type > ClarisWksStruct::DSET::T_Unknown || type < 0) {
+    if (pos > ClarisWksStruct::DSET::P_Unknown || pos < 0) {
       MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: OOPS, internal problem with type\n"));
       continue;
     }
-    listZonesId[type].push_back(id);
+    listZonesId[pos].push_back(id);
   }
   bool isPres = m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION;
-  for (int type=ClarisWksStruct::DSET::T_Header; type < ClarisWksStruct::DSET::T_Slide;  type++) {
-    for (size_t z = 0; z < listZonesId[type].size(); z++) {
-      int fId = typeMainZonesRec(listZonesId[type][z], ClarisWksStruct::DSET::Type(type), 1);
+  for (int pos=ClarisWksStruct::DSET::P_Header; pos < ClarisWksStruct::DSET::P_Slide;  pos++) {
+    for (size_t z = 0; z < listZonesId[pos].size(); z++) {
+      int fId = typeMainZonesRec(listZonesId[pos][z], ClarisWksStruct::DSET::Position(pos), 1);
       if (!fId)
         continue;
       if (isPres) // fixme: actually as the main type is not good too dangerous
-        fId=listZonesId[type][z];
-      if (type==ClarisWksStruct::DSET::T_Header && !m_state->m_headerId)
+        fId=listZonesId[pos][z];
+      if (pos==ClarisWksStruct::DSET::P_Header && !m_state->m_headerId)
         m_state->m_headerId=fId;
-      else if (type==ClarisWksStruct::DSET::T_Footer && !m_state->m_footerId)
+      else if (pos==ClarisWksStruct::DSET::P_Footer && !m_state->m_footerId)
         m_state->m_footerId=fId;
     }
   }
@@ -2687,7 +2676,7 @@ void ClarisWksDocument::typeMainZones()
   m_state->m_mainZonesList.resize(0);
   for (size_t i=0; i<rootList.size(); ++i) {
     shared_ptr<ClarisWksStruct::DSET> zone=getZone(rootList[i]);
-    if (zone && (zone->m_type==ClarisWksStruct::DSET::T_Footer || zone->m_type==ClarisWksStruct::DSET::T_Header))
+    if (zone && (zone->m_position==ClarisWksStruct::DSET::P_Footer || zone->m_position==ClarisWksStruct::DSET::P_Header))
       continue;
     m_state->m_mainZonesList.push_back(rootList[i]);
   }
@@ -2713,15 +2702,15 @@ void ClarisWksDocument::typeMainZones()
 #endif
 }
 
-int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type type, int maxHeight)
+int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Position pos, int maxHeight)
 {
   if (maxHeight < 0) return 0;
 
   shared_ptr<ClarisWksStruct::DSET> node = getZone(zId);
   if (!node) return 0;
-  if (node->m_type == ClarisWksStruct::DSET::T_Unknown)
-    node->m_type = type;
-  else if (node->m_type != type)
+  if (node->m_position == ClarisWksStruct::DSET::P_Unknown)
+    node->m_position = pos;
+  else if (node->m_position != pos)
     return 0;
   if (maxHeight==0)
     return zId;
@@ -2729,7 +2718,7 @@ int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Type typ
   int res = zId;
   for (std::set<int>::iterator it = node->m_fathersList.begin();
        it != node->m_fathersList.end(); ++it) {
-    int fId = typeMainZonesRec(*it, type, maxHeight-1);
+    int fId = typeMainZonesRec(*it, pos, maxHeight-1);
     if (fId) res = fId;
   }
   return res;

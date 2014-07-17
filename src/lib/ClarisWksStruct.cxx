@@ -68,11 +68,11 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
   float const &textWidth=pageDim[0];
   float const &textHeight=pageDim[1];
   if (textHeight<=0) {
-    MWAW_DEBUG_MSG(("DSET::updateChildPositions: the height can not be null\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: the height can not be null\n"));
     return;
   }
   if (numHorizontalPages>1 && textWidth<=0) {
-    MWAW_DEBUG_MSG(("DSET::updateChildPositions: the width can not be null\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: the width can not be null\n"));
     numHorizontalPages=1;
   }
   Box2f groupBox;
@@ -97,7 +97,9 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
           pageY--;
         }
         else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the page\n"));
+          if (m_position!=P_Main) { // can be normal, if this corresponds to the mainZone
+            MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: can not find the page\n"));
+          }
           continue;
         }
       }
@@ -118,7 +120,7 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
           pageX--;
         }
         else {
-          MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: can not find the horizontal page\n"));
+          MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: can not find the horizontal page\n"));
           continue;
         }
       }
@@ -145,32 +147,32 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
 
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
-  switch (doc.m_type) {
-  case DSET::T_Unknown:
+  switch (doc.m_position) {
+  case DSET::P_Unknown:
     break;
-  case DSET::T_Frame:
+  case DSET::P_Frame:
     o << "frame,";
     break;
-  case DSET::T_Header:
+  case DSET::P_Header:
     o << "header,";
     break;
-  case DSET::T_Footer:
+  case DSET::P_Footer:
     o << "footer,";
     break;
-  case DSET::T_Footnote:
+  case DSET::P_Footnote:
     o << "footnote,";
     break;
-  case DSET::T_Main:
+  case DSET::P_Main:
     o << "main,";
     break;
-  case DSET::T_Slide:
+  case DSET::P_Slide:
     o << "slide,";
     break;
-  case DSET::T_Table:
+  case DSET::P_Table:
     o << "table,";
     break;
   default:
-    o << "#type=" << doc.m_type << ",";
+    o << "#position=" << doc.m_position << ",";
     break;
   }
   switch (doc.m_fileType) {

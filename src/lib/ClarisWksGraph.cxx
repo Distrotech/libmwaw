@@ -269,7 +269,7 @@ struct ZoneShape : public Zone {
   {
     ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::C_Graphic;
     return child;
   }
 
@@ -338,7 +338,7 @@ struct ZonePict : public Zone {
   {
     ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::C_Graphic;
     return child;
   }
 
@@ -380,7 +380,7 @@ struct Bitmap : public ClarisWksStruct::DSET {
 //! Internal: structure to store a link to a zone of a ClarisWksGraph
 struct ZoneZone : public Zone {
   //! constructor
-  ZoneZone(Zone const &z, Type fileType) : Zone(z), m_subType(fileType), m_id(-1), m_subId(-1), m_styleId(-1), m_wrappingSep(5)
+  ZoneZone(Zone const &z, Type fileType) : Zone(z), m_subType(fileType), m_id(-1), m_subId(-1), m_frameId(-1), m_frameSubId(-1), m_frameLast(true), m_styleId(-1), m_wrappingSep(5)
   {
     for (int i = 0; i < 9; i++)
       m_flags[i] = 0;
@@ -415,6 +415,27 @@ struct ZoneZone : public Zone {
   {
     return m_subType==T_Zone ? 0 : 1;
   }
+  /** check if we need to send the frame is linked to another frmae */
+  bool isLinked() const
+  {
+    return m_frameId>=0 && m_frameSubId>=0;
+  }
+  /** add the frame name if needed */
+  bool addFrameName(MWAWGraphicStyle &style) const
+  {
+    if (!isLinked()) return false;
+    if (m_frameSubId>0) {
+      librevenge::RVNGString fName;
+      fName.sprintf("Frame%d-%d", m_frameId, m_frameSubId);
+      style.m_frameName=fName.cstr();
+    }
+    if (!m_frameLast) {
+      librevenge::RVNGString fName;
+      fName.sprintf("Frame%d-%d", m_frameId, m_frameSubId+1);
+      style.m_frameNextName=fName.cstr();
+    }
+    return true;
+  }
 
   //! return a child corresponding to this zone
   virtual ClarisWksStruct::DSET::Child getChild() const
@@ -422,7 +443,7 @@ struct ZoneZone : public Zone {
     ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
     child.m_id = m_id;
-    child.m_type = ClarisWksStruct::DSET::Child::ZONE;
+    child.m_type = ClarisWksStruct::DSET::C_Zone;
     return child;
   }
 
@@ -432,6 +453,12 @@ struct ZoneZone : public Zone {
   int m_id;
   //! the zoneSubId: can be page/column/frame linked number
   int m_subId;
+  //! the frame id (for a linked frame)
+  int m_frameId;
+  //! the frame sub id (for a linked frame)
+  int m_frameSubId;
+  //! true if this is the last frame of a frame zone
+  bool m_frameLast;
   //! the style id
   int m_styleId;
   //! the wrapping separator
@@ -471,7 +498,7 @@ struct Chart : public Zone {
   {
     ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::C_Graphic;
     return child;
   }
 };
@@ -529,7 +556,7 @@ struct ZoneUnknown : public Zone {
   {
     ClarisWksStruct::DSET::Child child;
     child.m_box = m_box;
-    child.m_type = ClarisWksStruct::DSET::Child::GRAPHIC;
+    child.m_type = ClarisWksStruct::DSET::C_Graphic;
     return child;
   }
 
@@ -542,11 +569,10 @@ struct ZoneUnknown : public Zone {
 ////////////////////////////////////////
 //! Internal: class which stores a group of graphics, ...
 struct Group : public ClarisWksStruct::DSET {
-  struct LinkedZones;
   //! constructor
   Group(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false), m_totalNumber(0),
-    m_blockToSendList(), m_idLinkedZonesMap()
+    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false),
+    m_blockToSendList()
   {
     m_page=0;
   }
@@ -557,53 +583,6 @@ struct Group : public ClarisWksStruct::DSET {
     o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
-  /** returns the maximum page */
-  int getMaximumPage() const
-  {
-    if (m_type==ClarisWksStruct::DSET::T_Slide)
-      return m_page;
-    if (m_type!=ClarisWksStruct::DSET::T_Main)
-      return 0;
-    int nPages=0;
-    size_t numBlock = m_blockToSendList.size();
-    for (size_t b=0; b < numBlock; b++) {
-      size_t bId=m_blockToSendList[b];
-      ClarisWksGraphInternal::Zone const *child = m_zones[bId].get();
-      if (!child) continue;
-      if (child->m_page > nPages)
-        nPages = child->m_page;
-    }
-    return nPages;
-  }
-  /** check if we need to send the frame is linked to another frmae */
-  bool isLinked(int id) const
-  {
-    return m_idLinkedZonesMap.find(id) != m_idLinkedZonesMap.end() &&
-           m_idLinkedZonesMap.find(id)->second.isLinked();
-  }
-  /** add the frame name if needed */
-  bool addFrameName(int id, int subId, MWAWGraphicStyle &style) const
-  {
-    if (!isLinked(id)) return false;
-    LinkedZones const &lZones = m_idLinkedZonesMap.find(id)->second;
-    std::map<int, size_t>::const_iterator it = lZones.m_mapIdChild.find(subId);
-    if (it == lZones.m_mapIdChild.end()) {
-      MWAW_DEBUG_MSG(("ClarisWksGraphInternal::Group::addFrameName: can not find frame %d[%d]\n", id, subId));
-      return false;
-    }
-    if (it != lZones.m_mapIdChild.begin()) {
-      librevenge::RVNGString fName;
-      fName.sprintf("Frame%d-%d", id, subId);
-      style.m_frameName=fName.cstr();
-    }
-    ++it;
-    if (it != lZones.m_mapIdChild.end()) {
-      librevenge::RVNGString fName;
-      fName.sprintf("Frame%d-%d", id, it->first);
-      style.m_frameNextName=fName.cstr();
-    }
-    return true;
-  }
   /** the list of child zones */
   std::vector<shared_ptr<Zone> > m_zones;
 
@@ -611,29 +590,8 @@ struct Group : public ClarisWksStruct::DSET {
   Vec2i m_headerDim;
   //! a flag to know if this zone contains or no the call to zone 1
   bool m_hasMainZone;
-  //! the number of zone to send
-  int m_totalNumber;
   //! the list of block to send
   std::vector<size_t> m_blockToSendList;
-  //! a map zone id to the list of zones
-  std::map<int, LinkedZones> m_idLinkedZonesMap;
-
-  //! a small class of Group used to store a list a set of text zone
-  struct LinkedZones {
-    //! constructor
-    LinkedZones(int frameId) :  m_frameId(frameId), m_mapIdChild()
-    {
-    }
-    //! returns true if we have many linked
-    bool isLinked() const
-    {
-      return  m_mapIdChild.size() > 1;
-    }
-    //! the frame basic id
-    int m_frameId;
-    //! map zoneId -> group child
-    std::map<int, size_t> m_mapIdChild;
-  };
 };
 
 ////////////////////////////////////////
@@ -734,7 +692,7 @@ void ClarisWksGraph::computePositions() const
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
-    if (!group || group->m_type == ClarisWksStruct::DSET::T_Slide) continue;
+    if (!group || group->m_position == ClarisWksStruct::DSET::P_Slide) continue;
     updateGroup(*group);
   }
 }
@@ -2324,53 +2282,57 @@ bool ClarisWksGraph::readBitmapData(ClarisWksGraphInternal::Bitmap &zone)
 ////////////////////////////////////////////////////////////
 void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
 {
-  if (!group.m_blockToSendList.empty() || !group.m_idLinkedZonesMap.empty())
+  if (!group.m_blockToSendList.empty())
     return;
-  std::set<int> forbiddenZone;
 
-  if (group.m_type == ClarisWksStruct::DSET::T_Main || group.m_type == ClarisWksStruct::DSET::T_Slide) {
-    int headerId=0, footerId=0;
-    m_document.getHeaderFooterId(headerId, footerId);
-    if (headerId) forbiddenZone.insert(headerId);
-    if (footerId) forbiddenZone.insert(footerId);
-  }
-
+  bool isHeaderFooterBlock=group.isHeaderFooter();
+  std::map<int, std::map<int, size_t> > idSIdCIdMap;
   for (size_t g = 0; g < group.m_zones.size(); g++) {
     ClarisWksGraphInternal::Zone *child = group.m_zones[g].get();
     if (!child) continue;
     if (child->getType() != ClarisWksGraphInternal::Zone::T_Zone) {
       group.m_blockToSendList.push_back(g);
-      group.m_totalNumber++;
       continue;
     }
 
     ClarisWksGraphInternal::ZoneZone const &childZone =
       static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
     int zId = childZone.m_id;
-    if (!group.okChildId(zId) || forbiddenZone.find(zId) != forbiddenZone.end())
+    shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(zId);
+    if (!group.okChildId(zId) || !zone)
       continue;
-
-    group.m_totalNumber++;
+    if (!isHeaderFooterBlock && zone->isHeaderFooter())
+      continue;
     if (zId==1) {
       group.m_hasMainZone = true;
       continue;
     }
-
     group.m_blockToSendList.push_back(g);
-
-    if (group.m_idLinkedZonesMap.find(zId) == group.m_idLinkedZonesMap.end())
-      group.m_idLinkedZonesMap.insert
-      (std::map<int,ClarisWksGraphInternal::Group::LinkedZones>::value_type
-       (zId,ClarisWksGraphInternal::Group::LinkedZones(m_state->m_frameId++)));
-    ClarisWksGraphInternal::Group::LinkedZones &lZone = group.m_idLinkedZonesMap.find(zId)->second;
-    if (lZone.m_mapIdChild.find(childZone.m_subId) != lZone.m_mapIdChild.end()) {
+    if (idSIdCIdMap.find(zId)==idSIdCIdMap.end())
+      idSIdCIdMap.insert(std::map<int, std::map<int, size_t> >::value_type(zId, std::map<int, size_t>()));
+    std::map<int, size_t> &sIdCIdMap=idSIdCIdMap.find(zId)->second;
+    if (sIdCIdMap.find(childZone.m_subId)!=sIdCIdMap.end()) {
       MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: zone %d already find with subId %d\n",
                       zId, childZone.m_subId));
       continue;
     }
-    lZone.m_mapIdChild[childZone.m_subId] = g;
+    sIdCIdMap[childZone.m_subId]=g;
   }
-
+  // first update the frame list
+  std::map<int, std::map<int, size_t> >::const_iterator it;
+  for (it=idSIdCIdMap.begin(); it!=idSIdCIdMap.end(); ++it) {
+    std::map<int, size_t> const &sIdCIdMap=it->second;
+    if (sIdCIdMap.size()<=1) continue;
+    int frameId=m_state->m_frameId++;
+    int frameSubId=0;
+    for (std::map<int, size_t>::const_iterator cIt=sIdCIdMap.begin(); cIt!=sIdCIdMap.end();) {
+      ClarisWksGraphInternal::ZoneZone *child =
+        static_cast<ClarisWksGraphInternal::ZoneZone *>(group.m_zones[cIt++->second].get());
+      child->m_frameId=frameId;
+      child->m_frameSubId=frameSubId++;
+      child->m_frameLast=cIt==sIdCIdMap.end();
+    }
+  }
   m_document.updateChildPositions(group, group.m_headerDim);
   size_t numBlock = group.m_blockToSendList.size();
   for (size_t b=0; b < numBlock; b++) {
@@ -2421,7 +2383,7 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
 bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
   updateGroup(group);
-  if ((group.m_type != ClarisWksStruct::DSET::T_Frame && group.m_type != ClarisWksStruct::DSET::T_Unknown)
+  if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
       || group.m_page <= 0)
     return false;
   size_t numZones = group.m_blockToSendList.size();
@@ -2432,7 +2394,7 @@ bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) cons
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
       ClarisWksGraphInternal::ZoneZone const &childZone =
         static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
-      if (group.isLinked(childZone.m_id) || !m_document.canSendZoneAsGraphic(childZone.m_id))
+      if (childZone.isLinked() || !m_document.canSendZoneAsGraphic(childZone.m_id))
         return false;
       continue;
     }
@@ -2497,8 +2459,8 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     return false;
   }
   updateGroup(group);
-  bool mainGroup = group.m_type == ClarisWksStruct::DSET::T_Main;
-  bool isSlide = group.m_type == ClarisWksStruct::DSET::T_Slide;
+  bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main;
+  bool isSlide = group.m_position == ClarisWksStruct::DSET::P_Slide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup)
@@ -2566,7 +2528,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     }
     return true;
   }
-  if (group.m_totalNumber > 1 &&
+  if (group.m_blockToSendList.size() > 1 &&
       (position.m_anchorTo==MWAWPosition::Char ||
        position.m_anchorTo==MWAWPosition::CharBaseLine)) {
     // we need to a frame, ...
@@ -2582,12 +2544,13 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   /* first sort the different zone: ie. we must first send the page block, then the main zone */
   std::vector<size_t> listJobs[2];
   for (size_t g = 0; g < group.m_blockToSendList.size(); g++) {
-    ClarisWksGraphInternal::Zone *child = group.m_zones[g].get();
+    size_t cPos=group.m_blockToSendList[g];
+    ClarisWksGraphInternal::Zone *child = group.m_zones[cPos].get();
     if (!child) continue;
     if (position.m_anchorTo==MWAWPosition::Unknown && suggestedAnchor == MWAWPosition::Page) {
       Vec2f RB = Vec2f(child->m_box[1])+leftTop;
       if (RB[1] >= textHeight || listener->isSectionOpened()) {
-        listJobs[1].push_back(g);
+        listJobs[1].push_back(cPos);
         continue;
       }
     }
@@ -2596,12 +2559,12 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
       int zId = childZone.m_id;
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
-      if (dset && dset->m_type==ClarisWksStruct::DSET::T_Main) {
-        listJobs[1].push_back(g);
+      if (dset && dset->m_position==ClarisWksStruct::DSET::P_Main) {
+        listJobs[1].push_back(cPos);
         continue;
       }
     }
-    listJobs[0].push_back(g);
+    listJobs[0].push_back(cPos);
   }
   for (int st = 0; st < 2; st++) {
     if (st == 1) {
@@ -2628,7 +2591,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
           if (type==ClarisWksGraphInternal::Zone::T_Zone) {
             ClarisWksGraphInternal::ZoneZone const &childZone =
               static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
-            if (group.isLinked(childZone.m_id) || !m_document.canSendZoneAsGraphic(childZone.m_id))
+            if (childZone.isLinked() || !m_document.canSendZoneAsGraphic(childZone.m_id))
               break;
           }
           else if (type==ClarisWksGraphInternal::Zone::T_DataBox ||
@@ -2720,7 +2683,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   ClarisWksGraphInternal::Style const cStyle = childZone.m_style;
   pos.m_wrapping=cStyle.getWrapping();
   // if this is a group, try to send it as a picture
-  bool isLinked=group.isLinked(zId);
+  bool isLinked=childZone.isLinked();
   bool isGroup = dset && dset->m_fileType==0;
   if (!isLinked && isGroup && canSendGroupAsGraphic(zId))
     return sendGroup(zId, MWAWListenerPtr(), pos);
@@ -2745,10 +2708,10 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
     return true;
   }
   // now check if we need to create a frame
-  ClarisWksStruct::DSET::Type cType=dset ? dset->m_type : ClarisWksStruct::DSET::T_Unknown;
+  ClarisWksStruct::DSET::Position cPos=dset ? dset->m_position : ClarisWksStruct::DSET::P_Unknown;
   bool createFrame=
-    cType == ClarisWksStruct::DSET::T_Frame || cType == ClarisWksStruct::DSET::T_Table ||
-    (cType == ClarisWksStruct::DSET::T_Unknown && pos.m_anchorTo == MWAWPosition::Page &&
+    cPos == ClarisWksStruct::DSET::P_Frame || cPos == ClarisWksStruct::DSET::P_Table ||
+    (cPos == ClarisWksStruct::DSET::P_Unknown && pos.m_anchorTo == MWAWPosition::Page &&
      (!dset || dset->m_fileType!=2));
   if (!isLinked && childZone.m_subId) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: find odd subs zone\n"));
@@ -2774,7 +2737,7 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   else
     style.m_backgroundOpacity=0;
   if (createFrame) {
-    group.addFrameName(zId, childZone.m_subId, style);
+    childZone.addFrameName(style);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0)
       doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
@@ -3035,16 +2998,4 @@ void ClarisWksGraph::flushExtra()
   }
 }
 
-void ClarisWksGraph::setSlideList(std::vector<int> const &slideList)
-{
-  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
-  for (size_t s=0; s < slideList.size(); s++) {
-    iter = m_state->m_groupMap.find(slideList[s]);
-    if (iter==m_state->m_groupMap.end() || !iter->second) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::setSlideList: can find group %d\n", slideList[s]));
-      continue;
-    }
-    iter->second->m_page=int(s+1);
-  }
-}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

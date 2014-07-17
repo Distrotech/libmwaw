@@ -685,8 +685,9 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
   input->seek(pos+8+16, librevenge::RVNG_SEEK_SET); // avoid header+8 generic number
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  shared_ptr<ClarisWksTextInternal::Zone> textZone(new ClarisWksTextInternal::Zone(zone));
+  f << "Entries(DSETT):";
 
+  shared_ptr<ClarisWksTextInternal::Zone> textZone(new ClarisWksTextInternal::Zone(zone));
   textZone->m_unknown = (int) input->readULong(2); // alway 0 ?
   textZone->m_fatherId = (int) input->readULong(2);
   textZone->m_numChar = (int) input->readULong(4);
@@ -695,27 +696,34 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
   textZone->m_numFont = (int) input->readULong(2);
   switch (textZone->m_textType >> 4) {
   case 2:
-    textZone->m_type = ClarisWksStruct::DSET::T_Header;
+    textZone->m_position = ClarisWksStruct::DSET::P_Header;
     break;
   case 4:
-    textZone->m_type = ClarisWksStruct::DSET::T_Footer;
+    textZone->m_position = ClarisWksStruct::DSET::P_Footer;
     break;
   case 6:
-    textZone->m_type = ClarisWksStruct::DSET::T_Footnote;
+    textZone->m_position = ClarisWksStruct::DSET::P_Footnote;
     break;
   case 8:
-    textZone->m_type = ClarisWksStruct::DSET::T_Frame;
+    textZone->m_position = ClarisWksStruct::DSET::P_Frame;
     break;
   case 0xe:
-    textZone->m_type = ClarisWksStruct::DSET::T_Table;
+    textZone->m_position = ClarisWksStruct::DSET::P_Table;
     break;
+  case 0:
+    if (zone.m_id==1) {
+      textZone->m_position = ClarisWksStruct::DSET::P_Main;
+      break;
+    }
+  // fail through intended
   default:
+    MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: find unknown position %d\n", (textZone->m_textType >> 4)));
+    f << "#position="<< (textZone->m_textType >> 4) << ",";
     break;
   }
-  if (textZone->m_textType != ClarisWksStruct::DSET::T_Unknown)
+  if (textZone->m_textType != ClarisWksStruct::DSET::P_Unknown)
     textZone->m_textType &= 0xF;
-
-  f << "Entries(DSETT):" << *textZone << ",";
+  f << *textZone << ",";
 
   if (long(input->tell())%2)
     input->seek(1, librevenge::RVNG_SEEK_CUR);
@@ -760,7 +768,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
       f << "DSETT-" << i << ":";
       ClarisWksStruct::DSET::Child child;
       child.m_posC = (long) input->readULong(4);
-      child.m_type = ClarisWksStruct::DSET::Child::TEXT;
+      child.m_type = ClarisWksStruct::DSET::C_SubText;
       int dim[2];
       for (int j = 0; j < 2; j++)
         dim[j] = (int) input->readLong(2);

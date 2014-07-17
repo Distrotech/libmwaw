@@ -114,18 +114,20 @@ int ClarisWksPresentation::numPages() const
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
-std::vector<int> ClarisWksPresentation::getSlidesList() const
+void ClarisWksPresentation::updateSlideTypes() const
 {
-  std::vector<int> res;
   std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::const_iterator it =
     m_state->m_presentationMap.begin();
   while (it != m_state->m_presentationMap.end()) {
     shared_ptr<ClarisWksPresentationInternal::Presentation> pres = it++->second;
     if (!pres) continue;
-    for (size_t c = 0; c < pres->m_otherChilds.size(); c++)
-      res.push_back(pres->m_otherChilds[c]);
+    for (size_t c = 0; c < pres->m_otherChilds.size(); c++) {
+      shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(pres->m_otherChilds[c]);
+      if (!zone) continue;
+      zone->m_position=ClarisWksStruct::DSET::P_Slide;
+      zone->m_page=int(c+1);
+    }
   }
-  return res;
 }
 
 ////////////////////////////////////////////////////////////

@@ -51,12 +51,14 @@ namespace ClarisWksStruct
 struct DSET {
   struct Child;
 
-  //! the document type
-  enum Type { T_Main=0, T_Header, T_Footer, T_Frame, T_Footnote, T_Table, T_Slide, T_Unknown};
+  //! the zone position
+  enum Position { P_Main=0, P_Header, P_Footer, P_Frame, P_Footnote, P_Table, P_Slide, P_Unknown};
+  /** the different types of zone child */
+  enum ChildType { C_Zone, C_SubText, C_Graphic, C_Unknown };
 
   //! constructor
   DSET() : m_size(0), m_numData(0), m_dataSz(-1), m_headerSz(-1),
-    m_type(T_Unknown), m_fileType(-1),
+    m_position(P_Unknown), m_fileType(-1),
     m_page(-1), m_box(), m_id(0), m_fathersList(), m_validedChildList(),
     m_beginSelection(0), m_endSelection(-1), m_textType(0),
     m_childs(), m_otherChilds(), m_parsed(false), m_internal(0)
@@ -67,6 +69,11 @@ struct DSET {
   //! virtual destructor
   virtual ~DSET() {}
 
+  //! test if the zone is an header/footer
+  bool isHeaderFooter() const
+  {
+    return m_position==P_Header||m_position==P_Footer;
+  }
   //! test is a child id is valid
   bool okChildId(int zoneId) const
   {
@@ -84,6 +91,20 @@ struct DSET {
       maxPt[c]=m_box[0][c];
     }
     return Box2f(minPt,maxPt);
+  }
+  /** returns the maximum page */
+  int getMaximumPage() const
+  {
+    if (m_position==ClarisWksStruct::DSET::P_Slide)
+      return m_page;
+    if (m_position!=ClarisWksStruct::DSET::P_Main)
+      return 0;
+    int nPages=m_page;
+    for (size_t b=0; b < m_childs.size(); b++) {
+      if (m_childs[b].m_page > nPages)
+        nPages=m_childs[b].m_page;
+    }
+    return nPages;
   }
 
   //! try to update the child page and bounding box
@@ -104,7 +125,7 @@ struct DSET {
   long m_headerSz;
 
   //! the zone type
-  Type m_type;
+  Position m_position;
   //! the type ( 0: text, -1: graphic, ...)
   int m_fileType;
 
@@ -143,11 +164,8 @@ struct DSET {
 
   //! structure used to define the child of a DSET structure
   struct Child {
-    /** the different types */
-    enum Type { ZONE, TEXT, GRAPHIC, TABLE, UNKNOWN };
-
     //! constructor
-    Child() : m_type(UNKNOWN), m_id(-1), m_posC(-1), m_page(-1), m_box()
+    Child() : m_type(C_Unknown), m_id(-1), m_posC(-1), m_page(-1), m_box()
     {
     }
     //! return the zone bdbox
@@ -167,19 +185,16 @@ struct DSET {
     friend std::ostream &operator<<(std::ostream &o, Child const &ch)
     {
       switch (ch.m_type) {
-      case TEXT:
+      case C_SubText:
         o << "text,";
         break;
-      case ZONE:
+      case C_Zone:
         o << "zone,";
         break;
-      case GRAPHIC:
+      case C_Graphic:
         o << "graphic,";
         break;
-      case TABLE:
-        o << "table,";
-        break;
-      case UNKNOWN:
+      case C_Unknown:
         o << "#type,";
       default:
         break;
@@ -193,7 +208,7 @@ struct DSET {
     }
 
     //! the type
-    int m_type;
+    ChildType m_type;
     //! the identificator
     int m_id;
     //! a position (used in text zone to store the character )
