@@ -31,6 +31,7 @@
 * instead of those above.
 */
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -59,7 +60,7 @@ namespace ClarisWksPresentationInternal
 struct Presentation : public ClarisWksStruct::DSET {
   // constructor
   Presentation(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_zoneIdList()
+    ClarisWksStruct::DSET(dset), m_zoneIdList(), m_auxiliaryDetached(false)
   {
   }
 
@@ -69,9 +70,28 @@ struct Presentation : public ClarisWksStruct::DSET {
     o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
+  /** remove a child from a list.
+
+      Normally, this function is not called, so optimizing it is not usefull
+   */
+  virtual void removeChild(int cId, bool normalChild)
+  {
+    DSET::removeChild(cId, normalChild);
+    if (m_id+1==cId) m_auxiliaryDetached=true;
+    else {
+      std::vector<int>::iterator it=std::find(m_zoneIdList.begin(), m_zoneIdList.end(), cId);
+      if (it!=m_zoneIdList.end())
+        m_zoneIdList.erase(it);
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::Presentation can not detach %d\n", cId));
+      }
+    }
+  }
 
   //! the list of main zone id
   std::vector<int> m_zoneIdList;
+  //! true if the auxiliary zone is detached
+  bool m_auxiliaryDetached;
 };
 
 //! Internal: the state of a ClarisWksPresentation
@@ -318,14 +338,14 @@ bool ClarisWksPresentation::sendZone(int number)
   if (!presentation || !m_parserState->getMainListener())
     return true;
   presentation->m_parsed = true;
-  if (presentation->okChildId(number+1))
+  if (!presentation->m_auxiliaryDetached)
     m_document.forceParsed(number+1);
   bool main = number == 1;
   int actPage = 1;
   for (size_t p = 0; p < presentation->m_zoneIdList.size(); p++) {
     if (main) m_document.newPage(actPage++);
     int id = presentation->m_zoneIdList[p];
-    if (id > 0 && presentation->okChildId(id))
+    if (id > 0)
       m_document.sendZone(id);
   }
   return true;

@@ -108,7 +108,7 @@ struct CurvePoint {
 //! Internal: the structure used to store a style of a ClarisWksGraph
 struct Style : public MWAWGraphicStyle {
   //! constructor
-  Style(): MWAWGraphicStyle(), m_id(-1), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0)
+  Style(): MWAWGraphicStyle(), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0)
   {
   }
   //! returns the wrapping
@@ -129,7 +129,6 @@ struct Style : public MWAWGraphicStyle {
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Style const &st)
   {
-    if (st.m_id >= 0) o << "id=" << st.m_id << ",";
     o << static_cast<MWAWGraphicStyle const &>(st);
     switch (st.m_wrapping & 3) {
     case 0:
@@ -160,8 +159,6 @@ struct Style : public MWAWGraphicStyle {
       o << "lineFlags(?)=" << std::hex << int(st.m_lineFlags & 0x2F) << std::dec << ",";
     return o;
   }
-  //! the identificator
-  int m_id;
   //! the wrap type
   int m_wrapping;
   //! the line flags
@@ -180,12 +177,13 @@ struct Zone {
               T_Pict, T_QTim, T_Movie
             };
   //! constructor
-  Zone() : m_page(-1), m_box(), m_style() {}
+  Zone() : m_page(-1), m_box(), m_ordering(-1), m_style() {}
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone)
   {
     if (zone.m_page >= 0) o << "pg=" << zone.m_page << ",";
     o << "box=" << zone.m_box << ",";
+    if (zone.m_ordering>0) o << "ordering=" << zone.m_ordering << ",";
     zone.print(o);
     o << "style=[" << zone.m_style << "],";
     return o;
@@ -228,10 +226,25 @@ struct Zone {
     child.m_box = m_box;
     return child;
   }
+  //! returns the id of the reference zone
+  virtual int getZoneId() const
+  {
+    return 0;
+  }
+  //! returns true if the zone can be send using a graphic listener (partial check)
+  virtual bool canBeSendAsGraphic() const
+  {
+    ClarisWksGraphInternal::Zone::Type type=getType();
+    return type==ClarisWksGraphInternal::Zone::T_Zone || type==ClarisWksGraphInternal::Zone::T_Shape ||
+           type==ClarisWksGraphInternal::Zone::T_DataBox || type==ClarisWksGraphInternal::Zone::T_Chart ||
+           type==ClarisWksGraphInternal::Zone::T_Unknown;
+  }
   //! the page (checkme: or frame linked )
   int m_page;
   //! the bdbox
   Box2f m_box;
+  //! the ordering
+  int m_ordering;
   //! the style
   Style m_style;
 };
@@ -415,6 +428,16 @@ struct ZoneZone : public Zone {
   {
     return m_subType==T_Zone ? 0 : 1;
   }
+  //! returns true if the zone can be send using a graphic listener (partial check)
+  virtual bool canBeSendAsGraphic() const
+  {
+    return !isLinked();
+  }
+  //! returns the id of the reference zone
+  virtual int getZoneId() const
+  {
+    return m_id;
+  }
   /** check if we need to send the frame is linked to another frmae */
   bool isLinked() const
   {
@@ -571,8 +594,8 @@ struct ZoneUnknown : public Zone {
 struct Group : public ClarisWksStruct::DSET {
   //! constructor
   Group(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_zones(), m_headerDim(0,0), m_hasMainZone(false),
-    m_blockToSendList()
+    ClarisWksStruct::DSET(dset), m_zones(), m_hasMainZone(false),
+    m_zonesToSend()
   {
     m_page=0;
   }
@@ -583,15 +606,34 @@ struct Group : public ClarisWksStruct::DSET {
     o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
+  /** remove a child from a list.
+
+      Normally, this function is not called, so optimizing it is not usefull
+   */
+  virtual void removeChild(int cId, bool normalChild)
+  {
+    DSET::removeChild(cId, normalChild);
+    std::vector<shared_ptr<Zone> >::iterator it;
+    for (it=m_zones.begin(); it!=m_zones.end(); ++it) {
+      shared_ptr<ClarisWksGraphInternal::Zone> child = *it;
+      if (!child || child->getType() != ClarisWksGraphInternal::Zone::T_Zone)
+        continue;
+      ClarisWksGraphInternal::ZoneZone const &childZone =
+        static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
+      if (childZone.m_id != cId) continue;
+      m_zones.erase(it);
+      return;
+    }
+    MWAW_DEBUG_MSG(("ClarisWksGraphInternal::Group can not detach %d\n", cId));
+  }
+
   /** the list of child zones */
   std::vector<shared_ptr<Zone> > m_zones;
 
-  //! the header dimension ( if defined )
-  Vec2i m_headerDim;
   //! a flag to know if this zone contains or no the call to zone 1
   bool m_hasMainZone;
   //! the list of block to send
-  std::vector<size_t> m_blockToSendList;
+  std::vector<shared_ptr<Zone> > m_zonesToSend;
 };
 
 ////////////////////////////////////////
@@ -829,7 +871,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readGroupZone
 }
 
 ////////////////////////////////////////////////////////////
-// a group of data mainly graphic
+// read a bitmap zone
 ////////////////////////////////////////////////////////////
 shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
 (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete)
@@ -949,6 +991,9 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
   return bitmap;
 }
 
+////////////////////////////////////////////////////////////
+// definition of an element of a group
+////////////////////////////////////////////////////////////
 shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry const &entry)
 {
   shared_ptr<ClarisWksGraphInternal::Zone> res;
@@ -1137,7 +1182,8 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     else
       style.m_surfaceColor=color;
   }
-  style.m_id = (int) input->readLong(2);
+  // checkme: look like an ordering, minimal value corresponding to front, actually unused
+  zone.m_ordering = (int) input->readLong(2);
 
   switch (type) {
   case ClarisWksGraphInternal::Zone::T_Zone: {
@@ -1223,6 +1269,10 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
 //
 // Intermediate level
 //
+////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+// extra data associated to some group's element
 ////////////////////////////////////////////////////////////
 bool ClarisWksGraph::readGroupData(ClarisWksGraphInternal::Group &group, long beginGroupPos)
 {
@@ -1701,7 +1751,7 @@ bool ClarisWksGraph::readGroupUnknown(ClarisWksGraphInternal::Group &group, int 
 
   Vec2i dim((int)values32[0],(int)values32[1]);
   if (id < 0)
-    group.m_headerDim=dim;
+    group.m_pageDimension=dim;
   if (dim[0] || dim[1]) f << "dim=" << dim << ",";
   if (values16[0]!=1 || values16[1]!=1)
     f << "pages[num]=" << values16[0] << "x" << values16[1] << ",";
@@ -2115,7 +2165,6 @@ bool ClarisWksGraph::readQTimeData(shared_ptr<ClarisWksGraphInternal::Zone> zone
   return true;
 }
 
-
 bool ClarisWksGraph::readNamedPict(ClarisWksGraphInternal::ZonePict &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -2282,43 +2331,49 @@ bool ClarisWksGraph::readBitmapData(ClarisWksGraphInternal::Bitmap &zone)
 ////////////////////////////////////////////////////////////
 void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
 {
-  if (!group.m_blockToSendList.empty())
+  if (!group.m_zonesToSend.empty())
     return;
 
+  /* update the list of zone to be send (ie. remove remaining header/footer zone in not footer zone )
+     + create a map to find linked zone: list of zone sharing the same text zone
+   */
   bool isHeaderFooterBlock=group.isHeaderFooter();
   std::map<int, std::map<int, size_t> > idSIdCIdMap;
   for (size_t g = 0; g < group.m_zones.size(); g++) {
-    ClarisWksGraphInternal::Zone *child = group.m_zones[g].get();
+    shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zones[g];
     if (!child) continue;
-    if (child->getType() != ClarisWksGraphInternal::Zone::T_Zone) {
-      group.m_blockToSendList.push_back(g);
+    if (child->getType() == ClarisWksGraphInternal::Zone::T_Zone) {
+      ClarisWksGraphInternal::ZoneZone const &childZone =
+        static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
+      int zId = childZone.m_id;
+      shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(zId);
+      if (!zone)
+        continue;
+      if (!isHeaderFooterBlock && zone->isHeaderFooter())
+        continue;
+      if (zId==1) {
+        group.m_hasMainZone = true;
+        continue;
+      }
+      if (idSIdCIdMap.find(zId)==idSIdCIdMap.end())
+        idSIdCIdMap.insert(std::map<int, std::map<int, size_t> >::value_type(zId, std::map<int, size_t>()));
+      std::map<int, size_t> &sIdCIdMap=idSIdCIdMap.find(zId)->second;
+      if (sIdCIdMap.find(childZone.m_subId)!=sIdCIdMap.end()) {
+        MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: zone %d already find with subId %d\n",
+                        zId, childZone.m_subId));
+      }
+      else
+        sIdCIdMap[childZone.m_subId]=g;
+    }
+    group.m_zonesToSend.push_back(child);
+    if (g>=group.m_childs.size()) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: the zones list is not in correspondance with the childs list\n"));
       continue;
     }
-
-    ClarisWksGraphInternal::ZoneZone const &childZone =
-      static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
-    int zId = childZone.m_id;
-    shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(zId);
-    if (!group.okChildId(zId) || !zone)
-      continue;
-    if (!isHeaderFooterBlock && zone->isHeaderFooter())
-      continue;
-    if (zId==1) {
-      group.m_hasMainZone = true;
-      continue;
-    }
-    group.m_blockToSendList.push_back(g);
-    if (idSIdCIdMap.find(zId)==idSIdCIdMap.end())
-      idSIdCIdMap.insert(std::map<int, std::map<int, size_t> >::value_type(zId, std::map<int, size_t>()));
-    std::map<int, size_t> &sIdCIdMap=idSIdCIdMap.find(zId)->second;
-    if (sIdCIdMap.find(childZone.m_subId)!=sIdCIdMap.end()) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: zone %d already find with subId %d\n",
-                      zId, childZone.m_subId));
-      continue;
-    }
-    sIdCIdMap[childZone.m_subId]=g;
+    child->m_box = group.m_childs[g].m_box;
+    child->m_page = group.m_childs[g].m_page;
   }
-  // first update the frame list
+  // update the linked frame data, ie. zone->m_frame*
   std::map<int, std::map<int, size_t> >::const_iterator it;
   for (it=idSIdCIdMap.begin(); it!=idSIdCIdMap.end(); ++it) {
     std::map<int, size_t> const &sIdCIdMap=it->second;
@@ -2332,19 +2387,6 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
       child->m_frameSubId=frameSubId++;
       child->m_frameLast=cIt==sIdCIdMap.end();
     }
-  }
-  m_document.updateChildPositions(group, group.m_headerDim);
-  size_t numBlock = group.m_blockToSendList.size();
-  for (size_t b=0; b < numBlock; b++) {
-    size_t bId=group.m_blockToSendList[b];
-    if (bId>=group.m_childs.size()) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::updateGroup: the zones list is not in correspondance with the childs list\n"));
-      continue;
-    }
-    ClarisWksGraphInternal::Zone *child = group.m_zones[bId].get();
-    if (!child) continue;
-    child->m_box = group.m_childs[bId].m_box;
-    child->m_page = group.m_childs[bId].m_page;
   }
 }
 
@@ -2360,6 +2402,24 @@ bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
   return canSendAsGraphic(*iter->second);
 }
 
+bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
+{
+  updateGroup(group);
+  if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
+      || group.m_page <= 0)
+    return false;
+  size_t numZones = group.m_zonesToSend.size();
+  for (size_t g = 0; g < numZones; g++) {
+    shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zonesToSend[g];
+    if (!child) continue;
+    if (!child->canBeSendAsGraphic()) return false;
+    if (child->getType()==ClarisWksGraphInternal::Zone::T_Zone &&
+        !m_document.canSendZoneAsGraphic(child->getZoneId()))
+      return false;
+  }
+  return true;
+}
+
 bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &position)
 {
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
@@ -2371,7 +2431,7 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
   MWAWGraphicListener *graphicListener=dynamic_cast<MWAWGraphicListener *>(listener.get());
   if (graphicListener) {
     shared_ptr<MWAWGraphicListener> ptr(graphicListener, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
-    return sendGroup(*group, group->m_blockToSendList, ptr);
+    return sendGroup(group->m_zonesToSend, ptr);
   }
   if (!m_parserState->getMainListener()) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));
@@ -2380,58 +2440,30 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
   return sendGroup(*group, position);
 }
 
-bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
+bool ClarisWksGraph::sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener)
 {
-  updateGroup(group);
-  if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
-      || group.m_page <= 0)
-    return false;
-  size_t numZones = group.m_blockToSendList.size();
-  for (size_t g = 0; g < numZones; g++) {
-    ClarisWksGraphInternal::Zone const *child = group.m_zones[group.m_blockToSendList[g]].get();
-    if (!child) continue;
-    ClarisWksGraphInternal::Zone::Type type=child->getType();
-    if (type==ClarisWksGraphInternal::Zone::T_Zone) {
-      ClarisWksGraphInternal::ZoneZone const &childZone =
-        static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
-      if (childZone.isLinked() || !m_document.canSendZoneAsGraphic(childZone.m_id))
-        return false;
-      continue;
-    }
-    if (type==ClarisWksGraphInternal::Zone::T_Shape || type==ClarisWksGraphInternal::Zone::T_DataBox ||
-        type==ClarisWksGraphInternal::Zone::T_Chart || type==ClarisWksGraphInternal::Zone::T_Unknown)
-      continue;
-    return false;
-  }
-  return true;
-}
-
-bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListenerPtr listener)
-{
-  group.m_parsed=true;
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener!!!\n"));
     return false;
   }
   size_t numZones = lChild.size();
   for (size_t g = 0; g < numZones; g++) {
-    ClarisWksGraphInternal::Zone const *child = group.m_zones[lChild[g]].get();
+    shared_ptr<ClarisWksGraphInternal::Zone> child = lChild[g];
     if (!child) continue;
     Box2f box=child->getBdBox();
     ClarisWksGraphInternal::Zone::Type type=child->getType();
     MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Page;
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
-      ClarisWksGraphInternal::ZoneZone const &zone=
-        static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
-      shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zone.m_id);
+      int zId=child->getZoneId();
+      shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
       if (dset && dset->m_fileType==4) {
-        sendBitmap(zone.m_id, listener, pos);
+        sendBitmap(zId, listener, pos);
         continue;
       }
-      shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zone.m_id));
+      shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
       if (dset && dset->m_fileType==1)
-        listener->insertTextBox(pos, doc, zone.m_style);
+        listener->insertTextBox(pos, doc, child->m_style);
       else
         listener->insertGroup(box, doc);
     }
@@ -2503,7 +2535,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
     graphicListener->startDocument();
-    sendGroup(group, group.m_blockToSendList, graphicListener);
+    sendGroup(group.m_zonesToSend, graphicListener);
     graphicListener->endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
@@ -2528,7 +2560,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     }
     return true;
   }
-  if (group.m_blockToSendList.size() > 1 &&
+  if (group.m_zonesToSend.size() > 1 &&
       (position.m_anchorTo==MWAWPosition::Char ||
        position.m_anchorTo==MWAWPosition::CharBaseLine)) {
     // we need to a frame, ...
@@ -2542,29 +2574,27 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   }
 
   /* first sort the different zone: ie. we must first send the page block, then the main zone */
-  std::vector<size_t> listJobs[2];
-  for (size_t g = 0; g < group.m_blockToSendList.size(); g++) {
-    size_t cPos=group.m_blockToSendList[g];
-    ClarisWksGraphInternal::Zone *child = group.m_zones[cPos].get();
+  std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > listJobs[2];
+  for (size_t g = 0; g < group.m_zonesToSend.size(); g++) {
+    shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zonesToSend[g];
     if (!child) continue;
+    // FIXME: find a accurate method to retrieve ordering
+    child->m_ordering=int(g);
     if (position.m_anchorTo==MWAWPosition::Unknown && suggestedAnchor == MWAWPosition::Page) {
       Vec2f RB = Vec2f(child->m_box[1])+leftTop;
       if (RB[1] >= textHeight || listener->isSectionOpened()) {
-        listJobs[1].push_back(cPos);
+        listJobs[1].push_back(child);
         continue;
       }
     }
     if (child->getType() == ClarisWksGraphInternal::Zone::T_Zone) {
-      ClarisWksGraphInternal::ZoneZone const &childZone =
-        static_cast<ClarisWksGraphInternal::ZoneZone &>(*child);
-      int zId = childZone.m_id;
-      shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
+      shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(child->getZoneId());
       if (dset && dset->m_position==ClarisWksStruct::DSET::P_Main) {
-        listJobs[1].push_back(cPos);
+        listJobs[1].push_back(child);
         continue;
       }
     }
-    listJobs[0].push_back(cPos);
+    listJobs[0].push_back(child);
   }
   for (int st = 0; st < 2; st++) {
     if (st == 1) {
@@ -2574,50 +2604,42 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     }
     size_t numJobs=listJobs[st].size();
     for (size_t g = 0; g < numJobs; g++) {
-      size_t cId = 0;
       Box2f box;
-      std::vector<size_t> groupList;
+      std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > groupList;
       int page = 0;
       size_t lastOk=g;
 
       if (st==0 && !mainGroup) {
         for (size_t h = g; h < numJobs; ++h) {
-          cId=listJobs[st][h];
-          ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
+          shared_ptr<ClarisWksGraphInternal::Zone> child = listJobs[st][h];
           if (!child) continue;
-          ClarisWksGraphInternal::Zone::Type type=child->getType();
           if (groupList.empty()) page=child->m_page;
           else if (page != child->m_page) break;
-          if (type==ClarisWksGraphInternal::Zone::T_Zone) {
-            ClarisWksGraphInternal::ZoneZone const &childZone =
-              static_cast<ClarisWksGraphInternal::ZoneZone const &>(*child);
-            if (childZone.isLinked() || !m_document.canSendZoneAsGraphic(childZone.m_id))
-              break;
-          }
-          else if (type==ClarisWksGraphInternal::Zone::T_DataBox ||
-                   type==ClarisWksGraphInternal::Zone::T_Chart ||
-                   type==ClarisWksGraphInternal::Zone::T_Unknown)
-            continue;
-          else if (type!=ClarisWksGraphInternal::Zone::T_Shape)
+          if (!child->canBeSendAsGraphic()) break;
+          if (child->getType()==ClarisWksGraphInternal::Zone::T_Zone &&
+              !m_document.canSendZoneAsGraphic(child->getZoneId()))
             break;
           if (groupList.empty())
             box=child->m_box;
           else
             box=box.getUnion(child->m_box);
-          groupList.push_back(cId);
+          groupList.push_back(child);
           lastOk=h;
         }
       }
-
-      if (groupList.size() <= 1) {
-        cId=listJobs[st][g];
-        ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
+      if (groupList.empty()) {
+        shared_ptr<ClarisWksGraphInternal::Zone> child = listJobs[st][g];
         if (!child) continue;
-        box = child->m_box;
-        page = child->m_page;
+        groupList.push_back(child);
       }
+      if (groupList.size()<= 1) {
+        if (!groupList[0]) continue;
+        box = groupList[0]->m_box;
+        page = groupList[0]->m_page;
+      }
+      int order=groupList[0] ? groupList[0]->m_ordering : int(g);
       MWAWPosition pos(position);
-      pos.setOrder(int(cId)+1);
+      pos.setOrder(int(order)+1);
       pos.setOrigin(box[0]);
       pos.setSize(box.size());
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
@@ -2628,19 +2650,20 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
           pos.m_wrapping =  MWAWPosition::WBackground;
-          pos.setOrder(-int(cId)-1);
+          pos.setOrder(-int(order)-1);
         }
         else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
+      // groupList can not be empty
       if (groupList.size() <= 1) {
-        sendGroupChild(group, cId, pos);
+        sendGroupChild(groupList[0], pos);
         continue;
       }
       MWAWGraphicEncoder graphicEncoder;
       MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
       graphicListener->startDocument();
-      sendGroup(group, groupList, graphicListener);
+      sendGroup(groupList, graphicListener);
       graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
@@ -2655,9 +2678,8 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   return true;
 }
 
-bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t cId, MWAWPosition pos)
+bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> child, MWAWPosition pos)
 {
-  ClarisWksGraphInternal::Zone *child = group.m_zones[cId].get();
   if (!child) return false;
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
@@ -2763,6 +2785,9 @@ bool ClarisWksGraph::sendGroupChild(ClarisWksGraphInternal::Group &group, size_t
   return m_document.sendZone(zId);
 }
 
+////////////////////////////////////////////////////////////
+// basic shape, bitmap, pict
+////////////////////////////////////////////////////////////
 bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosition pos)
 {
   MWAWListenerPtr listener=m_parserState->getMainListener();
@@ -2984,7 +3009,8 @@ void ClarisWksGraph::flushExtra()
     = m_state->m_groupMap.begin();
   for (; iter !=  m_state->m_groupMap.end(); ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> zone = iter->second;
-    if (!zone || zone->m_parsed)
+    // can be some footer print on the last page or an unused header/footer
+    if (!zone || zone->m_parsed || zone->isHeaderFooter())
       continue;
     static bool first=true;
     if (first) {

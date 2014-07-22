@@ -89,7 +89,7 @@ protected:
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! adds a new page
-  void newPage(int number);
+  void newPage(int number, bool softBreak);
 
   //
   // interface with the text parser

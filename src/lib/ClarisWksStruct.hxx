@@ -59,7 +59,7 @@ struct DSET {
   //! constructor
   DSET() : m_size(0), m_numData(0), m_dataSz(-1), m_headerSz(-1),
     m_position(P_Unknown), m_fileType(-1),
-    m_page(-1), m_box(), m_id(0), m_fathersList(), m_validedChildList(),
+    m_page(-1), m_box(), m_pageDimension(0,0), m_id(0), m_fathersList(),
     m_beginSelection(0), m_endSelection(-1), m_textType(0),
     m_childs(), m_otherChilds(), m_parsed(false), m_internal(0)
   {
@@ -73,11 +73,6 @@ struct DSET {
   bool isHeaderFooter() const
   {
     return m_position==P_Header||m_position==P_Footer;
-  }
-  //! test is a child id is valid
-  bool okChildId(int zoneId) const
-  {
-    return m_validedChildList.find(zoneId) != m_validedChildList.end();
   }
 
   //! return the zone bdbox
@@ -107,6 +102,8 @@ struct DSET {
     return nPages;
   }
 
+  //! virtual function to remove a child from a list
+  virtual void removeChild(int cId, bool normalChild);
   //! try to update the child page and bounding box
   void updateChildPositions(Vec2f const &pageDim, int numHorizontalPages=1);
   //! returns the child box (ie. the union of the childs box)
@@ -133,13 +130,13 @@ struct DSET {
   int m_page;
   //! the bounding box (if known)
   Box2f m_box;
+  //! the page dimension (if know)
+  Vec2f m_pageDimension;
 
   //! the zone identificator
   int m_id;
   //! the list of fathers
   std::set<int> m_fathersList;
-  //! the list of verified child
-  std::set<int> m_validedChildList;
 
   //! the begin of selection ( at least in text header)
   int m_beginSelection;

@@ -129,7 +129,7 @@ struct Table : public ClarisWksStruct::DSET, public MWAWTable {
   friend struct TableCell;
   //! constructor
   Table(ClarisWksStruct::DSET const &dset, ClarisWksTable &parser,  ClarisWksStyleManager &styleManager) :
-    ClarisWksStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(&styleManager), m_bordersList(), m_mainPtr(-1)
+    ClarisWksStruct::DSET(dset),MWAWTable(), m_parser(&parser), m_styleManager(&styleManager), m_bordersList(), m_mainPtr(-1), m_auxiliaryDetached(false)
   {
   }
 
@@ -148,16 +148,26 @@ struct Table : public ClarisWksStruct::DSET, public MWAWTable {
     o << static_cast<ClarisWksStruct::DSET const &>(doc);
     return o;
   }
-  //! check that each child zone are valid
-  void checkChildZones()
+  /** remove a child from a list.
+
+      Normally, this function is not called, so optimizing it is not usefull
+  */
+  virtual void removeChild(int cId, bool normalChild)
   {
-    for (size_t i = 0; i < m_cellsList.size(); i++) {
-      TableCell *cell = static_cast<TableCell *>(m_cellsList[i].get());
-      if (!cell) continue;
-      if (cell->m_zoneId > 0 && !okChildId(cell->m_zoneId))
-        cell->m_zoneId = 0;
+    DSET::removeChild(cId, normalChild);
+    if (cId==m_id+1) {
+      m_auxiliaryDetached=true;
+      return;
     }
+    for (size_t i=0; i<m_cellsList.size(); ++i) {
+      TableCell *cell = static_cast<TableCell *>(m_cellsList[i].get());
+      if (!cell || cell->m_zoneId!=cId) continue;
+      cell->m_zoneId=0;
+      return;
+    }
+    MWAW_DEBUG_MSG(("ClarisWksTableInternal::Zone can not detach %d\n", cId));
   }
+
   //! finish updating all cells
   void updateCells()
   {
@@ -180,6 +190,9 @@ struct Table : public ClarisWksStruct::DSET, public MWAWTable {
   std::vector<Border> m_bordersList;
   /** the relative main pointer */
   long m_mainPtr;
+  //! true if the auxiliary zone is detached
+  bool m_auxiliaryDetached;
+
 private:
   Table(Table const &orig);
   Table &operator=(Table const &orig);
@@ -432,14 +445,13 @@ bool ClarisWksTable::sendZone(int number)
     return false;
   shared_ptr<ClarisWksTableInternal::Table> table = iter->second;
   table->m_parsed = true;
-  if (table->okChildId(number+1))
+  if (!table->m_auxiliaryDetached)
     m_document.forceParsed(number+1);
 
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener)
     return true;
 
-  table->checkChildZones();
   if (table->sendTable(listener))
     return true;
   return table->sendAsText(listener);

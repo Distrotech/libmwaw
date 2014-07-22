@@ -134,20 +134,19 @@ protected:
   //! send a group
   bool sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position);
   //! send a group as graphic
-  bool sendGroup(ClarisWksGraphInternal::Group &group, std::vector<size_t> const &lChild, MWAWGraphicListenerPtr listener);
+  bool sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener);
   //! send a group child
-  bool sendGroupChild(ClarisWksGraphInternal::Group &group, size_t child, MWAWPosition position);
+  bool sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> zone, MWAWPosition position);
   /* read a simple group */
   shared_ptr<ClarisWksGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
-
-  /* read a simple graphic zone */
-  bool readShape(MWAWEntry const &entry,
-                 ClarisWksGraphInternal::ZoneShape &zone);
-
   /* read the group data.
 
      \note \a beginGroupPos is only used to help debugging */
   bool readGroupData(ClarisWksGraphInternal::Group &group, long beginGroupPos);
+
+  /* read a simple graphic zone */
+  bool readShape(MWAWEntry const &entry,
+                 ClarisWksGraphInternal::ZoneShape &zone);
 
   /* try to read the chart data */
   bool readChartData(shared_ptr<ClarisWksGraphInternal::Zone> zone);

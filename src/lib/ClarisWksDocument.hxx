@@ -101,10 +101,10 @@ public:
   MWAWSection getMainSection() const;
   //! return the zone corresponding to an id ( low level)
   shared_ptr<ClarisWksStruct::DSET> getZone(int zId) const;
-  //! try to update the child page of a zone (using the pagedim if given)
-  void updateChildPositions(ClarisWksStruct::DSET &zone, Vec2f const &pageDim=Vec2f(0,0));
+  //! try to update the child page of each zone
+  void updateChildPositions();
   /** send a page break */
-  void newPage(int page);
+  void newPage(int page, bool softBreak=false);
   /** returns the list of the main zones */
   std::vector<int> const &getMainZonesList() const;
   //! indicates that a zone is parser
@@ -208,6 +208,8 @@ public:
   bool exploreZonesGraph();
   /** try to find the zone tree graph ( DSF) function*/
   bool exploreZonesGraphRec(int zId, std::set<int> &notDoneList);
+  /** remove uneeded edge (mainly header/footer edges in main graph) */
+  void cleanZonesGraph();
 
   //! try to read a structured zone
   bool readStructZone(char const *zoneName, bool hasEntete);
@@ -256,7 +258,7 @@ protected:
   //
 
   /** callback used to send a page break */
-  typedef void (MWAWParser::* NewPage)(int page);
+  typedef void (MWAWParser::* NewPage)(int page, bool softBreak);
   //! callback used to send a footnote
   typedef void (MWAWParser::* SendFootnote)(int zoneId);
 

@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -69,10 +70,16 @@ struct State {
   //! constructor
   State() : m_pageSpanSet(false), m_numPages(0), m_pages(0,0), m_pagesVerified(false), m_headerId(0), m_footerId(0),  m_headerHeight(0), m_footerHeight(0),
     m_columns(1), m_columnsWidth(), m_columnsSep(),
-    m_zonesMap(), m_mainZonesList()
+    m_zonesMap(), m_zonesTypeMap(), m_rootZonesList(), m_hFZonesList()
   {
   }
-
+  //! returns a zone's type
+  ClarisWksStruct::DSET::Position getZoneType(int id) const
+  {
+    if (m_zonesTypeMap.find(id)==m_zonesTypeMap.end())
+      return ClarisWksStruct::DSET::P_Unknown;
+    return m_zonesTypeMap.find(id)->second;
+  }
   //! a flag to know if pageSpan is filled
   bool m_pageSpanSet;
 
@@ -96,8 +103,12 @@ struct State {
 
   /** the map of zone*/
   std::map<int, shared_ptr<ClarisWksStruct::DSET> > m_zonesMap;
-  /** the list of main group */
-  std::vector<int> m_mainZonesList;
+  /** the type of each zone*/
+  std::map<int, ClarisWksStruct::DSET::Position> m_zonesTypeMap;
+  /** the list of root zones */
+  std::vector<int> m_rootZonesList;
+  /** the list of header/footer group */
+  std::vector<int> m_hFZonesList;
 };
 
 ////////////////////////////////////////
@@ -239,7 +250,7 @@ void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList)
     return;
   pageList.resize(0);
   for (int i = 0; i < 2; i++) {
-    int zoneId = i == 0 ? m_state->m_headerId : m_state->m_footerId;
+    int zoneId = i==0 ? m_state->m_headerId : m_state->m_footerId;
     if (zoneId == 0)
       continue;
     MWAWHeaderFooter hF((i==0) ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER, MWAWHeaderFooter::ALL);
@@ -264,13 +275,13 @@ Vec2f ClarisWksDocument::getPageLeftTop() const
 ////////////////////////////////////////////////////////////
 // interface via callback
 ////////////////////////////////////////////////////////////
-void ClarisWksDocument::newPage(int page)
+void ClarisWksDocument::newPage(int page, bool softBreak)
 {
   if (!m_newPage) {
     MWAW_DEBUG_MSG(("ClarisWksDocument::newPage: can not find newPage callback\n"));
     return;
   }
-  (m_parser->*m_newPage)(page);
+  (m_parser->*m_newPage)(page, softBreak);
 }
 
 MWAWSection ClarisWksDocument::getMainSection() const
@@ -350,7 +361,7 @@ void ClarisWksDocument::checkOrdering(std::vector<int16_t> &vec16, std::vector<i
 ////////////////////////////////////////////////////////////
 std::vector<int> const &ClarisWksDocument::getMainZonesList() const
 {
-  return m_state->m_mainZonesList;
+  return m_state->m_rootZonesList;
 }
 
 shared_ptr<ClarisWksStruct::DSET> ClarisWksDocument::getZone(int zId) const
@@ -359,34 +370,6 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDocument::getZone(int zId) const
   if (iter != m_state->m_zonesMap.end())
     return iter->second;
   return shared_ptr<ClarisWksStruct::DSET>();
-}
-
-void ClarisWksDocument::updateChildPositions(ClarisWksStruct::DSET &zone, Vec2f const &pageDim)
-{
-  // try to fix the page position corresponding to the main zone
-  int numHorizontalPages=getDocumentPages()[0];
-  if (numHorizontalPages <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
-    numHorizontalPages=1;
-  }
-  float textWidth=72.0f*(float)m_parser->getPageWidth();
-  float textHeight = 0.0;
-  if (double(pageDim[1])>36.0*m_parser->getFormLength() &&
-      double(pageDim[1])<72.0*m_parser->getFormLength())
-    textHeight=float(pageDim[1]);
-  else
-    textHeight=72.0f*(float)getTextHeight();
-  if (textHeight <= 0) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::updateGroup: can not retrieve the form length\n"));
-    return;
-  }
-  zone.updateChildPositions(Vec2f(textWidth, textHeight), numHorizontalPages);
-}
-
-void ClarisWksDocument::forceParsed(int zoneId)
-{
-  shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
-  if (zMap) zMap->m_parsed = true;
 }
 
 bool ClarisWksDocument::canSendZoneAsGraphic(int zoneId) const
@@ -542,6 +525,28 @@ bool ClarisWksDocument::createZones()
     input->popLimit();
   exploreZonesGraph();
   typeMainZones();
+  updateChildPositions();
+  cleanZonesGraph();
+
+#ifdef DEBUG
+  // let check if all is ok
+  size_t numMain=m_state->m_rootZonesList.size();
+  if (1 && numMain == 1)
+    return !getMainZonesList().empty();
+  MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find %d main zones\n", int(numMain)));
+  // we have do not have find the root note : probably a database...
+  std::cerr << "--------------------------------------------------------\n";
+  std::cerr << "List of potential main zones : ";
+  for (size_t i = 0; i < numMain; i++)
+    std::cerr << m_state->m_rootZonesList[i] << ",";
+  std::cerr << "\n";
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::const_iterator iter = m_state->m_zonesMap.begin();
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+    std::cerr << *zone << "\n";
+  }
+  std::cerr << "--------------------------------------------------------\n";
+#endif
   return !getMainZonesList().empty();
 }
 
@@ -2506,6 +2511,39 @@ bool ClarisWksDocument::readZoneA()
 ////////////////////////////////////////////////////////////
 // try to order the zones
 ////////////////////////////////////////////////////////////
+void ClarisWksDocument::updateChildPositions()
+{
+  // try to fix the page position corresponding to the main zone
+  int numHorizontalPages=getDocumentPages()[0];
+  if (numHorizontalPages <= 0) {
+    MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
+    numHorizontalPages=1;
+  }
+  float textWidth=72.0f*(float)m_parser->getPageWidth();
+  float textHeight = 72.0f*(float)getTextHeight();
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
+  for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+    // checkme update also the slide
+    if (!zone || zone->m_position == ClarisWksStruct::DSET::P_Slide) continue;
+    float h=textHeight;
+    if (double(zone->m_pageDimension[1])>36.0*m_parser->getFormLength() &&
+        double(zone->m_pageDimension[1])<72.0*m_parser->getFormLength())
+      h=float(zone->m_pageDimension[1]);
+    if (h <= 0) {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: can not retrieve the form length\n"));
+      continue;
+    }
+    zone->updateChildPositions(Vec2f(textWidth, h), numHorizontalPages);
+  }
+}
+
+void ClarisWksDocument::forceParsed(int zoneId)
+{
+  shared_ptr<ClarisWksStruct::DSET> zMap = getZone(zoneId);
+  if (zMap) zMap->m_parsed = true;
+}
+
 bool ClarisWksDocument::exploreZonesGraph()
 {
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter, iter2;
@@ -2567,7 +2605,7 @@ bool ClarisWksDocument::exploreZonesGraph()
     exploreZonesGraphRec(id, notDoneList);
   }
 
-  m_state->m_mainZonesList = rootList;
+  m_state->m_rootZonesList = rootList;
   if (rootList.empty()) {
     // we have a big problem here, no way to continue
     MWAW_DEBUG_MSG(("ClarisWksDocument::exploreZonesGraph: the graph contains no tree...\n"));
@@ -2589,30 +2627,37 @@ bool ClarisWksDocument::exploreZonesGraphRec(int zId, std::set<int> &notDoneList
   shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
   if (!zone) return true;
   zone->m_internal = 1;
-  size_t numChilds = zone->m_childs.size();
   for (int step = 0; step < 2; step++) {
+    size_t numChilds = step==0 ? zone->m_childs.size() : zone->m_otherChilds.size();
+    std::vector<int> toRemove; // list of bad child
+    std::set<int> validChild; // list of good child (already verified)
     for (size_t c = 0; c < numChilds; c++) {
       int cId = step == 0 ? zone->m_childs[c].m_id : zone->m_otherChilds[c];
       if (cId <= 0) continue;
+      bool isValid=true;
       if (notDoneList.find(cId) == notDoneList.end()) {
         iter2 = m_state->m_zonesMap.find(cId);
         if (iter2 == m_state->m_zonesMap.end()) {
           MWAW_DEBUG_MSG(("ClarisWksDocument::exploreZonesGraph: can not find zone %d\n", cId));
+          isValid=false;
         }
         else if (iter2->second->m_internal==1) {
           MWAW_DEBUG_MSG(("ClarisWksDocument::exploreZonesGraph: find a cycle: for child : %d(<-%d)\n", cId, zId));
+          isValid=false;
         }
-        else if (cId != m_state->m_headerId && cId != m_state->m_footerId)
-          zone->m_validedChildList.insert(cId);
       }
-      else {
-        if (cId != m_state->m_headerId && cId != m_state->m_footerId)
-          zone->m_validedChildList.insert(cId);
+      else
         exploreZonesGraphRec(cId, notDoneList);
+      if (!isValid) {
+        toRemove.push_back(cId);
+        shared_ptr<ClarisWksStruct::DSET>child=getZone(cId);
+        if (child) child->m_fathersList.erase(zone->m_id);
       }
+      else if (validChild.find(cId)==validChild.end())
+        validChild.insert(cId);
     }
-    if (step == 1) break;
-    numChilds = zone->m_otherChilds.size();
+    for (size_t i=0; i<toRemove.size(); ++i)
+      zone->removeChild(toRemove[i], step==0);
   }
   zone->m_internal = 2;
   return true;
@@ -2656,50 +2701,46 @@ void ClarisWksDocument::typeMainZones()
     }
     listZonesId[pos].push_back(id);
   }
-  bool isPres = m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION;
+  // try to type parents of typed zone
   for (int pos=ClarisWksStruct::DSET::P_Header; pos < ClarisWksStruct::DSET::P_Slide;  pos++) {
-    for (size_t z = 0; z < listZonesId[pos].size(); z++) {
-      int fId = typeMainZonesRec(listZonesId[pos][z], ClarisWksStruct::DSET::Position(pos), 1);
-      if (!fId)
-        continue;
-      if (isPres) // fixme: actually as the main type is not good too dangerous
-        fId=listZonesId[pos][z];
-      if (pos==ClarisWksStruct::DSET::P_Header && !m_state->m_headerId)
-        m_state->m_headerId=fId;
-      else if (pos==ClarisWksStruct::DSET::P_Footer && !m_state->m_footerId)
-        m_state->m_footerId=fId;
-    }
+    for (size_t z = 0; z < listZonesId[pos].size(); z++)
+      typeMainZonesRec(listZonesId[pos][z], ClarisWksStruct::DSET::Position(pos), 1);
   }
-
+  // update m_zonesTypeMap
+  iter = m_state->m_zonesMap.begin();
+  while (iter != m_state->m_zonesMap.end()) {
+    int id = iter->first;
+    shared_ptr<ClarisWksStruct::DSET> node = iter++->second;
+    if (node)
+      m_state->m_zonesTypeMap[id]=node->m_position;
+  }
   // time to do to remove header/footer's zones in the main zones list
-  std::vector<int> rootList=m_state->m_mainZonesList;
-  m_state->m_mainZonesList.resize(0);
+  std::vector<int> rootList=m_state->m_rootZonesList;
+  m_state->m_rootZonesList.resize(0);
   for (size_t i=0; i<rootList.size(); ++i) {
     shared_ptr<ClarisWksStruct::DSET> zone=getZone(rootList[i]);
-    if (zone && (zone->m_position==ClarisWksStruct::DSET::P_Footer || zone->m_position==ClarisWksStruct::DSET::P_Header))
-      continue;
-    m_state->m_mainZonesList.push_back(rootList[i]);
+    if (!zone) continue;
+    if (zone->isHeaderFooter())
+      m_state->m_hFZonesList.push_back(rootList[i]);
+    else
+      m_state->m_rootZonesList.push_back(rootList[i]);
   }
-
-#ifdef DEBUG
-  // let check if all is ok
-  size_t numMain=m_state->m_mainZonesList.size();
-  if (1 && numMain == 1)
-    return;
-  MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find %d main zones\n", int(numMain)));
-  // we have do not have find the root note : probably a database...
-  iter = m_state->m_zonesMap.begin();
-  std::cerr << "--------------------------------------------------------\n";
-  std::cerr << "List of potential main zones : ";
-  for (size_t i = 0; i < numMain; i++)
-    std::cerr << m_state->m_mainZonesList[i] << ",";
-  std::cerr << "\n";
-  for (; iter != m_state->m_zonesMap.end(); ++iter) {
-    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
-    std::cerr << *zone << "\n";
+  for (int step=0; step<2; ++step) {
+    int id=step==0 ? m_state->m_headerId : m_state->m_footerId;
+    if (!id) continue;
+    // try to retrieve the father is also a header
+    shared_ptr<ClarisWksStruct::DSET> zone=getZone(id);
+    if (zone && zone->m_fathersList.size()==1) {
+      shared_ptr<ClarisWksStruct::DSET> father=getZone(*zone->m_fathersList.begin());
+      if (father && father->isHeaderFooter()) {
+        id=*zone->m_fathersList.begin();
+        if (step==0) m_state->m_headerId=id;
+        else m_state->m_footerId=id;
+      }
+      if (std::find(m_state->m_hFZonesList.begin(),m_state->m_hFZonesList.end(), id)==m_state->m_hFZonesList.end())
+        m_state->m_hFZonesList.push_back(id);
+    }
   }
-  std::cerr << "--------------------------------------------------------\n";
-#endif
 }
 
 int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Position pos, int maxHeight)
@@ -2723,4 +2764,78 @@ int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Position
   }
   return res;
 }
+
+////////////////////////////////////////////////////////////
+// remove uneeded edge (mainly header/footer edge in main graph)
+////////////////////////////////////////////////////////////
+void ClarisWksDocument::cleanZonesGraph()
+{
+  std::set<int>::iterator it;
+  for (size_t i=0; i<m_state->m_hFZonesList.size(); ++i) {
+    int id=m_state->m_hFZonesList[i];
+    shared_ptr<ClarisWksStruct::DSET> zone=getZone(id);
+    if (!zone) continue;
+    std::set<int> newFathers;
+    for (it = zone->m_fathersList.begin(); it != zone->m_fathersList.end(); ++it) {
+      shared_ptr<ClarisWksStruct::DSET> father = getZone(*it);
+      if (!father || father->m_position!=ClarisWksStruct::DSET::P_Main || father->m_fileType!=0) {
+        newFathers.insert(*it);
+        continue;
+      }
+      father->removeChild(id, true);
+    }
+    zone->m_fathersList=newFathers;
+  }
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> >::const_iterator iter = m_state->m_zonesMap.begin();
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
+    int id=iter->first;
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+    if (!zone || zone->m_fathersList.size()<2) continue;
+    std::set<int>::const_iterator i;
+    it=zone->m_fathersList.begin();
+    int fId=*(it++);
+    int fId1=*it;
+    if (zone->m_fathersList.size()==2) {
+      if (fId1==fId+1 && m_state->getZoneType(fId)==ClarisWksStruct::DSET::P_Table) {
+        // a table and it auxiliary representation
+        shared_ptr<ClarisWksStruct::DSET> group=getZone(fId+1);
+        if (group && group->m_fileType==0) {
+          zone->m_fathersList.erase(fId1);
+          group->removeChild(id, true);
+          continue;
+        }
+      }
+      else if (zone->isHeaderFooter()) {
+        // try to detach an header/footer text zone to the main zone
+        ClarisWksStruct::DSET::Position fType=m_state->getZoneType(fId);
+        ClarisWksStruct::DSET::Position fType1=m_state->getZoneType(fId1);
+        int which=0;
+        if (fType==ClarisWksStruct::DSET::P_Main && (fType1==ClarisWksStruct::DSET::P_Header || fType1==ClarisWksStruct::DSET::P_Footer))
+          which=fId;
+        else if (fType1==ClarisWksStruct::DSET::P_Main && (fType==ClarisWksStruct::DSET::P_Header || fType==ClarisWksStruct::DSET::P_Footer))
+          which=fId1;
+        if (which) {
+          shared_ptr<ClarisWksStruct::DSET> father=getZone(which);
+          if (father && father->m_fileType==1) {
+            /* ok, pointer to a text section, we only erase connection.
+             fixme: replace the connection in the text section to the group corresponding to the header */
+            father->m_fathersList.erase(which);
+            continue;
+          }
+        }
+      }
+    }
+    // slides can share a children : the slide master content
+    if (m_state->getZoneType(fId)==ClarisWksStruct::DSET::P_Slide)
+      continue;
+
+#ifdef DEBUG
+    std::cerr << "Node " << id << " has [";
+    for (it=zone->m_fathersList.begin(); it!=zone->m_fathersList.end(); ++it)
+      std::cerr << *it << ",";
+    std::cerr  << "] parents\n";
+#endif
+  }
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -468,6 +468,24 @@ struct Zone : public ClarisWksStruct::DSET {
     return o;
   }
 
+  /** remove a child from a list.
+
+      Normally, this function is not called, so optimizing it is not usefull
+   */
+  virtual void removeChild(int cId, bool normalChild)
+  {
+    DSET::removeChild(cId, normalChild);
+    for (size_t i=0; i<m_tokenList.size(); ++i) {
+      if (m_tokenList[i].m_zoneId!=cId) continue;
+      m_tokenList[i].m_zoneId=0;
+      return;
+    }
+    // normally, section list point only to the text zone (ie. the
+    // child of the header/footer group), so remove child is not
+    // called on it
+    MWAW_DEBUG_MSG(("ClarisWksTextInternal::Zone can not detach %d\n", cId));
+  }
+
   std::vector<MWAWEntry> m_zones; // the text zones
   int m_numChar /** the number of char in text zone */;
   int m_numTextZone /** the number of text zone ( ie. number of page ? ) */;
@@ -786,10 +804,10 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
         if (val)
           f << "f" << j << "=" << val << ",";
       }
-      int what = (int) input->readLong(2);
-      // simple id or 0: main text ?, 1 : header/footnote ?, 2: footer
-      if (what)
-        f << "what=" << what << ",";
+      int order = (int) input->readLong(2);
+      // simple id or 0: main text ?, 1 : header/footnote ?, 2: footer => id or order?
+      if (order)
+        f << "order?=" << order << ",";
 
       if (vers>=2) {
         long id=(int) input->readULong(4);
@@ -1656,7 +1674,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
               f << "###";
               break;
             }
-            if (zone.okChildId(token.m_zoneId))
+            if (token.m_zoneId>0)
               m_document.sendFootnote(token.m_zoneId);
             else
               f << "###";
@@ -1685,7 +1703,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
               f << "###";
               break;
             }
-            if (zone.okChildId(token.m_zoneId)) {
+            if (token.m_zoneId>0) {
               // fixme
               MWAWPosition tPos;
               if (token.m_descent != 0) {
@@ -1721,6 +1739,9 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
           seeToken = true;
           break;
         }
+        /* checkme: normally, this corresponds to the first
+           character following a 0xb/0x1, so we do not need to a
+           column/page break here */
         case ClarisWksTextInternal::P_Child:
         case ClarisWksTextInternal::P_Section:
         case ClarisWksTextInternal::P_TextZone:

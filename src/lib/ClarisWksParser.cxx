@@ -162,7 +162,7 @@ void ClarisWksParser::init()
 ////////////////////////////////////////////////////////////
 // new page
 ////////////////////////////////////////////////////////////
-void ClarisWksParser::newPage(int number)
+void ClarisWksParser::newPage(int number, bool soft)
 {
   if (number <= m_state->m_actPage || number > m_state->m_numPages)
     return;
@@ -171,7 +171,10 @@ void ClarisWksParser::newPage(int number)
     m_state->m_actPage++;
     if (!getTextListener() || m_state->m_actPage == 1)
       continue;
-    getTextListener()->insertBreak(MWAWTextListener::PageBreak);
+    if (soft)
+      getTextListener()->insertBreak(MWAWTextListener::SoftPageBreak);
+    else
+      getTextListener()->insertBreak(MWAWTextListener::PageBreak);
   }
 }
 
@@ -220,7 +223,9 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
       for (size_t i = 0; i < mainZonesList.size(); i++)
         m_document->sendZone(mainZonesList[i], MWAWListenerPtr(), pos);
       m_document->getPresentationParser()->flushExtra();
+#ifdef DEBUG
       m_document->getGraphParser()->flushExtra();
+#endif
       m_document->getTableParser()->flushExtra();
       m_document->getTextParser()->flushExtra();
     }

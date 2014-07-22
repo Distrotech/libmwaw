@@ -63,6 +63,28 @@ Box2i DSET::getUnionChildBox() const
   return res;
 }
 
+void DSET::removeChild(int cId, bool normalChild)
+{
+  if (normalChild) {
+    std::vector<Child>::iterator it;
+    for (it=m_childs.begin(); it!=m_childs.end(); ++it) {
+      if (it->m_type != C_Zone || it->m_id != cId) continue;
+      m_childs.erase(it);
+      return;
+    }
+  }
+  else {
+    std::vector<int>::iterator it;
+    for (it=m_otherChilds.begin(); it!=m_otherChilds.end(); ++it) {
+      if (*it != cId) continue;
+      m_otherChilds.erase(it);
+      return;
+    }
+  }
+  MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::removeChild can not detach %d\n", cId));
+}
+
+
 void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
 {
   float const &textWidth=pageDim[0];
@@ -210,18 +232,13 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
   if (doc.m_page>= 0) o << "pg=" << doc.m_page << ",";
   if (doc.m_box.size()[0]>0||doc.m_box.size()[1]>0)
     o << "box=" << doc.m_box << ",";
+  if (doc.m_pageDimension[0]>0 || doc.m_pageDimension[1]>0)
+    o << "zone[dim]=" << doc.m_pageDimension << ",";
   o << "id=" << doc.m_id << ",";
   if (!doc.m_fathersList.empty()) {
     o << "fathers=[";
     std::set<int>::const_iterator it = doc.m_fathersList.begin();
     for (; it != doc.m_fathersList.end(); ++it)
-      o << *it << ",";
-    o << "],";
-  }
-  if (!doc.m_validedChildList.empty()) {
-    o << "child[valided]=[";
-    std::set<int>::const_iterator it = doc.m_validedChildList.begin();
-    for (; it != doc.m_validedChildList.end(); ++it)
       o << *it << ",";
     o << "],";
   }
