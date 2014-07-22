@@ -200,8 +200,7 @@ Vec2i ClarisWksDocument::getDocumentPages()
       shared_ptr<ClarisWksStruct::DSET> group = iter->second;
       if (!group || group->m_position != ClarisWksStruct::DSET::P_Main)
         continue;
-      int maxX=group->getUnionChildBox()[1][0];
-      int page=int(maxX/textWidth-0.2)+1;
+      int page=int(float(group->getUnionChildBox()[1][0])/textWidth-0.2f)+1;
       if (page > numHPages && page < numHPages+10) {
         MWAW_DEBUG_MSG(("ClarisWksGraph::computePositions: increase num page accross to %d\n", page));
         numHPages = page;

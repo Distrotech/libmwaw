@@ -623,12 +623,12 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
   ClarisWksTextInternal::Zone const &zone=*m_state->m_zoneMap.find(1)->second;
   size_t numSection=zone.m_sectionList.size();
   if (!numSection) return false;
-  int numPages=m_document.numPages();
+  int nPages=m_document.numPages();
   int actPage=0;
   spanList.resize(0);
   for (size_t i=0; i<numSection; ++i) {
     ClarisWksTextInternal::Section const &sec=zone.m_sectionList[i];
-    int lastPage=numPages;
+    int lastPage=nPages;
     bool ok=true;
     while (i+1<numSection) {
       if (zone.m_sectionList[i+1].m_continuousHF) {
@@ -645,9 +645,9 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
     }
     if (!ok)
       break;
-    if (lastPage>numPages) {
+    if (lastPage>nPages) {
       MWAW_DEBUG_MSG(("ClarisWksText::updatePageSpanList: some first page seems to big\n"));
-      lastPage=numPages;
+      lastPage=nPages;
     }
     if (sec.m_hasTitlePage && actPage<lastPage) {
       // title page have no header/footer
@@ -677,9 +677,9 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
     }
     actPage=lastPage;
   }
-  if (actPage<numPages) {
+  if (actPage<nPages) {
     MWAWPageSpan ps(page);
-    ps.setPageSpan(numPages-actPage);
+    ps.setPageSpan(nPages-actPage);
     spanList.push_back(ps);
   }
   return true;
