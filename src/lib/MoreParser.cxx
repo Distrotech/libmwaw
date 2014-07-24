@@ -984,7 +984,6 @@ bool MoreParser::readUnknown9(MWAWEntry const &entry)
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  pos=input->tell();
   for (int n=0; n<N; n++) {
     pos=input->tell();
     if (pos+6>endPos)

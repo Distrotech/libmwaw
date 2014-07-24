@@ -430,7 +430,7 @@ bool BeagleWksText::createZones(MWAWEntry &entry)
   }
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=entry.begin(), endPos=entry.end();
+  long pos=entry.begin();
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -448,7 +448,7 @@ bool BeagleWksText::createZones(MWAWEntry &entry)
     MWAW_DEBUG_MSG(("BeagleWksText::createZones: the data size seems bad\n"));
     return false;
   }
-  endPos = pos+val;
+  long endPos = pos+val;
   nSections/=6;
   for (int i=0; i<2; i++) { // f2=0, f3=6
     val=input->readLong(2);

@@ -786,7 +786,6 @@ bool GreatWksText::readZone(GreatWksTextInternal::Zone &zone)
 bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
 {
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  long pos=input->tell();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
 
@@ -797,7 +796,7 @@ bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
   std::vector<long> linesPos;
   linesPos.push_back(0);
   for (int i=0; i < zone.m_numLines; ++i) {
-    pos=input->tell();
+    long pos=input->tell();
     f.str("");
     plc.m_id=(int) input->readULong(2);
     long numC = (long) input->readULong(4);
@@ -819,7 +818,7 @@ bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
   plc.m_type = GreatWksTextInternal::P_Page;
   for (int i=0; i < zone.m_numFrames; ++i) {
     GreatWksTextInternal::Frame frame;
-    pos=input->tell();
+    long pos=input->tell();
     plc.m_id=i;
     f.str("");
     float dim[4];

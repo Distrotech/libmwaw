@@ -693,14 +693,14 @@ bool DocMkrParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   }
   MWAWRSRCParser::Version vers;
   // read the Docmaker version
-  int docmakerVersion = -1;
+  int docmakerVersion = 1;
   MWAWEntry entry = getRSRCParser()->getEntry("vers", 2);
   if (entry.valid() && getRSRCParser()->parseVers(entry, vers))
     docmakerVersion = vers.m_majorVersion;
-  else if (docmakerVersion==-1) {
+  else  {
     MWAW_DEBUG_MSG(("DocMkrParser::checkHeader: can not find the DocMaker version\n"));
   }
-  setVersion(vers.m_majorVersion);
+  setVersion(docmakerVersion);
   if (header)
     header->reset(MWAWDocument::MWAW_T_DOCMAKER, version());
 

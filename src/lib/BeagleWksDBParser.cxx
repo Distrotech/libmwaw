@@ -1090,7 +1090,6 @@ bool BeagleWksDBParser::readFields()
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
 
-  pos=input->tell();
   for (int fld=0; fld<database.m_numFields; ++fld) {
     pos=input->tell();
     f.str("");

@@ -699,8 +699,6 @@ bool MsWks4Zone::readDOP(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAWP
       }
       long d = (int) input->readULong(2);
       if (d == 4000) break;
-      int pos = val-0x41;
-      if (pos > 1) pos += 1-2*(pos%2);
       dim[val-0x41] = double(d)/72.;
       break;
     }

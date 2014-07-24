@@ -274,8 +274,7 @@ bool MsWksParser::createZones()
     else input->seek(pos, librevenge::RVNG_SEEK_SET);
     if (ok && m_document->hasFooter())
       ok = m_document->readGroupHeaderFooter(false,99);
-    if (ok) pos = input->tell();
-    else input->seek(pos, librevenge::RVNG_SEEK_SET);
+    if (!ok) input->seek(pos, librevenge::RVNG_SEEK_SET);
   }
 
   std::multimap<int, MsWksDocument::Zone> &typeZoneMap=m_document->getTypeZoneMap();

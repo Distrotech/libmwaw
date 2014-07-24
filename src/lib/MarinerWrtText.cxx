@@ -799,7 +799,6 @@ bool MarinerWrtText::send(MarinerWrtTextInternal::Zone const &zone, MWAWEntry co
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
 
-        pos = actPos;
         f.str("");
         f << "Text:";
         break;

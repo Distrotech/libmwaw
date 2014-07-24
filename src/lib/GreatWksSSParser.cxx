@@ -376,12 +376,11 @@ bool GreatWksSSParser::readSpreadsheet()
 {
   MWAWInputStreamPtr input = getInput();
   int const vers=version();
-  long pos = input->tell();
   libmwaw::DebugStream f;
 
   while (!input->isEnd()) {
     bool ok=true, printDone=false;
-    pos = input->tell();
+    long pos = input->tell();
     f.str("");
     int type=(int) input->readLong(2);
     if (type==0x10) {

@@ -215,16 +215,13 @@ bool GreatWksDRParser::createZones()
 {
   m_document->readRSRCZones();
   MWAWInputStreamPtr input = getInput();
-  long pos;
   ascii().addPos(40);
   ascii().addNote("Entries(GZoneHeader)");
   ascii().addDelimiter(68,'|');
-  pos = 74;
-  input->seek(74, librevenge::RVNG_SEEK_SET);
+  long pos = 74;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
   if (!m_document->getTextParser()->readFontNames())
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-  else
-    pos = input->tell();
 
   bool ok=m_document->getGraphParser()->readGraphicZone();
   if (!input->isEnd()) {

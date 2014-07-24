@@ -1031,11 +1031,10 @@ bool MacWrtParser::readInformationsV3(int numEntries, std::vector<MacWrtParserIn
   if (numEntries == 0) return true;
 
   MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
 
   libmwaw::DebugStream f;
   for (int i = 0; i < numEntries; i++) {
-    pos = input->tell();
+    long pos = input->tell();
     MacWrtParserInternal::Information info;
     f.str("");
     f << "Entries(Information)[" << i+1 << "]:";

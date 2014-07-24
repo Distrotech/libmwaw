@@ -937,8 +937,8 @@ bool EDocParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
     ascFile.addNote("CompressZone[after]");
   }
   bool res = deflate.getBinaryData(data);
-#if defined(DEBUG_WITH_FILES)
   ascFile.skipZone(pos,input->tell()-1);
+#if defined(DEBUG_WITH_FILES)
   if (res) {
     static int volatile cPictName = 0;
     libmwaw::DebugStream f2;

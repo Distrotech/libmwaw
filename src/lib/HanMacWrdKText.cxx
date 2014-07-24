@@ -431,7 +431,7 @@ bool HanMacWrdKText::sendMainText()
     sendText(tIt->first, 0);
     return true;
   }
-  MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: can not find the main zone\n"));
+  MWAW_DEBUG_MSG(("HanMacWrdKText::sendMainText: can not find the main zone\n"));
   return false;
 }
 
@@ -481,7 +481,6 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
       if (pos+6+sz > dataSz) return false;
     }
 
-    pos = input->tell();
     while (!input->isEnd()) {
       int c=(int) input->readULong(2);
       if (c==0x100) {

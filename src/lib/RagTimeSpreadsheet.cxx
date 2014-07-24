@@ -985,7 +985,7 @@ bool RagTimeSpreadsheet::readRsrcSpDo(MWAWEntry &entry)
     int val=(int) input->readLong(2);
     if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
   }
-  int val0;
+  int val0=0; // to make clang analyzer happy
   for (int i=0; i<10; ++i) { // find g0=3+10*k, g1=10+g0, g2=10+g1, g3=10+g2, other 0|3+10*k1
     int val = (int) input->readLong(4);
     if (i==0) {
@@ -2206,6 +2206,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell 
     break;
   }
   val&=0xF8;
+  if (val) f << "align[high]=" << std::hex << val << std::dec << ",";
   if (hasFormula) {
     std::string extra("");
     std::vector<MWAWCellContent::FormulaInstruction> condition;
@@ -2878,12 +2879,11 @@ bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellC
   formula.resize(0);
 
   MWAWInputStreamPtr input=m_parserState->m_input;
-  long pos=input->tell();
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   bool ok=true, lastIsClosePara=false;
   while (!input->isEnd()) {
-    pos=input->tell();
+    long pos=input->tell();
     if (pos >= endPos)
       break;
     int val, type=(int) input->readULong(1);

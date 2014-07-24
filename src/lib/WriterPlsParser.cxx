@@ -286,7 +286,7 @@ bool WindowsInfo::getColumnLimitsFor(int line, std::vector<int> &listPos)
   listPos.resize(0);
 
   size_t numColumns = m_columns.size();
-  size_t firstColumn;
+  size_t firstColumn = 0; // initialized to make clang analyzer happier
   int numCols = 0;
   for (size_t i = 0; i < numColumns; i++) {
     if (m_columns[i].m_firstLine == line+2) {
@@ -837,7 +837,6 @@ bool WriterPlsParser::readWindowsInfo(int zone)
 
   long pos;
   for (int i = 0; i < 7; i++) {
-    pos = input->tell();
     WriterPlsParserInternal::WindowsInfo::Zone infoZone;
     infoZone.m_unknown[0] = (int) input->readULong(1);
     infoZone.m_width = (int) input->readULong(2);
@@ -1217,7 +1216,6 @@ bool WriterPlsParser::readPageInfo(int zone)
   assert(zone >= 0 && zone < 3);
 
   MWAWInputStreamPtr input = getInput();
-  long pos = input->tell();
 
   libmwaw::DebugStream f;
 
@@ -1234,7 +1232,7 @@ bool WriterPlsParser::readPageInfo(int zone)
   int prevTotalHeight = 0;
 
   for (int page = 0; page < numPages; page++) {
-    pos = input->tell();
+    long pos = input->tell();
     WriterPlsParserInternal::PageInfo pInfo;
     pInfo.m_firstLine = (int) input->readLong(2);
     if ((page == 0 && pInfo.m_firstLine != 1) || pInfo.m_firstLine < actNumLine)

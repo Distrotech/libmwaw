@@ -707,7 +707,6 @@ bool BeagleWksStructManager::readFormula(long endPos, Vec2i const &position,
   MWAWInputStreamPtr input=getInput();
   formula.resize(0);
   error = "";
-  long pos = input->tell();
 
   std::stringstream f;
   std::vector<std::vector<MWAWCellContent::FormulaInstruction> > stack;
@@ -715,7 +714,7 @@ bool BeagleWksStructManager::readFormula(long endPos, Vec2i const &position,
   bool const isSheet=m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET;
   while (long(input->tell()) != endPos) {
     double val;
-    pos = input->tell();
+    long pos = input->tell();
     if (pos > endPos) return false;
     int wh = (int) input->readULong(1);
     int arity = 0;

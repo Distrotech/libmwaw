@@ -1158,11 +1158,11 @@ bool MsWksDBParser::readFormTypes(MsWksDBParserInternal::Form &form)
     int fontFlags = (int) input->readULong(1);
     uint32_t fflags = 0;
     if (fontFlags) { // checkme
-      if (fontFlags & 0x1) flag |= MWAWFont::boldBit;
-      if (fontFlags & 0x2) flag |= MWAWFont::italicBit;
+      if (fontFlags & 0x1) fflags |= MWAWFont::boldBit;
+      if (fontFlags & 0x2) fflags |= MWAWFont::italicBit;
       if (fontFlags & 0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
-      if (fontFlags & 0x8) flag |= MWAWFont::embossBit;
-      if (fontFlags & 0x10) flag |= MWAWFont::shadowBit;
+      if (fontFlags & 0x8) fflags |= MWAWFont::embossBit;
+      if (fontFlags & 0x10) fflags |= MWAWFont::shadowBit;
       if (fontFlags &0xE0) f << "fFlags=" << std::hex << (fontFlags &0xE0) << std::dec << ",";
     }
     font.setFlags(fflags);
