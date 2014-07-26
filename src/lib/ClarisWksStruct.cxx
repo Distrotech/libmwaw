@@ -119,10 +119,19 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
           pageY--;
         }
         else {
+          // can happen in a drawing document if a form is on several vertical page
           if (m_position!=P_Main) { // can be normal, if this corresponds to the mainZone
-            MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: can not find the page\n"));
+            MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: data on several vertical page(move it on the first page)\n"));
           }
-          continue;
+          // better to move it on the first page, ie. if the position is problematic, we do no create a big number of empty page
+          pageY=int(float(childBdBox[0].y())/textHeight);
+          if (++pageY<0) pageY=0;
+          if (sz[1]>textHeight) {
+            orig[1]=0;
+            sz[1]=textHeight;
+          }
+          else
+            orig[1]=textHeight-sz[1];
         }
       }
       child.m_box = Box2f(orig, orig+sz);
@@ -142,8 +151,17 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
           pageX--;
         }
         else {
-          MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: can not find the horizontal page\n"));
-          continue;
+          // can happen if a form is on several horizontal page
+          MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: data on several horizontal page(move it on the first page)\n"));
+          // better to move it on the first page, ie. if the position is problematic, we do no create a big number of empty page
+          pageX=int(float(childBdBox[0].x())/textWidth);
+          if (pageX<0) pageX=0;
+          if (sz[0]>textWidth) {
+            orig[0]=0;
+            sz[0]=textWidth;
+          }
+          else
+            orig[0]=textWidth-sz[0];
         }
       }
       child.m_box = Box2f(orig, orig+sz);

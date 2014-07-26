@@ -108,6 +108,8 @@ public:
 protected:
   //! check if we can send a group as graphic
   bool canSendGroupAsGraphic(int number) const;
+  //! sends the page element
+  bool sendPageGraphics(int groupId);
   //! sends the zone data to the listener (if it exists )
   bool sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
   //! check if we can send a group as graphic
@@ -137,6 +139,8 @@ protected:
   bool sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener);
   //! send a group child
   bool sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> zone, MWAWPosition position);
+  //! send the child element corresponding to some page
+  bool sendPageChild(ClarisWksGraphInternal::Group &group);
   /* read a simple group */
   shared_ptr<ClarisWksGraphInternal::Zone> readGroupDef(MWAWEntry const &entry);
   /* read the group data.

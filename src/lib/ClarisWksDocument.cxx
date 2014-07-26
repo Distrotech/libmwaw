@@ -532,7 +532,7 @@ bool ClarisWksDocument::createZones()
   size_t numMain=m_state->m_rootZonesList.size();
   if (1 && numMain == 1)
     return !getMainZonesList().empty();
-  MWAW_DEBUG_MSG(("ClarisWksDocument::typeMainZones: find %d main zones\n", int(numMain)));
+  MWAW_DEBUG_MSG(("ClarisWksDocument::createZones: find %d main zones\n", int(numMain)));
   // we have do not have find the root note : probably a database...
   std::cerr << "--------------------------------------------------------\n";
   std::cerr << "List of potential main zones : ";
@@ -1185,8 +1185,10 @@ bool ClarisWksDocument::readDocHeader()
   case 1:
   case 2: {
     pos = input->tell();
-    if (!getTextParser()->readParagraphs())
+    if (!getTextParser()->readParagraphs()) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
+    }
     pos = input->tell();
     if (!readPrintInfo()) {
       MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: can not find print info\n"));
@@ -1420,7 +1422,6 @@ bool ClarisWksDocument::readEndTable(long &eof)
 
   for (int i = 0; i < numEntries-1; i++) {
     MWAWEntry const &entry = listEntries[(size_t) i];
-    long debPos = entry.begin();
     bool parsed = false;
     if (entry.type() == "CPRT") {
       readCPRT(entry);
@@ -1453,10 +1454,7 @@ bool ClarisWksDocument::readEndTable(long &eof)
     }
 
     // WMBT: crypt password ? 0|fieldSz + PString ?
-    if (parsed) {
-      debPos = input->tell();
-      if (debPos == entry.end()) continue;
-    }
+    if (parsed && input->tell() == entry.end()) continue;
     f.str("");
     f << "Entries(" << entry.type() << ")";
     if (parsed) f << "*";
@@ -2834,6 +2832,37 @@ void ClarisWksDocument::cleanZonesGraph()
       std::cerr << *it << ",";
     std::cerr  << "] parents\n";
 #endif
+  }
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_TEXT) {
+    // time to try detach the main text block
+    shared_ptr<ClarisWksStruct::DSET> main=getZone(1);
+    if (main && main->m_fileType==1 && main->m_fathersList.size()==1) {
+      shared_ptr<ClarisWksStruct::DSET> mainFather=getZone(*main->m_fathersList.begin());
+      if (mainFather && mainFather->m_fileType==0) {
+        // ok, let remove the connection between the text group and the text and consider that the text group is parsed
+        mainFather->m_parsed=true;
+        mainFather->removeChild(1, true);
+        main->m_fathersList.clear();
+        // now try to detach the text group from the document group
+        if (mainFather->m_fathersList.size()==1 && !m_state->m_rootZonesList.empty() &&
+            *mainFather->m_fathersList.begin()==m_state->m_rootZonesList[0]) {
+          shared_ptr<ClarisWksStruct::DSET> root=getZone(m_state->m_rootZonesList[0]);
+          if (root) {
+            mainFather->m_fathersList.clear();
+            root->removeChild(mainFather->m_id, true);
+          }
+        }
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksDocument::cleanZonesGraph: oops, can not detach the main text zone from the document zone\n"));
+        }
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksDocument::cleanZonesGraph: oops, can not find the main zone block\n"));
+      }
+    }
+    else {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::cleanZonesGraph: oops, can not find the main zone block id\n"));
+    }
   }
 }
 
