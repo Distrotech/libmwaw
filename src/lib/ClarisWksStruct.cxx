@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -61,6 +62,11 @@ Box2i DSET::getUnionChildBox() const
     res=child.m_box.getUnion(res);
   }
   return res;
+}
+
+void DSET::removeChild(int cId)
+{
+  removeChild(cId, std::find(m_otherChilds.begin(), m_otherChilds.end(), cId)==m_otherChilds.end());
 }
 
 void DSET::removeChild(int cId, bool normalChild)

@@ -104,6 +104,8 @@ struct DSET {
 
   //! virtual function to remove a child from a list
   virtual void removeChild(int cId, bool normalChild);
+  //! virtual function to remove a child from a list
+  virtual void removeChild(int cId);
   //! try to update the child page and bounding box
   void updateChildPositions(Vec2f const &pageDim, int numHorizontalPages=1);
   //! returns the child box (ie. the union of the childs box)

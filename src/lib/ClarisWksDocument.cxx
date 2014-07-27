@@ -524,8 +524,8 @@ bool ClarisWksDocument::createZones()
     input->popLimit();
   exploreZonesGraph();
   typeMainZones();
-  updateChildPositions();
   cleanZonesGraph();
+  updateChildPositions();
 
 #ifdef DEBUG
   // let check if all is ok
@@ -2863,6 +2863,44 @@ void ClarisWksDocument::cleanZonesGraph()
     else {
       MWAW_DEBUG_MSG(("ClarisWksDocument::cleanZonesGraph: oops, can not find the main zone block id\n"));
     }
+  }
+
+  /* try to remove orphelan group. There often exists one in word
+     processing document and if we do not remove it, it will create an
+     empty textbox, so let remove all of them...
+
+     Checkme: removing empty textboxes must be also done as there
+     appears frequently (a debutant's error), but as this requires
+     interaction with the graph(to check the border/background's
+     style) and the text(to check if the textbox are empty) parsers,
+     :-~ */
+  std::set<int> orphelanSet;
+  iter = m_state->m_zonesMap.begin();
+  for (; iter != m_state->m_zonesMap.end(); ++iter) {
+    int id=iter->first;
+    shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+    if (!zone || zone->m_fileType!=0 || !zone->m_childs.empty() || !zone->m_otherChilds.empty() || zone->m_parsed)
+      continue;
+    orphelanSet.insert(id);
+  }
+  while (!orphelanSet.empty()) {
+    int id=*orphelanSet.begin();
+    orphelanSet.erase(id);
+    shared_ptr<ClarisWksStruct::DSET> zone = getZone(id);
+    if (!zone || zone->m_parsed || zone->m_fathersList.size()!=1)
+      continue;
+    zone->m_parsed=true;
+
+    int fId=*zone->m_fathersList.begin();
+    shared_ptr<ClarisWksStruct::DSET> father = getZone(fId);
+    if (!father)
+      continue;
+    zone->m_fathersList.clear();
+    father->removeChild(id);
+
+    if (father->m_fileType!=0 || !father->m_childs.empty() || !father->m_otherChilds.empty() || father->m_parsed)
+      continue;
+    orphelanSet.insert(fId);
   }
 }
 
