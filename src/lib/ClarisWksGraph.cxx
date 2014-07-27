@@ -116,7 +116,7 @@ struct Style : public MWAWGraphicStyle {
   {
     switch (m_wrapping&3) {
     case 0:
-      return MWAWPosition::WForeground;
+      return MWAWPosition::WBackground;
       break;
     case 1:
     case 2:
@@ -2468,7 +2468,7 @@ bool ClarisWksGraph::sendPageChild(ClarisWksGraphInternal::Group &group)
     pos.setRelativePosition(MWAWPosition::Page);
     pos.setPage(child->m_page);
     pos.m_wrapping = child->m_style.getWrapping();
-    pos.setOrder(m_state->getOrdering());
+    pos.setOrder(-m_state->getOrdering());
     sendGroupChild(child, pos);
   }
   return true;
@@ -2536,7 +2536,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       //pos.setOrigin(box[0]);
       if (pos.size()[0]<=0 || pos.size()[1]<=0)
         pos.setSize(box.size());
-      pos.m_wrapping =  MWAWPosition::WForeground;
+      pos.m_wrapping =  MWAWPosition::WBackground;
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
         pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
         pos.setRelativePosition(suggestedAnchor);
@@ -2544,7 +2544,6 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
           int pg = isSlide ? 0 : group.m_page > 0 ? group.m_page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
-          pos.m_wrapping = MWAWPosition::WForeground;
         }
         else if (suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
@@ -2631,10 +2630,11 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         page = groupList[0]->m_page;
       }
       MWAWPosition pos(position);
-      pos.setOrder(m_state->getOrdering());
+      pos.setOrder(-m_state->getOrdering());
       pos.setOrigin(box[0]);
       pos.setSize(box.size());
       pos.setUnit(librevenge::RVNG_POINT);
+      pos.m_wrapping = MWAWPosition::WBackground;
       if (pos.m_anchorTo==MWAWPosition::Unknown) {
         pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
         pos.setRelativePosition(suggestedAnchor);
@@ -2642,7 +2642,6 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
           int pg = page > 0 ? page : 1;
           Vec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
-          pos.m_wrapping = MWAWPosition::WForeground;
         }
         else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
@@ -2662,7 +2661,6 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       if (graphicEncoder.getBinaryResult(data,type)) {
         MWAWGraphicStyle style(MWAWGraphicStyle::emptyStyle());
         style.m_backgroundOpacity=0;
-        pos.m_wrapping =  MWAWPosition::WForeground;
         listener->insertPicture(pos, data, type, style);
       }
       g=lastOk;
@@ -2759,7 +2757,7 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
       childPos.setUnit(librevenge::RVNG_POINT);
       if (dset && dset->m_fileType==0) {
         childPos.setRelativePosition(MWAWPosition::Paragraph);
-        pos.m_wrapping=MWAWPosition::WForeground;
+        pos.m_wrapping=MWAWPosition::WBackground;
         style.m_backgroundOpacity=0;
       }
       doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId, childPos));
