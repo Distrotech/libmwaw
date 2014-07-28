@@ -267,7 +267,8 @@ struct ParagraphPLC {
 /** internal class used to store a section */
 struct Section {
   //! the constructor
-  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_firstPage(0), m_hasTitlePage(false), m_continuousHF(true), m_leftRightHF(false), m_extra("")
+  Section() : m_pos(0), m_numColumns(1), m_columnsWidth(), m_columnsSep(), m_startOnNewPage(false),
+    m_firstPage(0), m_hasTitlePage(false), m_continuousHF(true), m_leftRightHF(false), m_extra("")
   {
     for (int i=0; i<4; ++i) m_HFId[i]=0;
   }
@@ -333,6 +334,8 @@ struct Section {
   std::vector<int> m_columnsWidth;
   /** the columns separator */
   std::vector<int> m_columnsSep;
+  /** a new section generates a page break */
+  bool m_startOnNewPage;
   /** the first page */
   int m_firstPage;
   /** true if the first page is a title page(ie. no header/footer) */
@@ -1427,6 +1430,7 @@ bool ClarisWksText::readTextSection(ClarisWksTextInternal::Zone &zone)
     default:
       break;
     }
+    sec.m_startOnNewPage=(val&3)!=0;
     val &=0xFFFC;
     if (val) f << "g0=" << std::hex << val << std::dec << ",";
     val = (int) input->readULong(2); // 0|1
@@ -1577,6 +1581,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
     libmwaw::DebugStream f, f2;
 
     int numC = int(entry.length()-4);
+    bool lastIsSectionBreak=false;
     input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header
 
     for (int i = 0; i < numC; i++) {
@@ -1590,6 +1595,8 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
         MWAWSection section;
         if (nextSection>=0) {
           section = zone.m_sectionList[size_t(nextSection)].getSection();
+          if (main && lastIsSectionBreak && zone.m_sectionList[size_t(nextSection)].m_startOnNewPage)
+            m_document.newPage(++actPage);
           if (size_t(++nextSection) < zone.m_sectionList.size())
             nextSectionPos = zone.m_sectionList[size_t(nextSection)].m_pos;
           else {
@@ -1751,6 +1758,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
         }
       }
       char c = (char) input->readULong(1);
+      lastIsSectionBreak=(c==0xc);
       actC++;
       if (c == '\0') {
         if (i == numC-1) break;
@@ -1799,7 +1807,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
       case 0xa:
         listener->insertEOL(true);
         break;
-      case 0xc: // new section (done)
+      case 0xc: // new section: this is treated after, at the beginning of the for loop
         break;
       case 0xd:
         f2.str("");
