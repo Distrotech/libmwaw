@@ -1,5 +1,8 @@
 CHANGES:
 
+28/7/2014:
+- AppleWorks/ClarisWorks: manage multiple headers/footers + better rebuilding of complex group
+
 1/7/2014:
 - MacDraw: add a parser for v0 and v1 documents
 
