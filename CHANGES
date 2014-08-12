@@ -1,5 +1,7 @@
 CHANGES:
 
+-------- version 0.3.3 (start)  -------------
+
 28/7/2014:
 - AppleWorks/ClarisWorks: manage multiple headers/footers + better rebuilding of complex group
 

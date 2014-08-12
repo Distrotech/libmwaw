@@ -337,7 +337,7 @@ bool File::readFileInformation()
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   }
   else if (m_fInfoCreator=="MDPL") {
-    checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
+    checkFInfoType("DRWG","MacDraw II") || checkFInfoType("STAT","MacDraw II(template)") || checkFInfoType("MacDraw II");
   }
   else if (m_fInfoCreator=="MMBB") {
     checkFInfoType("MBBT","Mariner Write") || checkFInfoType("Mariner Write");
@@ -584,6 +584,10 @@ bool File::readDataInformation()
       m_dataResult.push_back("MacDraw II");
       return true;
     }
+  }
+  if (val[0]==0x5354 && val[1]==0x4154 && val[2]==0x4432) { // STATD2
+    m_dataResult.push_back("MacDraw II(template)");
+    return true;
   }
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     m_dataResult.push_back("MacDraw Pro");

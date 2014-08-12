@@ -785,34 +785,31 @@ bool NisusWrtParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   MWAWInputStreamPtr input = getInput();
   if (!input || !input->hasDataFork() || !getRSRCParser())
     return false;
-  MWAWRSRCParser::Version vers;
+  MWAWRSRCParser::Version applVersion, docVersion;
   // read the Nisus version
-  int nisusVersion = -1;
   MWAWEntry entry = getRSRCParser()->getEntry("vers", 2002);
   if (!entry.valid()) entry = getRSRCParser()->getEntry("vers", 2);
-  if (entry.valid() && getRSRCParser()->parseVers(entry, vers))
-    nisusVersion = vers.m_majorVersion;
-  else if (nisusVersion==-1) {
+  // read the application format version
+  if (!entry.valid() || !getRSRCParser()->parseVers(entry, applVersion)) {
     MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: can not find the Nisus version\n"));
   }
-
   // read the file format version
   entry = getRSRCParser()->getEntry("vers", 1);
-  if (!entry.valid() || !getRSRCParser()->parseVers(entry, vers)) {
+  if (!entry.valid() || !getRSRCParser()->parseVers(entry, docVersion)) {
     MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: can not find the Nisus file format version\n"));
     return false;
   }
-  switch (vers.m_majorVersion) {
+  switch (docVersion.m_majorVersion) {
   case 3:
   case 4:
-    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with file format version %d\n", nisusVersion, vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with file format version %d\n", applVersion.m_majorVersion, docVersion.m_majorVersion));
     break;
   default:
-    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with unknown file format version %d\n", nisusVersion, vers.m_majorVersion));
+    MWAW_DEBUG_MSG(("NisusWrtParser::checkHeader: find Nisus %d file with unknown file format version %d\n", applVersion.m_majorVersion, docVersion.m_majorVersion));
     return false;
   }
 
-  setVersion(vers.m_majorVersion);
+  setVersion(docVersion.m_majorVersion);
   if (header)
     header->reset(MWAWDocument::MWAW_T_NISUSWRITER, version());
 

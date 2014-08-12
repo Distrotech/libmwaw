@@ -15,6 +15,7 @@
 - LightWayTxt*  : parser of LightWay Text documents
 - MacDoc*       : parser of MacDoc documents
 - MacDraw*      : parser of MacDraw documents
+- MacDrawPro*   : parser of MacDraw II documents ( not finished)
 - MacWrt*       : parser of MacWrite documents
 - MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
 - MarinerWrt*   : parser of Mariner Write documents
@@ -53,12 +54,13 @@ These files defined basic tools which must be used by the parsers :
 ## generic tools
 
 - MWAWDebug.hxx : class to store parsed data in an intermediate file
-- MWAWFontConverter.hxx : read and convert in unicode Apple© char fonts
+- MWAWFontConverter.hxx : reads and convert in unicode Apple© char fonts
      MWAWFontSJISConverter.hxx : read S-JIS encoding fonts
-- MWAWPrinter.hxx : read the mac printer information
-- MWAWOLEParser.hxx : read some classic ole structure
+- MWAWPrinter.hxx : reads the mac printer information
+- MWAWOLEParser.hxx : reads some classic ole structures
 - MWAWPropertyHandler.hxx : some classes which keep a list of tag and RVNGPropertyList,
 	store/unstore then in order to be reread by writerperfect 
+- MWAWStringStream.hxx: creates a RVNGInputStream given a unsigned char's pointer
 
 ## specific tool for graphics:
 - MWAWPict.hxx : generic pict
@@ -186,6 +188,8 @@ LightWayTxtParser : parser of LightWay Text v4.5
 MacDocParser : parser of MacDoc document: v1.3
 
 MacDrawParser : parser of MacDraw document: v0-v1
+
+MacDrawProParser : parser of MacDraw II document: not finished
 
 MacPaintParser: parser of MacPaint v1-2 files (ie. of PNTG mac file)
 

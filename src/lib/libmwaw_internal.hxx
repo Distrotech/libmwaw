@@ -198,6 +198,26 @@ struct MWAWColor {
   {
     return m_value;
   }
+  //! returns the alpha value
+  unsigned char getAlpha() const
+  {
+    return (unsigned char)((m_value>>24)&0xFF);
+  }
+  //! returns the green value
+  unsigned char getBlue() const
+  {
+    return (unsigned char)(m_value&0xFF);
+  }
+  //! returns the red value
+  unsigned char getRed() const
+  {
+    return (unsigned char)((m_value>>16)&0xFF);
+  }
+  //! returns the green value
+  unsigned char getGreen() const
+  {
+    return (unsigned char)((m_value>>8)&0xFF);
+  }
   //! return true if the color is black
   bool isBlack() const
   {

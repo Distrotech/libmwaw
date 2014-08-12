@@ -89,7 +89,7 @@ public:
   // Position: access
   //
 
-  /*! \brief seeks to a offset position, from actual or beginning position
+  /*! \brief seeks to a offset position, from actual, beginning or ending position
    * \return 0 if ok
    * \sa pushLimit popLimit
    */

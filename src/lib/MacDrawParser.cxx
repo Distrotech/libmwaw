@@ -331,28 +331,19 @@ void MacDrawParser::createDocument(librevenge::RVNGDrawingInterface *documentInt
 bool MacDrawParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
-  int const vers=version();
   readPrefs();
   input->seek(512,librevenge::RVNG_SEEK_SET);
   long pos=input->tell();
-  if (vers<2) {
-    while (!input->isEnd()) {
-      if (readObject()<0)
-        break;
-      pos=input->tell();
-    }
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  while (!input->isEnd()) {
+    if (readObject()<0)
+      break;
+    pos=input->tell();
   }
-  else {
-    MWAW_DEBUG_MSG(("MacDrawParser::createDocument: reading version 2 files is not implemented\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Data):##");
-    return false;
-  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   if (!input->isEnd()) {
     pos=input->tell();
-    MWAW_DEBUG_MSG(("MacDrawParser::createDocument: find extra data\n"));
+    MWAW_DEBUG_MSG(("MacDrawParser::createZones: find extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Data):##");
   }
@@ -895,9 +886,6 @@ bool MacDrawParser::checkHeader(MWAWHeader *header, bool strict)
     if (input->readULong(2)!=0x5747) return false;
     val=(int) input->readULong(2);
     if (val==0x4d44) vers=1;
-#ifdef DEBUG
-    else if (val==0x4432) vers=2;
-#endif
     else {
       MWAW_DEBUG_MSG(("MacDrawParser::checkHeader: find unexpected header\n"));
       return false;
@@ -925,6 +913,20 @@ bool MacDrawParser::checkHeader(MWAWHeader *header, bool strict)
       if (input->readLong(2)) return false;
   }
 
+  if (strict && vers >= 1) {
+    // we must check that this is not a basic pict file
+    input->seek(512+2, librevenge::RVNG_SEEK_SET);
+    int dim[4];
+    for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+    val=(int) input->readLong(2);
+    if (dim[0]<dim[2] && dim[1]<dim[3] && (val==0x1101 || (val==0x11 && input->readLong(2)==0x2ff))) {
+      // posible
+      input->seek(512, librevenge::RVNG_SEEK_SET);
+      Box2f box;
+      if (MWAWPictData::check(input, (int)(input->size()-512), box) != MWAWPict::MWAW_R_BAD)
+        return false;
+    }
+  }
   if (strict) {
     // check also the beginning list of shape
     input->seek(512, librevenge::RVNG_SEEK_SET);
