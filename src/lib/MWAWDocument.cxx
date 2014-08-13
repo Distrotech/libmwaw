@@ -109,7 +109,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
   }
 
   try {
-    MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported()\n"));
     MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
     MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
     shared_ptr<MWAWRSRCParser> rsrcParser;
