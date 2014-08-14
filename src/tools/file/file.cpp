@@ -580,12 +580,12 @@ bool File::readDataInformation()
       m_dataResult.push_back("MacDraw");
       return true;
     }
-    if (val[2]==0x4432) { // D2
+    if (val[2]==0 || val[2]==0x4432) { // nothing or D2
       m_dataResult.push_back("MacDraw II");
       return true;
     }
   }
-  if (val[0]==0x5354 && val[1]==0x4154 && val[2]==0x4432) { // STATD2
+  if (val[0]==0x5354 && val[1]==0x4154 && (val[2]==0||val[2]==0x4432)) { // STATD2
     m_dataResult.push_back("MacDraw II(template)");
     return true;
   }

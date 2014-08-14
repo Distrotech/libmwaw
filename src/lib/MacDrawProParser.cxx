@@ -57,6 +57,33 @@
 /** Internal: the structures of a MacDrawProParser */
 namespace MacDrawProParserInternal
 {
+// generic class used to defined a layer
+struct Layer {
+  //! constructor
+  Layer() : m_numShapes(0), m_name("")
+  {
+    for (int i=0; i<3; ++i) m_N[i]=0;
+  }
+  //! the number of shape
+  int m_numShapes;
+  //! some unknown number find in the beginning of the header
+  long m_N[3];
+  //! the layer name
+  std::string m_name;
+};
+
+// generic class used to defined a library
+struct Library {
+  //! constructor
+  Library() : m_layerList(), m_name("")
+  {
+  }
+  //! the list of layer id
+  std::vector<int> m_layerList;
+  //! the library name
+  std::string m_name;
+};
+
 // generic class used to store shape in MWAWDrawParser
 struct Shape {
   //! the different shape
@@ -107,9 +134,10 @@ struct Shape {
 //! Internal: the state of a MacDrawProParser
 struct State {
   //! constructor
-  State() : m_version(0), m_documentSize(), m_numLayers(1), m_numShapes(0), m_numColors(8), m_numBWPatterns(0), m_numColorPatterns(0), m_numPatternsInTool(0),
+  State() : m_version(0), m_documentSize(), m_numLayers(1), m_numLibraries(0), m_numShapes(0),
+    m_numColors(8), m_numBWPatterns(0), m_numColorPatterns(0), m_numPatternsInTool(0),
     m_penSizeList(), m_dashList(), m_fontList(), m_colorList(), m_BWPatternList(), m_colorPatternList(),
-    m_shapeList()
+    m_libraryList(), m_layerList(), m_objectDataList(), m_shapeList()
   {
     for (int i=0; i<5; ++i) m_numZones[i]=0;
     for (int i=0; i<5; ++i) m_sizeHeaderZones[i]=0;
@@ -153,6 +181,8 @@ struct State {
   Vec2f m_documentSize;
   //! the number of layer
   int m_numLayers;
+  //! the number of library
+  int m_numLibraries;
   //! the total number of shapes
   int m_numShapes;
   //! the number of zones
@@ -185,6 +215,12 @@ struct State {
   std::vector<MWAWGraphicStyle::Pattern> m_BWPatternList;
   //! the color patterns list
   std::vector<MWAWGraphicStyle::Pattern> m_colorPatternList;
+  //! the library list
+  std::vector<Library> m_libraryList;
+  //! the layer list
+  std::vector<Layer> m_layerList;
+  //! the list of entries which stores the object's data
+  std::vector<MWAWEntry> m_objectDataList;
   //! the shape list
   std::vector<Shape> m_shapeList;
 };
@@ -436,27 +472,27 @@ bool MacDrawProParser::createZones()
   if (getRSRCParser()) readRSRCZones();
 
   input->seek(0x1f4,librevenge::RVNG_SEEK_SET);
-  if (!readStyles() || !readLayersInfo()) return false;
-  for (int i=0; i<3; ++i) { // never seems zoneF1 and zoneF2, so there may have a different form
-    if (!readUnknownMainZones(i)) return false;
-    if (i==0 && !readLibrariesInfo()) return false;
+  if (!readStyles() || !readLayersInfo() || !readLayerLibraryCorrespondance() || !readLibrariesInfo() ||
+      !findDataObjectPosition() || !findTextObjectPosition()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::createZones: something is bad, stop.\n"));
+    return false;
   }
   long pos;
   libmwaw::DebugStream f;
   if (m_state->m_sizeFZones[3]) {
+    /* checkme: I am not sure if this zone contains data or if it is
+       only an intermediary zone used to make possible to grow the
+       previous zones */
     pos=input->tell();
     long endPos=pos+m_state->m_sizeFZones[3];
     f.str("");
-    f << "Entries(ZoneF5):";
+    f << "Entries(Free0):";
     if (m_state->m_sizeFZones[3]<0 || !input->checkPosition(endPos)) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::createZones: can not read ZoneF5 size\n"));
+      MWAW_DEBUG_MSG(("MacDrawProParser::createZones: can not read Free0 size\n"));
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
       return false;
     }
-    /** m_state->m_sizeFZones[3] is often a multiple of 8 ( and look like a list of struct of size 8)
-        but I also find m_state->m_sizeFZones[3]=0x16 ( an uncomplete struct ? )
-     */
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
@@ -472,20 +508,28 @@ bool MacDrawProParser::createZones()
     if (!readObject()) break;
   }
 
-  // maybe junk
-  pos=input->tell();
-  ascii().addPos(pos);
-  ascii().addNote("Entries(ZoneG):");
-  pos+=512;
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-
-  pos=input->tell();
-  pos=256*(pos/256)+256;
-  while (input->checkPosition(pos)) {
+  // probably a free zone (used to reserve space to make the file grow)
+  if (!input->isEnd()) {
+    pos=input->tell();
     ascii().addPos(pos);
-    ascii().addNote("ZoneG-##");
-    pos+=256;
+    ascii().addNote("Entries(Free1):");
   }
+
+  for (size_t i=0; i<m_state->m_objectDataList.size(); ++i) {
+    MWAWEntry const &entry=m_state->m_objectDataList[i];
+    if (!entry.valid() || entry.isParsed())
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::createZones: find some unparsed object sone\n"));
+      first=false;
+    }
+    f.str("");
+    f << "Entries(ObjData)[" << i << "]:###unparsed";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+  }
+
   MWAW_DEBUG_MSG(("MacDrawProParser::createZones: oops is not implemented\n"));
   return false;
 }
@@ -547,52 +591,215 @@ bool MacDrawProParser::readLayersInfo()
 
   libmwaw::DebugStream f;
   int numShapes=0;
+  std::map<int,long> idToNamePosMap;
+  m_state->m_layerList.clear();
   for (int i=0; i<m_state->m_numLayers; ++i) {
+    MacDrawProParserInternal::Layer layer;
     pos=input->tell();
     f.str("");
-    f << "Entries(Layer)[" << i << "]:";
-    long val=(long) input->readULong(2); // always 0?
+    f << "Entries(Layer)[L" << i+1 << "]:";
+    long val=(long) input->readULong(2);
+    if (val&0x8000) f << "hidden,";
+    val &=0x7FFF;
+    if (val) f << "fl=" << std::hex << val << std::dec << ",";
+    f << "id?=" << input->readULong(2) << ","; // a small number
+    long delta=(long) input->readULong(4);
+    if (delta) f << "name[pos]=" << std::hex << delta << std::dec << ",";
+    if (delta < 0 || delta >=m_state->m_sizeLayerZones[1]) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readLayersInfo: problem with the layer position dim\n"));
+      f << "###";
+      delta=-1;
+    }
+    idToNamePosMap[i]=delta;
+    layer.m_numShapes=(int) input->readULong(4);
+    numShapes+=layer.m_numShapes;
+    if (layer.m_numShapes) f << "N[shapes]=" << layer.m_numShapes << ",";
+    m_state->m_layerList.push_back(layer);
+    val=(long) input->readLong(4); // always 0?
     if (val) f << "f0=" << val << ",";
-    f << "id=" << input->readULong(2) << ",";
-    val=(long) input->readULong(4); // 0 excepted if we have many layers
-    if (val) f << "f1=" << val << ",";
-    val=(long) input->readULong(4);
-    numShapes+=(int) val;
-    if (val) f << "N[shapes]=" << val << ",";
-
-    ascii().addDelimiter(input->tell(),'|');
-    input->seek(pos+128, librevenge::RVNG_SEEK_SET);
+    f << "N[unkn]=[";
+    for (int j=0; j<3; ++j) { // small numbers always less than numShapes. Note: f2 can be equal to -1
+      val=layer.m_N[j]=(long) input->readLong(4);
+      if (!val) {
+        f << "_,";
+        continue;
+      }
+      if (val>layer.m_numShapes) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::readLayersInfo: find an old number in header\n"));
+        f << "#";
+      }
+      f << "f" << j << "=";
+      if (val==-1)
+        f << "*,";
+      else
+        f << val << "/" << layer.m_numShapes << ",";
+    }
+    f << "],";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
+
+    for (int j=0; j<2; ++j) {
+      /* very often Layer-A0=Layer-A1.
+         When they differ, Layer-A1 seems to contain more data than Layer-A0
+       */
+      pos=input->tell();
+      f.str("");
+      f << "Layer-A" << j << "[L" << i+1 << "]:";
+      f << "N[unkn]=[";
+      for (int k=0; k<3; ++k) { // small numbers always less than numShapes, but they can be greater than m_N[k]
+        val=(long) input->readLong(4);
+        if (!val) {
+          f << "_,";
+          continue;
+        }
+        if (val > layer.m_numShapes) f << "#";
+        f << val << "/" << layer.m_numShapes << ",";
+      }
+      f << "],";
+      for (int k=0; k<2; ++k) {
+        float dim[4];
+        for (int l=0; l<4; ++l) dim[l]=float(input->readLong(4))/65536.f;
+        if (dim[0]>0||dim[1]>0||dim[2]>0||dim[3]>0)
+          f << "dim" << k << "=" << Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
+      }
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+    }
+
+    pos=input->tell();
+    f.str("");
+    f << "Layer-B[L" << i+1 << "]:";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   }
   m_state->m_numShapes=numShapes;
-  input->seek(begNamePos, librevenge::RVNG_SEEK_SET);
 
-  pos=input->tell();
-  f.str("");
-  f << "Layer[name]:";
-  for (int i=0; i<m_state->m_numLayers; ++i) {
+  for (std::map<int,long>::const_iterator it=idToNamePosMap.begin(); it!=idToNamePosMap.end(); ++it) {
+    if (it->second < 0) continue;
+    pos=begNamePos+it->second;
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    f.str("");
+    f << "Layer[L" << it->first+1 << ",name]:";
     int fSz=(int)input->readULong(1);
     if (input->tell()+fSz>endPos) {
       MWAW_DEBUG_MSG(("MacDrawProParser::readLayersInfo: oops the layer name size seems bad\n"));
       f << "###";
-      break;
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      continue;
     }
     std::string name("");
     for (int c=0; c<fSz; ++c) name+=(char) input->readULong(1);
     f << name << ",";
+    m_state->m_layerList[size_t(it->first)].m_name=name;
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
   }
-  ascii().addPos(pos);
-  ascii().addNote(f.str().c_str());
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
+bool MacDrawProParser::readLayerLibraryCorrespondance()
+{
+  if (!m_state->m_sizeFZones[0]) return true;
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+
+  MWAWEntry entry;
+  entry.setBegin(pos);
+  entry.setLength(m_state->m_sizeFZones[0]);
+  entry.setName("LayToLib");
+
+  if (entry.length()<0 || !input->checkPosition(entry.end())) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: the zone size seems bad\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(LayToLib):###");
+    return false;
+  }
+  std::map<int, long> idToDecal;
+  if (!readStructuredHeaderZone(entry, idToDecal)) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: can not read the header\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(LayToLib):###");
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+
+  pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "LayToLib[data]:";
+  long sz=(long) input->readULong(4);
+  if (sz<4 || pos+sz>entry.end()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: can not read the data size\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  for (std::map<int, long>::const_iterator it=idToDecal.begin(); it!=idToDecal.end(); ++it) {
+    int id=it->first;
+    long decal=it->second;
+    if (decal<0 || decal+8>sz) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: the zone %d's decal seems bad\n", id));
+      continue;
+    }
+    f.str("");
+    f << "LayToLib-L" << id+1 << ":";
+    long begPos=pos+decal;
+    input->seek(begPos, librevenge::RVNG_SEEK_SET);
+    int val=(int) input->readLong(2); // always 0?
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2); // 1|3
+    if (val!=1) f << "type=" << val << ",";
+    long dataSz=(long) input->readULong(4);
+    if (dataSz<8 || begPos+dataSz>entry.end() || (dataSz%8)!=0) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: the zone %d data size seems bad\n", id));
+      f << "###";
+      ascii().addPos(begPos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    int N=int((dataSz-8)/8);
+    f << "libs=[";
+    for (int i=0; i<N; ++i) {
+      val=(int) input->readLong(4); // find 1 or 2
+      int val1=(int) input->readLong(2);
+      int library=(int) input->readLong(2);
+      if (library<1 || library>m_state->m_numLibraries) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::readLayerLibraryCorrespondance: a library number seems bad\n"));
+        f << "###";
+      }
+      else {
+        if (library>int(m_state->m_libraryList.size()))
+          m_state->m_libraryList.resize(size_t(library));
+        m_state->m_libraryList[size_t(library-1)].m_layerList.push_back(id+1);
+      }
+      f << "Li" << library;
+      if (val!=1) f << ":" << val;
+      else if (val1) f << ":_";
+      if (val1) f << ":" << val1;
+      f << ",";
+    }
+    f << "],";
+    ascii().addPos(begPos+dataSz);
+    ascii().addNote("_");
+    ascii().addPos(begPos);
+    ascii().addNote(f.str().c_str());
+  }
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+  return true;
+}
 
 bool MacDrawProParser::readLibrariesInfo()
 {
-  if (!m_state->m_sizeLibraryZones[0]||!m_state->m_sizeLibraryZones[1])
-    return false;
+  if (!m_state->m_sizeLibraryZones[0] && !m_state->m_sizeLibraryZones[1])
+    return true;
+
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
   long begNamePos=pos+m_state->m_sizeLibraryZones[0];
@@ -681,12 +888,11 @@ bool MacDrawProParser::readFontStyles(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MacDrawProParser::readFontStyles: oops the number of fonts seems odd\n"));
   }
 
-  int val;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   for (int j=0; j<N; ++j) {
     pos=input->tell();
     f.str("");
-    val=(int) input->readLong(2);
+    int val=(int) input->readLong(2);
     if (val!=1) f<<"numUsed=" << val << ",";
     f << "h[total]=" << input->readLong(2) << ",";
     int sz=(int) input->readULong(2);
@@ -725,68 +931,97 @@ bool MacDrawProParser::readFontStyles(MWAWEntry const &entry)
   return true;
 }
 
-bool MacDrawProParser::readUnknownMainZones(int zoneId)
+bool MacDrawProParser::readStructuredHeaderZone(MWAWEntry const &entry, std::map<int, long> &idToDeltaPosMap)
 {
-  if (!m_state->m_sizeFZones[zoneId]) return true;
-  MWAWInputStreamPtr input = getInput();
-  long pos=input->tell();
-  long endPos=pos+m_state->m_sizeFZones[zoneId];
+  idToDeltaPosMap.clear();
+  if (!entry.length())
+    return true;
 
+  MWAWInputStreamPtr input = getInput();
+  long pos=entry.begin();
   libmwaw::DebugStream f;
-  if (zoneId==0)
-    f << "Entries(LayToLib):";
-  else
-    f << "Entries(ZoneF" << zoneId << "):";
-  if (m_state->m_sizeFZones[zoneId]<0 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readUnknownMainZones: can not read ZoneF%d size\n", zoneId));
-    f.str("");
+  f << "Entries(" << entry.name() << "):";
+
+  if (entry.length()<4+4 || !input->checkPosition(entry.end())) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readStructuredHeaderZone: can not read %s size\n", entry.name().c_str()));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     return false;
   }
+
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
   long sz=(long) input->readULong(4);
-  long fFree=(int) input->readULong(4);
-  f << "fFree=" << fFree << ",";
-  if (sz<4 ||  pos+sz>endPos) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readUnknownMainZones: can not read ZoneF%d-ptr size\n", zoneId));
+  long endPos=pos+sz;
+  if (sz<8 || endPos>entry.end()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readStructuredHeaderZone: can not read %s-ptr size\n", entry.name().c_str()));
     f << "ptr###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
+  long fFree=(int) input->readULong(4);
+  f << "fFree=" << fFree << ",";
   if (fFree!=sz)
     ascii().addDelimiter(pos+fFree,'|');
   int numDatas=int((sz-8)/4);
-  if (numDatas>m_state->m_numShapes)
-    numDatas=m_state->m_numShapes;
-  std::map<int, long> idToDecal;
   f << "ptrs=[";
   for (int i=0; i<numDatas; ++i) {
     long ptr=(long) input->readULong(4);
     if (!ptr) continue;
-    idToDecal[i]=ptr;
+    idToDeltaPosMap[i]=ptr;
     f << std::hex << ptr << std::dec << ":" << i << ",";
   }
   f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+sz,  librevenge::RVNG_SEEK_SET);
+  input->seek(endPos,  librevenge::RVNG_SEEK_SET);
 
-  pos=input->tell();
-  f.str("");
-  if (zoneId==0)
-    f << "LayToLib[data]:";
-  else
-    f << "ZoneF" << zoneId << "[data]:";
-  sz=(long) input->readULong(4);
-  if (sz<4 || pos+sz>endPos) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readUnknownMainZones: can not read ZoneF%d-data size\n", zoneId));
+  return true;
+}
+
+bool MacDrawProParser::findTextObjectPosition()
+{
+  if (!m_state->m_sizeFZones[2]) return true;
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+
+  MWAWEntry entry;
+  entry.setBegin(pos);
+  entry.setLength(m_state->m_sizeFZones[2]);
+  entry.setId(2);
+  entry.setName("ObjText");
+
+  libmwaw::DebugStream f;
+  f << "Entries(ObjText):";
+  if (entry.length()<0 || !input->checkPosition(entry.end())) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findTextObjectPosition: can not read size\n"));
     f << "###";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  std::map<int, long> idToDecal;
+  if (!readStructuredHeaderZone(entry, idToDecal)) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findTextObjectPosition: can not read header\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+
+  pos=input->tell();
+  f.str("");
+  f << "ObjText[data]:";
+  long sz=(long) input->readULong(4);
+  if (sz<4 || pos+sz>entry.end()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findTextObjectPosition: can not read the data size\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
   ascii().addPos(pos);
@@ -795,14 +1030,11 @@ bool MacDrawProParser::readUnknownMainZones(int zoneId)
     int id=it->first;
     long decal=it->second;
     if (decal<0 || decal+8>sz) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readUnknownMainZones: can not read ZoneF%d-D%d position\n", zoneId, id));
+      MWAW_DEBUG_MSG(("MacDrawProParser::findTextObjectPosition: can not read data %d position\n", id));
       continue;
     }
     f.str("");
-    if (zoneId==0)
-      f << "LayToLib-D" << id << ":";
-    else
-      f << "ZoneF" << zoneId << "-D" << id << ":";
+    f << "ObjText-D" << id << ":";
     long begPos=pos+decal;
     input->seek(begPos, librevenge::RVNG_SEEK_SET);
     int val=(int) input->readLong(2); // always 0?
@@ -810,8 +1042,8 @@ bool MacDrawProParser::readUnknownMainZones(int zoneId)
     val=(int) input->readLong(2); // 1|3
     if (val!=1) f << "type=" << val << ",";
     long dataSz=(long) input->readULong(4);
-    if (dataSz<8 || begPos+dataSz>endPos) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readUnknownMainZones: can not read ZoneF%d-D%d data\n", zoneId, id));
+    if (dataSz<8 || begPos+dataSz>entry.end()) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::findTextObjectPosition: can not read data %d size\n", id));
       f << "###";
       ascii().addPos(begPos);
       ascii().addNote(f.str().c_str());
@@ -824,7 +1056,89 @@ bool MacDrawProParser::readUnknownMainZones(int zoneId)
     ascii().addPos(begPos);
     ascii().addNote(f.str().c_str());
   }
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool MacDrawProParser::findDataObjectPosition()
+{
+  if (!m_state->m_sizeFZones[1]) return true;
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+
+  MWAWEntry entry;
+  entry.setBegin(pos);
+  entry.setLength(m_state->m_sizeFZones[1]);
+  entry.setName("ObjData");
+
+  if (entry.length()<0 || !input->checkPosition(entry.end())) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: the zone size seems bad\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(ObjData):###");
+    return false;
+  }
+  std::map<int, long> idToDecal;
+  if (!readStructuredHeaderZone(entry, idToDecal)) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: can not read the header\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(ObjData):###");
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+
+  pos=input->tell();
+  libmwaw::DebugStream f;
+  f << "ObjData[data]:";
+  long sz=(long) input->readULong(4);
+  if (sz<4 || pos+sz>entry.end()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: can not read the data size\n"));
+    f << "###";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  m_state->m_objectDataList.clear();
+  for (std::map<int, long>::const_iterator it=idToDecal.begin(); it!=idToDecal.end(); ++it) {
+    int id=it->first;
+    long decal=it->second;
+    if (decal<4 || decal+8>sz) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: the zone %d's decal seems bad\n", id));
+      continue;
+    }
+
+    f.str("");
+    f << "ObjData[" << id << "]:";
+    long begPos=pos+decal;
+    input->seek(begPos+4, librevenge::RVNG_SEEK_SET);
+    long dataSz=(long) input->readULong(4);
+    if (dataSz<8 || begPos+dataSz>entry.end()) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: the zone %d data size seems bad\n", id));
+      f << "###";
+      ascii().addPos(begPos);
+      ascii().addNote(f.str().c_str());
+      continue;
+    }
+    MWAWEntry dEntry;
+    dEntry.setBegin(begPos);
+    dEntry.setLength(dataSz);
+    dEntry.setId(id);
+    if (id>=int(m_state->m_objectDataList.size()))
+      m_state->m_objectDataList.resize(size_t(id+1));
+    if (id>=0 && id < int(m_state->m_objectDataList.size()))
+      m_state->m_objectDataList[size_t(id)]=dEntry;
+    else {
+      MWAW_DEBUG_MSG(("MacDrawProParser::findDataObjectPosition: can not store entry %d\n", id));
+      f << "###";
+      ascii().addPos(begPos);
+      ascii().addNote(f.str().c_str());
+    }
+    ascii().addPos(dEntry.end());
+    ascii().addNote("_");
+  }
+  input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -834,7 +1148,8 @@ bool MacDrawProParser::readObject()
   if (input->isEnd()) return false;
   long pos=input->tell();
   libmwaw::DebugStream f;
-  f << "Entries(Object):";
+  size_t shapeId= m_state->m_shapeList.size();
+  f << "Entries(Object)[O" << shapeId << "]:";
 
   if (!input->checkPosition(pos+32)) {
     MWAW_DEBUG_MSG(("MacDrawProParser::readObject: the zone seems to small\n"));
@@ -843,11 +1158,9 @@ bool MacDrawProParser::readObject()
     ascii().addNote(f.str().c_str());
     return false;
   }
-  size_t shapeId= m_state->m_shapeList.size();
   m_state->m_shapeList.push_back(MacDrawProParserInternal::Shape());
   MacDrawProParserInternal::Shape &shape=m_state->m_shapeList.back();
   shape.m_id=int(shapeId);
-  f << "id=" << shapeId << ",";
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
   shape.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
@@ -855,8 +1168,9 @@ bool MacDrawProParser::readObject()
   int val=(int) input->readULong(1);
   if (val & 0x8) f << "select,";
   if (val & 0x20) f << "locked,";
+  bool hasData=(val & 0x40);
   if (val & 0x80) f << "rotation,";
-  val &=0x57;
+  val &=0x17;
   if (val) f << "fl0=" << std::hex << val << std::dec << ",";
   val=(int) input->readULong(1);
   // checkme
@@ -924,14 +1238,19 @@ bool MacDrawProParser::readObject()
     }
     f << "surf[pat]=C" << val << ",";
   }
+  else if (val&0x4000) {
+    val &= 0x3FFF;
+    if (val<=0 || val>int(m_state->m_colorList.size())) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown basic color pattern: %d\n", val));
+      f << "surf[color]=###" << val << ",";
+    }
+    else
+      f << "surf[color]=" << m_state->m_colorList[size_t(val-1)] << ",";
+  }
   else if (val)  {
     m_state->initBWPatterns();
     if (val<=0 || val>int(m_state->m_BWPatternList.size())) {
-      static bool first=true;
-      if (first) {
-        MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown BW pattern: %d\n", val));
-        first=false;
-      }
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown BW pattern: %d\n", val));
       f << "###";
     }
     f << "surf[pat]=" << val << ",";
@@ -945,11 +1264,57 @@ bool MacDrawProParser::readObject()
     }
     f << "D" << val << ",";
   }
-
+  val=(int) input->readLong(1); // a small number negative or positif
+  if (val) f << "f2=" << val << ",";
+  if (hasData) {
+    val=(int) input->readULong(2);
+    if (val<8) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: can not find the data position\n"));
+      f << "###objData[pos],";
+    }
+    else {
+      long actPos=input->tell();
+      if (!readObjectData(shape, (val-8)/4))
+        f << "###";
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
+      f << "objData[id]=" << (val-8)/4 << ",";
+    }
+    if (val&3)
+      f << "objData[low]=" << (val&3) << ",";
+  }
   ascii().addDelimiter(input->tell(),'|');
   input->seek(pos+32, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, int zId)
+{
+  if (zId<0 || zId>=(int) m_state->m_objectDataList.size() || !m_state->m_objectDataList[size_t(zId)].valid()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObject: can not find the data for zone %d\n", zId));
+    return false;
+  }
+  MWAWEntry const &entry=m_state->m_objectDataList[size_t(zId)];
+  entry.setParsed(true);
+
+  MWAWInputStreamPtr input = getInput();
+  long savePos=input->tell();
+  libmwaw::DebugStream f;
+  f << "ObjData[O" << shape.m_id << "]:id=" << zId << ",";
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  int val=(int) input->readLong(2); // always 0?
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(2); // 1|3
+  if (val!=1) f << "type=" << val << ",";
+  input->seek(4, librevenge::RVNG_SEEK_CUR); // skip the size field
+
+  if (input->tell()!=entry.end())
+    ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+
+  input->seek(savePos, librevenge::RVNG_SEEK_SET);
   return true;
 }
 
@@ -972,12 +1337,18 @@ bool MacDrawProParser::checkHeader(MWAWHeader *header, bool strict)
     if (input->readULong(2)!=0x5747) return false;
   }
   else if (val==0x5354) { // template
+    f << "stationery,";
     if (input->readULong(2)!=0x4154) return false;
   }
   else return false;
 
   val=(int) input->readULong(2);
-  if (val==0x4432) vers=0;
+  if (val==0x4432)
+    vers=0;
+  else if (val==0) {
+    f << "D2[not],";
+    vers=0;
+  }
   else {
     MWAW_DEBUG_MSG(("MacDrawProParser::checkHeader: find unexpected header\n"));
     return false;
@@ -1098,6 +1469,8 @@ bool MacDrawProParser::readHeaderInfo()
     val=(int) input->readULong(2);
     if (val) f << "h" << i+3 << "=" << val << ",";
   }
+  m_state->m_numLibraries=(int) input->readULong(2);
+  if (m_state->m_numLibraries) f << "num[libraries]=" << m_state->m_numLibraries << ",";
 
   input->seek(pos+40, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
@@ -1106,6 +1479,18 @@ bool MacDrawProParser::readHeaderInfo()
     pos=input->tell();
     f.str("");
     f << "HeaderInfo-B" << i << ":";
+    val=(int) input->readULong(2); // always 0 ?
+    if (val) f << "f0=" << val << ",";
+
+    val=(int) input->readULong(2);
+    if (val && i==0) {
+      m_state->m_numLibraries=val;
+      f << "num[libraries]=" << m_state->m_numLibraries << ",";
+    }
+    else if (val)
+      f << "num[shape?]=" << val << ",";
+
+    ascii().addDelimiter(input->tell(),'|');
     input->seek(pos+40, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1506,9 +1891,10 @@ bool MacDrawProParser::readRSRCZones()
     "Dstl"
   };
   /* find also
-     pPrf: with 0001000001000002000000000000
+     mmpp: with 0000000000000000000000000000000000000000000000000000000000000000
+     pPrf: with 0001000[01]01000002000000000000
      sPrf: spelling preference ? ie find in one file and contains strings "Main/User dictionary"...
-     xPrf: with 0000000100000001
+     xPrf: with 000000010000000[13]
    */
   for (int z = 0; z < 14; z++) {
     it = entryMap.lower_bound(zNames[z]);
@@ -2006,12 +2392,14 @@ bool MacDrawProParser::readPatternsToolList(MWAWEntry const &entry)
   for (int i=0; i<N; ++i) {
     int val=(int) input->readULong(2);
     if (val&0x8000) f << "C" << (val&0x7FFF);
+    else if (val&0x4000) f << "CC" << (val&0x3FFF); // pattern created using the color list
     else if (val) f << "BW" << val;
     else f << "_";
     val=(int) input->readULong(2);
-    if (val&0x8000) f << ":C" << (val&0x7FFF);
-    else if (val) f << ":BW" << val;
-    f << ",";
+    if (val&0x8000) f << ":#C" << (val&0x7FFF); // does not seems to appear
+    else if (val&0x4000) f << ":#CC" << (val&0x3FFF); // does not seems to appear
+    else if (val) f << ":BW" << val; // follows normally a C or a CC pattern
+    f << ","; // follows normally a BW or a _ pattern
   }
   f << "],";
   ascFile.addPos(pos-4);
@@ -2140,18 +2528,30 @@ bool MacDrawProParser::readRSRCDstl(MWAWEntry const &entry)
   entry.setParsed(true);
 
   long pos=entry.begin();
-  if (entry.length()!=18) {
+  // find always length=18, but I suppose that it can be greater
+  if (entry.length()<18 || (entry.length()%2)!=0) {
     MWAW_DEBUG_MSG(("MacDrawProParser::readRSRCDstls: the data size seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());
     return true;
   }
+
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<9; ++i) { // always -1?
+  // almost always [] but find [0,1]|[0,2]|[3,2,4]|[3,4,5,7]
+  int N=int(entry.length())/2;
+  f << "list=[";
+  for (int i=0; i<N; ++i) {
     int val=(int) input->readLong(2);
-    if (val!=-1) f << "f" << i << "=" << val << ",";
+    if (val==-1) {
+      input->seek(-2, librevenge::RVNG_SEEK_CUR);
+      break;
+    }
+    f << val << ",";
   }
+  f << "],";
+  if (input->tell()!=entry.end())
+    ascFile.addDelimiter(input->tell(),'|');
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   return true;

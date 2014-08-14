@@ -34,6 +34,7 @@
 #ifndef MACDRAWPRO_PARSER
 #  define MACDRAWPRO_PARSER
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -93,10 +94,17 @@ protected:
   bool readStyles();
   //! try to the layer info zone
   bool readLayersInfo();
+  //! try to the layer library correspondance zone
+  bool readLayerLibraryCorrespondance();
   //! try to read the library name info zone
   bool readLibrariesInfo();
-  //! try an unknown main zone
-  bool readUnknownMainZones(int zoneId);
+  //! find the objet's data position
+  bool findDataObjectPosition();
+  //! find the objet's text position
+  bool findTextObjectPosition();
+
+  //! try to read a structured zone header
+  bool readStructuredHeaderZone(MWAWEntry const &entry, std::map<int, long> &idToDeltaPosMap);
 
   //
   // low level
@@ -104,6 +112,8 @@ protected:
 
   //! try to read an object
   bool readObject();
+  //! try to read an object data
+  bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
   //! try to read the font style ( last style in data fork )
   bool readFontStyles(MWAWEntry const &entry);
 

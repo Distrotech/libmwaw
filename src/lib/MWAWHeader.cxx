@@ -548,13 +548,13 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
       return res;
     }
-    if (val[2]==0x4432) { // D2
+    if (val[2]==0 || val[2]==0x4432) { // D2
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw II file\n"));
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
       return res;
     }
   }
-  if (val[0]==0x5354 && val[1]==0x4154 && val[2]==0x4432) {
+  if (val[0]==0x5354 && val[1]==0x4154 && (val[2]==0 || val[2]==0x4432)) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw II template file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
     return res;
