@@ -53,11 +53,14 @@ struct State;
 class SubDocument;
 }
 
+class MacDrawProStyleManager;
+
 /** \brief the main class to read a MacDraw II file
  *
  */
 class MacDrawProParser : public MWAWGraphicParser
 {
+  friend class MacDrawProStyleManager;
   friend class MacDrawProParserInternal::SubDocument;
 public:
   //! constructor
@@ -81,8 +84,6 @@ protected:
 protected:
   //! finds the different objects zones
   bool createZones();
-  //! try to read the RSRC zones
-  bool readRSRCZones();
 
   // Intermediate level
 
@@ -90,8 +91,6 @@ protected:
   bool readPrintInfo();
   //! try to the header info zone ( print info + some information about content + prefs ?)
   bool readHeaderInfo();
-  //! try to the style zone
-  bool readStyles();
   //! try to the layer info zone
   bool readLayersInfo();
   //! try to the layer library correspondance zone
@@ -114,43 +113,8 @@ protected:
   bool readObject();
   //! try to read an object data
   bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
-  //! try to read the font style ( last style in data fork )
-  bool readFontStyles(MWAWEntry const &entry);
 
-  // data fork or rsrc fork
-
-  //! try to read the Arrow styles or the resource Aset:256
-  bool readArrows(MWAWEntry const &entry, bool inRsrc=false);
-  //! try to read the dash settings or the resource Dset:256
-  bool readDashs(MWAWEntry const &entry, bool inRsrc=false);
-  //! try to read the Pen styles or the resource PSet:256
-  bool readPens(MWAWEntry const &entry, bool inRsrc=false);
-  //! try to read the Ruler styles or the resource Drul:256
-  bool readRulers(MWAWEntry const &entry, bool inRsrc=false);
-
-  // rsrc
-
-  //! try to read the Document Information resource Dinf:256
-  bool readDocumentInfo(MWAWEntry const &entry);
-  //! try to read the main Preferences resource Pref:256
-  bool readPreferences(MWAWEntry const &entry);
-  //! try to read the font name resources Fmtx:256 and Fnms:256
-  bool readFontNames();
-  //! try to read colors map Ctbl:256
-  bool readColors(MWAWEntry const &entry);
-  //! try to read the BW pattern bawP:256
-  bool readBWPatterns(MWAWEntry const &entry);
-  //! try to read the color pattern colP:256
-  bool readColorPatterns(MWAWEntry const &entry);
-  //! try to read the list of pattern patR:256: list of BW/Color patterns list which appear in the patterns tools
-  bool readPatternsToolList(MWAWEntry const &entry);
-  //! try to read the Ruler settings resource Rset:256 or Rst2:256
-  bool readRulerSettings(MWAWEntry const &entry);
-  //! read the view positions resource Dvws:256
-  bool readViews(MWAWEntry const &entry);
-
-  //! read the Dstl:256 resource (unknown content)
-  bool readRSRCDstl(MWAWEntry const &entry);
+  // send functions
 
   //! try to send a shape
   bool send(MacDrawProParserInternal::Shape const &shape);
@@ -164,6 +128,9 @@ protected:
   //
   //! the state
   shared_ptr<MacDrawProParserInternal::State> m_state;
+
+  //! the style manager state
+  shared_ptr<MacDrawProStyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

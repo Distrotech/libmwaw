@@ -287,6 +287,10 @@ SOURCE=..\..\src\lib\MacDrawProParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MacDrawProStyleManager.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MacPaintParser.cxx
 # End Source File
 # Begin Source File
@@ -788,6 +792,10 @@ SOURCE=..\..\src\lib\MacDrawParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDrawProParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDrawProStyleManager.hxx
 # End Source File
 # Begin Source File
 

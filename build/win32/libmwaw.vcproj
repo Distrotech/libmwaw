@@ -372,6 +372,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MacDrawProStyleManager.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MacPaintParser.cxx"
 				>
 			</File>
@@ -874,6 +878,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MacDrawProParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawProStyleManager.hxx"
 				>
 			</File>
 			<File

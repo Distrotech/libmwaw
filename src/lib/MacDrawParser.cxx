@@ -61,9 +61,12 @@ struct Shape {
   enum Type { Basic, Bitmap, Group, GroupEnd, Text, Unknown };
 
   //! constructor
-  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1), m_font(), m_paragraph(), m_textEntry(), m_childList(), m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
+  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1),
+    m_font(), m_paragraph(), m_textEntry(), m_childList(),
+    m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
   {
   }
+
   //! return the shape bdbox
   Box2f getBdBox() const
   {

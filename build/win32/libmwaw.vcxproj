@@ -298,6 +298,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MacDrawProStyleManager.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MacPaintParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -651,6 +655,7 @@
     <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDrawParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDrawProParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacDrawProStyleManager.hxx" />
     <ClInclude Include="..\..\src\lib\MacPaintParser.hxx" />
     <ClInclude Include="..\..\src\lib\MindWrtParser.hxx" />
     <ClInclude Include="..\..\src\lib\MoreParser.hxx" />

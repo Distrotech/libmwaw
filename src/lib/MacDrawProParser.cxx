@@ -52,6 +52,8 @@
 #include "MWAWRSRCParser.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "MacDrawProStyleManager.hxx"
+
 #include "MacDrawProParser.hxx"
 
 /** Internal: the structures of a MacDrawProParser */
@@ -90,9 +92,15 @@ struct Shape {
   enum Type { Basic, Bitmap, Group, GroupEnd, Text, Unknown };
 
   //! constructor
-  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1), m_font(), m_paragraph(), m_textEntry(), m_childList(), m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
+  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1), m_flags(0),
+    m_font(), m_paragraph(), m_textEntry(), m_childList(),
+    m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
   {
   }
+
+  //! basic operator<<
+  friend std::ostream &operator<<(std::ostream &o, Shape const &shape);
+
   //! return the shape bdbox
   Box2f getBdBox() const
   {
@@ -110,6 +118,8 @@ struct Shape {
   int m_id;
   //! the following id (if set)
   int m_nextId;
+  //! the main shape flag
+  int m_flags;
   //! the font ( for a text box)
   MWAWFont m_font;
   //! the paragraph ( for a text box)
@@ -130,51 +140,78 @@ struct Shape {
   mutable bool m_isSent;
 };
 
+
+std::ostream &operator<<(std::ostream &o, Shape const &shape)
+{
+  o << "O" << shape.m_id << "[";
+  switch (shape.m_type) {
+  case Shape::Basic:
+    switch (shape.m_shape.m_type) {
+    case MWAWGraphicShape::Line:
+      o << "line,";
+      break;
+    case MWAWGraphicShape::Rectangle:
+      o << "rect,";
+      break;
+    case MWAWGraphicShape::Circle:
+      o << "circle,";
+      break;
+    case MWAWGraphicShape::Arc:
+      o << "arc,";
+      break;
+    case MWAWGraphicShape::Pie:
+      o << "pie,";
+      break;
+    case MWAWGraphicShape::Polygon:
+      o << "polygons,";
+      break;
+    case MWAWGraphicShape::Path:
+      o << "path,";
+      break;
+    case MWAWGraphicShape::ShapeUnknown:
+    default:
+      o << "###unknwown[shape],";
+      break;
+    }
+    break;
+  case Shape::Bitmap:
+    o << "bitmap,";
+    break;
+  case Shape::Group:
+    o << "group,";
+    break;
+  case Shape::GroupEnd:
+    o << "group[end],";
+    break;
+  case Shape::Text:
+    o << "text,";
+    break;
+  case Shape::Unknown:
+  default:
+    o << "unknown,";
+    break;
+  }
+  o << shape.m_box << ",";
+  if (shape.m_flags & 0x80) o << "rotation,";
+
+  if (shape.m_flags & 0x3f)
+    o << "fl=" << std::hex << (shape.m_flags&0x3f) << std::dec << ",";
+  o << "],";
+  return o;
+}
+
 ////////////////////////////////////////
 //! Internal: the state of a MacDrawProParser
 struct State {
   //! constructor
   State() : m_version(0), m_documentSize(), m_numLayers(1), m_numLibraries(0), m_numShapes(0),
-    m_numColors(8), m_numBWPatterns(0), m_numColorPatterns(0), m_numPatternsInTool(0),
-    m_penSizeList(), m_dashList(), m_fontList(), m_colorList(), m_BWPatternList(), m_colorPatternList(),
     m_libraryList(), m_layerList(), m_objectDataList(), m_shapeList()
   {
-    for (int i=0; i<5; ++i) m_numZones[i]=0;
-    for (int i=0; i<5; ++i) m_sizeHeaderZones[i]=0;
+    for (int i=0; i<5; ++i) m_sizeStyleZones[i]=0;
     for (int i=0; i<2; ++i) m_sizeLayerZones[i]=0;
     for (int i=0; i<2; ++i) m_sizeLibraryZones[i]=0;
     for (int i=0; i<4; ++i) m_sizeFZones[i]=0;
   }
-  //! returns a pattern if posible
-  bool getPattern(int id, MWAWGraphicStyle::Pattern &pat)
-  {
-    if (m_BWPatternList.empty()) initBWPatterns();
-    if (id<=0 || id>int(m_BWPatternList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParserInternal::getPattern: can not find pattern %d\n", id));
-      return false;
-    }
-    pat=m_BWPatternList[size_t(id-1)];
-    return true;
-  }
-  //! returns a color if posible
-  bool getColor(int id, MWAWColor &col)
-  {
-    if (m_colorList.empty()) initColors();
-    if (id<=0 || id>int(m_colorList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParserInternal::getColor: can not find color %d\n", id));
-      return false;
-    }
-    col=m_colorList[size_t(id-1)];
-    return true;
-  }
-  //! init the black and white patterns list
-  void initBWPatterns();
-  //! init the colors list
-  void initColors();
-  //! init the dashs list
-  void initDashs();
-  //! init the pens list
-  void initPens();
   //! the file version
   int m_version;
   //! the document size (in point)
@@ -185,36 +222,14 @@ struct State {
   int m_numLibraries;
   //! the total number of shapes
   int m_numShapes;
-  //! the number of zones
-  int m_numZones[5];
-  //! the number of color
-  int m_numColors;
-  //! the number of BW pattern
-  int m_numBWPatterns;
-  //! the number of color pattern
-  int m_numColorPatterns;
-  //! the number of pattern in tool list
-  int m_numPatternsInTool;
   //! the size of the header zones
-  long m_sizeHeaderZones[5];
+  long m_sizeStyleZones[5];
   //! the size of the layer zones
   long m_sizeLayerZones[2];
   //! the size of the library zones(checkme)
   long m_sizeLibraryZones[2];
   //! the size of the zoneF
   long m_sizeFZones[4];
-  //! the list of pen size
-  std::vector<float> m_penSizeList;
-  //! the list of dash
-  std::vector< std::vector<float> > m_dashList;
-  //! the list of font
-  std::vector<MWAWFont> m_fontList;
-  //! the color list
-  std::vector<MWAWColor> m_colorList;
-  //! the patterns list
-  std::vector<MWAWGraphicStyle::Pattern> m_BWPatternList;
-  //! the color patterns list
-  std::vector<MWAWGraphicStyle::Pattern> m_colorPatternList;
   //! the library list
   std::vector<Library> m_libraryList;
   //! the layer list
@@ -224,104 +239,6 @@ struct State {
   //! the shape list
   std::vector<Shape> m_shapeList;
 };
-
-void State::initColors()
-{
-  if (!m_colorList.empty()) return;
-  m_colorList.push_back(MWAWColor::white());
-  m_colorList.push_back(MWAWColor::black());
-  m_colorList.push_back(MWAWColor(0xDD,0x8,0x6));
-  m_colorList.push_back(MWAWColor(0,0x80,0x11));
-  m_colorList.push_back(MWAWColor(0,0,0xd4));
-  m_colorList.push_back(MWAWColor(0xFC,0xF3,0x5));
-  m_colorList.push_back(MWAWColor(0x2,0xAB,0xEB));
-  m_colorList.push_back(MWAWColor(0xF2,0x8,0x85));
-}
-
-void State::initDashs()
-{
-  if (!m_dashList.empty()) return;
-  std::vector<float> dash;
-  // 1: 9x9
-  dash.push_back(9);
-  dash.push_back(9);
-  m_dashList.push_back(dash);
-  // 2: 27x9
-  dash[0]=27;
-  m_dashList.push_back(dash);
-  // 3: 18x18
-  dash[0]=dash[1]=18;
-  m_dashList.push_back(dash);
-  // 4: 54x18
-  dash[0]=54;
-  m_dashList.push_back(dash);
-  // 5: 72x9, 9x9
-  dash.resize(4,9);
-  dash[0]=72;
-  dash[1]=9;
-  m_dashList.push_back(dash);
-  // 6: 72x9, 9x9, 9x9
-  dash.resize(6,9);
-}
-
-void State::initPens()
-{
-  if (!m_penSizeList.empty()) return;
-  static float const(values[])= {1,2,4,6,8,10};
-  for (int i=0; i<6; ++i) m_penSizeList.push_back(values[i]);
-}
-
-void State::initBWPatterns()
-{
-  if (!m_BWPatternList.empty()) return;
-  for (int i=0; i<59; ++i) {
-    static uint16_t const(patterns[]) = {
-      0xf0f0,0x3c3c,0x0f0f,0xc3c3, 0x1111,0x4444,0x1111,0x4444,
-      0x7777,0xbbbb,0x7777,0xbbbb, 0x9999,0xcccc,0x9999,0xcccc,
-      0x0000,0x0000,0x0000,0x0000, 0xffff,0xffff,0xffff,0xffff,
-      0x7f7f,0xffff,0xf7f7,0xffff, 0x7f7f,0xf7f7,0x7f7f,0xf7f7,
-      0x7777,0xdddd,0x7777,0xdddd, 0x7777,0x7777,0x7777,0x7777,
-      0xaaaa,0xaaaa,0xaaaa,0xaaaa, 0x8888,0x8888,0x8888,0x8888,
-      0x8888,0x2222,0x8888,0x2222, 0x8080,0x0808,0x8080,0x0808,
-      0x8080,0x0000,0x0808,0x0000, 0x8080,0x4141,0x0808,0x1414,
-      0xffff,0x8080,0xffff,0x0808, 0x8181,0x2424,0x8181,0x2424,
-      0x8080,0x2020,0x0808,0x0202, 0xe0e0,0x3838,0x0e0e,0x8383,
-      0x7777,0xdddd,0x7777,0xdddd, 0x8888,0x2222,0x8888,0x2222,
-      0x9999,0x6666,0x9999,0x6666, 0x2020,0x8080,0x0808,0x0202,
-      0xffff,0xffff,0xffff,0xffff, 0xffff,0x0000,0xffff,0x0000,
-      0xcccc,0x0000,0x3333,0x0000, 0xf0f0,0xf0f0,0x0f0f,0x0f0f,
-      0xffff,0x8888,0xffff,0x8888, 0xaaaa,0xaaaa,0xaaaa,0xaaaa,
-      0x0101,0x0404,0x1010,0x4040, 0x8383,0x0e0e,0x3838,0xe0e0,
-      0xeeee,0xbbbb,0xeeee,0xbbbb, 0x1111,0x4444,0x1111,0x4444,
-      0x3333,0xcccc,0x3333,0xcccc, 0x4040,0x0000,0x0404,0x0000,
-      0xaaaa,0xaaaa,0xaaaa,0xaaaa, 0x8888,0x8888,0x8888,0x8888,
-      0x0101,0x1010,0x0101,0x1010, 0x0000,0x1414,0x5555,0x1414,
-      0xffff,0x8080,0x8080,0x8080, 0x8282,0x2828,0x2828,0x8282,
-      0x8080,0x0000,0x0000,0x0000, 0x8080,0x0202,0x0101,0x4040,
-      0xaaaa,0xaaaa,0xaaaa,0xaaaa, 0x5555,0x5555,0x5555,0x5555,
-      0xdddd,0x7777,0xdddd,0x7777, 0xaaaa,0x8080,0x8888,0x8080,
-      0x0808,0x2222,0x8080,0x0202, 0xb1b1,0x0303,0xd8d8,0x0c0c,
-      0x8888,0x2222,0x8888,0xaaaa, 0x8282,0x3939,0x8282,0x0101,
-      0x0303,0x4848,0x0c0c,0x0101, 0x5555,0x4040,0x5555,0x0404,
-      0x1010,0x5454,0xffff,0x0404, 0x2020,0x8888,0x8888,0x0505,
-      0xbfbf,0xbfbf,0xb0b0,0xb0b0, 0xf8f8,0x2222,0x8f8f,0x2222,
-      0x7777,0x8f8f,0x7777,0xf8f8,
-    };
-    MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
-    pat.m_data.resize(8);
-    pat.m_colors[0]=MWAWColor::white();
-    pat.m_colors[1]=MWAWColor::black();
-
-    uint16_t const *patPtr=&patterns[4*i];
-    for (size_t j=0; j<8; j+=2, ++patPtr) {
-      pat.m_data[j]=uint8_t((*patPtr)>>8);
-      pat.m_data[j+1]=uint8_t((*patPtr)&0xFF);
-    }
-    if (i==0) m_BWPatternList.push_back(pat); // none pattern
-    m_BWPatternList.push_back(pat);
-  }
-}
 
 ////////////////////////////////////////
 //! Internal: the subdocument of a MacDrawProParser
@@ -382,7 +299,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 MacDrawProParser::MacDrawProParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWGraphicParser(input, rsrcParser, header), m_state()
+  MWAWGraphicParser(input, rsrcParser, header), m_state(), m_styleManager()
 {
   init();
 }
@@ -397,6 +314,7 @@ void MacDrawProParser::init()
   setAsciiName("main-1");
 
   m_state.reset(new MacDrawProParserInternal::State);
+  m_styleManager.reset(new MacDrawProStyleManager(*this));
 
   getPageSpan().setMargins(0.1);
 }
@@ -469,10 +387,11 @@ bool MacDrawProParser::createZones()
   MWAWInputStreamPtr input = getInput();
   readHeaderInfo();
 
-  if (getRSRCParser()) readRSRCZones();
+  if (getRSRCParser()) m_styleManager->readRSRCZones();
 
   input->seek(0x1f4,librevenge::RVNG_SEEK_SET);
-  if (!readStyles() || !readLayersInfo() || !readLayerLibraryCorrespondance() || !readLibrariesInfo() ||
+  if (!m_styleManager->readStyles(m_state->m_sizeStyleZones) ||
+      !readLayersInfo() || !readLayerLibraryCorrespondance() || !readLibrariesInfo() ||
       !findDataObjectPosition() || !findTextObjectPosition()) {
     MWAW_DEBUG_MSG(("MacDrawProParser::createZones: something is bad, stop.\n"));
     return false;
@@ -534,48 +453,9 @@ bool MacDrawProParser::createZones()
   return false;
 }
 
-bool MacDrawProParser::readStyles()
-{
-  MWAWInputStreamPtr input = getInput();
-  long pos;
-  for (int i=0; i<5; ++i) {
-    if (!m_state->m_sizeHeaderZones[i])
-      continue;
-    pos=input->tell();
-
-    bool done=false;
-    MWAWEntry entry;
-    entry.setBegin(pos);
-    entry.setLength(m_state->m_sizeHeaderZones[i]);
-    switch (i) {
-    case 0:
-      done=readRulers(entry);
-      break;
-    case 1:
-      done=readPens(entry);
-      break;
-    case 2:
-      done=readDashs(entry);
-      break;
-    case 3:
-      done=readArrows(entry);
-      break;
-    case 4:
-      done=readFontStyles(entry);
-      break;
-    default:
-      break;
-    }
-    if (done) continue;
-    MWAW_DEBUG_MSG(("MacDrawProParser::readStyles: can not read zone %d\n", i));
-    ascii().addPos(entry.end());
-    ascii().addNote("Entries(Styles):###");
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-  }
-
-  return true;
-}
-
+////////////////////////////////////////////////////////////
+// layer/library functions
+////////////////////////////////////////////////////////////
 bool MacDrawProParser::readLayersInfo()
 {
   MWAWInputStreamPtr input = getInput();
@@ -863,74 +743,9 @@ bool MacDrawProParser::readLibrariesInfo()
   return true;
 }
 
-
-bool MacDrawProParser::readFontStyles(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readFontStyles: the entry is bad\n"));
-    return false;
-  }
-
-  MWAWInputStreamPtr input = getInput();
-  libmwaw::DebugStream f;
-  entry.setParsed(true);
-  long pos=entry.begin();
-  if ((entry.length()%18)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readFontStyles: the data size seems bad\n"));
-    f << "###";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  int N=int(entry.length()/18);
-  if (N!=m_state->m_numZones[2]) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readFontStyles: oops the number of fonts seems odd\n"));
-  }
-
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int j=0; j<N; ++j) {
-    pos=input->tell();
-    f.str("");
-    int val=(int) input->readLong(2);
-    if (val!=1) f<<"numUsed=" << val << ",";
-    f << "h[total]=" << input->readLong(2) << ",";
-    int sz=(int) input->readULong(2);
-    MWAWFont font;
-    font.setId((int) input->readULong(2));
-    uint32_t flags = 0;
-    int flag=(int) input->readULong(1);
-    if (flag&0x1) flags |= MWAWFont::boldBit;
-    if (flag&0x2) flags |= MWAWFont::italicBit;
-    if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
-    if (flag&0x8) flags |= MWAWFont::embossBit;
-    if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0xE0) f << "#fl0=" << std::hex << (flag&0xE0) << std::dec << ",";
-    font.setFlags(flags);
-    val=(int) input->readULong(1);
-    if (val)
-      f << "fl2=" << val << ",";
-    val=(int) input->readULong(2);
-    font.setSize((float) val);
-    if (sz!=val)
-      f << "sz2=" << sz << ",";
-    unsigned char col[3];
-    for (int k=0; k < 3; k++)
-      col[k] = (unsigned char)(input->readULong(2)>>8);
-    if (col[0] || col[1] || col[2])
-      font.setColor(MWAWColor(col[0],col[1],col[2]));
-    font.m_extra=f.str();
-    m_state->m_fontList.push_back(font);
-
-    f.str("");
-    f << "Entries(FontStyle):F" << j+1 << ":";
-    f << font.getDebugString(getParserState()->m_fontConverter) << font.m_extra;
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-  }
-  return true;
-}
-
+////////////////////////////////////////////////////////////
+// generic function
+////////////////////////////////////////////////////////////
 bool MacDrawProParser::readStructuredHeaderZone(MWAWEntry const &entry, std::map<int, long> &idToDeltaPosMap)
 {
   idToDeltaPosMap.clear();
@@ -981,6 +796,9 @@ bool MacDrawProParser::readStructuredHeaderZone(MWAWEntry const &entry, std::map
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// object functions
+////////////////////////////////////////////////////////////
 bool MacDrawProParser::findTextObjectPosition()
 {
   if (!m_state->m_sizeFZones[2]) return true;
@@ -1166,6 +984,7 @@ bool MacDrawProParser::readObject()
   shape.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
   f << shape.m_box << ",";
   int val=(int) input->readULong(1);
+  shape.m_flags=val;
   if (val & 0x8) f << "select,";
   if (val & 0x20) f << "locked,";
   bool hasData=(val & 0x40);
@@ -1180,92 +999,134 @@ bool MacDrawProParser::readObject()
   val &= 0xF;
   switch (val) {
   case 1:
+    shape.m_type=MacDrawProParserInternal::Shape::Text;
     f << "text,";
     break;
   case 2:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Line;
     f << "line,";
     break;
   case 3:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Rectangle;
     f << "rect,";
     break;
   case 4:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Rectangle;
     f << "rectOval,";
     break;
   case 5:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Circle;
     f << "circle,";
     break;
   case 6:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Arc;
     f << "arc,";
     break;
   case 7:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Path;
     f << "spline,";
     break;
   case 8:
+    shape.m_type=MacDrawProParserInternal::Shape::Basic;
+    shape.m_shape.m_type=MWAWGraphicShape::Polygon;
     f << "poly,";
     break;
   case 9:
+    shape.m_type=MacDrawProParserInternal::Shape::Bitmap;
     f << "bitmap,";
     break;
   case 0xa:
+    shape.m_type=MacDrawProParserInternal::Shape::Group;
     f << "group,";
     break;
   case 0xb:
+    shape.m_type=MacDrawProParserInternal::Shape::GroupEnd;
     f << "endGroup,";
     break;
   default:
     MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown type %d\n", val));
     f << "###type=" << std::hex << val << std::dec << ",";
   }
-  val=(int) input->readLong(1); // always 1
-  if (val!=1) f << "f0=" << val << ",";
+  val=(int) input->readLong(1); // 0|1
+  if (val==0) f << "f0[no],";
+  else if (val!=1) f << "f0=" << val << ",";
+
+  // read the linewidth
   val=(int) input->readULong(1);
   if (val) {
-    m_state->initPens();
-    if (val<=0 || val>int(m_state->m_penSizeList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown pen: %d\n", val));
-      f << "###";
+    float penSize=1;
+    if (!m_styleManager->getPenSize(val, penSize))
+      f << "###P" << val << ",";
+    else {
+      shape.m_style.m_lineWidth=penSize;
+      if (penSize<1 || penSize>1)
+        f << "lineWidth=" <<  penSize << ",";
     }
-    f << "P" << val << ",";
   }
-  val=(int) input->readLong(2); // often 6
-  if (val!=6) f << "f1=" << val << ",";
-  val=(int) input->readULong(2); // often 6
-  if (val&0x8000) {
-    val &= 0x7FFF;
-    if (val<=0 || val>int(m_state->m_colorPatternList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown color pattern: %d\n", val));
-      f << "###";
+
+  // reads the pattern
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readULong(2);
+    if (val==0) { // transparent
+      if (i==0) {
+        shape.m_style.m_lineWidth=0;
+        f << "line[no],";
+      }
+      continue;
     }
-    f << "surf[pat]=C" << val << ",";
-  }
-  else if (val&0x4000) {
-    val &= 0x3FFF;
-    if (val<=0 || val>int(m_state->m_colorList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown basic color pattern: %d\n", val));
-      f << "surf[color]=###" << val << ",";
+    char const *(wh[])= {"line", "surf"};
+    if (val&0x4000) {
+      val &= 0x3FFF;
+      MWAWColor color;
+      if (!m_styleManager->getColor(val, color)) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown basic color pattern: %d\n", val));
+        f << wh[i] << "[color]=###" << val << ",";
+      }
+      else {
+        if (i==0) shape.m_style.m_lineColor=color;
+        else shape.m_style.setSurfaceColor(color);
+        if ((i==0&&!color.isBlack()) || (i==1 && !color.isWhite()))
+          f << wh[i] << "[color]=" << color << ",";
+      }
+      continue;
     }
-    else
-      f << "surf[color]=" << m_state->m_colorList[size_t(val-1)] << ",";
-  }
-  else if (val)  {
-    m_state->initBWPatterns();
-    if (val<=0 || val>int(m_state->m_BWPatternList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown BW pattern: %d\n", val));
-      f << "###";
+    MWAWGraphicStyle::Pattern pattern;
+    if (!m_styleManager->getPattern(val, pattern)) {
+      f << wh[i] << "[pat]=###" << std::hex << val << std::dec << ",";
+      continue;
     }
-    f << "surf[pat]=" << val << ",";
+    MWAWColor color;
+    if (pattern.getUniqueColor(color)) {
+      if (i==0) shape.m_style.m_lineColor=color;
+      else shape.m_style.setSurfaceColor(color);
+      if ((i==0&&!color.isBlack()) || (i==1 && !color.isWhite()))
+        f << wh[i] << "[color]=" << color << ",";
+      continue;
+    }
+    f << wh[i] <<  "[pat]=" << pattern << ",";
+    if (i==0 && pattern.getAverageColor(color))
+      shape.m_style.m_lineColor=color;
+    else if (i==1)
+      shape.m_style.m_pattern=pattern;
   }
+
+  // read the dash
   val=(int) input->readULong(1);
   if (val) {
-    m_state->initDashs();
-    if (val<=0 || val>int(m_state->m_dashList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObject: find unknown dash: %d\n", val));
+    if (!m_styleManager->getDash(val, shape.m_style.m_lineDashWidth))
       f << "###";
-    }
-    f << "D" << val << ",";
+    f << "dash=D" << val << ",";
   }
+
+  // unknown
   val=(int) input->readLong(1); // a small number negative or positif
-  if (val) f << "f2=" << val << ",";
+  if (val) f << "f1=" << val << ",";
   if (hasData) {
     val=(int) input->readULong(2);
     if (val<8) {
@@ -1292,23 +1153,45 @@ bool MacDrawProParser::readObject()
 bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, int zId)
 {
   if (zId<0 || zId>=(int) m_state->m_objectDataList.size() || !m_state->m_objectDataList[size_t(zId)].valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readObject: can not find the data for zone %d\n", zId));
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: can not find the data for zone %d\n", zId));
     return false;
   }
   MWAWEntry const &entry=m_state->m_objectDataList[size_t(zId)];
   entry.setParsed(true);
+  ascii().addPos(entry.end());
+  ascii().addNote("_");
 
   MWAWInputStreamPtr input = getInput();
   long savePos=input->tell();
   libmwaw::DebugStream f;
-  f << "ObjData[O" << shape.m_id << "]:id=" << zId << ",";
+  f << "ObjData[" << shape << "]:";
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   int val=(int) input->readLong(2); // always 0?
   if (val) f << "f0=" << val << ",";
   val=(int) input->readLong(2); // 1|3
   if (val!=1) f << "type=" << val << ",";
   input->seek(4, librevenge::RVNG_SEEK_CUR); // skip the size field
-
+  int unkn[2];
+  for (int i=0; i<2; ++i) { // for line f1=0|1|2, f2=1|2|4 , for text/group f2=number divided by 4->ObjText id
+    unkn[i]=(int) input->readLong(2);
+    if (unkn[i]) f << "f" << i+1 << "=" << unkn[i] << ",";
+  }
+  // first read the rotation data
+  if (shape.m_flags & 0x80) {
+    ascii().addDelimiter(input->tell(),'|');
+    if (input->tell()+28>entry.end()) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: can not find the rotation data\n"));
+      f << "###rot,";
+      ascii().addPos(entry.begin());
+      ascii().addNote(f.str().c_str());
+      return false;
+    }
+    f << "angl[rot]=" << float(input->readLong(4))/65536.f  << ","; // in radians
+    f << "rot[value?]=[";
+    for (int i=0; i<6; ++i)  // 3 points ?
+      f << float(input->readLong(4))/65536.f  << ",";
+    f << "],";
+  }
   if (input->tell()!=entry.end())
     ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(entry.begin());
@@ -1426,37 +1309,13 @@ bool MacDrawProParser::readHeaderInfo()
   if (val) f << "f0=" << val << ",";
   m_state->m_numLayers=(int) input->readULong(2); // 1|2|9
   if (m_state->m_numLayers!=1) f << "num[layers]=" << m_state->m_numLayers << ",";
-  f << "NZones=[";
-  for (int i=0; i<5; ++i) {
-    m_state->m_numZones[i]=(int)input->readULong(2);
-    f << m_state->m_numZones[i] << ",";
+  std::string extra("");
+  if (!m_styleManager->readHeaderInfoStylePart(extra)) {
+    f << "###Style[ignored],";
+    input->seek(pos+4+24, librevenge::RVNG_SEEK_SET);
   }
-  f << "],";
-  for (int i=0; i<7; ++i) {
-    val=(int) input->readULong(2);
-    if (!val) continue;
-    switch (i) {
-    case 0:
-      m_state->m_numPatternsInTool=val;
-      f << "num[PatternsTool]=" << val << ",";
-      break;
-    case 1:
-      m_state->m_numBWPatterns=val;
-      f << "num[BWPatterns]=" << val << ",";
-      break;
-    case 2:
-      m_state->m_numColors=val;
-      if (val!=8) f << "numColors=" << val << ",";
-      break;
-    case 3:
-      m_state->m_numColorPatterns=val;
-      f << "num[colPatterns]=" << val << ",";
-      break;
-    default:
-      f << "g" << i << "=" << val << ",";
-      break;
-    }
-  }
+  else
+    f << extra;
   for (int i=0; i<2; ++i) { // h0=1|2|9 ( maybe related to layer), h1=1|2|40
     val=(int) input->readULong(2);
     if (val!=1) f << "h" << i << "=" << val << ",";
@@ -1500,9 +1359,9 @@ bool MacDrawProParser::readHeaderInfo()
   f.str("");
   f << "HeaderInfo-C:";
   for (int i=0; i<5; ++i) {
-    m_state->m_sizeHeaderZones[i]=(long) input->readULong(4);
-    if (!m_state->m_sizeHeaderZones[i]) continue;
-    f << "sz[HeaderZ" << i << "]=" << std::hex << m_state->m_sizeHeaderZones[i] << std::dec << ",";
+    m_state->m_sizeStyleZones[i]=(long) input->readULong(4);
+    if (!m_state->m_sizeStyleZones[i]) continue;
+    f << "sz[style" << i << "]=" << std::hex << m_state->m_sizeStyleZones[i] << std::dec << ",";
   }
   for (int i=0;  i<5; ++i) {
     long lVal=(long) input->readULong(4);
@@ -1603,960 +1462,6 @@ bool MacDrawProParser::readPrintInfo()
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   return true;
 }
-
-////////////////////////////////////////////////////////////
-// styles/settings present in data/rsrc fork
-////////////////////////////////////////////////////////////
-
-bool MacDrawProParser::readArrows(MWAWEntry const &entry, bool inRsrc)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readArrows: the entry is bad\n"));
-    return false;
-  }
-
-  if (inRsrc && entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readArrows: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = inRsrc ? getRSRCParser()->getInput() : getInput();
-  libmwaw::DebugFile &ascFile = inRsrc ? getRSRCParser()->ascii() : ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(Arrow)";
-  if (inRsrc)
-    f << "[" << entry.id() << "]:";
-  else
-    f << ":";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  int const expectedSz=inRsrc ? 10 : 14;
-  if ((entry.length()%expectedSz)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readArrows: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(inRsrc ? pos-4 : pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  if (inRsrc) {
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-  }
-  int N=int(entry.length()/expectedSz);
-  if (!inRsrc && N!=m_state->m_numZones[3]) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readArrows: oops the number of arrows seems odd\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(Arrow):A" << i+1 << ",";
-    if (!inRsrc) {
-      int val=(int) input->readLong(2); // always 0
-      if (val) f<<"f0=" << val << ",";
-      val=(int) input->readLong(2);
-      if (val!=1) f<<"numUsed=" << val << ",";
-      val=(int) input->readLong(2);
-      if (val!=i+1) f << "id=" << val << ",";
-    }
-    float pt[2]; // position of the symetric point in the arrow head
-    for (int k=0; k<2; ++k) pt[k]=float(input->readULong(4))/65536.f;
-    f << "pt=" << pt[1] << "x" << pt[0] << ",";
-    if (inRsrc) {
-      int val=(int) input->readLong(2);
-      if (val!=i+1) f << "id=" << val << ",";
-    }
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readDashs(MWAWEntry const &entry, bool inRsrc)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDashs: the entry is bad\n"));
-    return false;
-  }
-
-  if (inRsrc && entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDashs: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = inRsrc ? getRSRCParser()->getInput() : getInput();
-  libmwaw::DebugFile &ascFile = inRsrc ? getRSRCParser()->ascii() : ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(Dash)";
-  if (inRsrc)
-    f << "[" << entry.id() << "]:";
-  else
-    f << ":";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  int const expectedSz=inRsrc ? 26 : 28;
-  if ((entry.length()%expectedSz)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDashs: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(inRsrc ? pos-4 : pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  m_state->m_dashList.clear();
-  if (inRsrc) {
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-  }
-  int N=int(entry.length()/expectedSz);
-  if (!inRsrc && N!=m_state->m_numZones[4]) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDashs: oops the number of dashs seems odd\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(Dash):D" << i+1 << ",";
-    if (!inRsrc) {
-      int val=(int) input->readLong(2); // always 0
-      if (val) f<<"f0=" << val << ",";
-      val=(int) input->readLong(2);
-      if (val!=1) f<<"numUsed=" << val << ",";
-    }
-    f << "dash=[";
-    std::vector<float> dash;
-    for (int k=0; k<3; ++k) {
-      long solid=(long) input->readULong(4);
-      long empty=(long) input->readULong(4);
-      if (!solid && !empty) continue;
-      dash.push_back(float(solid)/65536.f);
-      dash.push_back(float(empty)/65536.f);
-      f << double(solid)/65536. << "x" << double(empty)/65536. << ",";
-    }
-    m_state->m_dashList.push_back(dash);
-    f << "],";
-    if (inRsrc) {
-      int val=(int) input->readLong(2);
-      if (val!=i+1) f << "id=" << val << ",";
-    }
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readPens(MWAWEntry const &entry, bool inRsrc)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPens: the entry is bad\n"));
-    return false;
-  }
-
-  if (inRsrc && entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPens: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = inRsrc ? getRSRCParser()->getInput() : getInput();
-  libmwaw::DebugFile &ascFile = inRsrc ? getRSRCParser()->ascii() : ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(Pen)";
-  if (inRsrc)
-    f << "[" << entry.id() << "]:";
-  else
-    f << ":";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  int const expectedSz=inRsrc ? 8 : 12;
-  if ((entry.length()%expectedSz)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPens: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(inRsrc ? pos-4 : pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  m_state->m_penSizeList.clear();
-  if (inRsrc) {
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-  }
-  int N=int(entry.length()/expectedSz);
-  if (!inRsrc && N!=m_state->m_numZones[1]) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPens: oops the number of pens seems odd\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(Pen):P" << i+1 << ",";
-    if (!inRsrc) {
-      int val=(int) input->readLong(2); // always 0
-      if (val) f<<"f0=" << val << ",";
-      val=(int) input->readLong(2);
-      if (val!=1) f<<"numUsed=" << val << ",";
-    }
-    long penSize=(long) input->readULong(4);
-    if (penSize!=0x10000) f << "pen[size]=" << float(penSize)/65536.f << ",";
-    if (!inRsrc) {
-      int dim[2];
-      for (int j=0; j<2; ++j) dim[j]=(int) input->readULong(2);
-      f << "pen=" << Vec2i(dim[1],dim[0]) << ",";
-      m_state->m_penSizeList.push_back(float(dim[0]+dim[1])/2.f);
-    }
-    else {
-      m_state->m_penSizeList.push_back(float(penSize)/65536.f);
-      int val=(int) input->readLong(2); // unit ?
-      if (val) f << "fl=" << std::hex << val << std::dec << ",";
-      val=(int) input->readLong(2);
-      if (val!=i+1) f << "id=" << val << ",";
-    }
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readRulers(MWAWEntry const &entry, bool inRsrc)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulers: the entry is bad\n"));
-    return false;
-  }
-
-  if (inRsrc && entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulers: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = inRsrc ? getRSRCParser()->getInput() : getInput();
-  libmwaw::DebugFile &ascFile = inRsrc ? getRSRCParser()->ascii() : ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(RulerStyle)";
-  if (inRsrc)
-    f << "[" << entry.id() << "]:";
-  else
-    f << ":";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if ((entry.length()%24)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulers: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(inRsrc ? pos-4 : pos);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  if (inRsrc) {
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-  }
-  int N=int(entry.length()/24);
-  if (!inRsrc && N!=m_state->m_numZones[0]) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulers: oops the number of rulers seems odd\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "Entries(RulerStyle):R" << i+1 << ":";
-    int numUsed=(int) input->readULong(4);
-    if (numUsed!=1) f << "numUsed=" << numUsed << ",";
-    for (int j=0; j<2; ++j) {
-      double value;
-      bool isNAN;
-      if (!input->readDouble8(value, isNAN))
-        f << "###,";
-      else
-        f << value << ",";
-    }
-    f << "num[subd]=" << input->readULong(2) << ",";
-    f << "fl=" << std::hex << input->readULong(2) << std::dec << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// RSRC zones
-////////////////////////////////////////////////////////////
-bool MacDrawProParser::readRSRCZones()
-{
-  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
-  if (!rsrcParser) return false;
-
-  readFontNames();
-
-  std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
-  std::multimap<std::string, MWAWEntry>::iterator it;
-  // the 256 zones
-  char const *(zNames[]) = {
-    "Dinf", "Pref",
-    "Ctbl", "bawP", "colP", "patR",
-    "Aset", "Dset", "DRul", "Pset", "Rset", "Rst2", "Dvws",
-    "Dstl"
-  };
-  /* find also
-     mmpp: with 0000000000000000000000000000000000000000000000000000000000000000
-     pPrf: with 0001000[01]01000002000000000000
-     sPrf: spelling preference ? ie find in one file and contains strings "Main/User dictionary"...
-     xPrf: with 000000010000000[13]
-   */
-  for (int z = 0; z < 14; z++) {
-    it = entryMap.lower_bound(zNames[z]);
-    while (it != entryMap.end()) {
-      if (it->first != zNames[z])
-        break;
-      MWAWEntry const &entry = it++->second;
-      switch (z) {
-      case 0: // document info
-        readDocumentInfo(entry);
-        break;
-      case 1: // preferences
-        readPreferences(entry);
-        break;
-      case 2: // color table
-        readColors(entry);
-        break;
-      case 3: // BW patterns
-        readBWPatterns(entry);
-        break;
-      case 4: // color patterns
-        readColorPatterns(entry);
-        break;
-      case 5: // list of patterns in tools
-        readPatternsToolList(entry);
-        break;
-      case 6: // arrow definitions
-        readArrows(entry, true);
-        break;
-      case 7: // dashes
-        readDashs(entry, true);
-        break;
-      case 8: // ruler
-        readRulers(entry, true);
-        break;
-      case 9: // pen size
-        readPens(entry, true);
-        break;
-      case 10: // ruler settings
-      case 11:
-        readRulerSettings(entry);
-        break;
-      case 12: // views positions
-        readViews(entry);
-        break;
-      case 13: // unknown
-        readRSRCDstl(entry);
-        break;
-      default:
-        MWAW_DEBUG_MSG(("MacDrawProParser::readRSRCZones: called with unexpected settings %d\n", z));
-        break;
-      }
-    }
-  }
-  // Ctbl: list of 16*data: numUsed, id, color, pos?
-  return true;
-}
-
-bool MacDrawProParser::readPreferences(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPreferences: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPreferences: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(Preferences)[" << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if (entry.length()!=0x1a) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPreferences: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  int val=(int) input->readLong(2); // always 0?
-  if (val) f << "f0=" << val << ",";
-  f << "fl=[";
-  for (int i=0; i<4; ++i) { // fl0=20|30, fl2=1|2, fl3=2|3
-    val=(int) input->readULong(1);
-    f << std::hex << val << std::dec << ",";
-  }
-  f << "],";
-  for (int i=0; i<5; ++i) { // f1=12|1b, f2=f4=f5=0, f3=1e
-    val=(int) input->readLong(2);
-    if (val)
-      f << "f" << i+1 << "=" << val << ",";
-  }
-  val=(int) input->readULong(2);
-  if (val!=0xC000) f << "g0=" << std::hex << val << std::dec << ",";
-  for (int i=0; i<4; ++i) { // g1=0, g2=0|8, g3=0|4, g5=0|3
-    val=(int) input->readLong(2);
-    if (val)
-      f << "g" << i+1 << "=" << val << ",";
-  }
-
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool MacDrawProParser::readDocumentInfo(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDocumentInfo: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDocumentInfo: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(DocumentInfo)[" << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if (entry.length()!=0x58) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readDocumentInfo: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  int val;
-  f << "fl=[";
-  for (int i=0; i<4; ++i) { // fl0=24|64 (version?), fl1=d|f|1d, f2=2, f3=8|9|10
-    val=(int) input->readULong(1);
-    f << std::hex << val << std::dec << ",";
-  }
-  f << "],";
-  f << "windows[dim]?=[";
-  for (int i=0; i<4; ++i) { // 29|2a,3,d2|1b0, 110|250
-    val=(int) input->readLong(2);
-    f << val << ",";
-  }
-  f << "],";
-  f << "num?=[";
-  for (int i=0; i<14; ++i) { // series of small number
-    val=(int) input->readLong(2);
-    if (val) f << val << ",";
-    else f << "_,";
-  }
-  f << "],";
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-
-  pos=input->tell();
-  f.str("");
-  f << "DocumentInfo-II:";
-  for (int i=0; i<5; ++i) { // f3=2, f4=0|20, other 0
-    val=(int) input->readLong(2);
-    if (val)
-      f << "f" << i << "=" << val << ",";
-  }
-  int dim[2];
-  for (int i=0; i<2; ++i) dim[i]=(int) input->readULong(2);
-  if (dim[0]||dim[1]) f << "pos0?=" << dim[0] << "x" << dim[1] << ",";
-  float fDim[2];
-  for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  m_state->m_documentSize=Vec2f(fDim[0],fDim[1]);
-  f << "document[size]=" << m_state->m_documentSize << ",";
-  val=(int) input->readLong(2); // 0|1
-  if (val) f << "f5=" << val << ",";
-  for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  f << "pos1?=" << Vec2f(fDim[0],fDim[1]) << ",";
-  for (int i=0; i<4; ++i) { // always 0?
-    val=(int) input->readLong(2);
-    if (val)
-      f << "g" << i << "=" << val << ",";
-  }
-  for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  f << "page[size]=" << Vec2f(fDim[1],fDim[0]) << ",";
-
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool MacDrawProParser::readFontNames()
-{
-  MWAWRSRCParserPtr rsrcParser = getRSRCParser();
-  if (!rsrcParser) return false;
-  std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
-  MWAWEntry idPosEntry, nameEntry;
-  if (entryMap.find("Fnms")!=entryMap.end())
-    nameEntry=entryMap.find("Fnms")->second;
-  if (entryMap.find("Fmtx")!=entryMap.end())
-    idPosEntry=entryMap.find("Fmtx")->second;
-  if (!nameEntry.valid() && !idPosEntry.valid()) return true;
-  if (!nameEntry.valid() || !idPosEntry.valid() || (idPosEntry.length()%8)!=0 ||
-      nameEntry.id()!=256 || idPosEntry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readFontNames: the entries seems incoherent\n"));
-    return false;
-  }
-
-  entryMap.find("Fnms")->second.setParsed(true);
-  entryMap.find("Fmtx")->second.setParsed(true);
-
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-
-  // first read the id and the string delta pos
-  long pos=idPosEntry.begin();
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  f << "Entries(FontName)[pos]:";
-  int N=int(idPosEntry.length()/8);
-  std::map<int, long> idPosMap;
-  for (int i=0; i<N; ++i) {
-    int id=(int) input->readULong(4);
-    long dPos=(long) input->readULong(4);
-    f << std::hex << dPos << std::dec << "[id=" << id << "],";
-    idPosMap[id]=dPos;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-
-  // now read the name
-  pos=nameEntry.begin();
-  long endPos=nameEntry.end();
-  f.str("");
-  f << "Entries(FontName):";
-  for (std::map<int, long>::const_iterator it=idPosMap.begin(); it!=idPosMap.end(); ++it) {
-    long dPos=it->second;
-    if (dPos<0 || pos+dPos+1>endPos) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readFontNames: the name positions seems bad\n"));
-      f << "###[id=" << it->first << "],";
-      continue;
-    }
-    input->seek(pos+dPos, librevenge::RVNG_SEEK_SET);
-    int sSz=(int) input->readULong(1);
-    if (sSz==0 || pos+dPos+1+sSz>endPos) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readFontNames: the name size seems bad\n"));
-      f << "###[id=" << it->first << "],";
-      continue;
-    }
-    std::string name("");
-    for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
-    f << name << "[id=" << it->first << "],";
-    getParserState()->m_fontConverter->setCorrespondance(it->first, name);
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-
-  return true;
-}
-
-bool MacDrawProParser::readColors(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColors: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColors: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(ColorMap)";
-  f << "[" << entry.id() << "]:";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  if ((entry.length()%16)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColors: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  m_state->m_colorList.clear();
-  int N=int(entry.length()/16);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "ColorMap-" << i << ":";
-    int val=(int) input->readULong(4);
-    if (val!=1) f << "num[used]=" << val << ",";
-    val =(int) input->readULong(2); // index of ?
-    f << "id0=" << val << ",";
-    unsigned char col[3];
-    for (int k=0; k < 3; k++)
-      col[k] = (unsigned char)(input->readULong(2)>>8);
-    MWAWColor color(col[0],col[1],col[2]);
-    f << color << ",";
-    m_state->m_colorList.push_back(color);
-    val=(int) input->readULong(2); // always 0?
-    if (val) f << "f0=" << val << ",";
-    val =(int) input->readULong(2); // index of ?
-    f << "id1=" << val << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readBWPatterns(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readBWPatterns: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readBWPatterns: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(BWPattern)";
-  f << "[" << entry.id() << "]:";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  if ((entry.length()%12)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readBWPatterns: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  m_state->m_BWPatternList.clear();
-  int N=int(entry.length()/12);
-  if (N!=m_state->m_numBWPatterns) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readBWPatterns: the number of patterns seems bad\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-
-  MWAWGraphicStyle::Pattern pat;
-  pat.m_dim=Vec2i(8,8);
-  pat.m_data.resize(8);
-  pat.m_colors[0]=MWAWColor::white();
-  pat.m_colors[1]=MWAWColor::black();
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "BWPattern-" << i+1 << ":";
-    int val=(int) input->readULong(4);
-    if (val!=1) f << "num[used]=" << val << ",";
-    for (size_t j=0; j<8; ++j)
-      pat.m_data[j]=uint8_t(input->readULong(1));
-    f << pat;
-    m_state->m_BWPatternList.push_back(pat);
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readColorPatterns(MWAWEntry const &entry)
-{
-  if (!entry.length()) { // ok not color patterns
-    entry.setParsed(true);
-    return true;
-  }
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(ColorPattern)";
-  f << "[" << entry.id() << "]:";
-  entry.setParsed(true);
-  long pos=entry.begin();
-  if ((entry.length()%70)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  m_state->m_colorPatternList.clear();
-
-  int N=int(entry.length()/70);
-  if (N!=m_state->m_numColorPatterns) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: the number of patterns seems bad\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  if (m_state->m_colorList.empty()) m_state->initColors();
-
-  int numColors=(int)m_state->m_colorList.size();
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    MWAWPictBitmapIndexed bitmap(Vec2i(8,8));
-    bitmap.setColors(m_state->m_colorList);
-
-    f.str("");
-    f << "ColorPattern-" << i+1 << ":";
-    int val=(int) input->readULong(4);
-    if (val!=1) f << "num[used]=" << val << ",";
-    // the final pattern id
-    f << "id=" << input->readLong(2) << ",";
-    int indices[8];
-    int sumColors[3]= {0,0,0};
-    for (int r=0; r<8; ++r) {
-      for (size_t c=0; c<8; ++c) {
-        int id=(int) input->readULong(1);
-        if (id<0 || id>=numColors) {
-          static bool first=true;
-          if (first) {
-            MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: find some bad indices\n"));
-            f << "#id=" << id << ",";
-            first=false;
-          }
-          indices[c]=0;
-          continue;
-        }
-        indices[c]=id;
-        MWAWColor const &col=m_state->m_colorList[size_t(id)];
-        sumColors[0]+=(int)col.getRed();
-        sumColors[1]+=(int)col.getGreen();
-        sumColors[2]+=(int)col.getBlue();
-      }
-      bitmap.setRow(r, indices);
-    }
-    MWAWGraphicStyle::Pattern pat;
-    librevenge::RVNGBinaryData binary;
-    std::string type;
-    if (bitmap.getBinary(binary,type)) {
-      pat=MWAWGraphicStyle::Pattern
-          (Vec2i(8,8), binary, type,MWAWColor((unsigned char)(sumColors[0]/64),(unsigned char)(sumColors[1]/64),(unsigned char)(sumColors[2]/64)));
-    }
-    else {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readColorPatterns: oops can not create the binary data\n"));
-      pat.m_dim=Vec2i(8,8);
-      pat.m_data.resize(8, 0);
-      pat.m_colors[0]=MWAWColor::white();
-      pat.m_colors[1]=MWAWColor::black();
-    }
-    m_state->m_colorPatternList.push_back(pat);
-    f << pat;
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-bool MacDrawProParser::readPatternsToolList(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPatternsToolList: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPatternsToolList: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(PatternTool)[" << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if ((entry.length()%4)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPatternsToolList: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  int N=int(entry.length()/4);
-  if (N!=m_state->m_numPatternsInTool) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readPatternsToolList: the number of patterns seems bad\n"));
-  }
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  f << "pats=[";
-  for (int i=0; i<N; ++i) {
-    int val=(int) input->readULong(2);
-    if (val&0x8000) f << "C" << (val&0x7FFF);
-    else if (val&0x4000) f << "CC" << (val&0x3FFF); // pattern created using the color list
-    else if (val) f << "BW" << val;
-    else f << "_";
-    val=(int) input->readULong(2);
-    if (val&0x8000) f << ":#C" << (val&0x7FFF); // does not seems to appear
-    else if (val&0x4000) f << ":#CC" << (val&0x3FFF); // does not seems to appear
-    else if (val) f << ":BW" << val; // follows normally a C or a CC pattern
-    f << ","; // follows normally a BW or a _ pattern
-  }
-  f << "],";
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
-bool MacDrawProParser::readRulerSettings(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulerSettings: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulerSettings: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(RulerSetting)[" << entry.type() << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if ((entry.length()%24)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRulerSettings: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  int N=int(entry.length()/24);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "RulerSetting[R" << i+1 << "]:";
-    for (int j=0; j<2; ++j)
-      f << "dim" << j << "=" << float(input->readULong(4))/65536.f << ",";
-    int val;
-    for (int j=0; j<2; ++j) { // seems related to RulerStyle flags
-      val=(int) input->readULong(2);
-      if (val) f << "fl" << j << "=" << std::hex << val << std::dec << ",";
-    }
-    for (int j=0; j<4; ++j) { // always 0
-      val=(int) input->readLong(2);
-      if (val) f << "f" << j << "=" << val << ",";
-    }
-    val=(int) input->readLong(2);
-    if (val) f << "numSub=" << val << ",";
-    val=(int) input->readLong(2);
-    if (val!=i+1) f << "id=" << val << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    input->seek(pos+24, librevenge::RVNG_SEEK_SET);
-  }
-  return true;
-}
-
-bool MacDrawProParser::readViews(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readViews: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readViews: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(View)[" << entry.type() << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  if ((entry.length()%8)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readViews: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  int N=int(entry.length()/8);
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (int i=0; i<N; ++i) {
-    pos=input->tell();
-    f.str("");
-    f << "View[V" << i+1 << "]:";
-    int val=(int) input->readULong(2);
-    if (!val) {
-      ascFile.addPos(pos);
-      ascFile.addNote("_");
-      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-      continue;
-    }
-    if (val!=1) f << "numUsed?=" << val << ",";
-    val=(int) input->readULong(2); // 0 or 1
-    if (val) f << "f0=" << val << ",";
-    f << "pos=" << input->readLong(2) << "x" << input->readLong(2) << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  return true;
-}
-
-// unknown rsrc data
-bool MacDrawProParser::readRSRCDstl(MWAWEntry const &entry)
-{
-  if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRSRCDstls: the entry is bad\n"));
-    return false;
-  }
-
-  if (entry.id()!=256) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRSRCDstls: the entry id is odd\n"));
-  }
-  MWAWInputStreamPtr input = getRSRCParser()->getInput();
-  libmwaw::DebugFile &ascFile = getRSRCParser()->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(UnknDstl)[" << entry.id() << "]:";
-  entry.setParsed(true);
-
-  long pos=entry.begin();
-  // find always length=18, but I suppose that it can be greater
-  if (entry.length()<18 || (entry.length()%2)!=0) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::readRSRCDstls: the data size seems bad\n"));
-    f << "###";
-    ascFile.addPos(pos-4);
-    ascFile.addNote(f.str().c_str());
-    return true;
-  }
-
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  // almost always [] but find [0,1]|[0,2]|[3,2,4]|[3,4,5,7]
-  int N=int(entry.length())/2;
-  f << "list=[";
-  for (int i=0; i<N; ++i) {
-    int val=(int) input->readLong(2);
-    if (val==-1) {
-      input->seek(-2, librevenge::RVNG_SEEK_CUR);
-      break;
-    }
-    f << val << ",";
-  }
-  f << "],";
-  if (input->tell()!=entry.end())
-    ascFile.addDelimiter(input->tell(),'|');
-  ascFile.addPos(pos-4);
-  ascFile.addNote(f.str().c_str());
-  return true;
-}
-
 
 ////////////////////////////////////////////////////////////
 //
