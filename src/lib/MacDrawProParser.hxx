@@ -87,40 +87,42 @@ protected:
 
   // Intermediate level
 
-  //! try to read the print info zone
+  //! tries to read the print info zone
   bool readPrintInfo();
-  //! try to the header info zone ( print info + some information about content + prefs ?)
+  //! tries to the header info zone ( print info + some information about content + prefs ?)
   bool readHeaderInfo();
-  //! try to the layer info zone
+  //! tries to the layer info zone
   bool readLayersInfo();
-  //! try to the layer library correspondance zone
+  //! tries to the layer library correspondance zone
   bool readLayerLibraryCorrespondance();
-  //! try to read the library name info zone
+  //! tries to read the library name info zone
   bool readLibrariesInfo();
-  //! find the objet's data position
-  bool findDataObjectPosition();
-  //! find the objet's text position
-  bool findTextObjectPosition();
+  //! finds the objet's data/text positions
+  bool findObjectPositions(bool dataZone);
 
-  //! try to read a structured zone header
+  //! tries to read a structured zone header
   bool readStructuredHeaderZone(MWAWEntry const &entry, std::map<int, long> &idToDeltaPosMap);
 
   //
   // low level
   //
 
-  //! try to read an object
-  bool readObject();
-  //! try to read an object data
+  //! tries to read an object and returns the object id (-1 if error )
+  int readObject();
+  //! tries to read an object data
   bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
+  //! tries to read a basic geometric object data ( line, rect, arc,... )
+  bool readBasicObjectData(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
+  //! tries to read an object text
+  bool readObjectText(MacDrawProParserInternal::Shape &shape, int zId);
 
   // send functions
 
-  //! try to send a shape
+  //! tries to send a shape
   bool send(MacDrawProParserInternal::Shape const &shape);
-  //! try to send a bitmap to the listener
+  //! tries to send a bitmap to the listener
   bool sendBitmap(MacDrawProParserInternal::Shape const &shape, MWAWPosition const &pos);
-  //! try to send a text zone to the listener
+  //! tries to send a text zone to the listener
   bool sendText(int zoneId);
 
   //

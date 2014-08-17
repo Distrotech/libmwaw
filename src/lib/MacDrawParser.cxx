@@ -796,12 +796,16 @@ int MacDrawParser::readObject()
         MWAW_DEBUG_MSG(("MacDrawParser::readObject: can not find a child\n"));
         return int(shapeId);
       }
-      // do not use childList as the vector can have grown
+      // do not use shape's childList as the vector can have grown
       m_state->m_shapeList[shapeId].m_childList.push_back(size_t(cId));
     }
     int cId=readObject(); // read end group
-    if (cId<0)
+    int nextId=int(m_state->m_shapeList.size());
+    if (cId<0) {
+      m_state->m_shapeList[shapeId].m_nextId=nextId;
       return int(shapeId);
+    }
+    m_state->m_shapeList[shapeId].m_nextId=nextId-1;
     if (m_state->m_shapeList[size_t(cId)].m_type!=MacDrawParserInternal::Shape::GroupEnd) {
       MWAW_DEBUG_MSG(("MacDrawParser::readObject: oops, can not find the end group data\n"));
       ascii().addPos(pos);
@@ -809,7 +813,6 @@ int MacDrawParser::readObject()
     }
     else
       m_state->m_shapeList.pop_back();
-    m_state->m_shapeList[size_t(cId)].m_nextId=int(m_state->m_shapeList.size());
     return int(shapeId);
   }
   case 11: {
