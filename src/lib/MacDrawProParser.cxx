@@ -1175,21 +1175,27 @@ bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, in
     input->seek(savePos, librevenge::RVNG_SEEK_SET);
     return res;
   }
+  else if (shape.m_type==MacDrawProParserInternal::Shape::Bitmap) {
+    bool res=readBitmap(shape, entry);
+    input->seek(savePos, librevenge::RVNG_SEEK_SET);
+    return res;
+  }
   libmwaw::DebugStream f;
   f << "ObjData[" << shape << "]:";
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   int val=(int) input->readLong(2); // always 0?
   if (val) f << "f0=" << val << ",";
-  val=(int) input->readLong(2); // 1|3
-  if (val!=1) f << "type=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=1) f << "numUsed=" << val << ",";
   input->seek(4, librevenge::RVNG_SEEK_CUR); // skip the size field
 
   val=(int) input->readLong(2); // always 0?
   if (val) f << "f1=" << val << ",";
   val=(int) input->readLong(2);
+  int textId=-1;
   if (val) {
     if (val>=8 && (shape.m_type== MacDrawProParserInternal::Shape::Text || shape.m_type== MacDrawProParserInternal::Shape::Note)) {
-      readObjectText(shape, (val-8)/4);
+      textId=(val-8)/4;
       f << "objText[id]=" << (val-8)/4 << ",";
       if (val&3)
         f << "objText[low]=" << (val&3) << ",";
@@ -1214,14 +1220,98 @@ bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, in
       f << float(input->readLong(4))/65536.f  << ",";
     f << "],";
   }
+
+  int remain=int(entry.end()-input->tell());
+  switch (shape.m_type) {
+  case MacDrawProParserInternal::Shape::Note:
+  case MacDrawProParserInternal::Shape::Text: {
+    bool isNote=shape.m_type==MacDrawProParserInternal::Shape::Note;
+    int const headerSize=isNote ? 20+68 : 20;
+    if (remain<headerSize) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: the text zone seems too short\n"));
+      break;
+    }
+    for (int i=0; i<4; ++i) { // f0=-1|0|1, f1=0|2, f3=0|-1, f4=-1|0|1
+      val=(int) input->readLong(1);
+      if (val) f << "f" << i << "=" << val << ",";
+    }
+    int nChar=(int) input->readULong(2);
+    if (nChar) f << "nChar=" << nChar << ",";
+    int N[2];
+    for (int i=0; i<2; ++i) N[i]=(int) input->readULong(2);
+    f << "N=[" << N[0] << "," << N[1] << "],";
+    if (remain<headerSize+6*N[0]+4*N[1]) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: can not read the number of data\n"));
+      f << "###,";
+      break;
+    }
+    if (isNote) {
+      long debPos=input->tell();
+      f << "note=[";
+      for (int i=0; i<2; ++i) { // always 0
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      f << "flgs?=[";
+      for (int i=0; i<2; ++i) // two time the same big number ?
+        f << std::hex << input->readULong(4) << std::dec << ",";
+      f << "],";
+      for (int i=0; i<8; ++i) { // always 0
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i+2 << "=" << val << ",";
+      }
+      int sSz=(int) input->readULong(1);
+      if (sSz>31) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: the note size seems to big\n"));
+        f << "#sSz=" << sSz << ",";
+      }
+      else {
+        std::string name("");
+        for (int i=0; i<sSz; ++i) name+=(char) input->readULong(1);
+        f << name << ",";
+      }
+      input->seek(debPos+60, librevenge::RVNG_SEEK_SET);
+      for (int i=0; i<4; ++i) { // always 0
+        val=(int) input->readLong(2);
+        if (val) f << "g" << i << "=" << val << ",";
+      }
+      f << "],";
+      input->seek(debPos+68, librevenge::RVNG_SEEK_SET);
+    }
+    f << "lineBreak=[";
+    for (int i=0; i<=N[0]; ++i)
+      f << input->readULong(2) << ",";
+    f << "],";
+    f << "font=[";
+    for (int i=0; i<=N[1]; ++i)
+      f << input->readULong(2) << ":F" << input->readLong(2)+1 << ",";
+    f << "],";
+    f << "line[h,?]=[";
+    for (int i=0; i<=N[0]; ++i)
+      f << input->readULong(2) << ":" << input->readULong(2) << ",";
+    f << "],";
+    if (input->tell()+4<=entry.end())
+      f << "#remain,";
+    if (input->tell()!=entry.end()) {
+      ascii().addDelimiter(input->tell(),'|');
+      input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    }
+    break;
+  }
+  case MacDrawProParserInternal::Shape::Bitmap:
+  case MacDrawProParserInternal::Shape::Basic:
+  case MacDrawProParserInternal::Shape::Group:
+  case MacDrawProParserInternal::Shape::GroupEnd:
+  case MacDrawProParserInternal::Shape::Unknown:
+    break;
+  }
+  if (textId>=0)
+    readObjectText(shape, textId);
+
   if (input->tell()!=entry.end()) {
     ascii().addDelimiter(input->tell(),'|');
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: find unexpected data\n"));
-      first=false;
-    }
-    f << "#";
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: find unexpected data\n"));
+    f << "###";
   }
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
@@ -1243,14 +1333,14 @@ bool MacDrawProParser::readBasicObjectData(MacDrawProParserInternal::Shape &shap
   f << "ObjData[" << shape << "]:";
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   int val;
-  for (int i=0; i<2; ++i) { // f0=0, f1=1|3
-    val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
+  val=(int) input->readLong(2);
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=1) f << "numUsed=" << val << ",";
   input->seek(4, librevenge::RVNG_SEEK_CUR); // skip the size field
 
   val=(int) input->readLong(2); // find 0|1|2 for line, other 0
-  if (val) f << "f2=" << val << ",";
+  if (val) f << "f1=" << val << ",";
   int fl=(int) input->readLong(2);
 
   // first read the rotation data
@@ -1419,6 +1509,89 @@ bool MacDrawProParser::readBasicObjectData(MacDrawProParserInternal::Shape &shap
   }
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProParser::readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry)
+{
+  if (shape.m_type!=MacDrawProParserInternal::Shape::Bitmap || entry.length()<10) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readBitmap: the entry seems bad\n"));
+    return false;
+  }
+  entry.setParsed(true);
+
+  MWAWInputStreamPtr input = getInput();
+  libmwaw::DebugStream f;
+  f << "Entries(Bitmap)[" << shape << "]:";
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  int val;
+  val=(int) input->readLong(2);
+  if (val) f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  if (val!=1) f << "numUsed=" << val << ",";
+  input->seek(4, librevenge::RVNG_SEEK_CUR); // skip the size field
+
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i+1 << "=" << val << ",";
+  }
+
+  // first read the rotation data
+  if (shape.m_flags & 0x80) {
+    if (input->tell()+28>entry.end()) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readBitmap: can not find the rotation data\n"));
+      f << "###rot,";
+      ascii().addPos(entry.begin());
+      ascii().addNote(f.str().c_str());
+      return false;
+    }
+    float angle= float(input->readLong(4))/65536.f; // in radians
+    shape.m_style.m_rotate = float(360./M_PI*angle);
+    f << "angl[rot]=" << shape.m_style.m_rotate << ",";
+    f << "rot[value?]=[";
+    for (int i=0; i<6; ++i)  // 3 points ?
+      f << float(input->readLong(4))/65536.f  << ",";
+    f << "],";
+  }
+  int dim[4];
+  for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+  Box2i &bitmapBox=shape.m_bitmapDim;
+  bitmapBox=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  f << "dim=" << bitmapBox << ",";
+  f << "id?=" << std::hex << input->readULong(4) << std::dec << ",";
+  shape.m_numBytesByRow=(int) input->readULong(2);
+  f << "rowSize=" << shape.m_numBytesByRow << ",";
+  Box2i &fileBox=shape.m_bitmapFileDim;
+  for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+  fileBox=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  if (bitmapBox!=fileBox)
+    f << "bitmap[dimInFile]="<< fileBox << ",";
+  shape.m_bitmapEntry.setBegin(input->tell());
+  shape.m_bitmapEntry.setLength(fileBox.size()[1]*shape.m_numBytesByRow);
+  ascii().addPos(entry.begin());
+  ascii().addNote(f.str().c_str());
+
+  if (fileBox.size()[1]<0 || shape.m_numBytesByRow<0 || !input->checkPosition(shape.m_bitmapEntry.end())) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObject: can not compute the bitmap endPos\n"));
+    ascii().addPos(shape.m_bitmapEntry.begin());
+    ascii().addNote("Bitmap[data]:###");
+    return false;
+  }
+  if (shape.m_numBytesByRow*8 < fileBox.size()[0] ||
+      fileBox[0][0]>bitmapBox[0][0] || fileBox[0][1]>bitmapBox[0][1] ||
+      fileBox[1][0]<bitmapBox[1][0] || fileBox[1][1]<bitmapBox[1][1]) {
+    ascii().addPos(shape.m_bitmapEntry.begin());
+    ascii().addNote("Bitmap[data]:###");
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObject: something look bad when reading a bitmap header\n"));
+    shape.m_bitmapEntry=MWAWEntry();
+  }
+  else
+    ascii().skipZone(shape.m_bitmapEntry.begin(), shape.m_bitmapEntry.end()-1);
+  if (shape.m_bitmapEntry.end()+4<entry.end()) {
+    ascii().addPos(shape.m_bitmapEntry.end());
+    ascii().addNote("Bitmap[end]:###");
+    MWAW_DEBUG_MSG(("MacDrawProParser::readObject: the bitmap data zone seems too big\n"));
+  }
   return true;
 }
 

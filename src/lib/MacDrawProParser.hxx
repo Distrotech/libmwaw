@@ -113,6 +113,8 @@ protected:
   bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
   //! tries to read a basic geometric object data ( line, rect, arc,... )
   bool readBasicObjectData(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
+  //! tries to read a bitmpa data ( bitmap,... )
+  bool readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
   //! tries to read an object text
   bool readObjectText(MacDrawProParserInternal::Shape &shape, int zId);
 
