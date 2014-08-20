@@ -668,7 +668,6 @@ int MacDrawParser::readObject()
         angle[1]+=360;
       }
 
-      Vec2f center = box.center();
       Vec2f axis = 0.5*Vec2f(box.size());
       // we must compute the real bd box
       float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
@@ -685,6 +684,7 @@ int MacDrawParser::readObject()
         if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
         else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
       }
+      Vec2f center = box.center();
       Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
                     Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
       shape.m_box=Box2f(Vec2f(shape.m_box[0])+realBox[0],Vec2f(shape.m_box[0])+realBox[1]);

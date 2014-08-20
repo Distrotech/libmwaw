@@ -111,12 +111,12 @@ protected:
   int readObject();
   //! tries to read an object data
   bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
+  //! tries to update the basic geometric data
+  bool updateGeometryShape(MacDrawProParserInternal::Shape &shape, float cornerWidth);
   //! tries to read a basic geometric object data ( line, rect, arc,... )
-  bool readBasicObjectData(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
+  bool readGeometryShapeData(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
   //! tries to read a bitmpa data ( bitmap,... )
   bool readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
-  //! tries to read an object text
-  bool readObjectText(MacDrawProParserInternal::Shape &shape, int zId);
 
   // send functions
 
@@ -126,6 +126,10 @@ protected:
   bool sendBitmap(MacDrawProParserInternal::Shape const &shape, MWAWPosition const &pos);
   //! tries to send a text zone to the listener
   bool sendText(int zoneId);
+  //! tries to send a line label to the listener
+  bool sendLabel(MWAWEntry const &entry);
+  //! sends the data which have not yet been sent to the listener
+  void flushExtra();
 
   //
   // data

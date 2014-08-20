@@ -71,28 +71,6 @@ struct State {
   {
     for (int i=0; i<5; ++i) m_numStyleZones[i]=0;
   }
-  //! returns a pattern if posible
-  bool getPattern(int id, MWAWGraphicStyle::Pattern &pat)
-  {
-    if (m_BWPatternList.empty()) initBWPatterns();
-    if (id<=0 || id>int(m_BWPatternList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProStyleManagerInternal::getPattern: can not find pattern %d\n", id));
-      return false;
-    }
-    pat=m_BWPatternList[size_t(id-1)];
-    return true;
-  }
-  //! returns a color if posible
-  bool getColor(int id, MWAWColor &col)
-  {
-    if (m_colorList.empty()) initColors();
-    if (id<=0 || id>int(m_colorList.size())) {
-      MWAW_DEBUG_MSG(("MacDrawProStyleManagerInternal::getColor: can not find color %d\n", id));
-      return false;
-    }
-    col=m_colorList[size_t(id-1)];
-    return true;
-  }
   //! init the black and white patterns list
   void initBWPatterns();
   //! init the colors list
@@ -259,6 +237,18 @@ bool MacDrawProStyleManager::getColor(int cId, MWAWColor &color) const
   color=m_state->m_colorList[size_t(cId-1)];
   return true;
 }
+
+bool MacDrawProStyleManager::getFont(int fId, MWAWFont &font) const
+{
+  if (fId==0) return false; // none
+  if (fId<=0||fId>int(m_state->m_fontList.size())) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::getFont: can not find font %d\n", fId));
+    return false;
+  }
+  font=m_state->m_fontList[size_t(fId-1)];
+  return true;
+}
+
 bool MacDrawProStyleManager::getDash(int dId, std::vector<float> &dash) const
 {
   if (dId==0) // a solid line
@@ -296,6 +286,7 @@ bool MacDrawProStyleManager::getPattern(int pId, MWAWGraphicStyle::Pattern &patt
       return false;
     }
     pattern=m_state->m_colorPatternList[size_t(pId-1)];
+    return true;
   }
 
   m_state->initBWPatterns();
