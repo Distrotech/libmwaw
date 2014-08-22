@@ -1493,6 +1493,7 @@ bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, in
   case MacDrawProParserInternal::Shape::Group:
   case MacDrawProParserInternal::Shape::GroupEnd:
   case MacDrawProParserInternal::Shape::Unknown:
+  default:
     break;
   }
 
@@ -1723,8 +1724,8 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     f << "angle=" << fileAngle[0] << "->" << fileAngle[0]+fileAngle[1] << ",";
     float angle[2] = { 90.f-fileAngle[0]-fileAngle[1], 90.f-fileAngle[0] };
     if (fileAngle[1]<0) {
-      angle[0]=int(90-fileAngle[0]);
-      angle[1]=int(90-fileAngle[0]-fileAngle[1]);
+      angle[0]=90-fileAngle[0];
+      angle[1]=90-fileAngle[0]-fileAngle[1];
     }
     while (angle[1] > 360) {
       angle[0]-=360;
