@@ -66,7 +66,7 @@ struct GraphicState {
   //! constructor
   GraphicState(std::vector<MWAWPageSpan> const &pageList) :
     m_pageList(pageList), m_metaData(), m_isDocumentStarted(false), m_isAtLeastOnePageOpened(false),
-    m_isHeaderFooterStarted(false), m_sentListMarkers(), m_subDocuments()
+    m_isHeaderFooterStarted(false), m_pageSpan(), m_sentListMarkers(), m_subDocuments()
   {
   }
   //! destructor
@@ -83,6 +83,8 @@ struct GraphicState {
   bool m_isAtLeastOnePageOpened;
   /** a flag to know if the header footer is started */
   bool m_isHeaderFooterStarted;
+  ///! the current page span
+  MWAWPageSpan m_pageSpan;
   /// the list of marker corresponding to sent list
   std::vector<int> m_sentListMarkers;
   //! the list of actual subdocument
@@ -124,9 +126,10 @@ struct State {
 
   //! a flag to know if we are in a textbox
   bool m_isTextBoxOpened;
+  //! a flag to know if openGroup was called
+  bool m_isGroupOpened;
   //! a flag to know if openLayer was called
   bool m_isLayerOpened;
-
   bool m_isSpanOpened;
   bool m_isParagraphOpened;
   bool m_isListElementOpened;
@@ -140,7 +143,6 @@ struct State {
   bool m_isTableColumnOpened;
   bool m_isTableCellOpened;
 
-  MWAWPageSpan m_pageSpan;
   unsigned m_currentPage;
   int m_numPagesRemainingInSpan;
   int m_currentPageNumber;
@@ -157,12 +159,13 @@ private:
 
 State::State() : m_origin(0,0),
   m_textBuffer(""), m_font(20,12)/* default time 12 */, m_paragraph(), m_isPageSpanOpened(false), m_list(),
-  m_isFrameOpened(false), m_framePosition(), m_frameStyle(), m_isTextBoxOpened(false), m_isLayerOpened(false),
+  m_isFrameOpened(false), m_framePosition(), m_frameStyle(), m_isTextBoxOpened(false),
+  m_isGroupOpened(false), m_isLayerOpened(false),
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
   m_firstParagraphInPageSpan(true), m_listOrderedLevels(),
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
-  m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+  m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
   m_inLink(false), m_inNote(false), m_inSubDocument(false), m_subDocumentType(libmwaw::DOC_NONE)
 {
 }
@@ -515,7 +518,7 @@ MWAWPageSpan const &MWAWGraphicListener::getPageSpan()
 {
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
-  return m_ps->m_pageSpan;
+  return m_ds->m_pageSpan;
 }
 
 void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
@@ -558,7 +561,7 @@ void MWAWGraphicListener::_openPageSpan(bool sendHeaderFooters)
   if (!m_ps->m_isPageSpanOpened)
     m_documentInterface->startPage(propList);
   m_ps->m_isPageSpanOpened = true;
-  m_ps->m_pageSpan = currentPage;
+  m_ds->m_pageSpan = currentPage;
 
   // we insert the header footer
   if (sendHeaderFooters)
@@ -1248,7 +1251,7 @@ void MWAWGraphicListener::closeTableCell()
 }
 
 ///////////////////
-// frame/layer
+// frame/group
 ///////////////////
 bool MWAWGraphicListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
@@ -1281,7 +1284,44 @@ void MWAWGraphicListener::closeFrame()
   m_ps->m_isFrameOpened = false;
 }
 
-bool  MWAWGraphicListener::openLayer(MWAWPosition const &pos)
+bool  MWAWGraphicListener::openGroup(MWAWPosition const &pos)
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openGroup: the document is not started\n"));
+    return false;
+  }
+  if (m_ps->m_isTableOpened || m_ps->isInTextZone()) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openGroup: called in table or in a text zone\n"));
+    return false;
+  }
+  if (!m_ps->m_isPageSpanOpened)
+    _openPageSpan();
+
+  librevenge::RVNGPropertyList propList;
+  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_isPageSpanOpened=true;
+  m_ps->m_isGroupOpened = true;
+
+  m_documentInterface->openGroup(propList);
+
+  return true;
+}
+
+void  MWAWGraphicListener::closeGroup()
+{
+  if (!m_ps->m_isGroupOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::closeGroup: called but no group is already opened\n"));
+    return;
+  }
+  m_documentInterface->closeGroup();
+  _endSubDocument();
+  _popParsingState();
+}
+
+bool MWAWGraphicListener::openLayer(librevenge::RVNGString const &layerName)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openLayer: the document is not started\n"));
@@ -1291,19 +1331,21 @@ bool  MWAWGraphicListener::openLayer(MWAWPosition const &pos)
     MWAW_DEBUG_MSG(("MWAWGraphicListener::openLayer: called in table or in a text zone\n"));
     return false;
   }
+  if (m_ps->m_isLayerOpened) {
+    MWAW_DEBUG_MSG(("MWAWGraphicListener::openLayer: called but layer is already opened\n"));
+    return false;
+  }
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
 
   _pushParsingState();
   _startSubDocument();
   m_ps->m_isPageSpanOpened=true;
-
   m_ps->m_isLayerOpened = true;
 
   librevenge::RVNGPropertyList propList;
-  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
+  propList.insert("draw:layer", layerName);
   m_documentInterface->startLayer(propList);
-
   return true;
 }
 
@@ -1363,7 +1405,6 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
     list.insert("fo:min-height",-size.y(), unit);
   if (pos.order() > 0)
     list.insert("draw:z-index", pos.order());
-
   if (pos.naturalSize().x() > 4*pointFactor && pos.naturalSize().y() > 4*pointFactor) {
     list.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
     list.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
@@ -1396,8 +1437,8 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
     MWAW_DEBUG_MSG(("MWAWGraphicListener::_handleFrameParameters: only page anchor is implemented\n"));
   }
   else {
-    double w = m_ps->m_pageSpan.getFormWidth();
-    double h = m_ps->m_pageSpan.getFormLength();
+    double w = m_ds->m_pageSpan.getFormWidth();
+    double h = m_ds->m_pageSpan.getFormLength();
     w *= inchFactor;
     h *= inchFactor;
     double newPosition;

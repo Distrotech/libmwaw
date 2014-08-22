@@ -64,26 +64,32 @@ namespace MacDrawProParserInternal
 // generic class used to defined a layer
 struct Layer {
   //! constructor
-  Layer() : m_numShapes(0), m_name("")
+  Layer() : m_numShapes(0), m_firstShape(-1), m_box(), m_name("")
   {
     for (int i=0; i<3; ++i) m_N[i]=0;
   }
   //! the number of shape
   int m_numShapes;
+  //! the first shape
+  int m_firstShape;
+  //! the layer bounding box (if computed)
+  Box2f m_box;
   //! some unknown number find in the beginning of the header
   long m_N[3];
   //! the layer name
-  std::string m_name;
+  librevenge::RVNGString m_name;
 };
 
 // generic class used to defined a library
 struct Library {
   //! constructor
-  Library() : m_layerList(), m_name("")
+  Library() : m_layerList(), m_box(), m_name("")
   {
   }
   //! the list of layer id
   std::vector<int> m_layerList;
+  //! the bounding box (if computed)
+  Box2f m_box;
   //! the library name
   std::string m_name;
 };
@@ -107,7 +113,10 @@ struct Shape {
   //! return the shape bdbox
   Box2f getBdBox() const
   {
-    return m_type==Basic ? m_shape.getBdBox() : m_box;
+    if (m_type==Basic)
+      return m_shape.getBdBox();
+    if (m_style.m_rotate>=0 && m_style.m_rotate<=0) return m_box;
+    return libmwaw::rotateBoxFromCenter(m_box,m_style.m_rotate);
   }
   //! returns true if the object is a line
   bool isLine() const
@@ -236,7 +245,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 //! Internal: the state of a MacDrawProParser
 struct State {
   //! constructor
-  State() : m_version(0), m_documentSize(), m_numLayers(1), m_numLibraries(0), m_numShapes(0),
+  State() : m_version(0), m_isStationery(false), m_numLayers(1), m_numLibraries(0), m_numShapes(0),
     m_libraryList(), m_layerList(), m_objectDataList(), m_objectTextList(), m_shapeList()
   {
     for (int i=0; i<5; ++i) m_sizeStyleZones[i]=0;
@@ -246,8 +255,8 @@ struct State {
   }
   //! the file version
   int m_version;
-  //! the document size (in point)
-  Vec2f m_documentSize;
+  //! flag to know if the file is a stationery document
+  bool m_isStationery;
   //! the number of layer
   int m_numLayers;
   //! the number of library
@@ -378,13 +387,8 @@ void MacDrawProParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      for (size_t i=0; i<m_state->m_shapeList.size(); ++i) {
-        MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[i];
-        if (shape.m_isSent) continue;
-        send(shape);
-        if (shape.m_nextId>0 && shape.m_nextId>int(i))
-          i=size_t(shape.m_nextId-1);
-      }
+      for (size_t i=0; i<m_state->m_layerList.size(); ++i)
+        send(m_state->m_layerList[i]);
 #ifdef DEBUG
       flushExtra();
 #endif
@@ -490,7 +494,7 @@ bool MacDrawProParser::createZones()
     ascii().addNote(f.str().c_str());
   }
 
-  return true;
+  return computeLayersAndLibrariesBoundingBox();
 }
 
 ////////////////////////////////////////////////////////////
@@ -515,6 +519,7 @@ bool MacDrawProParser::readLayersInfo()
   m_state->m_layerList.clear();
   for (int i=0; i<m_state->m_numLayers; ++i) {
     MacDrawProParserInternal::Layer layer;
+    layer.m_firstShape=numShapes;
     pos=input->tell();
     f.str("");
     f << "Entries(Layer)[L" << i+1 << "]:";
@@ -610,9 +615,18 @@ bool MacDrawProParser::readLayersInfo()
       ascii().addNote(f.str().c_str());
       continue;
     }
-    std::string name("");
-    for (int c=0; c<fSz; ++c) name+=(char) input->readULong(1);
-    f << name << ",";
+    librevenge::RVNGString name("");
+    for (int c=0; c<fSz; ++c) {
+      char ch=(char) input->readULong(1);
+      if (!ch) continue;
+      f << ch;
+      int unicode= getParserState()->m_fontConverter->unicode(3, (unsigned char) ch);
+      if (unicode==-1)
+        name.append(ch);
+      else
+        libmwaw::appendUnicode((uint32_t) unicode, name);
+    }
+    f << ",";
     m_state->m_layerList[size_t(it->first)].m_name=name;
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -697,7 +711,7 @@ bool MacDrawProParser::readLayerLibraryCorrespondance()
       else {
         if (library>int(m_state->m_libraryList.size()))
           m_state->m_libraryList.resize(size_t(library));
-        m_state->m_libraryList[size_t(library-1)].m_layerList.push_back(id+1);
+        m_state->m_libraryList[size_t(library-1)].m_layerList.push_back(id);
       }
       f << "Li" << library;
       if (val!=1) f << ":" << val;
@@ -921,6 +935,112 @@ bool MacDrawProParser::findObjectPositions(bool dataZone)
     ascii().addNote("_");
   }
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
+{
+  if (m_state->m_layerList.empty()) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: can not find any layer\n"));
+    return false;
+  }
+  for (size_t i=0; i<m_state->m_layerList.size(); ++i) {
+    MacDrawProParserInternal::Layer &layer=m_state->m_layerList[i];
+    if (layer.m_firstShape < 0 || layer.m_numShapes < 0 ||
+        (layer.m_numShapes && layer.m_firstShape >= int(m_state->m_shapeList.size()))) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: the layer %d seems bad\n", int(i)));
+      layer.m_numShapes=0;
+      continue;
+    }
+    Box2f box;
+    bool boxSet=false;
+    for (int j=layer.m_firstShape; j<layer.m_firstShape+layer.m_numShapes; ++j) {
+      if (j>=int(m_state->m_shapeList.size())) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: the layer %d seems to contain to much shapes\n", int(i)));
+        layer.m_numShapes=j-layer.m_firstShape;
+        break;
+      }
+      MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[size_t(j)];
+      if (shape.m_type==MacDrawProParserInternal::Shape::Group ||
+          shape.m_type==MacDrawProParserInternal::Shape::GroupEnd ||
+          shape.m_type==MacDrawProParserInternal::Shape::Unknown)
+        continue;
+      if (!boxSet) {
+        box=shape.getBdBox();
+        boxSet=true;
+      }
+      else
+        box=box.getUnion(shape.getBdBox());
+    }
+    if (boxSet)
+      layer.m_box=box;
+    else if (layer.m_numShapes) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: can not compute the bdbox of the layer %d\n", int(i)));
+    }
+  }
+
+  if (m_state->m_libraryList.empty()) {
+    // create a false library which contains all layer
+    MacDrawProParserInternal::Library library;
+    for (int i=0; i<int(m_state->m_layerList.size()); ++i)
+      library.m_layerList.push_back(i);
+    m_state->m_libraryList.push_back(library);
+  }
+
+  Vec2f pageSize(float(72*getPageSpan().getFormWidth()), float(72*getPageSpan().getFormLength()));
+  Box2f docBox;
+  bool docBoxSet=false;
+  for (size_t i=0; i<m_state->m_libraryList.size(); ++i) {
+    MacDrawProParserInternal::Library &library=m_state->m_libraryList[i];
+    if (library.m_layerList.empty()) continue;
+    Box2f box;
+    bool boxSet=false;
+    for (size_t j=0; j<library.m_layerList.size(); ++j) {
+      int id=library.m_layerList[j];
+      if (id<0 || id>=int(m_state->m_layerList.size())) {
+        MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: library %d contains bad layer\n", int(i)));
+        library.m_layerList[j]=-1;
+        continue;
+      }
+      MacDrawProParserInternal::Layer const &layer= m_state->m_layerList[size_t(id)];
+      if (layer.m_box.size()[0]<0 || layer.m_box.size()[1]<0)
+        continue;
+      if (!boxSet) {
+        box=layer.m_box;
+        boxSet=true;
+      }
+      else
+        box=box.getUnion(layer.m_box);
+    }
+    if (boxSet)
+      library.m_box=box;
+    else if (m_state->m_numShapes>0) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: can not compute the bdbox of the library %d\n", int(i)));
+    }
+    // convert it to a multiple of page size
+    Vec2f libRB=library.m_box[1];
+    for (int c=0; c<2; ++c) {
+      if (pageSize[c]<=0) continue;
+      if (libRB[c]<=0)
+        libRB[c]=pageSize[c];
+      else {
+        int numPage=int(libRB[c]/pageSize[c]-0.01);
+        if (numPage<0) numPage=0;
+        libRB[c]=float(numPage+1)*pageSize[c];
+      }
+    }
+    library.m_box.setMax(libRB);
+    if (!docBoxSet) {
+      docBox=library.m_box;
+      docBoxSet=true;
+    }
+    else
+      docBox=docBox.getUnion(library.m_box);
+  }
+  if (docBoxSet) {
+    getPageSpan().setFormWidth(double(docBox.size()[0])/72);
+    getPageSpan().setFormLength(double(docBox.size()[1])/72);
+  }
   return true;
 }
 
@@ -1237,23 +1357,14 @@ bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, in
       f << "###objText[pos]=" << val << ",";
     }
   }
-  // first read the rotation data
-  if (shape.m_flags & 0x80) {
-    if (input->tell()+28>entry.end()) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readObjectData: can not find the rotation data\n"));
-      f << "###rot,";
-      ascii().addPos(entry.begin());
-      ascii().addNote(f.str().c_str());
-      return false;
-    }
-    float angle= float(input->readLong(4))/65536.f; // in radians
-    shape.m_style.m_rotate = float(180./M_PI*angle);
-    f << "angl[rot]=" << shape.m_style.m_rotate << ",";
-    f << "rot[value?]=[";
-    for (int i=0; i<6; ++i)  // 3 points ?
-      f << float(input->readLong(4))/65536.f  << ",";
-    f << "],";
+  std::string extra("");
+  if (!readRotationInObjectData(shape, entry.end(), extra)) {
+    f << "###rot,";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+    return false;
   }
+  f << extra;
 
   int remain=int(entry.end()-input->tell());
   switch (shape.m_type) {
@@ -1397,6 +1508,37 @@ bool MacDrawProParser::readObjectData(MacDrawProParserInternal::Shape &shape, in
   return true;
 }
 
+bool MacDrawProParser::readRotationInObjectData(MacDrawProParserInternal::Shape &shape, long endPos, std::string &extra)
+{
+  if ((shape.m_flags & 0x80)==0)
+    return true;
+
+  MWAWInputStreamPtr input = getInput();
+  if (input->tell()+28>endPos) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::readRotationInObjectData: can not find the rotation data\n"));
+    extra="###rot,";
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  float angle= float(input->readLong(4))/65536.f; // in radians
+  shape.m_style.m_rotate = float(180./M_PI*angle);
+  f << "angl[rot]=" << shape.m_style.m_rotate << ",";
+  float dim[4];
+  for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
+  Box2f rect(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  f << "prevDim[rot]=" << rect << ",";
+  f << "unkn[rot]=[";
+  for (int i=0; i<2; ++i)  // another points ?
+    f << float(input->readLong(4))/65536.f  << ",";
+  f << "],";
+  shape.m_box=Box2f(rect[0]+shape.m_box[0], rect[1]+shape.m_box[0]);
+  if (shape.m_type==MacDrawProParserInternal::Shape::Basic)
+    shape.m_shape.m_bdBox=shape.m_shape.m_formBox=shape.m_box;
+  extra=f.str();
+  return true;
+}
+
 bool MacDrawProParser::updateGeometryShape(MacDrawProParserInternal::Shape &shape, float cornerWidth)
 {
   if (shape.m_type!=MacDrawProParserInternal::Shape::Basic) {
@@ -1460,29 +1602,14 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
   if (val) f << "f1=" << val << ",";
   int fl=(int) input->readLong(2);
 
-  // first read the rotation data
-  if (shape.m_flags & 0x80) {
-    if (input->tell()+28>entry.end()) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not find the rotation data\n"));
-      f << "###rot,";
-      ascii().addPos(entry.begin());
-      ascii().addNote(f.str().c_str());
-      return false;
-    }
-    float angle= float(input->readLong(4))/65536.f; // in radians
-    shape.m_style.m_rotate = float(180./M_PI*angle);
-    f << "angl[rot]=" << shape.m_style.m_rotate << ",";
-    float dim[4];
-    for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    Box2f rect(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
-    f << "prevDim[rot]=" << rect << ",";
-    f << "unkn[rot]=[";
-    for (int i=0; i<2; ++i)  // another points ?
-      f << float(input->readLong(4))/65536.f  << ",";
-    f << "],";
-    shape.m_box=Box2f(rect[0]+shape.m_box[0], rect[1]+shape.m_box[0]);
-    shape.m_shape.m_bdBox=shape.m_shape.m_formBox=shape.m_box;
+  std::string extra("");
+  if (!readRotationInObjectData(shape, entry.end(), extra)) {
+    f << "###rot,";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+    return false;
   }
+  f << extra;
 
   long remain=entry.end()-input->tell();
   switch (shape.m_fileType) {
@@ -1727,23 +1854,14 @@ bool MacDrawProParser::readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEn
     if (val) f << "f" << i+1 << "=" << val << ",";
   }
 
-  // first read the rotation data
-  if (shape.m_flags & 0x80) {
-    if (input->tell()+28>entry.end()) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readBitmap: can not find the rotation data\n"));
-      f << "###rot,";
-      ascii().addPos(entry.begin());
-      ascii().addNote(f.str().c_str());
-      return false;
-    }
-    float angle= float(input->readLong(4))/65536.f; // in radians
-    shape.m_style.m_rotate = float(180./M_PI*angle);
-    f << "angl[rot]=" << shape.m_style.m_rotate << ",";
-    f << "rot[value?]=[";
-    for (int i=0; i<6; ++i)  // 3 points ?
-      f << float(input->readLong(4))/65536.f  << ",";
-    f << "],";
+  std::string extra("");
+  if (!readRotationInObjectData(shape, entry.end(), extra)) {
+    f << "###rot,";
+    ascii().addPos(entry.begin());
+    ascii().addNote(f.str().c_str());
+    return false;
   }
+  f << extra;
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
   Box2i &bitmapBox=shape.m_bitmapDim;
@@ -1805,6 +1923,7 @@ bool MacDrawProParser::checkHeader(MWAWHeader *header, bool strict)
     if (input->readULong(2)!=0x5747) return false;
   }
   else if (val==0x5354) { // template
+    m_state->m_isStationery=true;
     f << "stationery,";
     if (input->readULong(2)!=0x4154) return false;
   }
@@ -2053,16 +2172,55 @@ bool MacDrawProParser::readPrintInfo()
 // send data
 //
 ////////////////////////////////////////////////////////////
+bool MacDrawProParser::send(MacDrawProParserInternal::Library const &library)
+{
+  int numLayers=(int) m_state->m_layerList.size();
+  for (size_t i=0; i<library.m_layerList.size(); ++i) {
+    int id=library.m_layerList[i];
+    if (id<0 || id>=numLayers) continue;
+    send(m_state->m_layerList[size_t(id)]);
+  }
+  return true;
+}
+
+bool MacDrawProParser::send(MacDrawProParserInternal::Layer const &layer)
+{
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::send[layer]: can not find the listener\n"));
+    return false;
+  }
+  if (layer.m_firstShape<0)
+    return true;
+  int maxShape=(int) m_state->m_shapeList.size();
+  if (layer.m_firstShape+layer.m_numShapes<maxShape)
+    maxShape=layer.m_firstShape+layer.m_numShapes;
+  if (maxShape<=layer.m_firstShape)
+    return false;
+  bool openLayer=false;
+  if (!layer.m_name.empty())
+    openLayer=listener->openLayer(layer.m_name);
+  for (int i=layer.m_firstShape; i<maxShape; ++i) {
+    MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[size_t(i)];
+    send(shape);
+    if (shape.m_nextId>i+1)
+      i+=shape.m_nextId-(i+1);
+  }
+  if (openLayer)
+    listener->closeLayer();
+  return true;
+}
 
 bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
 {
   MWAWGraphicListenerPtr listener=getGraphicListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::send: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacDrawProParser::send[shape]: can not find the listener\n"));
     return false;
   }
   shape.m_isSent=true;
-  Box2f box=shape.getBdBox();
+  // for not basic shape, we need the box before the rotation, so compute the box by hand
+  Box2f box=(shape.m_type==MacDrawProParserInternal::Shape::Basic) ? shape.m_shape.getBdBox() : shape.m_box;
   MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
   pos.m_anchorTo = MWAWPosition::Page;
   switch (shape.m_type) {
@@ -2083,7 +2241,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
   case MacDrawProParserInternal::Shape::Group: {
     size_t numShapes=m_state->m_shapeList.size();
     if (!numShapes) break;
-    listener->openLayer(pos);
+    listener->openGroup(pos);
     for (size_t i=0; i<shape.m_childList.size(); ++i) {
       if (shape.m_childList[i]>=numShapes) {
         MWAW_DEBUG_MSG(("MacDrawProParser::send: can not find a child\n"));
@@ -2096,7 +2254,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
       }
       send(child);
     }
-    listener->closeLayer();
+    listener->closeGroup();
     break;
   }
   case MacDrawProParserInternal::Shape::GroupEnd:

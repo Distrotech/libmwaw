@@ -101,8 +101,12 @@ public:
   bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** close a frame */
   void closeFrame();
+  /** open a group */
+  bool openGroup(MWAWPosition const &pos);
+  /** close a group */
+  void closeGroup();
   /** open a layer */
-  bool openLayer(MWAWPosition const &pos);
+  bool openLayer(librevenge::RVNGString const &name);
   /** close a layer */
   void closeLayer();
 

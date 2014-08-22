@@ -1090,7 +1090,7 @@ bool MacDrawParser::send(MacDrawParserInternal::Shape const &shape)
   case MacDrawParserInternal::Shape::Group: {
     size_t numShapes=m_state->m_shapeList.size();
     if (!numShapes) break;
-    listener->openLayer(pos);
+    listener->openGroup(pos);
     for (size_t i=0; i<shape.m_childList.size(); ++i) {
       if (shape.m_childList[i]>=numShapes) {
         MWAW_DEBUG_MSG(("MacDrawParser::send: can not find a child\n"));
@@ -1103,7 +1103,7 @@ bool MacDrawParser::send(MacDrawParserInternal::Shape const &shape)
       }
       send(child);
     }
-    listener->closeLayer();
+    listener->closeGroup();
     break;
   }
   case MacDrawParserInternal::Shape::GroupEnd:

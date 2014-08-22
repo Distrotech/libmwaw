@@ -202,7 +202,6 @@ void State::initBWPatterns()
       pat.m_data[j]=uint8_t((*patPtr)>>8);
       pat.m_data[j+1]=uint8_t((*patPtr)&0xFF);
     }
-    if (i==0) m_BWPatternList.push_back(pat); // none pattern
     m_BWPatternList.push_back(pat);
   }
 }

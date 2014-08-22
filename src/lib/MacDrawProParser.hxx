@@ -47,6 +47,8 @@
 
 namespace MacDrawProParserInternal
 {
+struct Layer;
+struct Library;
 struct Shape;
 struct State;
 
@@ -99,6 +101,8 @@ protected:
   bool readLibrariesInfo();
   //! finds the objet's data/text positions
   bool findObjectPositions(bool dataZone);
+  //! computes the layers and libraries bounding box
+  bool computeLayersAndLibrariesBoundingBox();
 
   //! tries to read a structured zone header
   bool readStructuredHeaderZone(MWAWEntry const &entry, std::map<int, long> &idToDeltaPosMap);
@@ -111,6 +115,8 @@ protected:
   int readObject();
   //! tries to read an object data
   bool readObjectData(MacDrawProParserInternal::Shape &shape, int zId);
+  //! tries to read the rotation
+  bool readRotationInObjectData(MacDrawProParserInternal::Shape &shape, long endPos, std::string &extra);
   //! tries to update the basic geometric data
   bool updateGeometryShape(MacDrawProParserInternal::Shape &shape, float cornerWidth);
   //! tries to read a basic geometric object data ( line, rect, arc,... )
@@ -120,6 +126,10 @@ protected:
 
   // send functions
 
+  //! tries to send a library
+  bool send(MacDrawProParserInternal::Library const &library);
+  //! tries to send a layer
+  bool send(MacDrawProParserInternal::Layer const &layer);
   //! tries to send a shape
   bool send(MacDrawProParserInternal::Shape const &shape);
   //! tries to send a bitmap to the listener
