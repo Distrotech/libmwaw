@@ -141,6 +141,7 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_LIGHTWAYTEXT:
     case MWAW_T_MACDOC:
     case MWAW_T_MACDRAW:
+    case MWAW_T_MACDRAWPRO:
     case MWAW_T_MACPAINT:
     case MWAW_T_MACWRITE:
     case MWAW_T_MACWRITEPRO:
@@ -159,11 +160,6 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     case MWAW_T_WRITERPLUS:
     case MWAW_T_ZWRITE:
       confidence = MWAW_C_EXCELLENT;
-      break;
-    case MWAW_T_MACDRAWPRO:
-#ifdef DEBUG
-      confidence = MWAW_C_EXCELLENT;
-#endif
       break;
     case MWAW_T_ADOBEILLUSTRATOR:
     case MWAW_T_DBASE:

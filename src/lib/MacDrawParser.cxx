@@ -1129,7 +1129,9 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
   }
   if (!shape.m_bitmapEntry.valid()) return false;
   int const numBytesByRow=shape.m_numBytesByRow;
+  Vec2i pictDim=shape.m_bitmapDim.size();
   if (shape.m_type!=MacDrawParserInternal::Shape::Bitmap || numBytesByRow<=0 ||
+      pictDim[0]<0 || pictDim[1]<0 ||
       numBytesByRow*shape.m_bitmapFileDim.size()[1]<shape.m_bitmapEntry.length() ||
       shape.m_bitmapDim[0][0]<0 || shape.m_bitmapDim[0][1]<0 ||
       shape.m_bitmapDim[0][0]<shape.m_bitmapFileDim[0][0] ||
@@ -1139,13 +1141,14 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
     return false;
   }
   // change: implement indexed transparent color, replaced this code
-  MWAWPictBitmapColor pict(shape.m_bitmapDim[1], true);
+  MWAWPictBitmapColor pict(pictDim, true);
   MWAWColor transparent(255,255,255,0);
   MWAWColor black(MWAWColor::black());
-  std::vector<MWAWColor> data(size_t(shape.m_bitmapDim[1][0]), transparent);
+  std::vector<MWAWColor> data;
+  data.resize(size_t(pictDim[0]), transparent);
   // first set unseen row to zero (even if this must not appear)
-  for (int r=shape.m_bitmapDim[0][1]; r<shape.m_bitmapFileDim[0][1]; ++r) pict.setRow(r, &data[0]);
-  for (int r=shape.m_bitmapFileDim[1][1]; r<shape.m_bitmapDim[1][1]; ++r) pict.setRow(r, &data[0]);
+  for (int r=shape.m_bitmapDim[0][1]; r<shape.m_bitmapFileDim[0][1]; ++r) pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
+  for (int r=shape.m_bitmapFileDim[1][1]; r<shape.m_bitmapDim[1][1]; ++r) pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
 
   MWAWInputStreamPtr input=getInput();
   input->seek(shape.m_bitmapEntry.begin(), librevenge::RVNG_SEEK_SET);
@@ -1155,15 +1158,15 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
       input->seek(pos+numBytesByRow, librevenge::RVNG_SEEK_SET);
       continue;
     }
-    int wPos=shape.m_bitmapFileDim[0][0];
+    int wPos=shape.m_bitmapDim[0][0]-shape.m_bitmapFileDim[0][0];
     for (int col=shape.m_bitmapFileDim[0][0]; col<shape.m_bitmapFileDim[1][0]; ++col) {
       unsigned char c=(unsigned char) input->readULong(1);
       for (int j=0, bit=0x80; j<8 ; ++j, bit>>=1) {
-        if (wPos>=shape.m_bitmapDim[1][0]) break;
+        if (wPos>=pictDim[0]) break;
         data[size_t(wPos++)]=(c&bit) ? black : transparent;
       }
     }
-    pict.setRow(r, &data[0]);
+    pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
     input->seek(pos+numBytesByRow, librevenge::RVNG_SEEK_SET);
   }
 

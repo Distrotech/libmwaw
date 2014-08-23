@@ -64,7 +64,7 @@ namespace MacDrawProParserInternal
 // generic class used to defined a layer
 struct Layer {
   //! constructor
-  Layer() : m_numShapes(0), m_firstShape(-1), m_box(), m_name("")
+  Layer() : m_numShapes(0), m_firstShape(-1), m_isHidden(false), m_box(), m_name("")
   {
     for (int i=0; i<3; ++i) m_N[i]=0;
   }
@@ -72,6 +72,8 @@ struct Layer {
   int m_numShapes;
   //! the first shape
   int m_firstShape;
+  //! true if the layer is hidden
+  bool m_isHidden;
   //! the layer bounding box (if computed)
   Box2f m_box;
   //! some unknown number find in the beginning of the header
@@ -245,7 +247,9 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 //! Internal: the state of a MacDrawProParser
 struct State {
   //! constructor
-  State() : m_version(0), m_isStationery(false), m_numLayers(1), m_numLibraries(0), m_numShapes(0),
+  State() : m_version(0), m_isStationery(false), m_numPages(1),
+    m_actualLayer(1), m_numLayers(1), m_numHiddenLayers(0), m_numVisibleLayers(0),
+    m_numLibraries(0), m_numShapes(0),
     m_libraryList(), m_layerList(), m_objectDataList(), m_objectTextList(), m_shapeList()
   {
     for (int i=0; i<5; ++i) m_sizeStyleZones[i]=0;
@@ -257,8 +261,16 @@ struct State {
   int m_version;
   //! flag to know if the file is a stationery document
   bool m_isStationery;
+  //! the final number of pages
+  int m_numPages;
+  //! the actual layer
+  int m_actualLayer;
   //! the number of layer
   int m_numLayers;
+  //! the number of hidden layer
+  int m_numHiddenLayers;
+  //! the number of visible layer
+  int m_numVisibleLayers;
   //! the number of library
   int m_numLibraries;
   //! the total number of shapes
@@ -387,8 +399,8 @@ void MacDrawProParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      for (size_t i=0; i<m_state->m_layerList.size(); ++i)
-        send(m_state->m_layerList[i]);
+      for (int i=0; i<m_state->m_numPages; ++i)
+        sendPage(i);
 #ifdef DEBUG
       flushExtra();
 #endif
@@ -415,12 +427,45 @@ void MacDrawProParser::createDocument(librevenge::RVNGDrawingInterface *document
     return;
   }
 
+  // we need one page for the master page: the visible layer if any + one page by hidden layers
+  int numPages=m_state->m_numHiddenLayers;
+  if (numPages<=0) numPages=1;
+  m_state->m_numPages = numPages;
+
+  // create the list of page names
+  std::vector<librevenge::RVNGString> namesList;
+  for (size_t i=0; i<m_state->m_layerList.size(); ++i) {
+    MacDrawProParserInternal::Layer const &layer=m_state->m_layerList[i];
+    if (!layer.m_isHidden) continue;
+    namesList.push_back(layer.m_name);
+  }
+  if ((int) namesList.size() < numPages)
+    namesList.resize(size_t(numPages), "");
+
   // create the page list
   MWAWPageSpan ps(getPageSpan());
-  ps.setPageSpan(1);
-  /* FIXME: update the page size using m_state->m_documentSize or by
-     finding the right/bottom shape */
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  std::vector<MWAWPageSpan> pageList;
+  int actUnamedPage=0;
+  for (int i=0; i<numPages; ++i) {
+    if (namesList[size_t(i)].empty()) {
+      ++actUnamedPage;
+      continue;
+    }
+    if (actUnamedPage) {
+      ps.setPageSpan(actUnamedPage);
+      pageList.push_back(ps);
+      actUnamedPage=0;
+    }
+    MWAWPageSpan psNamed(ps);
+    psNamed.setPageName(namesList[size_t(i)]);
+    psNamed.setPageSpan(1);
+    pageList.push_back(psNamed);
+  }
+  if (actUnamedPage) {
+    ps.setPageSpan(actUnamedPage);
+    pageList.push_back(ps);
+  }
+
   MWAWGraphicListenerPtr listen(new MWAWGraphicListener(*getParserState(), pageList, documentInterface));
   setGraphicListener(listen);
   listen->startDocument();
@@ -520,11 +565,16 @@ bool MacDrawProParser::readLayersInfo()
   for (int i=0; i<m_state->m_numLayers; ++i) {
     MacDrawProParserInternal::Layer layer;
     layer.m_firstShape=numShapes;
+    if (i && m_state->m_actualLayer==i+1)
+      layer.m_isHidden=true;
     pos=input->tell();
     f.str("");
     f << "Entries(Layer)[L" << i+1 << "]:";
     long val=(long) input->readULong(2);
-    if (val&0x8000) f << "hidden,";
+    if (val&0x8000) {
+      layer.m_isHidden=true;
+      f << "hidden,";
+    }
     val &=0x7FFF;
     if (val) f << "fl=" << std::hex << val << std::dec << ",";
     f << "id?=" << input->readULong(2) << ","; // a small number
@@ -950,8 +1000,13 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
         (layer.m_numShapes && layer.m_firstShape >= int(m_state->m_shapeList.size()))) {
       MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: the layer %d seems bad\n", int(i)));
       layer.m_numShapes=0;
+      layer.m_isHidden=false;
       continue;
     }
+    if (layer.m_isHidden)
+      ++m_state->m_numHiddenLayers;
+    else
+      ++m_state->m_numVisibleLayers;
     Box2f box;
     bool boxSet=false;
     for (int j=layer.m_firstShape; j<layer.m_firstShape+layer.m_numShapes; ++j) {
@@ -1946,13 +2001,10 @@ bool MacDrawProParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
 
-  if (strict && !readPrintInfo()) {
-    input->seek(8, librevenge::RVNG_SEEK_SET);
-    for (int i=0; i<10; ++i) // allow print info to be zero
-      if (input->readLong(2)) return false;
-  }
-
   if (strict) {
+    // try to begin the parsing
+    if (!readHeaderInfo() || !m_styleManager->readStyles(m_state->m_sizeStyleZones)) return false;
+    m_styleManager.reset(new MacDrawProStyleManager(*this));
     // we must check that this is not a basic pict file
     input->seek(512+2, librevenge::RVNG_SEEK_SET);
     int dim[4];
@@ -2021,10 +2073,10 @@ bool MacDrawProParser::readHeaderInfo()
   }
   else
     f << extra;
-  for (int i=0; i<2; ++i) { // h0=1|2|9 ( maybe related to layer), h1=1|2|40
-    val=(int) input->readULong(2);
-    if (val!=1) f << "h" << i << "=" << val << ",";
-  }
+  m_state->m_actualLayer=(int) input->readULong(2);
+  if (m_state->m_actualLayer!=1) f << "layer[cur]=" << m_state->m_actualLayer << ",";
+  val=(int) input->readULong(2); // h1=1|2|40
+  if (val!=1) f << "h1=" << val << ",";
   val=(int) input->readULong(2); // 0|45
   if (val) f << "h2=" << val << ",";
   val=(int) input->readULong(2); // actual shape ?
@@ -2173,6 +2225,25 @@ bool MacDrawProParser::readPrintInfo()
 // send data
 //
 ////////////////////////////////////////////////////////////
+bool MacDrawProParser::sendPage(int page)
+{
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::sendPage: can not find the listener\n"));
+    return false;
+  }
+  if (page>0)
+    listener->insertBreak(MWAWListener::PageBreak);
+  int actHidden=0;
+  for (size_t i=0; i<m_state->m_layerList.size(); ++i) {
+    MacDrawProParserInternal::Layer const &layer=m_state->m_layerList[i];
+    if (layer.m_isHidden && actHidden++!=page)
+      continue;
+    send(layer);
+  }
+  return true;
+}
+
 bool MacDrawProParser::send(MacDrawProParserInternal::Library const &library)
 {
   int numLayers=(int) m_state->m_layerList.size();
@@ -2352,7 +2423,10 @@ bool MacDrawProParser::sendBitmap(MacDrawProParserInternal::Shape const &shape, 
   libmwaw::Debug::dumpFile(binary, f.str().c_str());
 #endif
 
-  listener->insertPicture(position, binary, type);
+  // bitmap have no border
+  MWAWGraphicStyle style=shape.m_style;
+  style.m_lineWidth=0;
+  listener->insertPicture(position, binary, type, style);
 
   return true;
 }
@@ -2471,6 +2545,7 @@ bool MacDrawProParser::sendLabel(MWAWEntry const &entry)
   }
   return true;
 }
+
 void MacDrawProParser::flushExtra()
 {
   for (size_t i=0; i<m_state->m_shapeList.size(); ++i) {

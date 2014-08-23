@@ -126,7 +126,9 @@ protected:
 
   // send functions
 
-  //! tries to send a library
+  //! tries to send the layer corresponding a page
+  bool sendPage(int page);
+  //! tries to send a library (not functionnal)
   bool send(MacDrawProParserInternal::Library const &library);
   //! tries to send a layer
   bool send(MacDrawProParserInternal::Layer const &layer);

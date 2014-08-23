@@ -218,6 +218,21 @@ public:
   }
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
+  //! set the page name
+  void setPageName(librevenge::RVNGString const &name)
+  {
+    m_name=name;
+  }
+  //! return true if the page has a name
+  bool hasPageName() const
+  {
+    return !m_name.empty();
+  }
+  //! return the page name
+  librevenge::RVNGString const &getPageName() const
+  {
+    return m_name;
+  }
   //! set the background color
   void setBackgroundColor(MWAWColor color=MWAWColor::white())
   {
@@ -262,6 +277,8 @@ private:
   FormOrientation m_formOrientation;
   /** the margins: libmwaw::Left, ... */
   double m_margins[4];
+  //! the page name
+  librevenge::RVNGString m_name;
   /** the page background color: default white */
   MWAWColor m_backgroundColor;
   //! the page number ( or -1)

@@ -203,6 +203,7 @@ void MWAWHeaderFooter::insertPageNumberParagraph(MWAWListener *listener) const
 // ----------------- MWAWPageSpan ------------------------
 MWAWPageSpan::MWAWPageSpan() :
   m_formLength(11.0), m_formWidth(8.5), m_formOrientation(MWAWPageSpan::PORTRAIT),
+  m_name(""),
   m_backgroundColor(MWAWColor::white()),
   m_pageNumber(-1),
   m_headerFooterList(),
@@ -301,6 +302,8 @@ void MWAWPageSpan::getPageProperty(librevenge::RVNGPropertyList &propList) const
 {
   propList.insert("librevenge:num-pages", getPageSpan());
 
+  if (hasPageName())
+    propList.insert("draw:name", getPageName());
   propList.insert("fo:page-height", getFormLength(), librevenge::RVNG_INCH);
   propList.insert("fo:page-width", getFormWidth(), librevenge::RVNG_INCH);
   if (getFormOrientation() == LANDSCAPE)
@@ -329,7 +332,7 @@ bool MWAWPageSpan::operator==(shared_ptr<MWAWPageSpan> const &page2) const
       getMarginTop() < page2->getMarginTop() || getMarginTop() > page2->getMarginTop() ||
       getMarginBottom() < page2->getMarginBottom() || getMarginBottom() > page2->getMarginBottom())
     return false;
-  if (backgroundColor() != page2->backgroundColor())
+  if (getPageName() != page2->getPageName() || backgroundColor() != page2->backgroundColor())
     return false;
 
   if (getPageNumber() != page2->getPageNumber())

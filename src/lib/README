@@ -15,7 +15,7 @@
 - LightWayTxt*  : parser of LightWay Text documents
 - MacDoc*       : parser of MacDoc documents
 - MacDraw*      : parser of MacDraw documents
-- MacDrawPro*   : parser of MacDraw II documents ( not finished)
+- MacDrawPro*   : parser of MacDraw II documents
 - MacWrt*       : parser of MacWrite documents
 - MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
 - MarinerWrt*   : parser of Mariner Write documents
@@ -189,7 +189,8 @@ MacDocParser : parser of MacDoc document: v1.3
 
 MacDrawParser : parser of MacDraw document: v0-v1
 
-MacDrawProParser : parser of MacDraw II document: not finished
+MacDrawProParser : parser of MacDraw II document
+-   MacDrawProStyleManager : class which read the styles either in the data fork or in the resource fork
 
 MacPaintParser: parser of MacPaint v1-2 files (ie. of PNTG mac file)
 

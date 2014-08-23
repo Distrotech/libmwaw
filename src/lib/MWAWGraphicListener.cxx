@@ -1031,6 +1031,18 @@ void MWAWGraphicListener::insertPicture
 
   list.clear();
   _handleFrameParameters(list, pos, style);
+  float rotate = style.m_rotate;
+  if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
+  if (rotate<0||rotate>0) {
+    list.insert("librevenge:rotate", rotate);
+    float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
+    Vec2f size=pointFactor*pos.size();
+    if (size[0]<0) size[0]=-size[0];
+    if (size[1]<0) size[1]=-size[1];
+    Vec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
+    list.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
+    list.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
+  }
   list.insert("librevenge:mime-type", type.c_str());
   list.insert("office:binary-data", binaryData);
   m_documentInterface->drawGraphicObject(list);
