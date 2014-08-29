@@ -45,8 +45,12 @@
 #  else
 #    define MWAWLIB _declspec(dllimport)
 #  endif
-#else
-#  define MWAWLIB
+#else // !DLL_EXPORT
+#  ifdef LIBMWAW_VISIBILITY
+#    define MWAWLIB __attribute__((visibility("default")))
+#  else
+#    define MWAWLIB
+#  endif
 #endif
 
 namespace librevenge
