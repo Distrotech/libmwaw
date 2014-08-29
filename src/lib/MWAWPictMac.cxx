@@ -1915,47 +1915,6 @@ namespace libmwaw_applepict2
 {
 using namespace libmwaw_applepict1;
 
-//! Internal and low level: a class used to read and store all possible value
-struct Value : public libmwaw_applepict1::Value {
-};
-
-//! Internal and low level: a class to define each opcode and their arguments and read their data
-struct OpCode : public libmwaw_applepict1::OpCode {
-  typedef libmwaw_applepict1::OpCode parent;
-  /** constructor
-   *
-   * \param id is the code of the opcode in the file
-   * \param nm is the short name of the opcode
-   * \param type1 \param type2 \param type3 \param type4 \param type5 the type of the first, second, third arguments (if they exist)
-   */
-  OpCode(int id, char const *nm, DataType type1=WP_NONE, DataType type2=WP_NONE, DataType type3=WP_NONE, DataType type4=WP_NONE, DataType type5=WP_NONE) :
-    parent(id, nm, type1, type2, type3, type4, type5) {}
-
-  /** tries to read the data in the file
-   *
-   * If the read is succefull, fills listValue with the read argument */
-  bool readData(MWAWInputStream &input, std::vector<Value> &listValue) const
-  {
-    size_t numTypes = m_types.size();
-    listValue.resize(numTypes);
-    Value newVal;
-    long debPos = input.tell();
-    for (size_t i = 0; i < numTypes; i++) {
-      long actualPos = input.tell();
-      if (readValue(input, m_types[i], newVal)) {
-        listValue[i] = newVal;
-        continue;
-      }
-      input.seek(actualPos, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    long actualPos = input.tell();
-    // we must check alignment
-    if ((actualPos - debPos)%2 == 1) input.seek(1, librevenge::RVNG_SEEK_CUR);
-    return true;
-  }
-};
-
 /** internal and low level: list of new opcodes */
 static OpCode const s_listCodes[] = {
   OpCode(0x12,"BackCPat",WP_CPATTERN), OpCode(0x13,"PenCPat",WP_CPATTERN), OpCode(0x14,"FillCPat",WP_CPATTERN),
@@ -1978,9 +1937,9 @@ public:
   //! the constructor
   PictParser() : m_mapIdOp()
   {
-    size_t numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(libmwaw_applepict1::OpCode);
+    size_t numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(OpCode);
     for (size_t i = 0; i < numCodes; i++)
-      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = static_cast<OpCode const *>(&(libmwaw_applepict1::s_listCodes[i]));
+      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = &(libmwaw_applepict1::s_listCodes[i]);
     numCodes = sizeof(s_listCodes)/sizeof(OpCode);
     for (size_t i = 0; i < numCodes; i++)
       m_mapIdOp[s_listCodes[i].m_id] = &(s_listCodes[i]);
@@ -2108,6 +2067,10 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
       ok = false;
       break;
     }
+    // we must check alignment
+    if ((input->tell() - actPos)%2 == 1)
+      input->seek(1, librevenge::RVNG_SEEK_CUR);
+
     s.str("");
     s << opCode.m_name << ":";
     for (size_t i = 0; i < readData.size(); i++) {
