@@ -248,7 +248,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 struct State {
   //! constructor
   State() : m_version(0), m_isStationery(false), m_numPages(1),
-    m_actualLayer(1), m_numLayers(1), m_numHiddenLayers(0), m_numVisibleLayers(0),
+    m_actualLayer(1), m_numLayers(1), m_numHiddenLayers(0), m_numVisibleLayers(0), m_createMasterPage(false),
     m_numLibraries(0), m_numShapes(0),
     m_libraryList(), m_layerList(), m_objectDataList(), m_objectTextList(), m_shapeList()
   {
@@ -271,6 +271,8 @@ struct State {
   int m_numHiddenLayers;
   //! the number of visible layer
   int m_numVisibleLayers;
+  //! flag to know if we need or not to create a master
+  bool m_createMasterPage;
   //! the number of library
   int m_numLibraries;
   //! the total number of shapes
@@ -399,6 +401,7 @@ void MacDrawProParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      sendMasterPage();
       for (int i=0; i<m_state->m_numPages; ++i)
         sendPage(i);
 #ifdef DEBUG
@@ -427,7 +430,7 @@ void MacDrawProParser::createDocument(librevenge::RVNGDrawingInterface *document
     return;
   }
 
-  // we need one page for the master page: the visible layer if any + one page by hidden layers
+  // we need one page for the master page: one page by hidden layers
   int numPages=m_state->m_numHiddenLayers;
   if (numPages<=0) numPages=1;
   m_state->m_numPages = numPages;
@@ -444,6 +447,10 @@ void MacDrawProParser::createDocument(librevenge::RVNGDrawingInterface *document
 
   // create the page list
   MWAWPageSpan ps(getPageSpan());
+  m_state->m_createMasterPage=m_state->m_numHiddenLayers>1 && m_state->m_numVisibleLayers>0;
+  if (m_state->m_createMasterPage)
+    ps.setMasterPageName("Master");
+
   std::vector<MWAWPageSpan> pageList;
   int actUnamedPage=0;
   for (int i=0; i<numPages; ++i) {
@@ -1043,6 +1050,7 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
   }
 
   Vec2f pageSize(float(72*getPageSpan().getFormWidth()), float(72*getPageSpan().getFormLength()));
+  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
   Box2f docBox;
   bool docBoxSet=false;
   for (size_t i=0; i<m_state->m_libraryList.size(); ++i) {
@@ -1061,11 +1069,11 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
       if (layer.m_box.size()[0]<0 || layer.m_box.size()[1]<0)
         continue;
       if (!boxSet) {
-        box=layer.m_box;
+        box=Box2f(layer.m_box[0]+leftTop, layer.m_box[1]+leftTop);
         boxSet=true;
       }
       else
-        box=box.getUnion(layer.m_box);
+        box=box.getUnion(Box2f(layer.m_box[0]+leftTop, layer.m_box[1]+leftTop));
     }
     if (boxSet)
       library.m_box=box;
@@ -1093,8 +1101,8 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
       docBox=docBox.getUnion(library.m_box);
   }
   if (docBoxSet) {
-    getPageSpan().setFormWidth(double(docBox.size()[0])/72);
-    getPageSpan().setFormLength(double(docBox.size()[1])/72);
+    getPageSpan().setFormWidth(double(docBox[1][0])/72);
+    getPageSpan().setFormLength(double(docBox[1][1])/72);
   }
   return true;
 }
@@ -2225,6 +2233,34 @@ bool MacDrawProParser::readPrintInfo()
 // send data
 //
 ////////////////////////////////////////////////////////////
+
+bool MacDrawProParser::sendMasterPage()
+{
+  if (!m_state->m_createMasterPage)
+    return true;
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::sendMasterPage: can not find the listener\n"));
+    m_state->m_createMasterPage=false;
+    return false;
+  }
+  MWAWPageSpan ps(getPageSpan());
+  ps.setMasterPageName("Master");
+  if (!listener->openMasterPage(ps)) {
+    MWAW_DEBUG_MSG(("MacDrawProParser::sendMasterPage: can not create the master page\n"));
+    m_state->m_createMasterPage=false;
+    return false;
+  }
+  for (size_t i=0; i<m_state->m_layerList.size(); ++i) {
+    MacDrawProParserInternal::Layer const &layer=m_state->m_layerList[i];
+    if (layer.m_isHidden)
+      continue;
+    send(layer);
+  }
+  listener->closeMasterPage();
+  return true;
+}
+
 bool MacDrawProParser::sendPage(int page)
 {
   MWAWGraphicListenerPtr listener=getGraphicListener();
@@ -2238,6 +2274,8 @@ bool MacDrawProParser::sendPage(int page)
   for (size_t i=0; i<m_state->m_layerList.size(); ++i) {
     MacDrawProParserInternal::Layer const &layer=m_state->m_layerList[i];
     if (layer.m_isHidden && actHidden++!=page)
+      continue;
+    if (!layer.m_isHidden && m_state->m_createMasterPage)
       continue;
     send(layer);
   }
@@ -2272,9 +2310,10 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Layer const &layer)
   bool openLayer=false;
   if (!layer.m_name.empty())
     openLayer=listener->openLayer(layer.m_name);
+  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
   for (int i=layer.m_firstShape; i<maxShape; ++i) {
     MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[size_t(i)];
-    send(shape);
+    send(shape, leftTop);
     if (shape.m_nextId>i+1)
       i+=shape.m_nextId-(i+1);
   }
@@ -2283,7 +2322,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Layer const &layer)
   return true;
 }
 
-bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
+bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape, Vec2f const &orig)
 {
   MWAWGraphicListenerPtr listener=getGraphicListener();
   if (!listener) {
@@ -2293,6 +2332,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
   shape.m_isSent=true;
   // for not basic shape, we need the box before the rotation, so compute the box by hand
   Box2f box=(shape.m_type==MacDrawProParserInternal::Shape::Basic) ? shape.m_shape.getBdBox() : shape.m_box;
+  box=Box2f(box[0]+orig, box[1]+orig);
   MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
   pos.m_anchorTo = MWAWPosition::Page;
   switch (shape.m_type) {
@@ -2324,7 +2364,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape)
         MWAW_DEBUG_MSG(("MacDrawProParser::send: the child is already sent\n"));
         continue;
       }
-      send(child);
+      send(child, orig);
     }
     listener->closeGroup();
     break;
@@ -2548,6 +2588,7 @@ bool MacDrawProParser::sendLabel(MWAWEntry const &entry)
 
 void MacDrawProParser::flushExtra()
 {
+  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginRight()));
   for (size_t i=0; i<m_state->m_shapeList.size(); ++i) {
     MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[i];
     if (shape.m_isSent || shape.m_type==MacDrawProParserInternal::Shape::GroupEnd)
@@ -2557,7 +2598,7 @@ void MacDrawProParser::flushExtra()
       MWAW_DEBUG_MSG(("MacDrawProParser::flushExtra: find some unsent zone\n"));
       first=false;
     }
-    send(shape);
+    send(shape, leftTop);
   }
   libmwaw::DebugStream f;
   for (size_t i=0; i<m_state->m_objectTextList.size(); ++i) {

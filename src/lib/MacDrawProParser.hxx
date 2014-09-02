@@ -126,6 +126,8 @@ protected:
 
   // send functions
 
+  //! tries to create a master page if needed
+  bool sendMasterPage();
   //! tries to send the layer corresponding a page
   bool sendPage(int page);
   //! tries to send a library (not functionnal)
@@ -133,7 +135,7 @@ protected:
   //! tries to send a layer
   bool send(MacDrawProParserInternal::Layer const &layer);
   //! tries to send a shape
-  bool send(MacDrawProParserInternal::Shape const &shape);
+  bool send(MacDrawProParserInternal::Shape const &shape, Vec2f const &orig);
   //! tries to send a bitmap to the listener
   bool sendBitmap(MacDrawProParserInternal::Shape const &shape, MWAWPosition const &pos);
   //! tries to send a text zone to the listener

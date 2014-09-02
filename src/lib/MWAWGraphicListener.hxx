@@ -111,6 +111,13 @@ public:
   void closeLayer();
 
   // ------ page --------
+  /** opens a master page */
+  bool openMasterPage(MWAWPageSpan &masterPage);
+  /** close a master page */
+  void closeMasterPage()
+  {
+    _closePageSpan(true);
+  }
   /** returns true if a page is opened */
   bool isPageSpanOpened() const;
   /** returns the current page span
@@ -241,7 +248,7 @@ protected:
   //! does open a new page (low level)
   void _openPageSpan(bool sendHeaderFooters=true);
   //! does close a page (low level)
-  void _closePageSpan();
+  void _closePageSpan(bool masterPage=false);
 
   void _startSubDocument();
   void _endSubDocument();
