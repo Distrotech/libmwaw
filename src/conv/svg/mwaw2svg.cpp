@@ -112,16 +112,22 @@ int main(int argc, char *argv[])
     printf("ERROR: can not determine the type of file!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_DRAW && kind != MWAWDocument::MWAW_K_PAINT) {
-    fprintf(stderr,"ERROR: not a graphic document!\n");
-    return 1;
-  }
   MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
   librevenge::RVNGStringVector vec;
 
   try {
-    librevenge::RVNGSVGDrawingGenerator listener(vec, "");
-    error = MWAWDocument::parse(&input, &listener);
+    if (kind == MWAWDocument::MWAW_K_DRAW || kind == MWAWDocument::MWAW_K_PAINT) {
+      librevenge::RVNGSVGDrawingGenerator listener(vec, "");
+      error = MWAWDocument::parse(&input, &listener);
+    }
+    else if (kind == MWAWDocument::MWAW_K_PRESENTATION) {
+      librevenge::RVNGSVGPresentationGenerator listener(vec);
+      error = MWAWDocument::parse(&input, &listener);
+    }
+    else {
+      fprintf(stderr,"ERROR: not a graphic/presentation document!\n");
+      return 1;
+    }
     if (error==MWAWDocument::MWAW_R_OK && (vec.empty() || vec[0].empty()))
       error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
   }

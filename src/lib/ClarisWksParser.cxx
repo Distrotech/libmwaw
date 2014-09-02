@@ -194,6 +194,9 @@ bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
   *m_state = ClarisWksParserInternal::State();
   if (!m_document->checkHeader(header, strict))
     return false;
+  // remove me when a presentation parser will be implemented
+  if (getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION && header)
+    header->setKind(MWAWDocument::MWAW_K_TEXT);
   return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT ||
          getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW ||
          getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION;

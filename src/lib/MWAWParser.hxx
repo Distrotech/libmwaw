@@ -50,7 +50,7 @@ class MWAWParserState
 {
 public:
   //! the parser state type
-  enum Type { Graphic, Spreadsheet, Text };
+  enum Type { Graphic, Presentation, Spreadsheet, Text };
   //! Constructor
   MWAWParserState(Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
@@ -78,6 +78,8 @@ public:
   MWAWGraphicListenerPtr m_graphicListener;
   //! the list manager
   MWAWListManagerPtr m_listManager;
+  //! the presentation listener
+  MWAWPresentationListenerPtr m_presentationListener;
   //! the spreadsheet listener
   MWAWSpreadsheetListenerPtr m_spreadsheetListener;
   //! the text listener
@@ -126,6 +128,11 @@ public:
   MWAWGraphicListenerPtr &getGraphicListener()
   {
     return m_parserState->m_graphicListener;
+  }
+  //! returns the presentation listener
+  MWAWPresentationListenerPtr &getPresentationListener()
+  {
+    return m_parserState->m_presentationListener;
   }
   //! returns the spreadsheet listener
   MWAWSpreadsheetListenerPtr &getSpreadsheetListener()
@@ -197,6 +204,10 @@ protected:
   void setGraphicListener(MWAWGraphicListenerPtr &listener);
   //! resets the listener
   void resetGraphicListener();
+  //! sets the presentation listener
+  void setPresentationListener(MWAWPresentationListenerPtr &listener);
+  //! resets the listener
+  void resetPresentationListener();
   //! sets the spreadsheet listener
   void setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener);
   //! resets the listener
@@ -241,6 +252,19 @@ protected:
   MWAWGraphicParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Graphic, input, rsrcParser, header) {}
   //! constructor using a state
   MWAWGraphicParser(MWAWParserStatePtr state) : MWAWParser(state) {}
+};
+
+/** virtual class which defines the ancestor of all presentation zone parser */
+class MWAWPresentationParser : public MWAWParser
+{
+public:
+  //! virtual function used to parse the input
+  virtual void parse(librevenge::RVNGPresentationInterface *documentInterface) = 0;
+protected:
+  //! constructor (protected)
+  MWAWPresentationParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) : MWAWParser(MWAWParserState::Presentation, input, rsrcParser, header) {}
+  //! constructor using a state
+  MWAWPresentationParser(MWAWParserStatePtr state) : MWAWParser(state) {}
 };
 
 /** virtual class which defines the ancestor of all spreadsheet zone parser */

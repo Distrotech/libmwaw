@@ -552,6 +552,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWPresentationListener.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWPrinter.cxx"
 				>
 			</File>
@@ -1074,6 +1078,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MWAWPosition.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MWAWPresentationListener.hxx"
 				>
 			</File>
 			<File

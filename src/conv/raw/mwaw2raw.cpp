@@ -111,6 +111,10 @@ int main(int argc, char *argv[])
       librevenge::RVNGRawSpreadsheetGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);
     }
+    else if (kind == MWAWDocument::MWAW_K_PRESENTATION) {
+      librevenge::RVNGRawPresentationGenerator documentGenerator(printIndentLevel);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+    }
     else {
       librevenge::RVNGRawTextGenerator documentGenerator(printIndentLevel);
       error=MWAWDocument::parse(&input, &documentGenerator);

@@ -140,6 +140,19 @@ int main(int argc, char *argv[])
       }
       useStringVector=true;
     }
+    else if (kind == MWAWDocument::MWAW_K_PRESENTATION) {
+      if (isInfo) {
+        printf("ERROR: can not print info concerning a presentation document!\n");
+        return 1;
+      }
+      librevenge::RVNGTextPresentationGenerator documentGenerator(pages);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
+        printf("ERROR: find no slides!\n");
+        return 1;
+      }
+      useStringVector=true;
+    }
     else {
       librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
       error=MWAWDocument::parse(&input, &documentGenerator);

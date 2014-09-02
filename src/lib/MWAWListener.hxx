@@ -53,7 +53,7 @@ public:
   virtual ~MWAWListener() {}
 
   //! the listener type
-  enum Type { Graphic, Spreadsheet, Text };
+  enum Type { Graphic, Presentation, Spreadsheet, Text };
   /** the different break type */
   enum BreakType { PageBreak=0, SoftPageBreak, ColumnBreak };
 

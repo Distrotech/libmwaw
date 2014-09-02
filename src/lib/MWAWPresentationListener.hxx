@@ -31,8 +31,8 @@
 * instead of those above.
 */
 
-#ifndef MWAW_GRAPHIC_LISTENER_H
-#define MWAW_GRAPHIC_LISTENER_H
+#ifndef MWAW_PRESENTATION_LISTENER_H
+#define MWAW_PRESENTATION_LISTENER_H
 
 #include <vector>
 
@@ -46,32 +46,28 @@
 
 class MWAWGraphicShape;
 
-namespace MWAWGraphicListenerInternal
+namespace MWAWPresentationListenerInternal
 {
 struct GraphicState;
 struct State;
 }
 
-/** This class contains the code needed to create Graphic document.
+/** This class contains code needed to write a presention document.
 
     \note All units are specified in librevenge::RVNG_POINT
  */
-class MWAWGraphicListener : public MWAWListener
+class MWAWPresentationListener : public MWAWListener
 {
 public:
   /** constructor */
-  MWAWGraphicListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGDrawingInterface *documentInterface);
-  /** simplified constructor (can be used for a embedded graphic with one page).
-
-   \note the box coordinates must be given in point.*/
-  MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface);
+  MWAWPresentationListener(MWAWParserState &parserState, std::vector<MWAWPageSpan> const &pageList, librevenge::RVNGPresentationInterface *documentInterface);
   /** destructor */
-  virtual ~MWAWGraphicListener();
+  virtual ~MWAWPresentationListener();
 
   /** returns the listener type */
   Type getType() const
   {
-    return Graphic;
+    return Presentation;
   }
 
   /** sets the documents language */
@@ -191,11 +187,11 @@ public:
   void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
   /** insert a note
 
-   \note as RVNGDrawingInterface does not accept note, note can only be inserted in a text zone (and are inserted between --) */
+   \note as RVNGPresentationInterface does not accept note, note can only be inserted in a text zone (and are inserted between --) */
   void insertNote(MWAWNote const &note, MWAWSubDocumentPtr &subDocument);
   /** adds comment
 
-   \note as RVNGDrawingInterface does not accept comment, comment can only be inserted in a text zone (and are inserted between --) */
+   \note as RVNGPresentationInterface does not accept comment, comment can only be inserted in a text zone (and are inserted between --) */
   void insertComment(MWAWSubDocumentPtr &subDocument);
 
   // ------- table -----------------
@@ -281,25 +277,25 @@ protected:
   /** creates a new parsing state (copy of the actual state)
    *
    * \return the old one */
-  shared_ptr<MWAWGraphicListenerInternal::State> _pushParsingState();
+  shared_ptr<MWAWPresentationListenerInternal::State> _pushParsingState();
   //! resets the previous parsing state
   void _popParsingState();
 
 protected:
   //! the actual global state
-  shared_ptr<MWAWGraphicListenerInternal::GraphicState> m_ds;
+  shared_ptr<MWAWPresentationListenerInternal::GraphicState> m_ds;
   //! the actual local parse state
-  shared_ptr<MWAWGraphicListenerInternal::State> m_ps;
+  shared_ptr<MWAWPresentationListenerInternal::State> m_ps;
   //! stack of local state
-  std::vector<shared_ptr<MWAWGraphicListenerInternal::State> > m_psStack;
+  std::vector<shared_ptr<MWAWPresentationListenerInternal::State> > m_psStack;
   //! the parser state
   MWAWParserState &m_parserState;
   //! the document interface
-  librevenge::RVNGDrawingInterface *m_documentInterface;
+  librevenge::RVNGPresentationInterface *m_documentInterface;
 
 private:
-  MWAWGraphicListener(const MWAWGraphicListener &);
-  MWAWGraphicListener &operator=(const MWAWGraphicListener &);
+  MWAWPresentationListener(const MWAWPresentationListener &);
+  MWAWPresentationListener &operator=(const MWAWPresentationListener &);
 };
 
 #endif

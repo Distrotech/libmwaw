@@ -215,6 +215,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPictMac.cxx			\
 	MWAWPictMac.hxx			\
 	MWAWPosition.hxx		\
+	MWAWPresentationListener.cxx	\
+	MWAWPresentationListener.hxx	\
 	MWAWPrinter.cxx			\
 	MWAWPrinter.hxx			\
 	MWAWPropertyHandler.cxx		\

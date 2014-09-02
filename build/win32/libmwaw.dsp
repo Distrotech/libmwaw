@@ -467,6 +467,10 @@ SOURCE=..\..\src\lib\MWAWPictMac.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWPresentationListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWPrinter.cxx
 # End Source File
 # Begin Source File
@@ -988,6 +992,10 @@ SOURCE=..\..\src\lib\MWAWPictMac.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MWAWPosition.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MWAWPresentationListener.hxx
 # End Source File
 # Begin Source File
 
