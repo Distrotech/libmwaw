@@ -57,6 +57,7 @@ struct State;
 }
 
 class ClarisWksParser;
+
 class ClarisWksDocument;
 
 /** \brief the main class to read the text part of Claris Works file

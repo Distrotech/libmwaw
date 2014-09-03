@@ -236,6 +236,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisWksPRParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.cxx"
 				>
 			</File>
@@ -742,6 +746,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ClarisWksPresentation.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisWksPRParser.hxx"
 				>
 			</File>
 			<File

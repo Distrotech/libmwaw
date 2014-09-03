@@ -57,6 +57,7 @@ struct State;
 
 class ClarisWksParser;
 class ClarisWksBMParser;
+class ClarisWksPRParser;
 class ClarisWksSSParser;
 
 class ClarisWksDatabase;
@@ -73,6 +74,7 @@ class ClarisWksDocument
 public:
   friend class ClarisWksParser;
   friend class ClarisWksBMParser;
+  friend class ClarisWksPRParser;
   friend class ClarisWksSSParser;
   friend class ClarisWksDocumentInternal::SubDocument;
   //! constructor

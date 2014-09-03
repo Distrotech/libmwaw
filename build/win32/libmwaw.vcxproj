@@ -166,6 +166,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\ClarisWksPRParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\ClarisWksSpreadsheet.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -626,6 +630,7 @@
     <ClInclude Include="..\..\src\lib\ClarisWksGraph.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksParser.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksPresentation.hxx" />
+    <ClInclude Include="..\..\src\lib\ClarisWksPRParser.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksSpreadsheet.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksSSParser.hxx" />
     <ClInclude Include="..\..\src\lib\ClarisWksStruct.hxx" />

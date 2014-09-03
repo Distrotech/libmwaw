@@ -151,6 +151,10 @@ SOURCE=..\..\src\lib\ClarisWksPresentation.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ClarisWksPRParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\ClarisWksSpreadsheet.cxx
 # End Source File
 # Begin Source File
@@ -656,6 +660,10 @@ SOURCE=..\..\src\lib\ClarisWksParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\ClarisWksPresentation.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisWksPRParser.hxx
 # End Source File
 # Begin Source File
 

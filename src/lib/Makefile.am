@@ -50,6 +50,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ClarisWksParser.hxx		\
 	ClarisWksPresentation.cxx	\
 	ClarisWksPresentation.hxx	\
+	ClarisWksPRParser.cxx		\
+	ClarisWksPRParser.hxx		\
 	ClarisWksSpreadsheet.cxx	\
 	ClarisWksSpreadsheet.hxx	\
 	ClarisWksSSParser.cxx		\
