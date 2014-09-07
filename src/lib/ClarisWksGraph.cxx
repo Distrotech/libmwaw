@@ -2487,7 +2487,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   bool isSlide = group.m_position == ClarisWksStruct::DSET::P_Slide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
-  if (mainGroup)
+  if (mainGroup || isSlide)
     leftTop = 72.0f*m_document.getPageLeftTop();
   textHeight = 72.0f*float(m_mainParser->getFormLength());
 
@@ -2522,7 +2522,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: position is not set\n"));
   }
-  if (!mainGroup && canSendAsGraphic(group)) {
+  if (!mainGroup && !isSlide && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
@@ -2601,7 +2601,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       int page = 0;
       size_t lastOk=g;
 
-      if (st==0 && !mainGroup) {
+      if (st==0 && !mainGroup && !isSlide) {
         for (size_t h = g; h < numJobs; ++h) {
           shared_ptr<ClarisWksGraphInternal::Zone> child = listJobs[st][h];
           if (!child) continue;
@@ -2702,7 +2702,8 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
     return sendGroup(zId, MWAWListenerPtr(), pos);
   if (!isLinked && dset && dset->m_fileType==4)
     return sendBitmap(zId, MWAWListenerPtr(), pos);
-  if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) &&
+  bool isPresentation=m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION;
+  if (!isPresentation && !isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) &&
       (dset && dset->m_fileType==1) && m_document.canSendZoneAsGraphic(zId)) {
     Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
     MWAWGraphicEncoder graphicEncoder;
@@ -2749,7 +2750,7 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
   }
   else
     style.m_backgroundOpacity=0;
-  if (createFrame) {
+  if (createFrame && (!isPresentation || (dset && dset->m_fileType==1))) {
     childZone.addFrameName(style);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {
@@ -2781,6 +2782,13 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
       listener->insertPicture(pos, data, mime);
     return true;
   }
+  if (isPresentation && dset && dset->m_fileType==6) { // table
+    createFrame=listener->openFrame(pos, style);
+    m_document.sendZone(zId, listener, pos);
+    if (createFrame)
+      listener->closeFrame();
+    return true;
+  }
   return m_document.sendZone(zId, listener, pos);
 }
 
@@ -2805,6 +2813,8 @@ bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosi
 
 bool ClarisWksGraph::canSendBitmapAsGraphic(int number) const
 {
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
+    return false;
   std::map<int, shared_ptr<ClarisWksGraphInternal::Bitmap> >::iterator iter
     = m_state->m_bitmapMap.find(number);
   if (iter == m_state->m_bitmapMap.end() || !iter->second) {
@@ -3005,6 +3015,10 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPos
 ////////////////////////////////////////////////////////////
 bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 {
+#if 0
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
+    return false;
+#endif
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.find(number);
   if (iter == m_state->m_groupMap.end() || !iter->second)
@@ -3014,6 +3028,10 @@ bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 
 bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
+#if 0
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
+    return false;
+#endif
   updateGroup(group);
   if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
       || group.m_page <= 0)

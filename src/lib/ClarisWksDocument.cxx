@@ -234,8 +234,17 @@ int ClarisWksDocument::numPages() const
 
 void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList)
 {
-  MWAWPageSpan ps(m_parserState->m_pageSpan);
+  updatePageSpanList(pageList, 0, "");
+}
 
+void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList, MWAWPageSpan &master)
+{
+  updatePageSpanList(pageList, &master, "Master");
+}
+
+void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList, MWAWPageSpan *master, librevenge::RVNGString const &masterName)
+{
+  MWAWPageSpan ps(m_parserState->m_pageSpan);
   // decrease right | bottom
   if (ps.getMarginRight()>50./72.)
     ps.setMarginRight(ps.getMarginRight()-50./72.);
@@ -245,6 +254,10 @@ void ClarisWksDocument::updatePageSpanList(std::vector<MWAWPageSpan> &pageList)
     ps.setMarginBottom(ps.getMarginBottom()-50./72.);
   else
     ps.setMarginBottom(0);
+  if (master && !masterName.empty()) {
+    ps.setMasterPageName(masterName);
+    *master=ps;
+  }
   if (m_textParser->updatePageSpanList(ps, pageList))
     return;
   pageList.resize(0);
@@ -409,9 +422,15 @@ bool ClarisWksDocument::sendZone(int zoneId, MWAWListenerPtr listener, MWAWPosit
   case 4:
     res = getGraphParser()->sendBitmap(zoneId, listener, position);
     break;
-  case 5:
-    res = getPresentationParser()->sendZone(zoneId);
+  case 5: {
+    if (!listener) listener=m_parserState->getMainListener();
+    if (listener && listener->getType()==MWAWListener::Presentation)
+      res = getPresentationParser()->sendZone(zoneId);
+    else {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::sendZone: sorry, not possible to send a presentation zone %d in a not presentation document\n", zoneId));
+    }
     break;
+  }
   case 6:
     res = getTableParser()->sendZone(zoneId);
     break;
@@ -2722,7 +2741,9 @@ void ClarisWksDocument::typeMainZones()
     else
       m_state->m_rootZonesList.push_back(rootList[i]);
   }
-  for (int step=0; step<2; ++step) {
+  // remove me
+  bool isPresentation=m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
+  for (int step=0; !isPresentation && step<2; ++step) {
     int id=step==0 ? m_state->m_headerId : m_state->m_footerId;
     if (!id) continue;
     // try to retrieve the father is also a header

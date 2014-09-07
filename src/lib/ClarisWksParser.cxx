@@ -194,12 +194,8 @@ bool ClarisWksParser::checkHeader(MWAWHeader *header, bool strict)
   *m_state = ClarisWksParserInternal::State();
   if (!m_document->checkHeader(header, strict))
     return false;
-  // remove me when a presentation parser will be implemented
-  if (getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION && header)
-    header->setKind(MWAWDocument::MWAW_K_TEXT);
   return getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW ||
-         getParserState()->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
+         getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW;
 }
 
 ////////////////////////////////////////////////////////////
@@ -221,25 +217,17 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       std::vector<int> const &mainZonesList=m_document->getMainZonesList();
-      if (getParserState()->m_kind!=MWAWDocument::MWAW_K_PRESENTATION) {
-        for (size_t i = 0; i < mainZonesList.size(); i++)
-          m_document->getGraphParser()->sendPageGraphics(mainZonesList[i]);
-        if (getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT) {
-          shared_ptr<ClarisWksStruct::DSET> mainMap = m_document->getZone(1);
-          if (mainMap && mainMap->m_fileType==1 && !mainMap->m_parsed)
-            m_document->sendZone(1, MWAWListenerPtr(), MWAWPosition());
-          else {
-            MWAW_DEBUG_MSG(("ClarisWksParser::parse: find a problem with the main text zones\n"));
-          }
+      for (size_t i = 0; i < mainZonesList.size(); i++)
+        m_document->getGraphParser()->sendPageGraphics(mainZonesList[i]);
+      if (getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT) {
+        shared_ptr<ClarisWksStruct::DSET> mainMap = m_document->getZone(1);
+        if (mainMap && mainMap->m_fileType==1 && !mainMap->m_parsed)
+          m_document->sendZone(1, MWAWListenerPtr(), MWAWPosition());
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksParser::parse: find a problem with the main text zones\n"));
         }
-        newPage(m_state->m_numPages, false);
       }
-      else {
-        MWAWPosition pos;
-        for (size_t i = 0; i < mainZonesList.size(); i++)
-          m_document->sendZone(mainZonesList[i], MWAWListenerPtr(), MWAWPosition());
-      }
-      m_document->getPresentationParser()->flushExtra();
+      newPage(m_state->m_numPages, false);
 #ifdef DEBUG
       m_document->getGraphParser()->flushExtra();
 #endif

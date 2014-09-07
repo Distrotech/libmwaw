@@ -185,12 +185,15 @@ void ClarisWksPRParser::parse(librevenge::RVNGPresentationInterface *docInterfac
 
     checkHeader(0L);
     ok = m_document->createZones();
+    // check that we have at least read the main zone
+    if (ok) {
+      shared_ptr<ClarisWksStruct::DSET> zMap = m_document->getZone(1);
+      ok = zMap && zMap->m_fileType==5;
+    }
     if (ok) {
       createDocument(docInterface);
-      std::vector<int> const &mainZonesList=m_document->getMainZonesList();
-      MWAWPosition pos;
-      for (size_t i = 0; i < mainZonesList.size(); i++)
-        m_document->sendZone(mainZonesList[i], MWAWListenerPtr(), MWAWPosition());
+
+      m_document->sendZone(1, getPresentationListener(), MWAWPosition());
     }
     ascii().reset();
   }
@@ -220,11 +223,18 @@ void ClarisWksPRParser::createDocument(librevenge::RVNGPresentationInterface *do
 
   // create the page list
   std::vector<MWAWPageSpan> pageList;
-  m_document->updatePageSpanList(pageList);
+  MWAWPageSpan master;
+  m_document->updatePageSpanList(pageList, master);
+
   //
   MWAWPresentationListenerPtr listen(new MWAWPresentationListener(*getParserState(), pageList, documentInterface));
   setPresentationListener(listen);
   listen->startDocument();
+
+  // time to send the master
+  listen->openMasterPage(master);
+  m_document->getPresentationParser()->sendMaster();
+  listen->closeMasterPage();
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

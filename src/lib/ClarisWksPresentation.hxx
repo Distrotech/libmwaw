@@ -56,7 +56,7 @@ struct Presentation;
 struct State;
 }
 
-class ClarisWksParser;
+class ClarisWksPRParser;
 
 class ClarisWksDocument;
 
@@ -68,7 +68,7 @@ class ClarisWksDocument;
 class ClarisWksPresentation
 {
   friend class ClarisWksDocument;
-  friend class ClarisWksParser;
+  friend class ClarisWksPRParser;
 
 public:
   //! constructor
@@ -90,6 +90,8 @@ public:
   void updateSlideTypes() const;
 
 protected:
+  //! sends the master zone (ie. the background zone)
+  bool sendMaster();
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);
 

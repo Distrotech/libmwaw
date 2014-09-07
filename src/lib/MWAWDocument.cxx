@@ -52,6 +52,7 @@
 #include "BeagleWksSSParser.hxx"
 #include "ClarisWksParser.hxx"
 #include "ClarisWksBMParser.hxx"
+#include "ClarisWksPRParser.hxx"
 #include "ClarisWksSSParser.hxx"
 #include "DocMkrParser.hxx"
 #include "EDocParser.hxx"
@@ -560,7 +561,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
   return parser;
 }
 
-shared_ptr<MWAWPresentationParser> getPresentationParserFromHeader(MWAWInputStreamPtr &/*input*/, MWAWRSRCParserPtr /*rsrcParser*/, MWAWHeader *header)
+shared_ptr<MWAWPresentationParser> getPresentationParserFromHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header)
 {
   shared_ptr<MWAWPresentationParser> parser;
   if (!header)
@@ -570,11 +571,13 @@ shared_ptr<MWAWPresentationParser> getPresentationParserFromHeader(MWAWInputStre
 
   try {
     switch (header->getType()) {
+    case MWAWDocument::MWAW_T_CLARISWORKS:
+      parser.reset(new ClarisWksPRParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_ADOBEILLUSTRATOR:
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
     case MWAWDocument::MWAW_T_CLARISRESOLVE:
-    case MWAWDocument::MWAW_T_CLARISWORKS:
     case MWAWDocument::MWAW_T_DBASE:
     case MWAWDocument::MWAW_T_DOCMAKER:
     case MWAWDocument::MWAW_T_EDOC:
@@ -755,14 +758,9 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
   shared_ptr<MWAWTextParser> parser;
   if (!header)
     return parser;
-  if (header->getKind()==MWAWDocument::MWAW_K_SPREADSHEET || header->getKind()==MWAWDocument::MWAW_K_DATABASE ||
-      header->getKind()==MWAWDocument::MWAW_K_PAINT)
-    return parser;
   // removeme: actually ClarisWorks draw file are exported as text file
-  if (header->getKind()==MWAWDocument::MWAW_K_DRAW  && header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS)
-    return parser;
-  // removeme: actually ClarisWorks presentation file are exported as text file
-  if (header->getKind()==MWAWDocument::MWAW_K_PRESENTATION  && header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS)
+  if (header->getKind()!=MWAWDocument::MWAW_K_TEXT &&
+      (header->getKind()!=MWAWDocument::MWAW_K_DRAW || header->getType()!=MWAWDocument::MWAW_T_CLARISWORKS))
     return parser;
   try {
     switch (header->getType()) {
@@ -899,6 +897,8 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
       parser=getSpreadsheetParserFromHeader(input, rsrcParser, &header);
     if (!parser)
       parser=getGraphicParserFromHeader(input, rsrcParser, &header);
+    if (!parser)
+      parser=getPresentationParserFromHeader(input, rsrcParser, &header);
     if (!parser)
       return false;
     return parser->checkHeader(&header, strict);

@@ -629,6 +629,7 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
   int nPages=m_document.numPages();
   int actPage=0;
   spanList.resize(0);
+  bool isPresentation=m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
   for (size_t i=0; i<numSection; ++i) {
     ClarisWksTextInternal::Section const &sec=zone.m_sectionList[i];
     int lastPage=nPages;
@@ -666,9 +667,11 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
         int zId=sec.m_HFId[j];
         if (!zId) continue;
         if ((j%2)==1 && zId==sec.m_HFId[j-1]) continue;
-        // try to retrieve the father group zone
-        if (m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() && m_state->m_zoneMap.find(zId)->second &&
-            m_state->m_zoneMap.find(zId)->second->m_fatherId)
+        /* try to retrieve the father group zone
+           in presentation, the father seems to be the header|footer|master page, ...
+         */
+        if (!isPresentation && m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() &&
+            m_state->m_zoneMap.find(zId)->second && m_state->m_zoneMap.find(zId)->second->m_fatherId)
           zId=m_state->m_zoneMap.find(zId)->second->m_fatherId;
         MWAWHeaderFooter hF(j<2 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
                             (j%2) ? MWAWHeaderFooter::EVEN : sec.m_HFId[j]==sec.m_HFId[j+1] ?
@@ -1709,6 +1712,10 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
               MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not send graphic in a paint file\n"));
               f << "###";
               break;
+            }
+            if (m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION) {
+              MWAW_DEBUG_MSG(("ClarisWksText::sendText: find a graphic in text zone, may cause some problem\n"));
+              f << "#";
             }
             if (token.m_zoneId>0) {
               // fixme

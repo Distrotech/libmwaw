@@ -98,6 +98,8 @@ public:
   Vec2f getPageLeftTop() const;
   /** updates the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
+  /** updates the page span list (and returns a master page)*/
+  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList, MWAWPageSpan &master);
 
   //! returns the main document section
   MWAWSection getMainSection() const;
@@ -230,6 +232,8 @@ public:
 
 
 protected:
+  //! update the page span (updating master if masterName is given and master is not null)
+  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList, MWAWPageSpan *master, librevenge::RVNGString const &masterName);
   //! the state
   shared_ptr<ClarisWksDocumentInternal::State> m_state;
 public:

@@ -43,8 +43,8 @@
 #include "MWAWFont.hxx"
 #include "MWAWFontConverter.hxx"
 #include "MWAWHeader.hxx"
-#include "MWAWListener.hxx"
 #include "MWAWParser.hxx"
+#include "MWAWPresentationListener.hxx"
 #include "MWAWPosition.hxx"
 
 #include "ClarisWksDocument.hxx"
@@ -60,7 +60,7 @@ namespace ClarisWksPresentationInternal
 struct Presentation : public ClarisWksStruct::DSET {
   // constructor
   Presentation(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_zoneIdList(), m_auxiliaryDetached(false)
+    ClarisWksStruct::DSET(dset), m_contentIdList(), m_masterDetached(false)
   {
   }
 
@@ -77,11 +77,11 @@ struct Presentation : public ClarisWksStruct::DSET {
   virtual void removeChild(int cId, bool normalChild)
   {
     DSET::removeChild(cId, normalChild);
-    if (m_id+1==cId) m_auxiliaryDetached=true;
+    if (m_id+1==cId) m_masterDetached=true;
     else {
-      std::vector<int>::iterator it=std::find(m_zoneIdList.begin(), m_zoneIdList.end(), cId);
-      if (it!=m_zoneIdList.end())
-        m_zoneIdList.erase(it);
+      std::vector<int>::iterator it=std::find(m_contentIdList.begin(), m_contentIdList.end(), cId);
+      if (it!=m_contentIdList.end())
+        m_contentIdList.erase(it);
       else {
         MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::Presentation can not detach %d\n", cId));
       }
@@ -89,9 +89,9 @@ struct Presentation : public ClarisWksStruct::DSET {
   }
 
   //! the list of main zone id
-  std::vector<int> m_zoneIdList;
+  std::vector<int> m_contentIdList;
   //! true if the auxiliary zone is detached
-  bool m_auxiliaryDetached;
+  bool m_masterDetached;
 };
 
 //! Internal: the state of a ClarisWksPresentation
@@ -128,7 +128,7 @@ int ClarisWksPresentation::numPages() const
   if (m_parserState->m_kind!=MWAWDocument::MWAW_K_PRESENTATION ||
       m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end())
     return 1;
-  return int(m_state->m_presentationMap.find(1)->second->m_zoneIdList.size());
+  return int(m_state->m_presentationMap.find(1)->second->m_contentIdList.size());
 }
 
 ////////////////////////////////////////////////////////////
@@ -147,6 +147,10 @@ void ClarisWksPresentation::updateSlideTypes() const
       zone->m_position=ClarisWksStruct::DSET::P_Slide;
       zone->m_page=int(c+1);
     }
+    // finally update the background type
+    shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(pres->m_id+1);
+    if (!zone) continue;
+    zone->m_position=ClarisWksStruct::DSET::P_Slide;
   }
 }
 
@@ -251,7 +255,7 @@ bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentatio
       int zoneId = (int) input->readLong(4);
       if (zoneId > 0) {
         if (st == 1)
-          pres.m_zoneIdList.push_back(zoneId);
+          pres.m_contentIdList.push_back(zoneId);
         pres.m_otherChilds.push_back(zoneId);
       }
       else
@@ -328,23 +332,39 @@ bool ClarisWksPresentation::readZone2(ClarisWksPresentationInternal::Presentatio
 //
 ////////////////////////////////////////////////////////////
 
+bool ClarisWksPresentation::sendMaster()
+{
+  if (m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end()) {
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::sendMaster: oops can not find main presentation\n"));
+    return false;
+  }
+
+  return  m_document.sendZone(2);
+}
+
 bool ClarisWksPresentation::sendZone(int number)
 {
+  if (number != 1) {
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: sending embeded presentation is not impelemented\n"));
+    return false;
+  }
   std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.find(number);
   if (iter == m_state->m_presentationMap.end())
     return false;
   shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
-  if (!presentation || !m_parserState->getMainListener())
-    return true;
+  MWAWPresentationListenerPtr listener=m_parserState->m_presentationListener;
+  if (!presentation || !listener) {
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: can not find the presentation listener\n"));
+    return false;
+  }
   presentation->m_parsed = true;
-  if (!presentation->m_auxiliaryDetached)
+  if (!presentation->m_masterDetached)
     m_document.forceParsed(number+1);
-  bool main = number == 1;
-  int actPage = 1;
-  for (size_t p = 0; p < presentation->m_zoneIdList.size(); p++) {
-    if (main) m_document.newPage(actPage++);
-    int id = presentation->m_zoneIdList[p];
+  for (size_t p = 0; p < presentation->m_contentIdList.size(); p++) {
+    if (p)
+      listener->insertBreak(MWAWListener::PageBreak);
+    int id = presentation->m_contentIdList[p];
     if (id > 0)
       m_document.sendZone(id);
   }
@@ -354,7 +374,7 @@ bool ClarisWksPresentation::sendZone(int number)
 void ClarisWksPresentation::flushExtra()
 {
   shared_ptr<MWAWListener> listener=m_parserState->getMainListener();
-  if (!listener) return;
+  if (!listener || listener->getType()!=MWAWListener::Presentation) return;
   std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
     = m_state->m_presentationMap.begin();
   for (; iter !=  m_state->m_presentationMap.end(); ++iter) {
