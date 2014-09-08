@@ -743,7 +743,7 @@ void ClarisWksGraph::computePositions() const
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
-    if (!group || group->m_position == ClarisWksStruct::DSET::P_Slide) continue;
+    if (!group || group->isSlide()) continue;
     updateGroup(*group);
   }
 }
@@ -2484,7 +2484,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   }
   updateGroup(group);
   bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main;
-  bool isSlide = group.m_position == ClarisWksStruct::DSET::P_Slide;
+  bool isSlide = group.isSlide();
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup || isSlide)
@@ -2495,28 +2495,32 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   if (!listener->isSubDocumentOpened(inDocType))
     inDocType = libmwaw::DOC_NONE;
   MWAWPosition::AnchorTo suggestedAnchor = MWAWPosition::Char;
-  switch (inDocType) {
-  case libmwaw::DOC_TEXT_BOX:
-    suggestedAnchor=MWAWPosition::Char;
-    break;
-  case libmwaw::DOC_CHART:
-  case libmwaw::DOC_CHART_ZONE:
-  case libmwaw::DOC_HEADER_FOOTER:
-  case libmwaw::DOC_NOTE:
-    suggestedAnchor=MWAWPosition::Frame;
-    break;
-  case libmwaw::DOC_SHEET:
-  case libmwaw::DOC_TABLE:
-  case libmwaw::DOC_COMMENT_ANNOTATION:
-    suggestedAnchor=MWAWPosition::Char;
-    break;
-  case libmwaw::DOC_GRAPHIC_GROUP:
-    suggestedAnchor=MWAWPosition::Page;
-    break;
-  default:
-  case libmwaw::DOC_NONE:
-    suggestedAnchor= (mainGroup || isSlide) ? MWAWPosition::Page : MWAWPosition::Char;
-    break;
+  if (isSlide)
+    suggestedAnchor = MWAWPosition::Page;
+  else {
+    switch (inDocType) {
+    case libmwaw::DOC_TEXT_BOX:
+      suggestedAnchor=MWAWPosition::Char;
+      break;
+    case libmwaw::DOC_CHART:
+    case libmwaw::DOC_CHART_ZONE:
+    case libmwaw::DOC_HEADER_FOOTER:
+    case libmwaw::DOC_NOTE:
+      suggestedAnchor=MWAWPosition::Frame;
+      break;
+    case libmwaw::DOC_SHEET:
+    case libmwaw::DOC_TABLE:
+    case libmwaw::DOC_COMMENT_ANNOTATION:
+      suggestedAnchor=MWAWPosition::Char;
+      break;
+    case libmwaw::DOC_GRAPHIC_GROUP:
+      suggestedAnchor=MWAWPosition::Page;
+      break;
+    default:
+    case libmwaw::DOC_NONE:
+      suggestedAnchor= mainGroup ? MWAWPosition::Page : MWAWPosition::Char;
+      break;
+    }
   }
   // CHECKME
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
@@ -2590,9 +2594,9 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   }
   for (int st = 0; st < 2; st++) {
     if (st == 1) {
-      suggestedAnchor = MWAWPosition::Char;
       if (group.m_hasMainZone)
         m_document.sendZone(1);
+      suggestedAnchor = MWAWPosition::Page;
     }
     size_t numJobs=listJobs[st].size();
     for (size_t g = 0; g < numJobs; g++) {
@@ -3015,10 +3019,6 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPos
 ////////////////////////////////////////////////////////////
 bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 {
-#if 0
-  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
-    return false;
-#endif
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
     = m_state->m_groupMap.find(number);
   if (iter == m_state->m_groupMap.end() || !iter->second)
@@ -3028,10 +3028,6 @@ bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 
 bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
-#if 0
-  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
-    return false;
-#endif
   updateGroup(group);
   if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
       || group.m_page <= 0)

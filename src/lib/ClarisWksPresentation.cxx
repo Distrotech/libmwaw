@@ -60,7 +60,7 @@ namespace ClarisWksPresentationInternal
 struct Presentation : public ClarisWksStruct::DSET {
   // constructor
   Presentation(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_contentIdList(), m_masterDetached(false)
+    ClarisWksStruct::DSET(dset), m_contentIdList(), m_noteIdList(), m_thumbnailsIdList(), m_masterDetached(false)
   {
   }
 
@@ -78,18 +78,14 @@ struct Presentation : public ClarisWksStruct::DSET {
   {
     DSET::removeChild(cId, normalChild);
     if (m_id+1==cId) m_masterDetached=true;
-    else {
-      std::vector<int>::iterator it=std::find(m_contentIdList.begin(), m_contentIdList.end(), cId);
-      if (it!=m_contentIdList.end())
-        m_contentIdList.erase(it);
-      else {
-        MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::Presentation can not detach %d\n", cId));
-      }
-    }
   }
 
   //! the list of main zone id
   std::vector<int> m_contentIdList;
+  //! the list of notes zone id
+  std::vector<int> m_noteIdList;
+  //! the list of thumbnail zone id
+  std::vector<int> m_thumbnailsIdList;
   //! true if the auxiliary zone is detached
   bool m_masterDetached;
 };
@@ -97,10 +93,12 @@ struct Presentation : public ClarisWksStruct::DSET {
 //! Internal: the state of a ClarisWksPresentation
 struct State {
   //! constructor
-  State() : m_presentationMap()
+  State() : m_presentation(), m_presentationMap()
   {
   }
-
+  //! the main presentation
+  shared_ptr<Presentation> m_presentation;
+  //! map zId to presentation
   std::map<int, shared_ptr<Presentation> > m_presentationMap;
 };
 
@@ -141,16 +139,62 @@ void ClarisWksPresentation::updateSlideTypes() const
   while (it != m_state->m_presentationMap.end()) {
     shared_ptr<ClarisWksPresentationInternal::Presentation> pres = it++->second;
     if (!pres) continue;
-    for (size_t c = 0; c < pres->m_otherChilds.size(); c++) {
-      shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(pres->m_otherChilds[c]);
-      if (!zone) continue;
-      zone->m_position=ClarisWksStruct::DSET::P_Slide;
-      zone->m_page=int(c+1);
+    if (pres->m_id==1)
+      m_state->m_presentation=pres;
+    for (int step=0; step<3; ++step) {
+      std::vector<int> const &content=step==0 ? pres->m_contentIdList :
+                                      step==1 ? pres->m_noteIdList : pres->m_thumbnailsIdList;
+      for (size_t c = 0; c < content.size(); c++) {
+        shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(content[c]);
+        if (!zone) continue;
+        static ClarisWksStruct::DSET::Position const positions[]= {
+          ClarisWksStruct::DSET::P_Slide, ClarisWksStruct::DSET::P_SlideNote, ClarisWksStruct::DSET::P_SlideThumbnail
+        };
+        zone->m_position=positions[step];
+        zone->m_page=int(c+1);
+      }
     }
     // finally update the background type
     shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(pres->m_id+1);
     if (!zone) continue;
-    zone->m_position=ClarisWksStruct::DSET::P_Slide;
+    zone->m_position=ClarisWksStruct::DSET::P_SlideMaster;
+  }
+}
+
+void ClarisWksPresentation::disconnectMasterFromContents() const
+{
+  std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::const_iterator it =
+    m_state->m_presentationMap.begin();
+  while (it != m_state->m_presentationMap.end()) {
+    shared_ptr<ClarisWksPresentationInternal::Presentation> pres = it++->second;
+    if (!pres) continue;
+    shared_ptr<ClarisWksStruct::DSET> background=m_document.getZone(pres->m_id+1);
+    if (!background || background->m_fathersList.size()!=1) {
+      MWAW_DEBUG_MSG(("ClarisWksPresentation::disconnectMasterFromContents: can not find the background zone\n"));
+      continue;
+    }
+    int masterId=*background->m_fathersList.begin();
+    shared_ptr<ClarisWksStruct::DSET> master=m_document.getZone(masterId);
+    if (!master) {
+      MWAW_DEBUG_MSG(("ClarisWksPresentation::disconnectMasterFromContents: can not find the master zone\n"));
+      continue;
+    }
+
+    for (int step=0; step<3; ++step) {
+      std::vector<int> const &content=step==0 ? pres->m_contentIdList :
+                                      step==1 ? pres->m_noteIdList : pres->m_thumbnailsIdList;
+      for (size_t i=0; i<content.size(); ++i) {
+        int childId=content[i];
+        if (master->m_fathersList.find(childId)==master->m_fathersList.end()) {
+          MWAW_DEBUG_MSG(("ClarisWksPresentation::disconnectMasterFromContents: find a content zone with no link to master\n"));
+          continue;
+        }
+        shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(childId);
+        if (!zone) continue;
+        zone->removeChild(masterId, true);
+        master->m_fathersList.erase(childId);
+      }
+    }
   }
 }
 
@@ -256,6 +300,10 @@ bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentatio
       if (zoneId > 0) {
         if (st == 1)
           pres.m_contentIdList.push_back(zoneId);
+        else if (st == 2)
+          pres.m_noteIdList.push_back(zoneId);
+        else
+          pres.m_thumbnailsIdList.push_back(zoneId);
         pres.m_otherChilds.push_back(zoneId);
       }
       else
@@ -334,7 +382,7 @@ bool ClarisWksPresentation::readZone2(ClarisWksPresentationInternal::Presentatio
 
 bool ClarisWksPresentation::sendMaster()
 {
-  if (m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end()) {
+  if (!m_state->m_presentation) {
     MWAW_DEBUG_MSG(("ClarisWksPresentation::sendMaster: oops can not find main presentation\n"));
     return false;
   }
@@ -345,14 +393,10 @@ bool ClarisWksPresentation::sendMaster()
 bool ClarisWksPresentation::sendZone(int number)
 {
   if (number != 1) {
-    MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: sending embeded presentation is not impelemented\n"));
+    MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: sending embeded presentation is not implemented\n"));
     return false;
   }
-  std::map<int, shared_ptr<ClarisWksPresentationInternal::Presentation> >::iterator iter
-    = m_state->m_presentationMap.find(number);
-  if (iter == m_state->m_presentationMap.end())
-    return false;
-  shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = iter->second;
+  shared_ptr<ClarisWksPresentationInternal::Presentation> presentation = m_state->m_presentation;
   MWAWPresentationListenerPtr listener=m_parserState->m_presentationListener;
   if (!presentation || !listener) {
     MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: can not find the presentation listener\n"));
@@ -365,6 +409,11 @@ bool ClarisWksPresentation::sendZone(int number)
     if (p)
       listener->insertBreak(MWAWListener::PageBreak);
     int id = presentation->m_contentIdList[p];
+    if (id > 0)
+      m_document.sendZone(id);
+    if (p>=presentation->m_noteIdList.size())
+      continue;
+    id = presentation->m_noteIdList[p];
     if (id > 0)
       m_document.sendZone(id);
   }

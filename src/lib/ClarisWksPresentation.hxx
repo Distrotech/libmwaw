@@ -89,6 +89,9 @@ public:
   //! update the slide zone types
   void updateSlideTypes() const;
 
+  //! disconnect the master zone to the content zones
+  void disconnectMasterFromContents() const;
+
 protected:
   //! sends the master zone (ie. the background zone)
   bool sendMaster();

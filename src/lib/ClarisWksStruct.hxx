@@ -52,7 +52,9 @@ struct DSET {
   struct Child;
 
   //! the zone position
-  enum Position { P_Main=0, P_Header, P_Footer, P_Frame, P_Footnote, P_Table, P_Slide, P_Unknown};
+  enum Position { P_Main=0, P_Header, P_Footer, P_Frame, P_Footnote, P_Table,
+                  P_Slide, P_SlideNote, P_SlideThumbnail, P_SlideMaster, P_Unknown
+                };
   /** the different types of zone child */
   enum ChildType { C_Zone, C_SubText, C_Graphic, C_Unknown };
 
@@ -75,6 +77,11 @@ struct DSET {
     return m_position==P_Header||m_position==P_Footer;
   }
 
+  //! test if the zone is a slide
+  bool isSlide() const
+  {
+    return m_position==P_Slide || m_position==P_SlideNote || m_position==P_SlideThumbnail || m_position==P_SlideMaster;
+  }
   //! return the zone bdbox
   Box2f getBdBox() const
   {

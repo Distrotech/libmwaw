@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     printf("ERROR: can not determine the file type!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_TEXT && kind != MWAWDocument::MWAW_K_PRESENTATION) {
+  if (kind != MWAWDocument::MWAW_K_TEXT) {
     printf("ERROR: find a not text document!\n");
     return 1;
   }

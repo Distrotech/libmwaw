@@ -696,6 +696,7 @@ bool MWAWTextListener::openSection(MWAWSection const &section)
     MWAW_DEBUG_MSG(("MWAWTextListener::openSection: impossible to open a section\n"));
     return false;
   }
+
   m_ps->m_section=section;
   _openSection();
   return true;
@@ -898,11 +899,13 @@ void MWAWTextListener::_changeList()
   if (m_ps->m_isParagraphOpened)
     _closeParagraph();
 
-  if (!m_ps->m_isSectionOpened && !m_ps->m_inSubDocument && !m_ps->m_isTableOpened)
-    _openSection();
-
   size_t actualLevel = m_ps->m_listOrderedLevels.size();
   size_t newLevel= (size_t) m_ps->m_paragraph.m_listLevelIndex.get();
+
+  if (!m_ps->m_isSectionOpened && newLevel && !m_ps->m_isTableOpened &&
+      (!m_ps->m_inSubDocument || m_ps->m_subDocumentType == libmwaw::DOC_TEXT_BOX))
+    _openSection();
+
   int newListId = newLevel>0 ? _getListId() : -1;
   bool changeList = newLevel &&
                     (m_ps->m_list && m_ps->m_list->getId()!=newListId);

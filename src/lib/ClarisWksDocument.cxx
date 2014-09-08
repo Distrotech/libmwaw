@@ -952,7 +952,8 @@ bool ClarisWksDocument::readDocInfo()
   if (pages[1]>=1 && pages[1] < 1000 &&
       (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_parserState->m_kind == MWAWDocument::MWAW_K_DRAW)))
     m_state->m_pages=Vec2i(pages[0],pages[1]);
-  else {
+  // in database field, pages[1] can be very big, this number seems related to the number of record ?
+  else if (m_parserState->m_kind != MWAWDocument::MWAW_K_DATABASE || pages[0]!=1) {
     MWAW_DEBUG_MSG(("ClarisWksDocument::readDocInfo: the number of pages seems bad\n"));
     f << "###";
   }
@@ -2541,7 +2542,7 @@ void ClarisWksDocument::updateChildPositions()
   for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     // checkme update also the slide
-    if (!zone || zone->m_position == ClarisWksStruct::DSET::P_Slide) continue;
+    if (!zone || zone->isSlide()) continue;
     float h=textHeight;
     if (double(zone->m_pageDimension[1])>36.0*m_parser->getFormLength() &&
         double(zone->m_pageDimension[1])<72.0*m_parser->getFormLength())
@@ -2788,6 +2789,8 @@ int ClarisWksDocument::typeMainZonesRec(int zId, ClarisWksStruct::DSET::Position
 ////////////////////////////////////////////////////////////
 void ClarisWksDocument::cleanZonesGraph()
 {
+  if (m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION)
+    m_presentationParser->disconnectMasterFromContents();
   std::set<int>::iterator it;
   for (size_t i=0; i<m_state->m_hFZonesList.size(); ++i) {
     int id=m_state->m_hFZonesList[i];
@@ -2844,7 +2847,7 @@ void ClarisWksDocument::cleanZonesGraph()
       }
     }
     // slides can share a children : the slide master content
-    if (m_state->getZoneType(fId)==ClarisWksStruct::DSET::P_Slide)
+    if (getZone(fId) && getZone(fId)->isSlide())
       continue;
 
 #ifdef DEBUG

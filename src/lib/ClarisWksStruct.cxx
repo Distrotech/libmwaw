@@ -214,6 +214,15 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
   case DSET::P_Slide:
     o << "slide,";
     break;
+  case DSET::P_SlideMaster:
+    o << "slide[master],";
+    break;
+  case DSET::P_SlideNote:
+    o << "slide[note],";
+    break;
+  case DSET::P_SlideThumbnail:
+    o << "slide[thumbnail],";
+    break;
   case DSET::P_Table:
     o << "table,";
     break;
