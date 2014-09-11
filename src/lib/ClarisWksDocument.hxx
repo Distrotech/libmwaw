@@ -232,8 +232,8 @@ public:
 
 
 protected:
-  //! update the page span (updating master if masterName is given and master is not null)
-  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList, MWAWPageSpan *master, librevenge::RVNGString const &masterName);
+  //! returns the final page span to use for the document
+  MWAWPageSpan getFinalPageSpan() const;
   //! the state
   shared_ptr<ClarisWksDocumentInternal::State> m_state;
 public:

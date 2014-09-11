@@ -238,7 +238,7 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     o << "text";
     if (doc.m_textType==0xFF)
       o << "*,";
-    else if (doc.m_textType)
+    else if (doc.m_textType) // 0xa: note?
       o << "[#type=" << std::hex << doc.m_textType<< std::dec << "],";
     else
       o << ",";

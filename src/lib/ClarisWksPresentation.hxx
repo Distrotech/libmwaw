@@ -54,6 +54,8 @@ namespace ClarisWksPresentationInternal
 {
 struct Presentation;
 struct State;
+
+class SubDocument;
 }
 
 class ClarisWksPRParser;
@@ -69,6 +71,7 @@ class ClarisWksPresentation
 {
   friend class ClarisWksDocument;
   friend class ClarisWksPRParser;
+  friend class ClarisWksPresentationInternal::SubDocument;
 
 public:
   //! constructor
@@ -81,6 +84,8 @@ public:
 
   /** returns the number of pages */
   int numPages() const;
+  /** updates the page span list and returns true if this is possible */
+  bool updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList);
 
   //! reads the zone presentation DSET
   shared_ptr<ClarisWksStruct::DSET> readPresentationZone
@@ -100,6 +105,11 @@ protected:
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+
+  // interface with main parser
+
+  //! ask the main parser to send a zone
+  void askToSend(int number);
 
   //
   // Intermediate level

@@ -743,7 +743,7 @@ void ClarisWksGraph::computePositions() const
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
-    if (!group || group->isSlide()) continue;
+    if (!group) continue;
     updateGroup(*group);
   }
 }
@@ -2346,7 +2346,7 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
   /* update the list of zone to be send (ie. remove remaining header/footer zone in not footer zone )
      + create a map to find linked zone: list of zone sharing the same text zone
    */
-  bool isHeaderFooterBlock=group.isHeaderFooter();
+  bool isHeaderFooterBlock=group.isHeaderFooter() || group.m_position==ClarisWksStruct::DSET::P_SlideMaster;
   std::map<int, std::map<int, size_t> > idSIdCIdMap;
   for (size_t g = 0; g < group.m_zones.size(); g++) {
     shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zones[g];
@@ -2650,6 +2650,11 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
+      else if (isSlide && pos.m_anchorTo==MWAWPosition::Page) {
+        int pg = page > 0 ? page : 1;
+        Vec2f orig = pos.origin()+leftTop;
+        pos.setPagePos(pg, orig);
+      }
       // groupList can not be empty
       if (groupList.size() <= 1) {
         sendGroupChild(groupList[0], pos);
@@ -2754,7 +2759,8 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
   }
   else
     style.m_backgroundOpacity=0;
-  if (createFrame && (!isPresentation || (dset && dset->m_fileType==1))) {
+  if ((createFrame && !isPresentation) ||
+      (isPresentation && dset && dset->m_fileType==1)) {
     childZone.addFrameName(style);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {

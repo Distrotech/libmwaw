@@ -60,7 +60,8 @@ namespace ClarisWksPresentationInternal
 struct Presentation : public ClarisWksStruct::DSET {
   // constructor
   Presentation(ClarisWksStruct::DSET const &dset = ClarisWksStruct::DSET()) :
-    ClarisWksStruct::DSET(dset), m_contentIdList(), m_noteIdList(), m_thumbnailsIdList(), m_masterDetached(false)
+    ClarisWksStruct::DSET(dset), m_contentIdList(), m_noteIdList(), m_thumbnailsIdList(), m_titleList(),
+    m_masterId(0), m_masterDetached(false)
   {
   }
 
@@ -86,6 +87,10 @@ struct Presentation : public ClarisWksStruct::DSET {
   std::vector<int> m_noteIdList;
   //! the list of thumbnail zone id
   std::vector<int> m_thumbnailsIdList;
+  //! the list of title
+  std::vector<librevenge::RVNGString> m_titleList;
+  //! the master zone (background + header/footer)
+  int m_masterId;
   //! true if the auxiliary zone is detached
   bool m_masterDetached;
 };
@@ -102,6 +107,57 @@ struct State {
   std::map<int, shared_ptr<Presentation> > m_presentationMap;
 };
 
+////////////////////////////////////////
+//! Internal: the subdocument of a ClarisWksPresentation
+class SubDocument : public MWAWSubDocument
+{
+public:
+  SubDocument(ClarisWksPresentation &pars, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_presentationParser(&pars), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const
+  {
+    if (MWAWSubDocument::operator!=(doc)) return true;
+    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+    if (!sDoc) return true;
+    if (m_presentationParser != sDoc->m_presentationParser) return true;
+    if (m_id != sDoc->m_id) return true;
+    return false;
+  }
+
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+  /** the presentation parser */
+  ClarisWksPresentation *m_presentationParser;
+
+protected:
+  //! the subdocument id
+  int m_id;
+private:
+  SubDocument(SubDocument const &orig);
+  SubDocument &operator=(SubDocument const &orig);
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
+{
+  if (!listener || (type==libmwaw::DOC_TEXT_BOX&&!listener->canWriteText())) {
+    MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+  assert(m_presentationParser);
+  long pos = m_input->tell();
+  m_presentationParser->askToSend(m_id);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
 }
 
 ////////////////////////////////////////////////////////////
@@ -123,10 +179,32 @@ int ClarisWksPresentation::version() const
 
 int ClarisWksPresentation::numPages() const
 {
-  if (m_parserState->m_kind!=MWAWDocument::MWAW_K_PRESENTATION ||
-      m_state->m_presentationMap.find(1) == m_state->m_presentationMap.end())
+  if (m_parserState->m_kind!=MWAWDocument::MWAW_K_PRESENTATION || !m_state->m_presentation)
     return 1;
-  return int(m_state->m_presentationMap.find(1)->second->m_contentIdList.size());
+  return int(m_state->m_presentation->m_contentIdList.size());
+}
+
+bool ClarisWksPresentation::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList)
+{
+  if (!m_state->m_presentation)
+    return false;
+  int numPage=numPages();
+  if (numPage<=0)
+    return false;
+  for (int i=0; i<numPage; ++i) {
+    MWAWPageSpan ps(page);
+    if (i<(int) m_state->m_presentation->m_titleList.size() &&
+        !m_state->m_presentation->m_titleList[size_t(i)].empty())
+      ps.setPageName(m_state->m_presentation->m_titleList[size_t(i)]);
+    ps.setPageSpan(1);
+    spanList.push_back(ps);
+  }
+  return true;
+}
+
+void ClarisWksPresentation::askToSend(int number)
+{
+  m_document.sendZone(number);
 }
 
 ////////////////////////////////////////////////////////////
@@ -156,7 +234,7 @@ void ClarisWksPresentation::updateSlideTypes() const
     }
     // finally update the background type
     shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(pres->m_id+1);
-    if (!zone) continue;
+    if (!zone || zone->m_fileType!=0) continue;
     zone->m_position=ClarisWksStruct::DSET::P_SlideMaster;
   }
 }
@@ -169,6 +247,7 @@ void ClarisWksPresentation::disconnectMasterFromContents() const
     shared_ptr<ClarisWksPresentationInternal::Presentation> pres = it++->second;
     if (!pres) continue;
     shared_ptr<ClarisWksStruct::DSET> background=m_document.getZone(pres->m_id+1);
+    pres->m_masterId=pres->m_id+1;
     if (!background || background->m_fathersList.size()!=1) {
       MWAW_DEBUG_MSG(("ClarisWksPresentation::disconnectMasterFromContents: can not find the background zone\n"));
       continue;
@@ -179,7 +258,8 @@ void ClarisWksPresentation::disconnectMasterFromContents() const
       MWAW_DEBUG_MSG(("ClarisWksPresentation::disconnectMasterFromContents: can not find the master zone\n"));
       continue;
     }
-
+    master->m_position=ClarisWksStruct::DSET::P_SlideMaster;
+    pres->m_masterId=masterId;
     for (int step=0; step<3; ++step) {
       std::vector<int> const &content=step==0 ? pres->m_contentIdList :
                                       step==1 ? pres->m_noteIdList : pres->m_thumbnailsIdList;
@@ -311,17 +391,27 @@ bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentatio
       f << "zId=" << zoneId << ",";
       f << "f1=" << input->readLong(4) << ","; // always 8 ?
       int sSz = (int) input->readLong(4);
-      input->seek(pos+16+sSz, librevenge::RVNG_SEEK_SET);
-      if (sSz < 0 || input->tell() != pos+16+sSz) {
+      long endStringPos=pos+12+sSz;
+      if (sSz < 0 || !input->checkPosition(endStringPos+4)) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone1: can not read string %d\n", i));
         return false;
       }
-      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
-      std::string name("");
-      for (int s = 0; s < sSz; s++)
-        name += (char) input->readULong(1);
-      f << name << ",";
+      librevenge::RVNGString title("");
+      for (int s = 0; s < sSz; s++) {
+        char ch=(char) input->readULong(1);
+        if (!ch) continue;
+        f << ch;
+        // checkme: can we always use a defaut font
+        int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) ch);
+        if (unicode==-1)
+          title.append(ch);
+        else
+          libmwaw::appendUnicode((uint32_t) unicode, title);
+      }
+      if (st==1)
+        pres.m_titleList.push_back(title);
+      input->seek(endStringPos, librevenge::RVNG_SEEK_SET);
       val = input->readLong(4); // always 0 ?
       if (val)
         f << "f2=" << val << ",";
@@ -386,8 +476,8 @@ bool ClarisWksPresentation::sendMaster()
     MWAW_DEBUG_MSG(("ClarisWksPresentation::sendMaster: oops can not find main presentation\n"));
     return false;
   }
-
-  return  m_document.sendZone(2);
+  int masterId=m_state->m_presentation->m_masterId;
+  return m_document.sendZone(masterId > 0 ? masterId : 2);
 }
 
 bool ClarisWksPresentation::sendZone(int number)
@@ -408,14 +498,39 @@ bool ClarisWksPresentation::sendZone(int number)
   for (size_t p = 0; p < presentation->m_contentIdList.size(); p++) {
     if (p)
       listener->insertBreak(MWAWListener::PageBreak);
+
+    // first insert the content
+
     int id = presentation->m_contentIdList[p];
     if (id > 0)
       m_document.sendZone(id);
-    if (p>=presentation->m_noteIdList.size())
+
+    // try to retrieve the notes: ie. the text zone in the notes zone
+    if (p>=presentation->m_noteIdList.size() || presentation->m_noteIdList[p] <=0)
       continue;
-    id = presentation->m_noteIdList[p];
-    if (id > 0)
-      m_document.sendZone(id);
+
+    shared_ptr<ClarisWksStruct::DSET> zone=m_document.getZone(presentation->m_noteIdList[p]);
+    if (!zone) continue;
+    std::vector<int> listTextChild;
+    for (size_t i=0; i<zone->m_childs.size(); ++i) {
+      if (zone->m_childs[i].m_type != ClarisWksStruct::DSET::C_Zone)
+        continue;
+      int cId=zone->m_childs[i].m_id;
+      shared_ptr<ClarisWksStruct::DSET> child=m_document.getZone(cId);
+      if (child && child->m_fileType==1)
+        listTextChild.push_back(cId);
+    }
+    if (listTextChild.size()!=1) {
+      MWAW_DEBUG_MSG(("ClarisWksPresentation::sendZone: the number of notes text zone is odd=%d\n",
+                      (int) listTextChild.size()));
+    }
+    if (listTextChild.empty())
+      continue;
+    shared_ptr<MWAWSubDocument> doc(new ClarisWksPresentationInternal::SubDocument(*this, m_parserState->m_input, listTextChild[0]));
+    // fixme
+    MWAWPosition pos(Vec2f(0,400), Vec2f(600,200), librevenge::RVNG_POINT);
+    pos.m_anchorTo=MWAWPosition::Page;
+    listener->insertSlideNote(pos, doc);
   }
   return true;
 }

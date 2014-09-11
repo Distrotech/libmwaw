@@ -1114,6 +1114,30 @@ void MWAWPresentationListener::insertTextBox
   closeFrame();
 }
 
+void MWAWPresentationListener::insertSlideNote(MWAWPosition const &pos, MWAWSubDocumentPtr &subDocument)
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWPresentationListener::insertSlideNote: the document is not started\n"));
+    return;
+  }
+  if (!m_ds->m_isPageSpanOpened)
+    _openPageSpan();
+  float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
+  if (m_ps->m_isTextBoxOpened) {
+    MWAW_DEBUG_MSG(("MWAWPresentationListener::insertSlideNote: can not insert a textbox in a textbox\n"));
+    handleSubDocument(pointFactor*pos.origin(), subDocument, libmwaw::DOC_TEXT_BOX);
+    return;
+  }
+  if (!openFrame(pos))
+    return;
+  librevenge::RVNGPropertyList propList;
+  _handleFrameParameters(propList, pos, MWAWGraphicStyle::emptyStyle());
+  m_documentInterface->startNotes(propList);
+  handleSubDocument(pointFactor*pos.origin(), subDocument, libmwaw::DOC_TEXT_BOX);
+  m_documentInterface->endNotes();
+  closeFrame();
+}
+
 void MWAWPresentationListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
 {
   if (!m_ds->m_isDocumentStarted || m_ps->isInTextZone()) {
