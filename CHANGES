@@ -1,5 +1,8 @@
 CHANGES:
 
+12/9/2014:
+- AppleWorks: add a presentation parser
+
 22/8/2014:
 - MacDraw II: add a parser for MacDraw II v1.0-v1.1
 

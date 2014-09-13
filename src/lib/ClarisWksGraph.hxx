@@ -135,8 +135,8 @@ protected:
   bool canSendAsGraphic(ClarisWksGraphInternal::Group &group) const;
   //! send a group
   bool sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position);
-  //! send a group as graphic
-  bool sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener);
+  //! send a child group as graphic or as presentation
+  bool sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, Vec2f const &leftTop);
   //! send a group child
   bool sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> zone, MWAWPosition position);
   //! send the child element corresponding to some page

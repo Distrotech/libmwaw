@@ -1679,6 +1679,7 @@ shared_ptr<MWAWPresentationListenerInternal::State> MWAWPresentationListener::_p
   shared_ptr<MWAWPresentationListenerInternal::State> actual = m_ps;
   m_psStack.push_back(actual);
   m_ps.reset(new MWAWPresentationListenerInternal::State);
+  m_ps->m_origin=actual->m_origin;
   return actual;
 }
 

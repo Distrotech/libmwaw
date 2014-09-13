@@ -98,7 +98,7 @@ public:
     MWAW_T_ADOBEILLUSTRATOR /** Adobe Illustrator: TODO */,
     MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2): export database(as spreadsheet), draw, paint, spreadsheet and text files.*/,
     MWAW_T_CLARISRESOLVE /**Claris Resolve (v1.1)*/,
-    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export text, draw(as text), paint, spreadsheet/database (as spreadsheet) document*/,
+    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export database (as spreadsheet), draw(as text), paint, presentation, spreadsheet, text document*/,
     MWAW_T_DBASE /** DBase: TODO*/,
     MWAW_T_DOCMAKER /** DocMaker (v4)*/,
     MWAW_T_EDOC /** eDOC (v2)*/,

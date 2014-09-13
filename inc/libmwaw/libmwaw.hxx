@@ -75,15 +75,17 @@ recommended to launch the tests in a empty repository...
     - 1: can create some graphic shapes in a RVNGBinaryData
       mimeType="image/mwaw-odg". You can use
       MWAWDocument::decodeGraphic to read them(from libmwaw-0.2).
-    - 2: can also create graphic documents(from libmwaw-0.3)
+    - 2: can also create graphic documents(from libmwaw-0.3.0)
 */
 #define MWAW_GRAPHIC_VERSION 2
 /** Defines the bitmap graphic possible conversion (actually none) */
 #define MWAW_PAINT_VERSION 0
-/** Defines the presentation possible conversion (actually none) */
-#define MWAW_PRESENTATION_VERSION 0
+/** Defines the presentation possible conversion:
+    - 1: can create some presentation documents(from libmwaw-0.3.3)
+ */
+#define MWAW_PRESENTATION_VERSION 1
 /** Defines the spreadsheet possible conversion:
-    - 1: can create some spreadsheet document(from libmwaw-0.3)
+    - 1: can create some spreadsheet document(from libmwaw-0.3.0)
     - 2: can create some spreadsheet shapes in a RVNGBinaryData
       mimeType="image/mwaw-ods". You can use
       MWAWDocument::decodeSpreasheet to read them(from libmwaw-0.3.1).
@@ -91,7 +93,7 @@ recommended to launch the tests in a empty repository...
 #define MWAW_SPREADSHEET_VERSION 2
 /** Defines the word processing possible conversion:
     - 1: can create some text document(from libmwaw-0.0)
-    - 2: new interface with password encryption(from libmwaw-0.3) */
+    - 2: new interface with password encryption(from libmwaw-0.3.0) */
 #define MWAW_TEXT_VERSION 2
 
 #include "MWAWDocument.hxx"

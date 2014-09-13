@@ -621,7 +621,8 @@ int ClarisWksText::numPages() const
 
 bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList)
 {
-  if (m_state->m_zoneMap.find(1)==m_state->m_zoneMap.end() || !m_state->m_zoneMap.find(1)->second)
+  if (m_state->m_zoneMap.find(1)==m_state->m_zoneMap.end() || !m_state->m_zoneMap.find(1)->second
+      || m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION)
     return false;
   ClarisWksTextInternal::Zone const &zone=*m_state->m_zoneMap.find(1)->second;
   size_t numSection=zone.m_sectionList.size();
@@ -629,7 +630,6 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
   int nPages=m_document.numPages();
   int actPage=0;
   spanList.resize(0);
-  bool isPresentation=m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
   for (size_t i=0; i<numSection; ++i) {
     ClarisWksTextInternal::Section const &sec=zone.m_sectionList[i];
     int lastPage=nPages;
@@ -667,10 +667,8 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
         int zId=sec.m_HFId[j];
         if (!zId) continue;
         if ((j%2)==1 && zId==sec.m_HFId[j-1]) continue;
-        /* try to retrieve the father group zone
-           in presentation, the father seems to be the header|footer|master page, ...
-         */
-        if (!isPresentation && m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() &&
+        /* try to retrieve the father group zone */
+        if (m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() &&
             m_state->m_zoneMap.find(zId)->second && m_state->m_zoneMap.find(zId)->second->m_fatherId)
           zId=m_state->m_zoneMap.find(zId)->second->m_fatherId;
         MWAWHeaderFooter hF(j<2 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
