@@ -91,8 +91,6 @@ struct State {
   int m_numColorPatterns;
   //! the number of pattern in tool list
   int m_numPatternsInTool;
-  //! the size of the header zones
-  long m_sizeHeaderZones[5];
 
   //! the color list
   std::vector<MWAWColor> m_colorList;
