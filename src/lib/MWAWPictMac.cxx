@@ -1303,7 +1303,7 @@ protected:
       // can not guess, so we read the pixmap...
       bool hasRgn = type ==WP_CRBITMAP;
       shared_ptr<Pixmap> pxmap(new Pixmap);
-      if (!pxmap->read(input, false, false, true, hasRgn)) return -1;
+      if (!pxmap->read(input, false, false, true, hasRgn)) return false;
       val.m_type = WP_CBITMAP;
       val.m_pixmap = pxmap;
       return true;

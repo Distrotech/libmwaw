@@ -237,7 +237,7 @@ public:
   //! returns true if the gradient is defined
   bool hasGradient(bool complex=false) const
   {
-    return m_gradientType != G_None && m_gradientStopList.size() >= (complex ? 3 : 2);
+    return m_gradientType != G_None && (int) m_gradientStopList.size() >= (complex ? 3 : 2);
   }
   //! returns true if the interior surface is defined
   bool hasSurface() const

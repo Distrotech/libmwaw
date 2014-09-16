@@ -734,7 +734,7 @@ bool MoreParser::checkHeader(MWAWHeader *header, bool strict)
       return false;
     break;
   default:
-    return -1;
+    return false;
   }
   setVersion(vers);
   val=(int) input->readLong(2);

@@ -708,7 +708,7 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   int val= (int) input->readULong(1); // 0-46
   if (val) f << "format=" << std::hex << val << std::dec << ",";
   record.m_style=(int) input->readLong(2);
-  if (record.m_style) f << "style" << record.m_style << ",";
+  if (record.m_style) f << "Style-" << record.m_style << ",";
 
   int fileFormat=0;
   ClarisWksStyleManager::Style style;
@@ -1231,7 +1231,15 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
       break;
     }
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
-    instr.m_longValue=(int) input->readLong(2);
+    instr.m_longValue=(double) input->readLong(2);
+    break;
+  case 0x11:
+    if (pos+1+4>endPos) {
+      ok=false;
+      break;
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+    instr.m_longValue=(double) input->readLong(4);
     break;
   case 0x12: {
     double value;

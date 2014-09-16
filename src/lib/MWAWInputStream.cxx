@@ -190,6 +190,7 @@ unsigned long MWAWInputStream::readULong(librevenge::RVNGInputStream *stream, in
     default:
       break;
     }
+    break;
   }
   default:
     return readULong(stream, num-1,(a<<8) + (unsigned long)readU8(stream), inverseRead);

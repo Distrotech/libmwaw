@@ -464,17 +464,17 @@ bool ClarisWksDocument::createZones()
   libmwaw::DebugStream f;
   libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
 
-  long pos = input->tell();
   long eof=-1;
-  if (vers > 1)
-    readEndTable(eof);
-
-  if (eof > 0)
-    input->pushLimit(eof);
-
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-
   if (readDocHeader() && readDocInfo()) {
+    long pos = input->tell();
+    // time to read the styles
+    if (vers > 1) {
+      readEndTable(eof);
+      if (eof > 0)
+        input->pushLimit(eof);
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+    }
+
     pos = input->tell();
     while (!input->isEnd()) {
       if (!readZone()) {
@@ -484,6 +484,7 @@ bool ClarisWksDocument::createZones()
       pos = input->tell();
     }
   }
+
   if (!input->isEnd()) {
     ascFile.addPos(input->tell());
     f.str("");
@@ -491,6 +492,7 @@ bool ClarisWksDocument::createZones()
     ascFile.addNote(f.str().c_str());
   }
   // look for graphic
+  long pos=input->tell();
   while (!input->isEnd()) {
     pos = input->tell();
     int val = (int) input->readULong(2);

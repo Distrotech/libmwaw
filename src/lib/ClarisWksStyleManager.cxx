@@ -237,7 +237,7 @@ struct State {
 
 void State::setDefaultColorList(int version)
 {
-  if (m_colorList.size()) return;
+  if (!m_colorList.empty()) return;
   if (version==1) {
     uint32_t const defCol[81] = {
       0xffffff,0x000000,0x222222,0x444444,0x555555,0x888888,0xbbbbbb,0xdddddd,

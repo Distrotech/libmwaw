@@ -606,16 +606,16 @@ bool BeagleWksStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pi
   pict.clear();
   input->readDataBlock(pictEntry.length(), pict);
 
+#ifdef DEBUG_WITH_FILES
   libmwaw::DebugFile &ascFile = rsrcAscii();
   libmwaw::DebugStream f;
-#ifdef DEBUG_WITH_FILES
   static int volatile pictName = 0;
   f << "PICT" << ++pictName << ".pct";
   libmwaw::Debug::dumpFile(pict, f.str().c_str());
-#endif
   ascFile.addPos(pictEntry.begin()-4);
   ascFile.addNote(f.str().c_str());
   ascFile.skipZone(pictEntry.begin(),pictEntry.end()-1);
+#endif
 
   return true;
 }
