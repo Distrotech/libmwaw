@@ -95,11 +95,6 @@ public:
   bool getData(librevenge::RVNGBinaryData &data);
 
 protected:
-  //! adds an integer value in f
-  void writeInteger(int val)
-  {
-    writeLong(long(val));
-  }
   //! adds a long value if f
   void writeLong(long val);
   //! adds a string: size and string
