@@ -60,8 +60,10 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicShape::PathData const &path
   switch (path.m_type) {
   case 'H':
     o << ":" << path.m_x[0];
+    break;
   case 'V':
     o << ":" << path.m_x[1];
+    break;
   case 'M':
   case 'L':
   case 'T':

@@ -2513,12 +2513,14 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
   }
   else {
     switch (graphType) {
+    // case 0: already treated in isLine block
     case 1:
       shape.m_type = MWAWGraphicShape::Rectangle;
       break;
     case 2:
       shape.m_type = MWAWGraphicShape::Circle;
       break;
+    // case 3: already treated in isLine block
     case 4:
       shape.m_type = MWAWGraphicShape::Rectangle;
       for (int c=0; c < 2; ++c) {
@@ -2557,8 +2559,6 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
     case 6:
       shape.m_type = MWAWGraphicShape::Polygon;
       break;
-    case 0:
-    case 3:
     default:
       break;
     }
