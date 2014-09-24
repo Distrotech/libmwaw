@@ -819,12 +819,12 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       static bool first=true;
       if (zone.m_sharedWith && first) {
         first=false;
-        MWAW_DEBUG_MSG(("RagTimeParser::findDataZones: find potential shared zones, not implemented\n"));
+        MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find potential shared zones, not implemented\n"));
       }
     }
     else if (filePos<endPos || !input->checkPosition(filePos)) {
       f << "###";
-      MWAW_DEBUG_MSG(("RagTimeParser::findDataZones: find an odd zone\n"));
+      MWAW_DEBUG_MSG(("RagTimeParser::readDataZoneHeader: find an odd zone\n"));
     }
     else if (filePos) {
       // checkme: does vers==1 has some flags which explains +4

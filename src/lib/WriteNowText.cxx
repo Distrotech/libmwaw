@@ -423,6 +423,7 @@ std::ostream &operator<<(std::ostream &o, ContentZone const &z)
     break;
   case 0x10:
     o << "break,";
+    break;
   default:
     o << "type=#" << z.m_type << ",";
     break;

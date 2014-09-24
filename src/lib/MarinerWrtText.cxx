@@ -229,6 +229,7 @@ MWAWBorder Paragraph::BorderFill::getBorder(int i) const
     break;
   case 1: // single[w=0.5]
     res.m_width = 0.5f;
+  // fall-through intended
   case 2:
     res.m_style = MWAWBorder::Simple;
     break;

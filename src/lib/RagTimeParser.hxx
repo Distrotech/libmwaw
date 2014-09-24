@@ -52,7 +52,7 @@ class SubDocument;
 class RagTimeText;
 class RagTimeSpreadsheet;
 
-/** \brief the main class to read a RagTime v3 file
+/** \brief the main class to read a RagTime v2-3 file
  *
  *
  *

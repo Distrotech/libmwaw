@@ -2846,6 +2846,7 @@ bool RagTimeSpreadsheet::readCellInFormulaV2(Vec2i const &cellPos, bool canBeLis
       if (frame>=0) s << "F" << frame;
       instr.m_sheet=s.str();
     }
+    // coverity[dead_error_line : FALSE]: intended as sanity check
     else {
       f << "##marker=" << what << ",";
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormulaV2: find unexpected marker %d\n", what));

@@ -1044,7 +1044,11 @@ struct OpCode {
    *
    * \param id is the code of the opcode in the file
    * \param nm is the short name of the opcode
-   * \param type1 \param type2 \param type3 \param type4 \param type5 the type of the first, second, third arguments (if they exist)
+   * \param type1 type of the first component
+   * \param type2 type of the second component (if it exists)
+   * \param type3 type of the third component (if it exists)
+   * \param type4 type of the fourst component (if it exists)
+   * \param type5 type of the fifth component (if it exists)
    */
   OpCode(int id, char const *nm, DataType type1=WP_NONE, DataType type2=WP_NONE, DataType type3=WP_NONE, DataType type4=WP_NONE, DataType type5=WP_NONE)
     : m_id(id), m_name(nm), m_types()

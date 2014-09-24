@@ -161,6 +161,9 @@ public:
   //! constructor
   FontName() : m_name(""), m_id(-1), m_unknown(0) { }
 
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, FontName const &ft);
+
   //! the font name
   std::string m_name;
   //! the font id
@@ -168,7 +171,7 @@ public:
   //! unknown
   int m_unknown;
 };
-//! operator<< for a font name
+
 std::ostream &operator<<(std::ostream &o, FontName const &ft)
 {
   o << "Font(name=" << ft.m_name << ", id=" << ft.m_id;

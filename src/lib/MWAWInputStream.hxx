@@ -53,11 +53,11 @@
 class MWAWInputStream
 {
 public:
-  /*!\brief creates a stream with given endian from \param inp
-   * \param inverted must be set to true for pc doc and ole part
-   * \param inverted must be set to false for mac doc
+  /*!\brief creates a stream with given endian
+   * \param input the given input
+   * \param inverted must be set to true for pc doc and ole part and to false for mac doc
    */
-  MWAWInputStream(shared_ptr<librevenge::RVNGInputStream> inp, bool inverted);
+  MWAWInputStream(shared_ptr<librevenge::RVNGInputStream> input, bool inverted);
 
   /*!\brief creates a stream with given endian from an existing input
    *

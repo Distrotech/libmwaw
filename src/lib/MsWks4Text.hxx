@@ -68,7 +68,8 @@ protected:
   struct DataFOD;
   /** callback when a new attribute is found in an FDPP/FDPC entry
    *
-   * \param input, endPos: defined the zone in the file
+   * \param input defines the input
+   * \param endPos the last position in the input
    * \return true and filled id if this attribute can be parsed
    * \note mess can be filled to add a message in debugFile */
   typedef bool (MsWks4Text::* FDPParser)(MWAWInputStreamPtr &input, long endPos,
@@ -107,7 +108,8 @@ protected:
   /** definition of the plc data parser (low level)
    *
    * \param endPos the end of the properties' definition,
-   * \param bot, eot defined the text zone corresponding to these properties
+   * \param bot defined the begin of the text zone corresponding to these properties
+   * \param eot defined the end of the text zone corresponding to these properties
    * \param id the number of this properties
    * \param mess a string which can be filled to indicate unparsed data */
   typedef bool (MsWks4Text::* DataParser)
@@ -192,8 +194,7 @@ protected:
    *
    * Uses the entry BTEC/BTEP : the normal ways, and calls readSimplePLC on each entry to check that the parsing is correct
    * \param input the file input
-   * \param which = 0 : paragraphs structures
-   * \param which = 1 : characters structures
+   * \param which set to 0 for paragraphs structures and to 1 for characters structures
    */
   bool findFDPStructures(MWAWInputStreamPtr &input, int which);
   /** Fills the vector of (FDPCs/FDPPs) paragraph/characters strutures,
@@ -201,8 +202,7 @@ protected:
    *
    * Uses all entries FDPCs/FDPPs and calls readSimplePLC on each entry to check that the parsing is correct.
    * \param input the file input
-   * \param which = 0 : paragraphs structures
-   * \param which = 1 : characters structures
+   * \param which set to 0 for paragraphs structures and to 1 for characters structures
    */
   bool findFDPStructuresByHand(MWAWInputStreamPtr &input, int which);
 

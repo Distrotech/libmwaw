@@ -85,7 +85,7 @@ class MWAWOLEParser
 {
 public:
   /** constructor
-      \param mainName: name of the main ole, we must avoid to parse */
+      \param mainName name of the main ole, we must avoid to parse */
   MWAWOLEParser(std::string mainName);
 
   /** destructor */
