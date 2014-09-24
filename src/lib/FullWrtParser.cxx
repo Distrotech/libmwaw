@@ -1050,15 +1050,12 @@ bool FullWrtParser::readPrintInfo(FullWrtStruct::EntryPtr zone)
   // print info
   libmwaw::PrinterInfo info;
   if (!info.read(input)) {
-    if (sz == 0x78) {
-      // the size is ok, so let try to continue
-      asciiFile.addPos(pos);
-      asciiFile.addNote("Entries(PrintInfo):##");
-      input->seek(endPos, librevenge::RVNG_SEEK_SET);
-      MWAW_DEBUG_MSG(("FullWrtParser::readPrintInfo: can not read print info, continue\n"));
-      return true;
-    }
-    return false;
+    // we know that the size is ok, so let try to continue
+    asciiFile.addPos(pos);
+    asciiFile.addNote("Entries(PrintInfo):##");
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("FullWrtParser::readPrintInfo: can not read print info, continue\n"));
+    return true;
   }
   f << "Entries(PrintInfo):"<< info;
 

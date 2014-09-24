@@ -647,7 +647,6 @@ bool MsWksSSParser::readSSheetZone()
 
     long posRow = input->tell();
     unsigned long length = input->readULong(4);
-    int fl = 0;
     if (length & 0xF0000000L) {
       if ((length >> 28) != 8) {
         input->seek(posRow, librevenge::RVNG_SEEK_SET);
@@ -672,7 +671,6 @@ bool MsWksSSParser::readSSheetZone()
     f.str("");
     cellPos[0]=0;
     f << "SSheetE(Row" << std::dec << cellPos[1]+1 << "): ";
-    if (fl) f << std::hex << "fl=" << fl << ",";
     while (input->tell() < endRow-1) {
       pos = input->tell();
       int sz = (int) input->readULong(1);

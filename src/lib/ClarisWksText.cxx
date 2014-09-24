@@ -1139,18 +1139,8 @@ bool ClarisWksText::readParagraphs(MWAWEntry const &entry, ClarisWksTextInternal
 {
   long pos = entry.begin();
 
-  int styleSize = 0;
   int const vers = version();
-  switch (vers) {
-  case 1:
-    styleSize = 6;
-    break;
-  default:
-    styleSize = 8;
-    break;
-  }
-  if (styleSize == 0)
-    return false;
+  int styleSize = vers==1 ? 6 : 8;
   if ((entry.length()%styleSize) != 4)
     return false;
 

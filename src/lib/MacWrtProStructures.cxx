@@ -1142,11 +1142,6 @@ bool MacWrtProStructures::readFontsName()
     return false;
   }
   m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
   f << "Entries(FontsName):";
   int N=(int) m_input->readULong(2);
   if (3*N+2 > sz) {
