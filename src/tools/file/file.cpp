@@ -65,14 +65,14 @@ struct File {
     m_fileVersion(), m_appliVersion(), m_rsrcMissingMessage(""), m_rsrcResult(""),
     m_dataResult(), m_printFileName(false)
   {
-    if (!m_fName.length()) {
+    if (m_fName.empty()) {
       std::cerr << "File::File: call without path\n";
       throw libmwaw_tools::Exception();
     }
 
     // check if it is a regular file
     struct stat status;
-    if (stat(path, &status) == -1) {
+    if (!path || stat(path, &status) == -1) {
       std::cerr << "File::File: the file " << m_fName << " cannot be read\n";
       throw libmwaw_tools::Exception();
     }
@@ -268,6 +268,10 @@ bool File::readFileInformation()
   }
   else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
+  }
+  else if (m_fInfoCreator=="C#+A") {
+    checkFInfoType("C#+D","RagTime 5") || checkFInfoType("C#+F","RagTime 5[form]") ||
+    checkFInfoType("RagTime 5");
   }
   else if (m_fInfoCreator=="CDrw") {
     checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
@@ -543,6 +547,10 @@ bool File::readDataInformation()
       m_dataResult.push_back("BeagleWorks/WordPerfect Works");
     else
       m_dataResult.push_back("BeagleWorks/WordPerfect Works[Unknown]");
+    return true;
+  }
+  if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5 && val[4]==0x4864) {
+    m_dataResult.push_back("RagTime 5");
     return true;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
