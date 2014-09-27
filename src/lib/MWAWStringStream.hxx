@@ -36,6 +36,8 @@ public:
   //! destructor
   ~MWAWStringStream();
 
+  //! append some data at the end of the string
+  void append(const unsigned char *data, const unsigned int dataSize);
   /**! reads numbytes data.
 
    * \return a pointer to the read elements

@@ -127,6 +127,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="C#+A") { // solo
+      if (type=="C#+D" || type=="C#+F") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
+        return res;
+      }
+    }
     else if (creator=="Dc@P" || creator=="Dk@P") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_DOCMAKER, 1));
@@ -508,6 +514,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
   if (val[0]==0x4241 && val[1]==0x545F && val[2]==0x4254 && val[3]==0x5353) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a ClarisResolve file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET));
+    return res;
+  }
+  if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a RagTime 5 file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
     return res;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {

@@ -31,6 +31,7 @@ class MWAWStringStreamPrivate
 public:
   MWAWStringStreamPrivate(const unsigned char *data, unsigned dataSize);
   ~MWAWStringStreamPrivate();
+  void append(const unsigned char *data, unsigned dataSize);
   std::vector<unsigned char> buffer;
   long offset;
 private:
@@ -49,6 +50,14 @@ MWAWStringStreamPrivate::~MWAWStringStreamPrivate()
 {
 }
 
+void MWAWStringStreamPrivate::append(const unsigned char *data, unsigned dataSize)
+{
+  if (!dataSize) return;
+  size_t actualSize=buffer.size();
+  buffer.resize(actualSize+size_t(dataSize));
+  std::memcpy(&buffer[actualSize], data, dataSize);
+}
+
 MWAWStringStream::MWAWStringStream(const unsigned char *data, const unsigned int dataSize) :
   librevenge::RVNGInputStream(),
   d(new MWAWStringStreamPrivate(data, dataSize))
@@ -58,6 +67,11 @@ MWAWStringStream::MWAWStringStream(const unsigned char *data, const unsigned int
 MWAWStringStream::~MWAWStringStream()
 {
   delete d;
+}
+
+void MWAWStringStream::append(const unsigned char *data, const unsigned int dataSize)
+{
+  d->append(data, dataSize);
 }
 
 const unsigned char *MWAWStringStream::read(unsigned long numBytes, unsigned long &numBytesRead)

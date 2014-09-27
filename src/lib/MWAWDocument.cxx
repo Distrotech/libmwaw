@@ -82,6 +82,7 @@
 #include "MsWrdParser.hxx"
 #include "NisusWrtParser.hxx"
 #include "RagTimeParser.hxx"
+#include "RagTime5Parser.hxx"
 #include "SuperPaintParser.hxx"
 #include "TeachTxtParser.hxx"
 #include "WingzParser.hxx"
@@ -825,7 +826,12 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
       parser.reset(new NisusWrtParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_RAGTIME:
-      parser.reset(new RagTimeParser(input, rsrcParser, header));
+      if (header->getMajorVersion()<5)
+        parser.reset(new RagTimeParser(input, rsrcParser, header));
+#ifdef DEBUG
+      else
+        parser.reset(new RagTime5Parser(input, rsrcParser, header));
+#endif
       break;
     case MWAWDocument::MWAW_T_TEACHTEXT:
     case MWAWDocument::MWAW_T_TEXEDIT:
