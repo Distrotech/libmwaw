@@ -102,8 +102,16 @@ protected:
 
   //! try to read string zone ( zone with id=21)
   bool readStringZone(RagTime5ParserInternal::Zone &zone);
+  //! try to read a list of unknown zone
+  bool readListZone(RagTime5ParserInternal::Zone &zone);
+
+  //! try to read a PICT zone
+  bool readPICT(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry);
+  //! try to read a TIFF zone
+  bool readTIFF(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry);
   //! try to read a OLE zone
   bool readOLEZone(RagTime5ParserInternal::Zone &zone);
+
   //! flush unsent zone (debugging function)
   void flushExtra();
 

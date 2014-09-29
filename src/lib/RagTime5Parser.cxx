@@ -125,6 +125,9 @@ struct Zone {
   {
     for (int i=0; i<3; ++i) m_ids[i]=m_idsFlag[i]=0;
   }
+  //! destructor
+  ~Zone() {}
+
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &z);
   //! returns the current input
@@ -192,6 +195,9 @@ protected:
   libmwaw::DebugFile *m_asciiFile;
   //! the local ascii file ( if we need to create a new input)
   shared_ptr<libmwaw::DebugFile> m_localAsciiFile;
+private:
+  Zone(Zone const &orig);
+  Zone &operator=(Zone const &orig);
 };
 
 std::ostream &operator<<(std::ostream &o, Zone const &z)
@@ -254,7 +260,7 @@ std::ostream &operator<<(std::ostream &o, Zone const &z)
 struct State {
   //! constructor
   State() : m_zonesEntry(), m_zonesList(), m_numDataZone(0), m_dataZoneMap(), m_idColorsMap(), m_patternList(),
-    m_actualZoneId(-1), m_idZoneMap(), m_pageZonesIdMap(), m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
+    m_actualZoneId(-1), m_pageZonesIdMap(), m_idPictureMap(), m_actPage(0), m_numPages(0), m_headerHeight(0), m_footerHeight(0)
   {
   }
   //! init the pattern to default
@@ -273,8 +279,6 @@ struct State {
   std::vector<Pattern> m_patternList;
   //! the actual zone id
   int m_actualZoneId;
-  //! a map: zoneId->zone (datafork)
-  std::map<int, Zone> m_idZoneMap;
   //! a map: page->main zone id
   std::map<int, std::vector<int> > m_pageZonesIdMap;
   //! a map: zoneId->picture (datafork)
@@ -522,9 +526,13 @@ bool RagTime5Parser::createZones()
     else if (zone.m_idsFlag[1]==1 && zone.m_ids[1]+1==zone.m_ids[2] && zone.m_entry.length()==7 && readStringZone(zone))
       continue;
 
-    if (unpackZone(zone)) continue;
+    if (zone.m_idsFlag[1]==1) {
+      // checkme: does pack zone have always zone.m_idsFlag[1]==1
+      unpackZone(zone);
+    }
 
-    if (zone.m_idsFlag[2]==0 && readOLEZone(zone)) continue;
+    if (readListZone(zone) || readOLEZone(zone)) continue;
+    if (readTIFF(zone, zone.m_entry) || readPICT(zone, zone.m_entry)) continue;
     libmwaw::DebugFile &ascFile=zone.ascii();
     libmwaw::DebugStream f;
     f << "Entries(" << zone.m_name << "):" << zone;
@@ -566,6 +574,62 @@ bool RagTime5Parser::readStringZone(RagTime5ParserInternal::Zone &zone)
   ascFile.addNote(f.str().c_str());
   ascFile.addPos(zone.m_entry.end());
   ascFile.addNote("_");
+  return true;
+}
+
+bool RagTime5Parser::readListZone(RagTime5ParserInternal::Zone &zone)
+{
+  MWAWInputStreamPtr input=zone.getInput();
+  libmwaw::DebugStream f;
+  f << "Entries(ListZone)[" << zone << "]:";
+  input->seek(zone.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  long N=(long) input->readULong(1);
+  if (!N || N>0x83) return false;
+  if (N>=0x80) // find 0x80, never 0x81
+    N=(long) input->readULong(int(N-0x7F));
+  f << "N=" << N << ",";
+  if (N<=20 || 12+14*N>zone.m_entry.length()) return false;
+  int val;
+  for (int i=0; i<2; ++i) { // always 0,0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  int sz=(int) input->readULong(1);
+  if (sz) {
+    f << "data1=[" << std::hex;
+    for (int i=0; i<sz+1; ++i) {
+      val=(int) input->readULong(1);
+      if (val) f << val << ",";
+      else f << "_,";
+    }
+    f << std::dec << "],";
+  }
+  long debPos=input->tell()+4*(N+1);
+  long remain=zone.m_entry.end()-debPos;
+  if (remain<=0) return false;
+  f << "ptr=[" << std::hex;
+  std::vector<long> listPtrs((size_t)(N+1));
+  for (size_t i=0; i<=size_t(N); ++i) {
+    long ptr=(long) input->readULong(4);
+    if (ptr<0 || ptr>remain || (i && ptr<listPtrs[i-1]))
+      return false;
+    f << ptr << ",";
+    listPtrs[size_t(i)]=ptr;
+  }
+  f << std::dec << "],";
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  ascFile.addPos(zone.m_entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(zone.m_entry.end());
+  ascFile.addNote("_");
+
+  for (size_t i=0; i<listPtrs.size(); ++i) {
+    if (listPtrs[i]==remain) break;
+    f.str("");
+    f << "ListZone-" << i << ":";
+    ascFile.addPos(debPos+listPtrs[i]);
+    ascFile.addNote(f.str().c_str());
+  }
   return true;
 }
 
@@ -652,10 +716,10 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone)
 
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   unsigned long sz=(unsigned long) input->readULong(4);
-  if ((sz>>24) != 0xC0 || !(sz&0xFFFFFF)) return false;
+  int flag=int(sz>>24);
   sz &= 0xFFFFFF;
-  libmwaw::DebugStream f;
-  f << "#" << std::hex;
+  if ((flag&0xf) || (flag&0xf0)==0 || !(sz&0xFFFFFF)) return false;
+  if (flag != 0xC0 && zone.m_ids[1]==3) return false;
 
   int nBytesRead=0, szField=9;
   unsigned int read=0;
@@ -666,12 +730,11 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone)
   mapToString.reserve(size_t(zone.m_entry.length()-6));
   bool ok=false;
   while (!input->isEnd()) {
-    if (mapPos==(1<<szField)-0x102)
+    if ((int) mapPos==(1<<szField)-0x102)
       ++szField;
     if (input->tell()>=endPos) {
-      if (nBytesRead)
-        f << (read << (9-nBytesRead));
       MWAW_DEBUG_MSG(("RagTime5Parser::unpackZone: oops can not find last data\n"));
+      ok=false;
       break;
     }
     do {
@@ -682,7 +745,6 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone)
     unsigned int val=(read >> (nBytesRead-szField));
     nBytesRead-=szField;
     read &= ((1<<nBytesRead)-1);
-    f << val << ".";
 
     if (val<0x100) {
       unsigned char c=(unsigned char) val;
@@ -711,6 +773,7 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone)
     size_t readPos=size_t(val-0x102);
     if (readPos >= mapToString.size()) {
       MWAW_DEBUG_MSG(("RagTime5Parser::unpackZone: find bad position\n"));
+      ok = false;
       break;
     }
     std::vector<unsigned char> final=mapToString[readPos++];
@@ -723,46 +786,104 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone)
       mapToString.resize(mapPos+1);
     mapToString[mapPos++]=final;
   }
-  f << std::dec << "#";
-
-  std::string extra=f.str();
-  f.str("");
-  f << "Entries(ZoneAA):" << zone << ",";
-  f << "sz=" << std::hex << sz << std::dec << ",";
 
   if (ok && newData.size()!=(size_t) sz) {
     MWAW_DEBUG_MSG(("RagTime5Parser::unpackZone: oops the data file is bad\n"));
-    f << std::hex << "##sz=" << newData.size() << "!=" << sz << std::dec << ",";
     ok=false;
   }
-  if (ok) {
-    if (input.get()==getInput().get())
-      ascii().skipZone(pos, endPos-1);
-
-    shared_ptr<MWAWStringStream> newStream(new MWAWStringStream(&newData[0], (unsigned int) newData.size()));
-    MWAWInputStreamPtr newInput(new MWAWInputStream(newStream, false));
-    zone.setInput(newInput);
-    zone.m_entry.setBegin(0);
-    zone.m_entry.setLength(newInput->size());
+  if (!ok) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::unpackZone: stop with mapPos=%ld and totalSize=%ld/%ld\n", long(mapPos), long(newData.size()), long(sz)));
+    return false;
   }
-  else {
-    f << "fSz=" << szField << ":" << mapPos << ",";
-    f << extra << "####";
-    if (input->tell()!=endPos)
-      zone.ascii().addDelimiter(input->tell(),'|');
-  }
-  libmwaw::DebugFile &ascFile=zone.ascii();
-  ascFile.addPos(zone.m_entry.end());
-  ascFile.addNote("_");
 
-  ascFile.addPos(zone.m_entry.begin());
-  ascFile.addNote(f.str().c_str());
+  libmwaw::DebugStream f;
+  f << "Entries(ZoneAA):" << zone << ",";
+  if (flag != 0xC0) f << "fl=" << std::hex << flag << std::dec << ",";
+  f << "sz=" << std::hex << sz << std::dec << ",";
+  if (input.get()==getInput().get())
+    ascii().skipZone(pos, endPos-1);
+
+  shared_ptr<MWAWStringStream> newStream(new MWAWStringStream(&newData[0], (unsigned int) newData.size()));
+  MWAWInputStreamPtr newInput(new MWAWInputStream(newStream, false));
+  zone.setInput(newInput);
+  zone.m_entry.setBegin(0);
+  zone.m_entry.setLength(newInput->size());
+  zone.m_extra += "packed,";
   return ok;
 }
 
 ////////////////////////////////////////////////////////////
 // find the different zones
 ////////////////////////////////////////////////////////////
+bool RagTime5Parser::readPICT(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry)
+{
+  if (entry.length()<=40)
+    return false;
+  MWAWInputStreamPtr input = zone.getInput();
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  // look only for pict v2
+  int header=(int)input->readULong(2);
+  if (header != int(entry.length()&0xFFFF)) return false;
+  long dim[4];
+  for (int i = 0; i < 4; i++) dim[i] = input->readLong(2);
+  if (dim[0]>dim[2] || dim[1]>dim[3]) return false;
+  if (input->readLong(2)!=0x0011 || input->readLong(2)!=0x2ff || input->readLong(2)!=0xc00) return false;
+
+#ifdef DEBUG_WITH_FILES
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(PICT):" << zone;
+  ascFile.skipZone(entry.begin()+1, entry.end()-1);
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(entry.end());
+  ascFile.addNote("");
+
+  librevenge::RVNGBinaryData file;
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  input->readDataBlock(entry.length(), file);
+  static int volatile pictName = 0;
+  f.str("");
+  f << "Pict-" << ++pictName << ".pct";
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
+  return true;
+}
+
+bool RagTime5Parser::readTIFF(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry)
+{
+  if (entry.length()<=20)
+    return false;
+  MWAWInputStreamPtr input = zone.getInput();
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  int header=(int)input->readULong(2);
+  if (header!=0x4d4d && header != 0x4949)
+    return false;
+  header=(int) input->readULong(2);
+  if (header!=0x2a && header!=0x2a00)
+    return false;
+
+#ifdef DEBUG_WITH_FILES
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(TIFF):" << zone;
+  ascFile.skipZone(entry.begin()+1, entry.end()-1);
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(entry.end());
+  ascFile.addNote("");
+
+  librevenge::RVNGBinaryData file;
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  input->readDataBlock(entry.length(), file);
+  static int volatile tiffName = 0;
+  f.str("");
+  f << "Tiff-" << ++tiffName << ".tiff";
+  libmwaw::Debug::dumpFile(file, f.str().c_str());
+#endif
+  return true;
+}
+
 bool RagTime5Parser::readOLEZone(RagTime5ParserInternal::Zone &zone)
 {
   if (zone.m_entry.length()<=0x1c)
@@ -771,22 +892,17 @@ bool RagTime5Parser::readOLEZone(RagTime5ParserInternal::Zone &zone)
   MWAWInputStreamPtr input = zone.getInput();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   unsigned long header=input->readULong(4);
-  if (header==0x4d4d002a) {
+  libmwaw::DebugStream f;
+  if (header==0x4d4d00dd) {
     libmwaw::DebugFile &ascFile=zone.ascii();
+    f << "Entries(MM):" << zone;
     ascFile.addPos(pos);
-    ascFile.addNote("Entries(MM)");
-    return true;
-  }
-  if (header==0x49492a00) {
-    libmwaw::DebugFile &ascFile=zone.ascii();
-    ascFile.addPos(pos);
-    ascFile.addNote("Entries(MM)[inv]");
+    ascFile.addNote(f.str().c_str());
     return true;
   }
   if (header!=0xc5d0d3c6)
     return false;
   input->setReadInverted(true);
-  libmwaw::DebugStream f;
   f << "Entries(OLE):" << zone;
   MWAWEntry entry[3];
   long fDataPos=0;
@@ -830,14 +946,17 @@ bool RagTime5Parser::readOLEZone(RagTime5ParserInternal::Zone &zone)
 #endif
       continue;
     }
+    MWAWEntry dEntry;
+    dEntry.setBegin(pos+entry[i].begin());
+    dEntry.setLength(entry[i].length());
+    if (readTIFF(zone, dEntry))
+      continue;
+    // find one time OLE-1 with 0100090000...
     f.str("");
-    if (i==2)
-      f << "Entries(MM):";
-    else // never seens
-      f << "OLE-A:";
-    ascFile.addPos(pos+entry[i].begin());
+    f << "OLE-" << i << ":";
+    ascFile.addPos(dEntry.begin());
     ascFile.addNote(f.str().c_str());
-    ascFile.addPos(pos+entry[i].end());
+    ascFile.addPos(dEntry.end());
     ascFile.addNote("_");
   }
   input->setReadInverted(false);

@@ -2543,10 +2543,12 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       break;
     }
   }
+#if 0
   // CHECKME
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: position is not set\n"));
   }
+#endif
   if (!mainGroup && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     MWAWGraphicEncoder graphicEncoder;

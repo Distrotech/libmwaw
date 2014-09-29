@@ -492,9 +492,8 @@ bool ClarisWksDocument::createZones()
     ascFile.addNote(f.str().c_str());
   }
   // look for graphic
-  long pos=input->tell();
   while (!input->isEnd()) {
-    pos = input->tell();
+    long pos = input->tell();
     int val = (int) input->readULong(2);
     if (input->isEnd()) break;
     bool ok = false;
