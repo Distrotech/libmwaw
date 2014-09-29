@@ -34,8 +34,7 @@
 #ifndef RAG_TIME_5_PARSER
 #  define RAG_TIME_5_PARSER
 
-#include <set>
-#include <vector>
+#include <string>
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
@@ -80,8 +79,6 @@ protected:
 
   //! returns the ith color ( if possible)
   bool getColor(int colId, MWAWColor &color, int listId=-1) const;
-  //! returns a new unique zone id
-  int getNewZoneId();
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
@@ -100,17 +97,16 @@ protected:
   //! try to unpack a zone
   bool unpackZone(RagTime5ParserInternal::Zone &zone);
 
-  //! try to read string zone ( zone with id=21)
-  bool readStringZone(RagTime5ParserInternal::Zone &zone);
+  //! try to read a string zone ( zone with id1=21,id2=23:24)
+  bool readString(RagTime5ParserInternal::Zone &zone, std::string &string);
   //! try to read a list of unknown zone
   bool readListZone(RagTime5ParserInternal::Zone &zone);
 
-  //! try to read a PICT zone
-  bool readPICT(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry);
-  //! try to read a TIFF zone
-  bool readTIFF(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry);
-  //! try to read a OLE zone
-  bool readOLEZone(RagTime5ParserInternal::Zone &zone);
+  //! enum used to defined list of classical pict
+  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_ScreenRep, P_WMF, P_Unknown };
+
+  //! try to read a picture zone
+  bool readPicture(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry, PictureType type);
 
   //! flush unsent zone (debugging function)
   void flushExtra();
