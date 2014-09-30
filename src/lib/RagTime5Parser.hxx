@@ -58,6 +58,9 @@ class RagTime5Parser : public MWAWTextParser
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
+  //! enum used to defined list of classical pict
+  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
+
   //! constructor
   RagTime5Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
@@ -97,13 +100,16 @@ protected:
   //! try to unpack a zone
   bool unpackZone(RagTime5ParserInternal::Zone &zone);
 
+  //! try to read a compressed long
+  bool readCompressedLong(MWAWInputStreamPtr &input, long endPos, long &val);
   //! try to read a string zone ( zone with id1=21,id2=23:24)
   bool readString(RagTime5ParserInternal::Zone &zone, std::string &string);
+  //! try to read a unicode string zone
+  bool readUnicodeString(RagTime5ParserInternal::Zone &zone);
+  //! try to read a cluster of item
+  bool readItemCluster(RagTime5ParserInternal::Zone &zone);
   //! try to read a list of unknown zone
   bool readListZone(RagTime5ParserInternal::Zone &zone);
-
-  //! enum used to defined list of classical pict
-  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_ScreenRep, P_WMF, P_Unknown };
 
   //! try to read a picture zone
   bool readPicture(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry, PictureType type);

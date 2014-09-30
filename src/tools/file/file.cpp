@@ -550,7 +550,7 @@ bool File::readDataInformation()
     return true;
   }
   if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5 && val[4]==0x4864) {
-    m_dataResult.push_back("RagTime 5");
+    m_dataResult.push_back("RagTime 5-6");
     return true;
   }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {

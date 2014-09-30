@@ -41,6 +41,7 @@
 #  if defined(DEBUG_WITH_FILES)
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 //! some  basic tools
 namespace libmwaw
@@ -66,7 +67,7 @@ class DebugFile
 public:
   //! constructor given the input file
   DebugFile(MWAWInputStreamPtr ip=MWAWInputStreamPtr())
-    : m_file(), m_on(false), m_input(ip), m_actOffset(-1), m_notes(), m_skipZones() { }
+    : m_fileName(""), m_file(), m_on(false), m_input(ip), m_actOffset(-1), m_notes(), m_skipZones() { }
 
   //! resets the input
   void setStream(MWAWInputStreamPtr ip)
@@ -84,6 +85,7 @@ public:
   void reset()
   {
     write();
+    m_fileName="";
     m_file.close();
     m_on = false;
     m_notes.resize(0);
@@ -109,6 +111,8 @@ protected:
   //! sorts the position/note date
   void sort();
 
+  //! the file name
+  mutable std::string m_fileName;
   //! a stream which is open to write the file
   mutable std::ofstream m_file;
   //! a flag to know if the result stream is open or note

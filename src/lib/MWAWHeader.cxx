@@ -517,7 +517,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
   if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5) {
-    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a RagTime 5 file\n"));
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a RagTime 5-6 file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
     return res;
   }
