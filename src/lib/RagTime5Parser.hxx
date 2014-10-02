@@ -97,6 +97,9 @@ protected:
   bool findDataZones(MWAWEntry const &entry);
   //! try to update a zone: create a new input if the zone is stored in different positions, ...
   bool update(RagTime5ParserInternal::Zone &zone);
+
+  //! try to unpack a zone
+  bool unpackZone(RagTime5ParserInternal::Zone &zone, MWAWEntry const &entry, std::vector<unsigned char> &data);
   //! try to unpack a zone
   bool unpackZone(RagTime5ParserInternal::Zone &zone);
 
@@ -111,8 +114,14 @@ protected:
   //! try to read a list of unknown zone
   bool readListZone(RagTime5ParserInternal::Zone &zone);
 
+  //! try to read the document version zone
+  bool readDocumentVersion(RagTime5ParserInternal::Zone &zone);
   //! try to read a picture zone
   bool readPicture(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry, PictureType type);
+  //! try to read a picture list
+  bool readPictureList(RagTime5ParserInternal::Zone &zone, std::vector<int> &listIds);
+  //! try to read a picture match zone
+  bool readPictureMatch(RagTime5ParserInternal::Zone &zone, bool color);
 
   //! flush unsent zone (debugging function)
   void flushExtra();
