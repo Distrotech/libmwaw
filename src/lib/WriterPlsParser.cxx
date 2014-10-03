@@ -1070,7 +1070,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
       }
       bool ok = true;
       switch (pInfo.getType()) {
-      case 3: // col break: seems simillar to an entry data (without text)
+      case 3: // col break: seems similar to an entry data (with a text zone which does not contain any character)
         if (numCols) {
           if (actCol >numCols) {
             MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with col break\n"));
@@ -1080,6 +1080,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
             listener->insertBreak(MWAWTextListener::ColumnBreak);
           }
         }
+      // fall through intended
       case 0:
       case 2:
         ok = readText(pInfo);

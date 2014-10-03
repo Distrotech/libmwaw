@@ -474,7 +474,6 @@ bool ZWrtText::sendText(ZWrtTextInternal::Section const &zone, MWAWEntry const &
     MWAWEntry textData;
     if (c=='<' && (textCode=isTextCode(input, endPos, textData))!=None) {
       long newPos = input->tell();
-      done = true;
       switch (textCode) {
       case Center:
         isCenter=true;
@@ -498,16 +497,14 @@ bool ZWrtText::sendText(ZWrtTextInternal::Section const &zone, MWAWEntry const &
         listener->insertComment(subdoc);
         break;
       }
+      // coverity[dead_error_line : FALSE]: intentional ( needed to remove warning in other compiler )
       case None:
       default:
         break;
       }
-      if (done) {
-        input->seek(newPos, librevenge::RVNG_SEEK_SET);
-        cPos=newPos-zone.m_pos.begin();
-        continue;
-      }
-      input->seek(actPos+1, librevenge::RVNG_SEEK_SET);
+      input->seek(newPos, librevenge::RVNG_SEEK_SET);
+      cPos=newPos-zone.m_pos.begin();
+      continue;
     }
     switch (c) {
     case 0x9:

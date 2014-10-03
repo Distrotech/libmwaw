@@ -1,5 +1,9 @@
 CHANGES:
 
+2/10/2014:
+- RagTime v5-v6: begin to find the main structures in a document, to be continued...
+- fix some coverity problems.
+
 12/9/2014:
 - AppleWorks: add a presentation parser
 

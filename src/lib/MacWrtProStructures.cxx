@@ -1876,12 +1876,15 @@ shared_ptr<MacWrtProStructuresInternal::Block>  MacWrtProStructures::readBlockV2
     if (val) f<< "unkn=" << val << ",";
     int what = (int) m_input->readULong(1);
     switch (what &0xF0) {
-    case 0x40:
+    case 0x40: // a header zone
       res->m_isHeader = true;
-    case 0x80:
       res->m_type = 6;
       break;
-    case 0xc0:
+    case 0x80: // a footer zone
+      res->m_isHeader = false;
+      res->m_type = 6;
+      break;
+    case 0xc0: // a footnote zone
       res->m_type = 7;
       break;
     default:
