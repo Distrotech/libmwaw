@@ -266,7 +266,15 @@ int HanMacWrdKText::version() const
 
 int HanMacWrdKText::numPages() const
 {
-  return m_state->m_numPages;
+  int nPages = 1;
+  std::multimap<long, shared_ptr<HanMacWrdKZone> >::iterator tIt=m_state->m_IdTextMaps.begin();
+  for (; tIt!=m_state->m_IdTextMaps.end(); ++tIt) {
+    if (!tIt->second) continue;
+    int pages = const_cast<HanMacWrdKText *>(this)->computeNumPages(*tIt->second);
+    if (pages > nPages) nPages=pages;
+  }
+  m_state->m_numPages = nPages;
+  return nPages;
 }
 
 void HanMacWrdKText::getHeaderFooterId(long &headerId, long &footerId) const
@@ -307,45 +315,66 @@ void HanMacWrdKText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
 ////////////////////////////////////////////////////////////
 //     Text
 ////////////////////////////////////////////////////////////
-bool HanMacWrdKText::readTextZone(shared_ptr<HanMacWrdKZone> zone)
+int HanMacWrdKText::computeNumPages(HanMacWrdKZone const &zone) const
 {
-  if (!zone || !zone->valid()) {
-    MWAW_DEBUG_MSG(("HanMacWrdKText::readTextZone: called without any zone\n"));
-    return false;
-  }
-  m_state->m_IdTextMaps.insert
-  (std::multimap<long, shared_ptr<HanMacWrdKZone> >::value_type(zone->m_id, zone));
-  long dataSz = zone->length();
-  MWAWInputStreamPtr input = zone->m_input;
-  input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
+  if (!zone.valid())
+    return 0;
+  // first check if this is the main zone
+  if (m_state->m_IdTypeMaps.find(zone.m_id)== m_state->m_IdTypeMaps.end() ||
+      m_state->m_IdTypeMaps.find(zone.m_id)->second != 0)
+    return 1;
 
-  int actPage = 1, actCol = 0, numCol=1;
+  long endPos = zone.end();
+  MWAWInputStreamPtr input = zone.m_input;
+  long pos = zone.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+
+  int actPage = 1, actCol = 0, numCol=1, actSection = 1;
+  if (!m_state->m_sectionList.empty()) {
+    HanMacWrdKTextInternal::Section sec = m_state->m_sectionList[0];
+    if (sec.m_numCols >= 1 && sec.m_colWidth.size() > 0)
+      numCol = sec.m_numCols;
+  }
+
+  input->seek(0, librevenge::RVNG_SEEK_SET);
   while (!input->isEnd()) {
-    long pos = input->tell();
+    pos = input->tell();
     long val = (long) input->readULong(1);
-    if (val == 0 && input->isEnd()) break;
-    if (val != 1 || input->readLong(1) != 0)
-      break;
+    if (val != 1 || input->readLong(1) != 0) break;
+
     int type = (int) input->readLong(2);
     bool done=false;
     switch (type) {
+    case 1: {
+      MWAWFont font(-1,-1);
+      done=readFont(zone,font);
+      break;
+    }
     case 2: { // ruler
       HanMacWrdKTextInternal::Paragraph para;
-      done=readParagraph(*zone,para);
-      if (para.m_addPageBreak)
-        actPage++;
+      if (!readParagraph(zone,para))
+        break;
+      if (para.m_addPageBreak) {
+        ++actPage;
+        actCol = 0;
+      }
+      done=true;
       break;
     }
-    case 3: { // token
+    case 3: { // footnote, attachment
       HanMacWrdKTextInternal::Token token;
-      done=readToken(*zone,token);
-      if (done)
-        m_state->m_tokenIdList.push_back(token.m_id);
+      done=readToken(zone,token);
       break;
     }
-    case 4:
+    case 4: {
+      if (size_t(actSection) >= m_state->m_sectionList.size())
+        break;
+      actCol = 0;
       actPage++;
+      HanMacWrdKTextInternal::Section const &sec = m_state->m_sectionList[size_t(actSection++)];
+      numCol = sec.m_numCols >= 1 ? sec.m_numCols : 1;
       break;
+    }
     default:
       break;
     }
@@ -353,11 +382,10 @@ bool HanMacWrdKText::readTextZone(shared_ptr<HanMacWrdKZone> zone)
     if (!done) {
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
-      if (pos+6+sz > dataSz)
+      if (pos+6+sz>endPos)
         break;
       input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
     }
-
     bool ok=true;
     while (!input->isEnd()) {
       int c=(int) input->readLong(2);
@@ -385,8 +413,73 @@ bool HanMacWrdKText::readTextZone(shared_ptr<HanMacWrdKZone> zone)
     if (!ok)
       break;
   }
-  if (actPage > m_state->m_numPages)
-    m_state->m_numPages = actPage;
+  return actPage;
+}
+
+bool HanMacWrdKText::readTextZone(shared_ptr<HanMacWrdKZone> zone)
+{
+  if (!zone || !zone->valid()) {
+    MWAW_DEBUG_MSG(("HanMacWrdKText::readTextZone: called without any zone\n"));
+    return false;
+  }
+  m_state->m_IdTextMaps.insert
+  (std::multimap<long, shared_ptr<HanMacWrdKZone> >::value_type(zone->m_id, zone));
+  long endPos = zone->end();
+  MWAWInputStreamPtr input = zone->m_input;
+  input->seek(zone->begin(), librevenge::RVNG_SEEK_SET);
+
+  while (!input->isEnd()) {
+    long pos = input->tell();
+    if (pos >= endPos)
+      break;
+    long val = (long) input->readULong(1);
+    if (val == 0 && input->isEnd()) break;
+    if (val != 1 || input->readLong(1) != 0)
+      break;
+    int type = (int) input->readLong(2);
+    bool done=false;
+    switch (type) {
+    case 2: { // ruler
+      HanMacWrdKTextInternal::Paragraph para;
+      done=readParagraph(*zone,para);
+      break;
+    }
+    case 3: { // token
+      HanMacWrdKTextInternal::Token token;
+      done=readToken(*zone,token);
+      if (done)
+        m_state->m_tokenIdList.push_back(token.m_id);
+      break;
+    }
+    default:
+      break;
+    }
+
+    if (!done) {
+      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      long sz = (long) input->readULong(2);
+      if (pos+6+sz > endPos)
+        break;
+      input->seek(pos+6+sz, librevenge::RVNG_SEEK_SET);
+    }
+
+    bool ok=true;
+    while (!input->isEnd()) {
+      int c=(int) input->readLong(2);
+      if (c==0x100) {
+        input->seek(-2, librevenge::RVNG_SEEK_CUR);
+        break;
+      }
+      if (c==0 && input->isEnd())
+        break;
+      if (c==0) {
+        ok = false;
+        break;
+      }
+    }
+    if (!ok)
+      break;
+  }
   return true;
 }
 
@@ -439,7 +532,7 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
 {
   if (!zone.valid()) return false;
 
-  long dataSz = zone.length();
+  long endPos = zone.end();
   MWAWInputStreamPtr input = zone.m_input;
   long pos = zone.begin();
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -449,6 +542,8 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
   MWAWFont font;
   while (!input->isEnd()) {
     pos = input->tell();
+    if (pos>=endPos)
+      break;
     long val = (long) input->readULong(1);
     if (val == 0 && input->isEnd()) break;
     if (val != 1 || input->readLong(1) != 0)
@@ -478,7 +573,7 @@ bool HanMacWrdKText::canSendTextAsGraphic(HanMacWrdKZone &zone)
     if (!done) {
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
-      if (pos+6+sz > dataSz) return false;
+      if (pos+6+sz > endPos) return false;
     }
 
     while (!input->isEnd()) {
@@ -508,7 +603,7 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
     return false;
   }
 
-  long dataSz = zone.length();
+  long endPos = zone.end();
   MWAWInputStreamPtr input = zone.m_input;
   libmwaw::DebugFile &asciiFile = zone.ascii();
   libmwaw::DebugStream f;
@@ -543,6 +638,8 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
 
   while (!input->isEnd()) {
     pos = input->tell();
+    if (pos>=endPos)
+      break;
     f.str("");
     f << zone.name()<< ":";
     long val = (long) input->readULong(1);
@@ -645,7 +742,7 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
     if (!done) {
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       long sz = (long) input->readULong(2);
-      ok = pos+6+sz <= dataSz;
+      ok = pos+6+sz <= endPos;
       if (!ok)
         f << "###";
       else
@@ -770,7 +867,7 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
 ////////////////////////////////////////////////////////////
 
 // a font in the text zone
-bool HanMacWrdKText::readFont(HanMacWrdKZone &zone, MWAWFont &font)
+bool HanMacWrdKText::readFont(HanMacWrdKZone const &zone, MWAWFont &font) const
 {
   font = MWAWFont(-1,-1);
 
@@ -1089,7 +1186,7 @@ void HanMacWrdKText::setProperty(HanMacWrdKTextInternal::Paragraph const &para, 
   m_parserState->m_textListener->setParagraph(para);
 }
 
-bool HanMacWrdKText::readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Paragraph &para)
+bool HanMacWrdKText::readParagraph(HanMacWrdKZone const &zone, HanMacWrdKTextInternal::Paragraph &para) const
 {
   para = HanMacWrdKTextInternal::Paragraph();
 
@@ -1314,7 +1411,7 @@ bool HanMacWrdKText::readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal:
 ////////////////////////////////////////////////////////////
 //     the token
 ////////////////////////////////////////////////////////////
-bool HanMacWrdKText::readToken(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Token &token)
+bool HanMacWrdKText::readToken(HanMacWrdKZone const &zone, HanMacWrdKTextInternal::Token &token) const
 {
   token = HanMacWrdKTextInternal::Token();
 

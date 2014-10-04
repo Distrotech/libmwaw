@@ -130,7 +130,7 @@ struct HanMacWrdKZone {
   friend std::ostream &operator<<(std::ostream &o, HanMacWrdKZone const &zone);
 
   //! returns the debug file
-  libmwaw::DebugFile &ascii()
+  libmwaw::DebugFile &ascii() const
   {
     return *m_asciiFile;
   }

@@ -2818,7 +2818,6 @@ void ClarisWksDocument::cleanZonesGraph()
     int id=iter->first;
     shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     if (!zone || zone->m_fathersList.size()<2) continue;
-    std::set<int>::const_iterator i;
     it=zone->m_fathersList.begin();
     int fId=*(it++);
     int fId1=*it;
