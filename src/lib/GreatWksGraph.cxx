@@ -1261,6 +1261,11 @@ bool GreatWksGraph::readPageFrames()
   f.str("");
   f << "GFrame[roots]: N=" << nRoots << ",roots=[";
   for (int i=0; i < nRoots; ++i) {
+    if (input->tell()+2>zoneEnd) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: can not read some roots\n"));
+      f << "###";
+      break;
+    }
     int val = (int) input->readLong(2);
     if (val==0) {
       f << "_,";

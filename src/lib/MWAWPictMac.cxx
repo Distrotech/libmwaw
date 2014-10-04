@@ -443,7 +443,7 @@ struct ColorTable {
     input.seek(4, librevenge::RVNG_SEEK_CUR); // ignore seed
     m_flags = (int) input.readULong(2);
     int n = (int) input.readLong(2)+1;
-    if (n < 0) return false;
+    if (n < 0 || !input.checkPosition(actPos+8+8*n)) return false;
     m_colors.resize(size_t(n));
     for (size_t i = 0; i < size_t(n); i++) {
       input.readULong(2); // indexId: ignored

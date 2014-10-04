@@ -235,7 +235,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   MacDrawParser *parser=dynamic_cast<MacDrawParser *>(m_parser);
-  if (!m_parser) {
+  if (!parser) {
     MWAW_DEBUG_MSG(("MacDrawParserInternal::SubDocument::parse: no parser\n"));
     return;
   }

@@ -1171,7 +1171,6 @@ bool RagTime5Parser::unpackZone(RagTime5ParserInternal::Zone &zone, MWAWEntry co
   }
   if (!ok) {
     MWAW_DEBUG_MSG(("RagTime5Parser::unpackZone: stop with mapPos=%ld and totalSize=%ld/%ld\n", long(mapPos), long(data.size()), long(sz)));
-    return false;
   }
   input->setReadInverted(actEndian);
   return ok;

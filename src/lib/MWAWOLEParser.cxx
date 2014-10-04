@@ -652,9 +652,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     long sz = ip->readLong(4);
     bool waitNumber = sz == -1;
     if (waitNumber || sz == -2) sz = 4;
-    if (sz < 0 || ip->seek(actPos+4+sz,librevenge::RVNG_SEEK_SET) != 0 ||
-        ip->tell() != actPos+4+sz) return false;
-    ip->seek(actPos+4,librevenge::RVNG_SEEK_SET);
+    if (sz < 0 || !ip->checkPosition(actPos+4+sz)) return false;
 
     std::string st;
     if (waitNumber) {

@@ -180,7 +180,10 @@ unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &num
 #if 0
     MWAW_DEBUG_MSG(("FileStream::read called with %ld[%ld]: read %ld bytes\n", m_offset, numBytes, numToRead));
 #endif
-    fseek(m_file, m_offset, SEEK_SET);
+    if (fseek(m_file, m_offset, SEEK_SET)==-1) {
+      MWAW_DEBUG_MSG(("FileStream::seek error when going to offset position\n"));
+      return 0;
+    }
     size_t nRead = fread(&(m_buffer[0]), 1, numToRead, m_file);
     if (nRead != numToRead) {
       MWAW_DEBUG_MSG(("FileStream::read get error when reading data\n"));

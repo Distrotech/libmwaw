@@ -2463,13 +2463,11 @@ bool MacWrtProStructures::readStructB()
 
   // CHECKME: find N=2 only one time ( and across a checksum zone ...)
   long endPos = pos+N*10+6;
-  m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  if (!m_input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("MacWrtProStructures::readZonB: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   int val = (int) m_input->readULong(2);
   if (val != 0x2af8)
     f << "f0=" << std::hex << val << std::dec << ",";

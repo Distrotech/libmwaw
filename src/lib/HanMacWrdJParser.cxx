@@ -438,7 +438,7 @@ bool HanMacWrdJParser::checkEntry(MWAWEntry &entry)
     "TextZone", "Picture", "Table", "GraphData", "GroupData",
     "ZoneA", "ZoneB", "Section", "FtnDef", "ZoneE", "FontsName"
   };
-  if (type <= 15)
+  if (type>=0 && type <= 15)
     entry.setName(what[type]);
   else {
     std::stringstream s;

@@ -360,8 +360,7 @@ bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentatio
     long pos = input->tell();
     long N = (long) input->readULong(4);
     long endPos = pos+16*N+4;
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    if (N < 0 || long(input->tell()) != endPos) {
+    if (N < 0 || !input->checkPosition(endPos)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       MWAW_DEBUG_MSG(("ClarisWksPresentation::readZone1: zone seems too short\n"));
       return false;
@@ -371,7 +370,6 @@ bool ClarisWksPresentation::readZone1(ClarisWksPresentationInternal::Presentatio
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
 
-    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
     for (int i = 0; i < N; i++) {
       f.str("");
       f << "PresentationStr" << st << "-" << i << ":";
