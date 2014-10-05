@@ -2424,13 +2424,11 @@ bool MacWrtProStructures::readString(MWAWInputStreamPtr input, std::string &res)
     MWAW_DEBUG_MSG(("MacWrtProStructures::readString: odd value for size\n"));
     return false;
   }
-  input->seek(pos+sz+2, librevenge::RVNG_SEEK_SET);
-  if (long(input->tell())!=pos+sz+2) {
+  if (!input->checkPosition(pos+sz+2)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MacWrtProStructures::readString: file is too short\n"));
     return false;
   }
-  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   for (int i= 0; i < sz; ++i) {
     char c = (char) input->readULong(1);
     if (c) {

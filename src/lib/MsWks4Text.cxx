@@ -1044,7 +1044,13 @@ bool MsWks4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
   if (int(len)+10 != entry.length())
     f << ", ###size=" << std::hex << len+10 << std::dec ;
   for (int i = 0; i < 3; i++) f << ", " << input->readLong(2); // -1/4/0
-
+  if (debPos+10+2*n_fonts>endPos) {
+    MWAW_DEBUG_MSG(("MsWks4Text::readFontNames: the number of font seems bad\n"));
+    f << "###";
+    ascFile.addPos(debPos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
   f << ", defPos=[" << std::hex; // FIXME: used it
   for (int i = 0; i < int(n_fonts); i++)
     f << debPos+10+input->readLong(2) << ", ";

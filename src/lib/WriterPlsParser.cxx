@@ -1761,12 +1761,10 @@ bool WriterPlsParser::readParagraphData(WriterPlsParserInternal::ParagraphInfo c
   int length2 = (int) input->readLong(2);
   data.m_endPos = pos+4+textLength+length2;
 
-  input->seek(data.m_endPos, librevenge::RVNG_SEEK_SET);
-  if (textLength < 0 || length2 < 0 || input->tell() != data.m_endPos) {
+  if (textLength < 0 || length2 < 0 || !input->checkPosition(data.m_endPos)) {
     MWAW_DEBUG_MSG(("WriterPlsParser::readParagraphData:  paragraph is too short\n"));
     return false;
   }
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   if (textLength) {
     std::string &text = data.m_text;
     for (int i = 0; i < textLength; i++) {
@@ -1799,9 +1797,12 @@ bool WriterPlsParser::readParagraphData(WriterPlsParserInternal::ParagraphInfo c
   std::vector<WriterPlsParserInternal::Font> &fonts = data.m_fonts;
   if (hasFonts) {
     long actPos = input->tell();
-    if (!readFonts(data.m_numData[0], data.m_type, fonts)) {
+    if (data.m_numData[0]<0 || !input->checkPosition(actPos+data.m_numData[0]*16)) {
+      MWAW_DEBUG_MSG(("WriterPlsParser::readParagraph: pb reading the number of fonts\n"));
+      f << "###numFonts=" << data.m_numData[0] << ",";
+    }
+    else if (!readFonts(data.m_numData[0], data.m_type, fonts)) {
       MWAW_DEBUG_MSG(("WriterPlsParser::readParagraph: pb with the fonts\n"));
-      fonts.resize(0);
       input->seek(actPos+data.m_numData[0]*16, librevenge::RVNG_SEEK_SET);
     }
   }
@@ -1841,6 +1842,10 @@ bool WriterPlsParser::readFonts
   int actPos = 0;
   libmwaw::DebugStream f;
   for (int i = 0; i < nFonts; i++) {
+    if (!input->checkPosition(input->tell()+16)) {
+      MWAW_DEBUG_MSG(("WriterPlsParser::readFonts: the zone seems too short\n"));
+      break;
+    }
     WriterPlsParserInternal::Font fInfo;
     f.str("");
     int val = (int) input->readLong(2); // 65|315

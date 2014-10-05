@@ -1630,13 +1630,14 @@ protected:
 
     long actualPos = input.tell();
     res = "";
+    if (!input.checkPosition(actualPos+sz)) {
+      MWAW_DEBUG_MSG(("Pict1:OpCode: readText: find EOF\n"));
+      return false;
+    }
+
     for (int i = 0; i < sz; i++) {
       char c = (char) input.readULong(1);
       res += c;
-    }
-    if (actualPos+sz != input.tell()) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode: readText: find EOF\n"));
-      return false;
     }
     return true;
   }

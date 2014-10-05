@@ -1172,7 +1172,8 @@ bool GreatWksGraph::readPageFrames()
     pos = input->tell();
     f.str("");
     f << "GFrame[head]-F" << i+1 << ":";
-    shared_ptr<GreatWksGraphInternal::Frame> zone=readFrameHeader();
+    shared_ptr<GreatWksGraphInternal::Frame> zone;
+    if (pos+0x36<=zoneEnd) zone=readFrameHeader();
     if (!zone) {
       MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: oops graphic detection is probably bad\n"));
       f << "###";
@@ -1207,7 +1208,7 @@ bool GreatWksGraph::readPageFrames()
     f.str("");
     f << "GStyle-S" << i+1 << ":";
     MWAWGraphicStyle style;
-    if (!readStyle(style))
+    if (pos+gDataSize>zoneEnd || !readStyle(style))
       f << "###";
     else
       f << style;

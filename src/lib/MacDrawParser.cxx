@@ -356,7 +356,7 @@ bool MacDrawParser::createZones()
 int MacDrawParser::readObject()
 {
   MWAWInputStreamPtr input = getInput();
-  if (input->isEnd()) return false;
+  if (input->isEnd()) return -1;
   long pos=input->tell();
   libmwaw::DebugStream f;
   f << "Entries(Object):";
