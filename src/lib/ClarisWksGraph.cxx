@@ -1517,13 +1517,23 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
     if (val==1) f<< "show[axis],";
     else if (val) f << "#show[axis]=" << val << ",";
     int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
+    if (angle[1]>360) {
+      int numLoop=int(angle[1]/360)-1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[1] > 360) {
+        angle[0]-=360;
+        angle[1]-=360;
+      }
     }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
+    if (angle[0] < -360) {
+      int numLoop=int(angle[0]/360)+1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[0] < -360) {
+        angle[0]+=360;
+        angle[1]+=360;
+      }
     }
     Vec2f center = box.center();
     Vec2f axis = 0.5*Vec2f(box.size());

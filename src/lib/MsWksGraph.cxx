@@ -1490,6 +1490,8 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     else if (val) f << "#smooth=" << val << ",";
     int numPt = (int) input->readLong(2);
     long ptr = (long) input->readULong(4);
+    if (!input->checkPosition(input->tell()+8*numPt))
+      return -1;
     f << std::hex << "ptr2=" << ptr << std::dec << ",";
     std::vector<Vec2f> vertices;
     for (int i = 0; i < numPt; i++) {

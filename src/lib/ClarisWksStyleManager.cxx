@@ -2136,6 +2136,10 @@ bool ClarisWksStyleManager::readLookUp(int N, int fSz)
   m_state->m_lookupMap.clear();
 
   if (fSz == 0 || N== 0) return true;
+  if (fSz < 2) {
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readLookUp: the field size seems bad\n"));
+    return false;
+  }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -2429,6 +2433,10 @@ bool ClarisWksStyleManager::readStyleFonts(int N, int fSz)
 bool ClarisWksStyleManager::readStyleNames(int N, int fSz)
 {
   if (fSz == 0 || N== 0) return true;
+  if (fSz < 2) {
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readStyleNames: the field size seems bad\n"));
+    return false;
+  }
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;

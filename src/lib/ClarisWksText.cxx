@@ -849,8 +849,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
     zEntry.setBegin(pos);
     zEntry.setLength(sz+4);
 
-    input->seek(zEntry.end(), librevenge::RVNG_SEEK_SET);
-    if (long(input->tell()) !=  zEntry.end()) {
+    if (!input->checkPosition(zEntry.end())) {
       MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: entry for %d zone is too short\n", z));
       ascFile.addPos(pos);
       ascFile.addNote("###");

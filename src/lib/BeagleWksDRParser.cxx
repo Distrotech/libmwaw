@@ -1027,13 +1027,23 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
   case 5: {
     f << "angle=" << dim[0] << "x" << dim[0]+dim[1] << ",";
     int angle[2] = { 90-dim[0]-dim[1], 90-dim[0] };
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
+    if (angle[1]>360) {
+      int numLoop=int(angle[1]/360)-1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[1] > 360) {
+        angle[0]-=360;
+        angle[1]-=360;
+      }
     }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
+    if (angle[0] < -360) {
+      int numLoop=int(angle[0]/360)+1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[0] < -360) {
+        angle[0]+=360;
+        angle[1]+=360;
+      }
     }
     Box2f box=shape.m_box;
     Vec2f center = box.center();
