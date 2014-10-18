@@ -19,6 +19,9 @@
 * instead of those above.
 */
 
+#ifndef MWAWSTRINGSTREAM_HXX
+#define MWAWSTRINGSTREAM_HXX
+
 #include <librevenge-stream/librevenge-stream.h>
 
 class MWAWStringStreamPrivate;
@@ -82,5 +85,7 @@ private:
   MWAWStringStream(const MWAWStringStream &); // copy is not allowed
   MWAWStringStream &operator=(const MWAWStringStream &); // assignment is not allowed
 };
+
+#endif
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
