@@ -467,7 +467,7 @@ bool File::readFileInformation()
     checkFInfoType("curs","CursorAnimator") || checkFInfoType("CursorAnimator");
   }
   else if (m_fInfoCreator=="dPro") {
-    checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");
+    checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("dLib","MacDraw Pro(slide)") || checkFInfoType("MacDraw Pro");
   }
   else if (m_fInfoCreator=="eDcR") {
     checkFInfoType("eDoc","eDOC") || checkFInfoType("eDOC");
@@ -599,6 +599,10 @@ bool File::readDataInformation()
   }
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     m_dataResult.push_back("MacDraw Pro");
+    return true;
+  }
+  if (val[0]==0x644c && val[1]==0x6962 && val[2]==0x4432) { // dLibD2
+    m_dataResult.push_back("MacDraw Pro(slide)");
     return true;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {

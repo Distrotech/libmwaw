@@ -19,8 +19,8 @@
 * instead of those above.
 */
 
-#ifndef MWAWSTRINGSTREAM_HXX
-#define MWAWSTRINGSTREAM_HXX
+#ifndef MWAW_STRING_STREAM_HXX
+#define MWAW_STRING_STREAM_HXX
 
 #include <librevenge-stream/librevenge-stream.h>
 
@@ -81,7 +81,8 @@ public:
   librevenge::RVNGInputStream *getSubStreamById(unsigned);
 
 private:
-  MWAWStringStreamPrivate *d;
+  /// the string stream data
+  MWAWStringStreamPrivate *m_data;
   MWAWStringStream(const MWAWStringStream &); // copy is not allowed
   MWAWStringStream &operator=(const MWAWStringStream &); // assignment is not allowed
 };
