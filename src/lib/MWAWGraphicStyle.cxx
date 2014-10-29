@@ -281,15 +281,15 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
       list.insert("librevenge:end-opacity", m_gradientStopList[1-first].m_opacity, librevenge::RVNG_PERCENT);
     }
     else {
+      librevenge::RVNGPropertyListVector gradient;
       for (size_t s=0; s < m_gradientStopList.size(); ++s) {
-        librevenge::RVNGPropertyListVector gradient;
         librevenge::RVNGPropertyList grad;
         grad.insert("svg:offset", m_gradientStopList[s].m_offset, librevenge::RVNG_PERCENT);
         grad.insert("svg:stop-color", m_gradientStopList[s].m_color.str().c_str());
         grad.insert("svg:stop-opacity", m_gradientStopList[s].m_opacity, librevenge::RVNG_PERCENT);
         gradient.append(grad);
-        list.insert("svg:linearGradient", gradient);
       }
+      list.insert("svg:linearGradient", gradient);
     }
     list.insert("draw:angle", m_gradientAngle, librevenge::RVNG_GENERIC);
     list.insert("draw:border", m_gradientBorder, librevenge::RVNG_PERCENT);

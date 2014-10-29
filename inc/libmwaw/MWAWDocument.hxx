@@ -118,7 +118,7 @@ public:
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
     MWAW_T_MACDRAFT /** MacDraft: TODO*/,
     MWAW_T_MACDRAW /** MacDraw: v0-v1 */,
-    MWAW_T_MACDRAWPRO /** MacDraw II: v1.0-v1.1, MacDraw Pro: TODO*/,
+    MWAW_T_MACDRAWPRO /** MacDraw II: v1.0-v1.1, MacDraw Pro: v1*/,
     MWAW_T_MACPAINT /** MacPaint: v1-v2 */,
     MWAW_T_MARINERWRITE /** Mariner Write (only v1.6-v3.5 Mac Classic) */,
     MWAW_T_MINDWRITE /** MindWrite */,

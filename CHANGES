@@ -1,5 +1,10 @@
 CHANGES:
 
+29/10/2014:
+- MacDraw Pro: add a parser for MacDraw Pro v1
+
+-------- version 0.3.4 (start)  -------------
+
 2/10/2014:
 - RagTime v5-v6: begin to find the main structures in a document, to be continued...
 - fix some coverity problems.

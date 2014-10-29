@@ -119,10 +119,14 @@ protected:
   bool readRotationInObjectData(MacDrawProParserInternal::Shape &shape, long endPos, std::string &extra);
   //! tries to update the basic geometric data
   bool updateGeometryShape(MacDrawProParserInternal::Shape &shape, float cornerWidth);
+  //! tries to read a bitmap data
+  bool readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
+  //! tries to read a text object data in MacDraw II file
+  bool readTextII(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
+  //! tries to read a text object data in MacDraw pro file
+  bool readTextPro(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
   //! tries to read a basic geometric object data ( line, rect, arc,... )
   bool readGeometryShapeData(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
-  //! tries to read a bitmpa data ( bitmap,... )
-  bool readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEntry const &entry);
 
   // send functions
 

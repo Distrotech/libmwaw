@@ -38,6 +38,7 @@
 #include <stdio.h>
 #endif
 
+#include <cmath>
 #include <map>
 #include <ostream>
 #include <string>
@@ -178,6 +179,33 @@ struct MWAWColor {
   {
     m_value = argb;
     return *this;
+  }
+  //! return a color from a cmyk color ( basic)
+  static MWAWColor colorFromCMYK(unsigned char c, unsigned char m,  unsigned char y, unsigned char k)
+  {
+    double w=1.-double(k)/255.;
+    return MWAWColor
+           ((unsigned char)(255 * (1-double(c)/255) * w),
+            (unsigned char)(255 * (1-double(m)/255) * w),
+            (unsigned char)(255 * (1-double(y)/255) * w)
+           );
+  }
+  //! return a color from a hsl color (basic)
+  static MWAWColor colorFromHSL(unsigned char H, unsigned char S,  unsigned char L)
+  {
+    double c=(1-((L>=128) ? (2*double(L)-255) : (255-2*double(L)))/255)*
+             double(S)/255;
+    double tmp=std::fmod((double(H)*6/255),2)-1;
+    double x=c*(1-(tmp>0 ? tmp : -tmp));
+    unsigned char C=(unsigned char)(255*c);
+    unsigned char M=(unsigned char)(double(L)-255*c/2);
+    unsigned char X=(unsigned char)(255*x);
+    if (H<=42) return MWAWColor((unsigned char)(M+C),(unsigned char)(M+X),(unsigned char)M);
+    if (H<=85) return MWAWColor((unsigned char)(M+X),(unsigned char)(M+C),(unsigned char)M);
+    if (H<=127) return MWAWColor((unsigned char)M,(unsigned char)(M+C),(unsigned char)(M+X));
+    if (H<=170) return MWAWColor((unsigned char)M,(unsigned char)(M+X),(unsigned char)(M+C));
+    if (H<=212) return MWAWColor((unsigned char)(M+X),(unsigned char)M,(unsigned char)(M+C));
+    return MWAWColor((unsigned char)(M+C),(unsigned char)(M),(unsigned char)(M+X));
   }
   //! return the back color
   static MWAWColor black()

@@ -60,16 +60,83 @@
 /** Internal: the structures of a MacDrawProStyleManager */
 namespace MacDrawProStyleManagerInternal
 {
+// gradient of MacDrawProStyleManagerInternal
+struct Gradient {
+  //! constructor
+  Gradient() : m_type(MWAWGraphicStyle::G_None), m_stopList(), m_angle(0), m_percentCenter(0.5f,0.5f), m_extra("")
+  {
+  }
+  //! returns true if the gradient is defined
+  bool hasGradient() const
+  {
+    return m_type != MWAWGraphicStyle::G_None && (int) m_stopList.size() >= 2;
+  }
+  //! a print operator
+  friend std::ostream &operator<<(std::ostream &o, Gradient const &grad);
+
+  //! the gradient type
+  MWAWGraphicStyle::GradientType m_type;
+  //! the list of gradient limits
+  std::vector<MWAWGraphicStyle::GradientStop> m_stopList;
+  //! the gradient angle
+  float m_angle;
+  //! the gradient center
+  Vec2f m_percentCenter;
+  //! extra data
+  std::string m_extra;
+};
+
+std::ostream &operator<<(std::ostream &o, Gradient const &grad)
+{
+  if (!grad.hasGradient()) {
+    o << "none," << grad.m_extra;
+    return o;
+  }
+  switch (grad.m_type) {
+  case MWAWGraphicStyle::G_Axial:
+    o << "axial,";
+    break;
+  case MWAWGraphicStyle::G_Linear:
+    o << "linear,";
+    break;
+  case MWAWGraphicStyle::G_Radial:
+    o << "radial,";
+    break;
+  case MWAWGraphicStyle::G_Rectangular:
+    o << "rectangular,";
+    break;
+  case MWAWGraphicStyle::G_Square:
+    o << "square,";
+    break;
+  case MWAWGraphicStyle::G_Ellipsoid:
+    o << "ellipsoid,";
+    break;
+  case MWAWGraphicStyle::G_None:
+  default:
+    break;
+  }
+  if (grad.m_angle>0 || grad.m_angle<0) o << "angle=" << grad.m_angle << ",";
+  if (grad.m_stopList.size() >= 2) {
+    o << "stops=[";
+    for (size_t s=0; s < grad.m_stopList.size(); ++s)
+      o << "[" << grad.m_stopList[s] << "],";
+    o << "],";
+  }
+  if (grad.m_percentCenter != Vec2f(0.5f,0.5f)) o << "center=" << grad.m_percentCenter << ",";
+  o << grad.m_extra;
+  return o;
+}
 ////////////////////////////////////////
 //! Internal: the state of a MacDrawProStyleManager
 struct State {
   //! constructor
   State() : m_documentSize(),
     m_numColors(8), m_numBWPatterns(0), m_numColorPatterns(0), m_numPatternsInTool(0),
-    m_colorList(), m_dashList(), m_fontList(), m_penSizeList(),
-    m_BWPatternList(), m_colorPatternList()
+    m_colorList(), m_displayColorList(), m_dashList(),
+    m_fontList(), m_paragraphList(), m_penSizeList(),
+    m_BWPatternList(), m_colorPatternList(), m_gradientList()
   {
-    for (int i=0; i<5; ++i) m_numStyleZones[i]=0;
+    for (int i=0; i<6; ++i) m_numStyleZones[i]=0;
   }
   //! init the black and white patterns list
   void initBWPatterns();
@@ -82,7 +149,7 @@ struct State {
   //! the document size (in point)
   Vec2f m_documentSize;
   //! the number of zones
-  int m_numStyleZones[5];
+  int m_numStyleZones[6];
   //! the number of color
   int m_numColors;
   //! the number of BW pattern
@@ -94,10 +161,14 @@ struct State {
 
   //! the color list
   std::vector<MWAWColor> m_colorList;
+  //! the display color list
+  std::vector<MWAWColor> m_displayColorList;
   //! the list of dash
   std::vector< std::vector<float> > m_dashList;
   //! the list of font
   std::vector<MWAWFont> m_fontList;
+  //! the list of paragraph
+  std::vector<MWAWParagraph> m_paragraphList;
   //! the list of pen size
   std::vector<float> m_penSizeList;
 
@@ -105,6 +176,8 @@ struct State {
   std::vector<MWAWGraphicStyle::Pattern> m_BWPatternList;
   //! the color patterns list
   std::vector<MWAWGraphicStyle::Pattern> m_colorPatternList;
+  //! the gradient list
+  std::vector<Gradient> m_gradientList;
 };
 
 void State::initColors()
@@ -225,8 +298,33 @@ MacDrawProStyleManager::~MacDrawProStyleManager()
 ////////////////////////////////////////////////////////////
 bool MacDrawProStyleManager::getColor(int cId, MWAWColor &color) const
 {
-  m_state->initColors();
   if (cId==0) return false; // none
+  if (m_parserState->m_version>0) {
+    int colType=(cId>>14);
+    switch (colType) {
+    case 1:
+      cId&=0x3FFF;
+      m_state->initColors();
+      if (cId<0||cId>=int(m_state->m_colorList.size())) {
+        MWAW_DEBUG_MSG(("MacDrawProStyleManager::getColor: can not find color %d\n", cId));
+        return false;
+      }
+      color=m_state->m_colorList[size_t(cId)];
+      return true;
+    case 2:
+      cId&=0x3FFF;
+      if (cId<0||cId>=int(m_state->m_displayColorList.size())) {
+        MWAW_DEBUG_MSG(("MacDrawProStyleManager::getColor: can not find displayColor %d\n", cId));
+        return false;
+      }
+      color=m_state->m_displayColorList[size_t(cId)];
+      return true;
+    default:
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::getColor: can not find color %d\n", cId));
+      return false;
+    }
+  }
+  m_state->initColors();
   if (cId<=0||cId>int(m_state->m_colorList.size())) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::getColor: can not find color %d\n", cId));
     return false;
@@ -243,6 +341,16 @@ bool MacDrawProStyleManager::getFont(int fId, MWAWFont &font) const
     return false;
   }
   font=m_state->m_fontList[size_t(fId-1)];
+  return true;
+}
+
+bool MacDrawProStyleManager::getParagraph(int fId, MWAWParagraph &para) const
+{
+  if (fId<0||fId>=int(m_state->m_paragraphList.size())) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::getParagraph: can not find paragraph %d\n", fId));
+    return false;
+  }
+  para=m_state->m_paragraphList[size_t(fId)];
   return true;
 }
 
@@ -272,6 +380,19 @@ bool MacDrawProStyleManager::getPattern(int pId, MWAWGraphicStyle::Pattern &patt
 {
   if (pId==0) // no pattern
     return false;
+  if (m_parserState->m_version>0) {
+    if ((pId&0xC000)!=0x8000) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::getPattern: can not find BW pattern %d\n", pId));
+      return false;
+    }
+    pId&=0x7FFF;
+    if (pId<0||pId>=int(m_state->m_BWPatternList.size())) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::getPattern: can not find BW pattern %d\n", pId));
+      return false;
+    }
+    pattern=m_state->m_BWPatternList[size_t(pId)];
+    return true;
+  }
   if (pId&0x4000) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::getPattern: call with uniform color id=%d\n", (pId&0x3FFF)));
     return false;
@@ -296,6 +417,20 @@ bool MacDrawProStyleManager::getPattern(int pId, MWAWGraphicStyle::Pattern &patt
   return true;
 }
 
+bool MacDrawProStyleManager::updateGradient(int gId, MWAWGraphicStyle &style) const
+{
+  if (gId<0 || gId>int(m_state->m_gradientList.size())) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::updateGradient: can not find gradient %d\n", gId));
+    return false;
+  }
+  MacDrawProStyleManagerInternal::Gradient const &gradient=m_state->m_gradientList[size_t(gId)];
+  style.m_gradientType=gradient.m_type;
+  style.m_gradientStopList=gradient.m_stopList;
+  style.m_gradientAngle=gradient.m_angle;
+  style.m_gradientPercentCenter=gradient.m_percentCenter;
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level
@@ -304,6 +439,7 @@ bool MacDrawProStyleManager::getPattern(int pId, MWAWGraphicStyle::Pattern &patt
 bool MacDrawProStyleManager::readHeaderInfoStylePart(std::string &extra)
 {
   extra="";
+  int const vers=m_parserState->m_version;
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos=input->tell();
   if (!input->checkPosition(pos+10+14)) {
@@ -313,13 +449,18 @@ bool MacDrawProStyleManager::readHeaderInfoStylePart(std::string &extra)
 
   libmwaw::DebugStream f;
   f << "NZones=[";
-  for (int i=0; i<5; ++i) {
+  int const NZones=vers==0 ? 5 : 6;
+  for (int i=0; i<NZones; ++i) {
     m_state->m_numStyleZones[i]=(int)input->readULong(2);
     f << m_state->m_numStyleZones[i] << ",";
   }
   f << "],";
+  if (vers>0) {
+    extra=f.str();
+    return true;
+  }
   for (int i=0; i<7; ++i) {
-    int val=(int) input->readULong(2);
+    int val=(int) input->readLong(2);
     if (!val) continue;
     switch (i) {
     case 0:
@@ -347,12 +488,13 @@ bool MacDrawProStyleManager::readHeaderInfoStylePart(std::string &extra)
   return true;
 }
 
-bool MacDrawProStyleManager::readStyles(long const(&sizeZones)[5])
+bool MacDrawProStyleManager::readStyles(long const(&sizeZones)[6])
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   long pos;
-  for (int i=0; i<5; ++i) {
+  int const numZones=m_parserState->m_version==0 ? 5:6;
+  for (int i=0; i<numZones; ++i) {
     if (!sizeZones[i])
       continue;
     pos=input->tell();
@@ -377,6 +519,9 @@ bool MacDrawProStyleManager::readStyles(long const(&sizeZones)[5])
     case 4:
       done=readFontStyles(entry);
       break;
+    case 5:
+      done=readParagraphStyles(entry);
+      break;
     default:
       break;
     }
@@ -397,12 +542,14 @@ bool MacDrawProStyleManager::readFontStyles(MWAWEntry const &entry)
     return false;
   }
 
+  int const vers=m_parserState->m_version;
   MWAWInputStreamPtr input = m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   entry.setParsed(true);
   long pos=entry.begin();
-  if ((entry.length()%18)!=0) {
+  int const expectedSize=vers==0 ? 18 : 22;
+  if ((entry.length()%expectedSize)!=0) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFontStyles: the data size seems bad\n"));
     f << "###";
     ascFile.addPos(pos);
@@ -410,7 +557,7 @@ bool MacDrawProStyleManager::readFontStyles(MWAWEntry const &entry)
     input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
-  int N=int(entry.length()/18);
+  int N=int(entry.length()/expectedSize);
   if (N!=m_state->m_numStyleZones[2]) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFontStyles: oops the number of fonts seems odd\n"));
   }
@@ -421,37 +568,77 @@ bool MacDrawProStyleManager::readFontStyles(MWAWEntry const &entry)
     f.str("");
     int val=(int) input->readLong(2);
     if (val!=1) f<<"numUsed=" << val << ",";
-    f << "h[total]=" << input->readLong(2) << ",";
-    int sz=(int) input->readULong(2);
+    float sz;
+    if (vers==0) {
+      f << "h[total]=" << input->readLong(2) << ",";
+      sz=float(input->readULong(2));
+    }
+    else {
+      f << "h[total]=" << double(input->readLong(4))/65536. << ",";
+      sz=float(input->readULong(4))/65536.f;
+    }
     MWAWFont font;
     font.setId((int) input->readULong(2));
     uint32_t flags = 0;
-    int flag=(int) input->readULong(1);
+    int flag=(int) input->readULong(vers==0 ? 1 : 2);
     if (flag&0x1) flags |= MWAWFont::boldBit;
     if (flag&0x2) flags |= MWAWFont::italicBit;
     if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple);
     if (flag&0x8) flags |= MWAWFont::embossBit;
     if (flag&0x10) flags |= MWAWFont::shadowBit;
-    if (flag&0xE0) f << "#fl0=" << std::hex << (flag&0xE0) << std::dec << ",";
+    if (flag&0x100) font.set(MWAWFont::Script::super100());
+    if (flag&0x200) font.set(MWAWFont::Script::sub100());
+    if (flag&0x800) flags |= MWAWFont::smallCapsBit;
+    if (flag&0xF4E0) f << "#fl0=" << std::hex << (flag&0xF4E0) << std::dec << ",";
     font.setFlags(flags);
-    val=(int) input->readULong(1);
-    if (val)
-      f << "fl2=" << val << ",";
-    val=(int) input->readULong(2);
-    font.setSize((float) val);
-    if (sz!=val)
+    if (vers==0) {
+      val=(int) input->readULong(1);
+      if (val)
+        f << "fl2=" << val << ",";
+    }
+    float fSz=(float) input->readULong(2);
+    if (vers==1) fSz/=4.f;
+    font.setSize(fSz);
+    if (sz<fSz || sz>fSz)
       f << "sz2=" << sz << ",";
-    unsigned char col[3];
-    for (int k=0; k < 3; k++)
-      col[k] = (unsigned char)(input->readULong(2)>>8);
-    if (col[0] || col[1] || col[2])
-      font.setColor(MWAWColor(col[0],col[1],col[2]));
+    if (vers==0) {
+      unsigned char col[3];
+      for (int k=0; k < 3; k++)
+        col[k] = (unsigned char)(input->readULong(2)>>8);
+      if (col[0] || col[1] || col[2])
+        font.setColor(MWAWColor(col[0],col[1],col[2]));
+    }
+    else {
+      // now ?, back color
+      for (int i=0; i<2; ++i) {
+        val=(int) input->readULong(2);
+        if (val)
+          f << "f" << i+1 << "=" << std::hex << val << std::dec << ",";
+      }
+      val=(int) input->readULong(2);
+      MWAWColor color;
+      if ((val&0xC000)==0x4000) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFontStyles: find some 4000 color\n"));
+          first=false;
+        }
+        f << "##color=" << std::hex << val << std::dec << ",";
+        font.setColor(MWAWColor::white());
+      }
+      else if (val && getColor(val, color)) {
+        f << "color=" << color << ",";
+        font.setColor(color);
+      }
+      else if (val)
+        f << "###color=" << std::hex << val << std::dec << ",";
+    }
     font.m_extra=f.str();
     m_state->m_fontList.push_back(font);
 
     f.str("");
     f << "Entries(FontStyle):F" << j+1 << ":";
-    f << font.getDebugString(m_parserState->m_fontConverter) << font.m_extra;
+    f << font.getDebugString(m_parserState->m_fontConverter);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -472,6 +659,7 @@ bool MacDrawProStyleManager::readArrows(MWAWEntry const &entry, bool inRsrc)
   if (inRsrc && entry.id()!=256) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readArrows: the entry id is odd\n"));
   }
+  int const vers=m_parserState->m_version;
   MWAWInputStreamPtr input = inRsrc ? m_parserState->m_rsrcParser->getInput() : m_parserState->m_input;
   libmwaw::DebugFile &ascFile = inRsrc ? m_parserState->m_rsrcParser->ascii() : m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -496,7 +684,7 @@ bool MacDrawProStyleManager::readArrows(MWAWEntry const &entry, bool inRsrc)
     ascFile.addNote(f.str().c_str());
   }
   int N=int(entry.length()/expectedSz);
-  if (!inRsrc && N!=m_state->m_numStyleZones[3]) {
+  if (!inRsrc && N!=m_state->m_numStyleZones[vers==0 ? 3 : 4]) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readArrows: oops the number of arrows seems odd\n"));
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -535,6 +723,7 @@ bool MacDrawProStyleManager::readDashs(MWAWEntry const &entry, bool inRsrc)
   if (inRsrc && entry.id()!=256) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readDashs: the entry id is odd\n"));
   }
+  int const vers=m_parserState->m_version;
   MWAWInputStreamPtr input = inRsrc ? m_parserState->m_rsrcParser->getInput() : m_parserState->m_input;
   libmwaw::DebugFile &ascFile = inRsrc ? m_parserState->m_rsrcParser->ascii() : m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
@@ -560,7 +749,7 @@ bool MacDrawProStyleManager::readDashs(MWAWEntry const &entry, bool inRsrc)
     ascFile.addNote(f.str().c_str());
   }
   int N=int(entry.length()/expectedSz);
-  if (!inRsrc && N!=m_state->m_numStyleZones[4]) {
+  if (!inRsrc && N!=m_state->m_numStyleZones[vers==0 ? 4 : 5]) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readDashs: oops the number of dashs seems odd\n"));
   }
   input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -578,6 +767,8 @@ bool MacDrawProStyleManager::readDashs(MWAWEntry const &entry, bool inRsrc)
     std::vector<float> dash;
     for (int k=0; k<3; ++k) {
       long solid=(long) input->readULong(4);
+      if (k==0 && inRsrc && (solid&0x8000)) // frequent
+        solid &= 0x7FFF;
       long empty=(long) input->readULong(4);
       if (!solid && !empty) continue;
       dash.push_back(float(solid)/65536.f);
@@ -725,6 +916,139 @@ bool MacDrawProStyleManager::readRulers(MWAWEntry const &entry, bool inRsrc)
   return true;
 }
 
+bool MacDrawProStyleManager::readParagraphStyles(MWAWEntry const &entry)
+{
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readParagraphStyles: the entry is bad\n"));
+    return false;
+  }
+
+  int const vers=m_parserState->m_version;
+  MWAWInputStreamPtr input = m_parserState->m_input;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  entry.setParsed(true);
+  long pos=entry.begin();
+  int const expectedSize=0xee;
+  if ((entry.length()%expectedSize)!=0 || vers==0) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readParagraphStyles: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  int N=int(entry.length()/expectedSize);
+  if (N!=m_state->m_numStyleZones[3]) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readParagraphStyles: oops the number of paragraphs seems odd\n"));
+  }
+
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int j=0; j<N; ++j) {
+    MWAWParagraph para;
+    pos=input->tell();
+    f.str("");
+    f << "Entries(Paragraph)[P" << j << "]:";
+    int val=(int) input->readLong(2);
+    if (val!=1) f << "numUsed=" << val << ",";
+    val=(int) input->readLong(2);
+    switch (val) {
+    case 0: // left
+      break;
+    case -1:
+      para.m_justify = MWAWParagraph::JustificationRight;
+      f << "right,";
+      break;
+    case 1:
+      para.m_justify = MWAWParagraph::JustificationCenter;
+      f << "center,";
+      break;
+    case 2:
+      para.m_justify = MWAWParagraph::JustificationFull;
+      f << "justified,";
+      break;
+    default:
+      f << "#align=" << val << ",";
+      break;
+    }
+    val=(int) input->readLong(2); // always 0?
+    if (val) f << "f0=" << val << ",";
+    para.m_marginsUnit=librevenge::RVNG_POINT;
+    for (int i=0; i<3; ++i)
+      para.m_margins[i<2 ? 1-i : 2]=double(input->readLong(4))/65536.;
+    para.m_margins[2] = -*para.m_margins[2];// rigth margin is defined from right border
+    double spacings[3];
+    for (int i=0; i<3; ++i)
+      spacings[i]=double(input->readLong(4))/65536.;
+    for (int i=0; i<3; ++i) {
+      val=(int) input->readLong(2);
+      if (spacings[i]>=0 && spacings[i]<=0) continue; // default
+      if (val==-1) { // percent
+        if (i==0)
+          para.setInterline(1.0+spacings[i], librevenge::RVNG_PERCENT);
+        else // assume line with height=12pt
+          para.m_spacings[i]=spacings[i]*12./72.;
+      }
+      else {
+        if (i==0)
+          para.setInterline(spacings[i], librevenge::RVNG_POINT, MWAWParagraph::AtLeast);
+        else
+          para.m_spacings[i]=spacings[i]/72.;
+      }
+    }
+    int nTabs=(int) input->readLong(2);
+    if (nTabs<0||nTabs>20) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::readParagraphStyles: oops the number of tabs seems odd\n"));
+      f << "#nTabs=" << nTabs << ",";
+      nTabs=0;
+    }
+    float leftPos=float(*para.m_margins[1])/72.f;
+    for (int i=0; i<nTabs; ++i) {
+      MWAWTabStop tab;
+      val=(int) input->readLong(2);
+      switch (val) {
+      case 0: // left
+        break;
+      case 1:
+        tab.m_alignment=MWAWTabStop::RIGHT;
+        break;
+      case 2:
+        tab.m_alignment=MWAWTabStop::CENTER;
+        break;
+      case 3:
+        tab.m_alignment=MWAWTabStop::DECIMAL;
+        break;
+      default:
+        f << "#align=" << val << ",";
+        break;
+      }
+      val=(int) input->readLong(2);
+      if (val!=0x20) {
+        int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) val);
+        if (unicode==-1)
+          tab.m_leaderCharacter = uint16_t(val);
+        else
+          tab.m_leaderCharacter = uint16_t(unicode);
+      }
+      tab.m_position=leftPos+double(input->readLong(4))/65536./72;
+      val=(int) input->readLong(2);
+      if (val!=0x2e) {
+        int unicode= m_parserState->m_fontConverter->unicode(3, (unsigned char) val);
+        if (unicode==-1)
+          tab.m_decimalCharacter = uint16_t(val);
+        else
+          tab.m_decimalCharacter = uint16_t(unicode);
+      }
+      para.m_tabs->push_back(tab);
+    }
+    m_state->m_paragraphList.push_back(para);
+    f << para;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+expectedSize, librevenge::RVNG_SEEK_SET);
+  }
+  return true;
+}
 ////////////////////////////////////////////////////////////
 // RSRC zones
 ////////////////////////////////////////////////////////////
@@ -738,19 +1062,13 @@ bool MacDrawProStyleManager::readRSRCZones()
   std::multimap<std::string, MWAWEntry> &entryMap = rsrcParser->getEntriesMap();
   std::multimap<std::string, MWAWEntry>::iterator it;
   // the 256 zones
-  char const *(zNames[]) = {
-    "Dinf", "Pref",
-    "Ctbl", "bawP", "colP", "patR",
-    "Aset", "Dset", "DRul", "Pset", "Rset", "Rst2", "Dvws",
-    "Dstl"
-  };
-  /* find also
-     mmpp: with 0000000000000000000000000000000000000000000000000000000000000000
-     pPrf: with 0001000[01]01000002000000000000
-     sPrf: spelling preference ? ie find in one file and contains strings "Main/User dictionary"...
-     xPrf: with 000000010000000[13]
-   */
   for (int z = 0; z < 14; z++) {
+    char const *(zNames[]) = {
+      "Dinf", "Pref",
+      "Ctbl", "bawP", "colP", "patR",
+      "Aset", "Dset", "DRul", "Pset", "Rset", "Rst2", "Dvws",
+      "Dstl"
+    };
     it = entryMap.lower_bound(zNames[z]);
     while (it != entryMap.end()) {
       if (it->first != zNames[z])
@@ -803,7 +1121,81 @@ bool MacDrawProStyleManager::readRSRCZones()
       }
     }
   }
-  // Ctbl: list of 16*data: numUsed, id, color, pos?
+  /* find also
+     mmpp: with 0000000000000000000000000000000000000000000000000000000000000000
+     pPrf: with 0001000[01]01000002000000000000
+     sPrf: spelling preference ? ie find in one file and contains strings "Main/User dictionary"...
+     xPrf: with 000000010000000[13]
+   */
+
+  if (m_parserState->m_version==0) return true;
+
+  // first read the palette
+  it = entryMap.lower_bound("PaDB");
+  while (it != entryMap.end()) {
+    if (it->first != "PaDB")
+      break;
+    MWAWEntry const &entry = it++->second;
+    readPaletteDef(entry);
+  }
+
+  for (int z = 0; z < 10; z++) {
+    char const *(zProNames[]) = {
+      "Prf1", "Prf2", "Prf3", "Prf4", "Prf5", "Prf6", "Prf8", "Prf9",
+      "UPDL", "Grid"
+    };
+    it = entryMap.lower_bound(zProNames[z]);
+    while (it != entryMap.end()) {
+      if (it->first != zProNames[z])
+        break;
+      MWAWEntry const &entry = it++->second;
+      switch (z) {
+      case 0: // pref 1
+        readPreferences1(entry);
+        break;
+      case 1: // pref 2
+        readPreferencesListBool(entry,6);
+        break;
+      case 2: // pref 3
+        readPreferencesListBool(entry,2);
+        break;
+      case 3: // pref 4 ( always find 0,0,0,1 : so maybe 2 int)
+        readPreferencesListBool(entry,4);
+        break;
+      case 4: // pref 5
+        readPreferencesListBool(entry,6);
+        break;
+      case 5: // pref 6
+        readPreferences6(entry);
+        break;
+      case 6: // pref 8
+        readPreferences8(entry);
+        break;
+      case 7: // pref 9 ( begins by 4 bools, after alway find 0 so...)
+        readPreferencesListBool(entry,20);
+        break;
+      case 8: // unknown: RSRCUPDL
+        readUPDL(entry);
+        break;
+      case 9: // unknown: id stored in RSRCUPDL
+        readGrid(entry);
+        break;
+      default:
+        MWAW_DEBUG_MSG(("MacDrawProStyleManager::readRSRCZones: called with unexpected settings %d\n", z));
+        break;
+      }
+    }
+  }
+
+  // read the menu list
+  for (int z=0; z<4; ++z) {
+    char const *(menuNames[]) = { "fnt", "siz", "sty", "vue" };
+    readListNames(menuNames[z]);
+  }
+
+  /* find also
+     STYI with 00000006000300000000
+     + some clut used to store bitmap colormap */
   return true;
 }
 
@@ -868,6 +1260,7 @@ bool MacDrawProStyleManager::readDocumentInfo(MWAWEntry const &entry)
   if (entry.id()!=256) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readDocumentInfo: the entry id is odd\n"));
   }
+  int vers=m_parserState->m_version;
   MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
   libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
   libmwaw::DebugStream f;
@@ -875,7 +1268,8 @@ bool MacDrawProStyleManager::readDocumentInfo(MWAWEntry const &entry)
   entry.setParsed(true);
 
   long pos=entry.begin();
-  if (entry.length()!=0x58) {
+  int const expectedSize=vers==0 ? 0x58 : 0x72;
+  if (entry.length()!=expectedSize) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readDocumentInfo: the data size seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
@@ -903,6 +1297,15 @@ bool MacDrawProStyleManager::readDocumentInfo(MWAWEntry const &entry)
     else f << "_,";
   }
   f << "],";
+  if (vers) {
+    f << "num2?=[";
+    for (int i=0; i<13; ++i) { // series of small number
+      val=(int) input->readLong(2);
+      if (val) f << val << ",";
+      else f << "_,";
+    }
+    f << "],";
+  }
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
 
@@ -1325,6 +1728,7 @@ bool MacDrawProStyleManager::readViews(MWAWEntry const &entry)
   if (entry.id()!=256) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readViews: the entry id is odd\n"));
   }
+  int const vers=m_parserState->m_version;
   MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
   libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
   libmwaw::DebugStream f;
@@ -1332,7 +1736,8 @@ bool MacDrawProStyleManager::readViews(MWAWEntry const &entry)
   entry.setParsed(true);
 
   long pos=entry.begin();
-  if ((entry.length()%8)!=0) {
+  int const dataSize=vers==0 ? 8 : 12;
+  if ((entry.length()%dataSize)!=0) {
     MWAW_DEBUG_MSG(("MacDrawProStyleManager::readViews: the data size seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
@@ -1341,7 +1746,7 @@ bool MacDrawProStyleManager::readViews(MWAWEntry const &entry)
   }
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
-  int N=int(entry.length()/8);
+  int N=int(entry.length()/dataSize);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   for (int i=0; i<N; ++i) {
     pos=input->tell();
@@ -1351,13 +1756,16 @@ bool MacDrawProStyleManager::readViews(MWAWEntry const &entry)
     if (!val) {
       ascFile.addPos(pos);
       ascFile.addNote("_");
-      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
+      input->seek(pos+dataSize, librevenge::RVNG_SEEK_SET);
       continue;
     }
     if (val!=1) f << "numUsed?=" << val << ",";
     val=(int) input->readULong(2); // 0 or 1
     if (val) f << "f0=" << val << ",";
-    f << "pos=" << input->readLong(2) << "x" << input->readLong(2) << ",";
+    if (vers==0)
+      f << "pos=" << input->readLong(2) << "x" << input->readLong(2) << ",";
+    else
+      f << "pos=" << double(input->readLong(4))/65536 << "x" << double(input->readLong(4))/65536 << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -1406,6 +1814,1167 @@ bool MacDrawProStyleManager::readRSRCDstl(MWAWEntry const &entry)
   f << "],";
   if (input->tell()!=entry.end())
     ascFile.addDelimiter(input->tell(),'|');
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+// MacDraw Pro specific resources
+bool MacDrawProStyleManager::readPaletteDef(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteDef: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()<0 || entry.id()>3) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteDef: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  std::multimap<std::string, MWAWEntry> &entryMap = m_parserState->m_rsrcParser->getEntriesMap();
+  std::multimap<std::string, MWAWEntry>::iterator it;
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+
+  f << "Entries(PaletteDef)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+  long pos=entry.begin();
+  if (entry.length()!=80) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteDef: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int id=(int) input->readULong(2);
+  if (id!=entry.id()) f << "#id=" << id << ",";
+  int val=(int) input->readLong(2); // always 0
+  if (val) f << "f0=" << val << ",";
+  for (int i=0; i<2; ++i) { // almost always 0 but can be big numbers
+    val=(int) input->readULong(4);
+    if (val)
+      f << "ID" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  id=(int) input->readULong(2);
+  if (id!=entry.id()) f << "#id2=" << id << ",";
+  // first the list
+  std::string name("");
+  for (int i=0; i<4; ++i) name+=(char) input->readULong(1);
+  int dataSz=(int) input->readULong(2);
+  f << name << ",";
+  if (!name.empty()) {
+    it=entryMap.find(name);
+    if (it!=entryMap.end()) {
+      long actPos=input->tell();
+      readPaletteData(it->second, dataSz);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
+    }
+    // it==entry.map is ok has default palette are not stored
+  }
+  for (int i=0; i<6; ++i) { // f3=f5=id, other 0
+    val=(int) input->readULong(2);
+    if (i==3 || i==5) {
+      if (val==id) continue;
+    }
+    else if (!val) continue;
+    f << "f" << i+1 << "=" << val << ",";
+  }
+  val=(int) input->readULong(4); // another big number
+  if (val)
+    f << "ID2=" << std::hex << val << std::dec << ",";
+  for (int i=0; i<6; ++i) { // always 0?
+    val=(int) input->readULong(2);
+    if (val) f << "f" << i+7 << "=" << val << ",";
+  }
+
+  // now the map
+  name.clear();
+  for (int i=0; i<4; ++i) name+=(char) input->readULong(1);
+  dataSz=(int) input->readULong(2);
+  int N=(int) input->readULong(2);
+  f << name << "[" << N << "],";
+  if (!name.empty()) {
+    it=entryMap.find(name);
+    if (it!=entryMap.end()) {
+      long actPos=input->tell();
+      readPaletteMap(it->second, N, dataSz);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
+    }
+    else if (N) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteDef: can not find the %s map\n", name.c_str()));
+      f << "###";
+    }
+  }
+
+  for (int i=0; i<2; ++i) { // g1=id, other 0
+    val=(int) input->readULong(2);
+    if (i==1) {
+      if (val==id) continue;
+    }
+    else if (!val) continue;
+    f << "g" << i << "=" << val << ",";
+  }
+  // the names list
+  name.clear();
+  for (int i=0; i<4; ++i) name+=(char) input->readULong(1);
+  f << name << ",";
+  if (!name.empty()) {
+    it=entryMap.find(name);
+    if (it!=entryMap.end()) {
+      long actPos=input->tell();
+      readListNames(it->second);
+      input->seek(actPos, librevenge::RVNG_SEEK_SET);
+    }
+    // ok if default
+  }
+  for (int i=0; i<2; ++i) { // id=0, g2-3=[b,e], id=1-2, g2-3=[e,20], id=3, g2-3=[10,20]
+    val=(int) input->readULong(2);
+    if (val)
+      f << "g" << i+2 << "=" << val << ",";
+  }
+  val=(int) input->readULong(4); // another big number
+  if (val)
+    f << "ID3=" << std::hex << val << std::dec << ",";
+  for (int i=0; i<4; ++i) { // always 0
+    val=(int) input->readULong(2);
+    if (val)
+      f << "g" << i+5 << "=" << val << ",";
+  }
+
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProStyleManager::readPaletteData(MWAWEntry const &entry, int dataSz)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteData: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id()!=128) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteData: the entry id is odd\n"));
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  entry.setParsed(true);
+
+  if (entry.type()=="CoEL")
+    return readColorPalette(entry, dataSz);
+  if (entry.type()=="PaEL")
+    return readPatternPalette(entry, dataSz);
+  if (entry.type()=="RaEL")
+    return readGradientPalette(entry, dataSz);
+  if (entry.type()=="FaEL")
+    return readFAPalette(entry, dataSz);
+
+  long pos=entry.begin();
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.type() << entry.id() << "]:";
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (!dataSz || entry.length()!=2+dataSz*N) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteData: can not compute the number of entry\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteData: find some unknown entry %s\n", entry.type().c_str()));
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readPaletteMap(MWAWEntry const &entry, int N, int dataSz)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteMap: the entry is bad\n"));
+    return false;
+  }
+  if (entry.id()<0 || entry.id()>3) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteMap: the entry id is odd\n"));
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  if (entry.length()==10) { // no data
+    ascFile.addPos(pos-4);
+    ascFile.addNote("_");
+    return true;
+  }
+
+  if (entry.type()=="DPCo")
+    return readColorMap(entry, N, dataSz);
+  if (entry.type()=="DPPa")
+    return readPatternMap(entry, N, dataSz);
+  if (entry.type()=="DPRa")
+    return readGradientMap(entry, N, dataSz);
+  if (entry.type()=="DPFa")
+    return readFAMap(entry, N, dataSz);
+
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.type() << entry.id() << "]:";
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (!dataSz || entry.length()!=dataSz*N) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteMap: can not compute the number of entry\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPaletteMap: find some unknown entry %s\n", entry.type().c_str()));
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << entry.type() << "-" << i << ":";
+    input->seek(pos+dataSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readColorMap(MWAWEntry const &entry, int N, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorMap: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=0) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorMap: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(ColorMap)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  if (fieldSize < 20 || entry.length() != N*fieldSize) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorMap: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  m_state->m_displayColorList.clear();
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "ColorMap-" << i << "]:";
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val!=1) f << "numUsed=" << val << ",";
+    for (int j=0; j<2; ++j) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j+1 << "=" << val << ",";
+    }
+    int type=(int) input->readULong(2);
+    unsigned char col[4];
+    for (int j=0; j<4; ++j) col[j]=(unsigned char)(input->readULong(2)>>8);
+    MWAWColor color;
+    switch (type&3) {
+    case 1: // checkme
+      f << "rgb,";
+      color=MWAWColor(col[0],col[1],col[2]);
+      break;
+    case 2:
+      color=MWAWColor::colorFromCMYK(col[0],col[1],col[2],col[3]);
+      break;
+    case 3:
+      color=MWAWColor::colorFromHSL(col[0],col[1],col[2]);
+      break;
+    default:
+      f << "type" << (type&3) << ",";
+      color=MWAWColor(col[0],col[1],col[2]);
+      break;
+    }
+    m_state->m_displayColorList.push_back(color);
+    f << color << ",";
+    val=(int) input->readLong(2);
+    if (val!=-1) f << "id=" << val << ",";
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readColorPalette(MWAWEntry const &entry, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorPalette: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=128) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorPalette: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(ColorList)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (entry.length()!=N*fieldSize+2 || fieldSize<16) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorPalette: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "ColorList-" << i << "]:";
+    for (int j=0; j<2; ++j) {
+      int val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    MWAWColor color;
+    int type=(int) input->readULong(2);
+    unsigned char col[4];
+    for (int j=0; j<4; ++j) col[j]=(unsigned char)(input->readULong(2)>>8);
+    switch (type&3) {
+    case 1: // checkme
+      f << "rgb,";
+      color=MWAWColor(col[0],col[1],col[2]);
+      break;
+    case 2:
+      color=MWAWColor::colorFromCMYK(col[0],col[1],col[2],col[3]);
+      break;
+    case 3:
+      color=MWAWColor::colorFromHSL(col[0],col[1],col[2]);
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorPalette: find unknown color type\n"));
+      f << "type" << (type&3) << ",";
+      color=MWAWColor(col[0],col[1],col[2]);
+      break;
+    }
+    f << color << ",";
+    if (type&0xfc) f << "type[high]=" << (type>>2) << ",";
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readPatternMap(MWAWEntry const &entry, int N, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternMap: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=1) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternMap: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(PatternMap)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+  long pos=entry.begin();
+  if (fieldSize<18 || entry.length()!=N*fieldSize) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternMap: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  m_state->m_BWPatternList.clear();
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "PatternMap-" << i << "]:";
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val!=1) f << "numUsed=" << val << ",";
+    for (int j=0; j<3; ++j) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j+1 << "=" << val << ",";
+    }
+    MWAWGraphicStyle::Pattern pat;
+    pat.m_dim=Vec2i(8,8);
+    pat.m_data.resize(8);
+    pat.m_colors[0]=MWAWColor::white();
+    pat.m_colors[1]=MWAWColor::black();
+    for (size_t j=0; j<8; ++j) pat.m_data[j]=(uint8_t) input->readULong(1);
+    f << pat << ",";
+    m_state->m_BWPatternList.push_back(pat);
+
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readPatternPalette(MWAWEntry const &entry, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternPalette: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=128) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternPalette: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(PatternPalette)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (entry.length()!=N*fieldSize+2 || fieldSize<14) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternPalette: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "PatternPalette-" << i << "]:";
+    for (int j=0; j<2; ++j) {
+      int val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    int type=(int) input->readULong(2); // find 20 for 0 and 1 type
+    if (type) f  << "type=" << std::hex << type << std::dec << ",";
+    f << "pat=[" << std::hex;
+    for (int j=0; j<8; ++j)
+      f << input->readULong(1) << ",";
+    f << std::dec << "],";
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readFAMap(MWAWEntry const &entry, int N, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAMap: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=3) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAMap: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(FAMap)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+  long pos=entry.begin();
+  if (fieldSize<54 || entry.length()!=N*fieldSize) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternMap: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  m_state->m_BWPatternList.clear();
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "FAMap-" << i << "]:";
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val!=1) f << "numUsed=" << val << ",";
+
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readFAPalette(MWAWEntry const &entry, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAPalette: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=128) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAPalette: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(FAList)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (entry.length()!=N*fieldSize+2 || fieldSize<90) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAPalette: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "FAList-" << i << "]:";
+    for (int j=0; j<5; ++j) { // always 0
+      int val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    ascFile.addDelimiter(input->tell(),'|');
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readGradientMap(MWAWEntry const &entry, int N, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientMap: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=2) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientMap: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(GradientMap)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+  long pos=entry.begin();
+  if (fieldSize<56 || entry.length()!=N*56) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientMap: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  m_state->m_gradientList.clear();
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<N; ++i) {
+    MacDrawProStyleManagerInternal::Gradient gradient;
+    pos=input->tell();
+    f.str("");
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val!=1) f << "numUsed=" << val << ",";
+    for (int j=0; j<2; ++j) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j+1 << "=" << val << ",";
+    }
+    int type=(int) input->readLong(2);
+    float decal=0;
+    switch (type) {
+    case 0:
+      gradient.m_type = MWAWGraphicStyle::G_Linear;
+      decal=float(input->readLong(4))/65536.f;
+      if (decal>0.5f-1e-3f && decal < 0.5f+1e-3) {
+        decal=0;
+        gradient.m_type = MWAWGraphicStyle::G_Axial;
+      }
+      f << "decal=" << decal << ",";
+      break;
+    case 1:
+      gradient.m_type = MWAWGraphicStyle::G_Radial;
+    // fall through expected
+    case 2: {
+      if (type==2) gradient.m_type = MWAWGraphicStyle::G_Rectangular;
+      int dim[4]; // square which defined the center rectangle
+      for (int j=0; j<4; ++j) dim[j]=(int) input->readULong(1);
+      gradient.m_percentCenter=Vec2f(float(dim[1]+dim[3])/200.f, float(dim[0]+dim[2])/200.f);
+      break;
+    }
+    default:
+      f << "#type=" << type << ",";
+      break;
+    }
+    ascFile.addDelimiter(input->tell(),'|');
+    input->seek(pos+16, librevenge::RVNG_SEEK_SET);
+    ascFile.addDelimiter(input->tell(),'|');
+    MWAWColor colors[4];
+    for (int j=0; j<4; ++j) {
+      unsigned char col[4];
+      for (int k=0; k<4; ++k) col[k]=(unsigned char)(input->readULong(2)>>8);
+      colors[j]=MWAWColor(col[0],col[1],col[2]);
+    }
+    int which=(int) input->readULong(2);
+    std::vector<MWAWColor> listColor;
+    f << "col=[";
+    if (which&0x8000) listColor.push_back(colors[0]);
+    if (which&0x4000) listColor.push_back(colors[1]);
+    if (which&0x2000) listColor.push_back(colors[2]);
+    if (which&0x1000) listColor.push_back(colors[3]);
+    f << "],";
+    size_t numColors=listColor.size();
+    if ((type==1 || type==2) || decal>1.f-1e-3f) { // reverse color
+      for (size_t j=0; j<numColors/2; ++j) {
+        MWAWColor tmp=listColor[j];
+        listColor[j]=listColor[numColors-1-j];
+        listColor[numColors-1-j]=tmp;
+      }
+      decal=0;
+    }
+    if (decal>1e-3f && numColors>1) {
+      float step=decal/float(numColors-1);
+      float gradPos=0;
+      for (size_t j=numColors-1; j>0; --j, gradPos+=step)
+        gradient.m_stopList.push_back(MWAWGraphicStyle::GradientStop(gradPos, listColor[j]));
+    }
+    float step=numColors>1 ? (1.f-decal)/float(numColors-1) : (1.f-decal);
+    float gradPos=decal;
+    for (size_t j=0; j<numColors; ++j, gradPos+=step)
+      gradient.m_stopList.push_back(MWAWGraphicStyle::GradientStop(gradPos, listColor[j]));
+    gradient.m_angle=90.f+float(which&0xFFF);
+    if (which&0xFFF) f << "angle=" << (which&0xFFF) << ",";
+    for (int j=0; j<3; ++j) { // always 0?
+      val=(int) input->readLong(2);
+      if (val) f << "g" << j << "=" << val << ",";
+    }
+    gradient.m_extra=f.str();
+    m_state->m_gradientList.push_back(gradient);
+
+    f.str("");
+    f << "GradientMap-" << i << "]:" << gradient;
+
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readGradientPalette(MWAWEntry const &entry, int fieldSize)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientPalette: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=128) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientPalette: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(GradientList)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (entry.length()!=N*fieldSize+2 || fieldSize<52) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGradientPalette: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "GradientList-" << i << "]:";
+    for (int j=0; j<2; ++j) { // always 0
+      int val=(int) input->readLong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    int type=(int) input->readLong(2);
+    switch (type) {
+    case 0:
+      f << "directional,";
+      f << "decal=" << float(input->readLong(4))/65536.f << ",";
+      break;
+    case 1:
+      f << "concentric,";
+    // fall through expected
+    case 2: {
+      if (type==2) f << "radial,";
+      int dim[4]; // square which defined the center rectangle
+      for (int j=0; j<4; ++j) dim[j]=(int) input->readULong(1);
+      f << "center=" << float(dim[1]+dim[3])/200.f << "x" << float(dim[0]+dim[2])/200.f << ",";
+      break;
+    }
+    default:
+      f << "#type=" << type << ",";
+      break;
+    }
+    ascFile.addDelimiter(input->tell(),'|');
+    input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+    ascFile.addDelimiter(input->tell(),'|');
+    MWAWColor colors[4];
+    for (int j=0; j<4; ++j) {
+      unsigned char col[4];
+      for (int k=0; k<4; ++k) col[k]=(unsigned char)(input->readULong(2)>>8);
+      colors[j]=MWAWColor::colorFromCMYK(col[0],col[1],col[2],col[3]);
+    }
+    int which=(int) input->readULong(2);
+    f << "col=[";
+    if (which&0x8000) f << colors[0] << ",";
+    if (which&0x4000) f << colors[1] << ",";
+    if (which&0x2000) f << colors[2] << ",";
+    if (which&0x1000) f << colors[3] << ",";
+    f << "],";
+    if (which&0xFFF) f << "angle=" << (which&0xFFF) << ",";
+    for (int j=0; j<3; ++j) { // always 0?
+      int val=(int) input->readLong(2);
+      if (val) f << "g" << j << "=" << val << ",";
+    }
+    input->seek(pos+fieldSize, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readListNames(char const *type)
+{
+  if (!type || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the type is bad\n"));
+    return false;
+  }
+
+  std::string dataDef(type);
+  dataDef+="L";
+
+  std::multimap<std::string, MWAWEntry> &entryMap = m_parserState->m_rsrcParser->getEntriesMap();
+  std::multimap<std::string, MWAWEntry>::iterator it= entryMap.find(dataDef);
+  if (it == entryMap.end())
+    return true;
+  MWAWEntry &entry=it->second;
+  if (!entry.valid()) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=512) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the entry id is odd\n"));
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(LNames)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+
+  if (entry.length()!=8) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+
+  f << "dSz=" << input->readULong(2) << ",";
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  f << "rsId[lAttr]=" << std::hex << input->readULong(4) << ","; // last field in the RSRCMap's mainType
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+
+  std::string dataName(type);
+  dataName+="D";
+  it= entryMap.find(dataName);
+  if (it!=entryMap.end())
+    readListNames(it->second, N);
+  else {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: can not find main type=%s\n", type));
+  }
+
+  return true;
+}
+
+bool MacDrawProStyleManager::readListNames(MWAWEntry const &entry, int N)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()!=128 && entry.id()!=512) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the entry id is odd\n"));
+  }
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  std::string fName(N<0 ? "ListNames" : "LNames");
+  f << "Entries(" << fName << ")[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (N<0) {
+    N=(int) input->readULong(2);
+    f << "N=" << N << ",";
+  }
+  if (entry.length()<2+N) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+
+  long const endPos=entry.end();
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    int dSz=(int) input->readULong(1);
+
+    f.str("");
+    f << fName << "-" << i << ":";
+    if (pos+dSz+1 > endPos) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::readListNames: the data size seems bad\n"));
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    std::string name("");
+    for (int c=0; c<dSz; ++c) name+=(char) input->readULong(1);
+    f << name << ",";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  pos=input->tell();
+  if (pos!=endPos) { // extra space can be reserved here
+    ascFile.addPos(pos);
+    ascFile.addNote("ListNames-end:#");
+  }
+  return true;
+}
+
+bool MacDrawProStyleManager::readUPDL(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readUPDL: the entry is bad\n"));
+    return false;
+  }
+
+  if (entry.id()<0 || entry.id()>3) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readUPDL: the entry id is odd\n"));
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(UPDL)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  if (entry.length()!=0x2e) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readUPDL: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int val=(int) input->readLong(2); // always 1
+  if (val!=1) f << "f0=" << val << ",";
+  val=(int) input->readLong(2);
+  f << "grid[num/resId]=" << val << ",";
+  f << "ID1=" << std::hex << input->readULong(4) << std::dec << ","; // big number
+  // some number that are also present in the grid header
+  for (int i=0; i<8; ++i) {
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i+1 << "=" << val << ",";
+  }
+  // for other iD?
+  for (int i=0; i<3; ++i) {
+    val=(int) input->readULong(4);
+    if (val) f << "ID" << i+1 << "=" << std::hex << val << std::dec << ",";
+  }
+  for (int i=0; i<5; ++i) { // g1=g2=[0|-1], other 0
+    val=(int) input->readLong(2);
+    if (val) f << "g" << i << "=" << val << ",";
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProStyleManager::readGrid(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGrid: the entry is bad\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(Grid)[" << entry.type() << entry.id() << "]:";
+  entry.setParsed(true);
+
+  long pos=entry.begin();
+  if (entry.length()<22) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGrid: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int N=(int) input->readULong(2);
+  f << "N=" << N << ",";
+  if (entry.length()!=N*14+22) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readGrid: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos+22, librevenge::RVNG_SEEK_SET);
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "Grid-" << i << "]:";
+    int val=(int) input->readLong(2); // always 0
+    if (val) f << "f0=" << val << ",";
+    f << "ids=["; // some ids, [i, ?, next]
+    for (int j=0; j<3; ++j) f << input->readULong(2) << ",";
+    f << "],";
+    f << "row=" << input->readLong(2) << ",";
+    f << "x=" << double(input->readLong(4))/65536. << ",";
+
+    input->seek(pos+14, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  return true;
+}
+
+// preferences
+bool MacDrawProStyleManager::readPreferencesListBool(MWAWEntry const &entry, int num)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences2: the entry is bad\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(" << entry.type() << ")[" << entry.id() << "]:";
+  entry.setParsed(true);
+  if (entry.id()!=256) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences2: the entry id is odd\n"));
+  }
+
+  long pos=entry.begin();
+  if (entry.length()!=num) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences2: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<num; ++i) {
+    int val=(int) input->readLong(1);
+    if (val==1) f << "fl" << i << ",";
+    else if (val) f << "fl" << i << "=" << val << ",";
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProStyleManager::readPreferences1(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences1: the entry is bad\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(Prf1)[" << entry.type() << ":" << entry.id() << "]:";
+  entry.setParsed(true);
+  if (entry.id()!=256) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences1: the entry id is odd\n"));
+  }
+
+  long pos=entry.begin();
+  if (entry.length()!=0x2e) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences1: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int val=(int) input->readLong(2); // prefId?
+  if (val!=1) f << "#id[pref]?=" << val << ",";
+  for (int i=0; i<2; ++i) { // always 0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i<4; ++i) { // dim3 often empty
+    int dim[4];
+    for (int j=0; j<4; ++j) dim[j]=(int) input->readLong(2);
+    if (dim[0]||dim[1]||dim[2]||dim[3])
+      f << "dim" << i << "=" << Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2])) << ",";
+  }
+  for (int i=0; i<4; ++i) { // always 0 expected f5=2
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i+2 << "=" << val << ",";
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProStyleManager::readPreferences6(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences6: the entry is bad\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(PrfSpelling)[" << entry.type() << ":" << entry.id() << "]:";
+  entry.setParsed(true);
+  if (entry.id()!=256) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences6: the entry id is odd\n"));
+  }
+
+  long pos=entry.begin();
+  if (entry.length()!=0x92) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences6: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<4; ++i) { // always -1
+    int val=(int) input->readLong(2);
+    if (val!=-1)
+      f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i<2; ++i) { // main and user dictionary name
+    int sSz=(int) input->readULong(1);
+    if (sSz>63) {
+      MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences6: can not read some size string\n"));
+      f << "###sSz" << i << "=" << sSz << ",";
+    }
+    else {
+      std::string name("");
+      for (int c=0; c<sSz; ++c) name+=(char) input->readLong(1);
+      f << name << ",";
+    }
+    input->seek(pos+8+64*(i+1), librevenge::RVNG_SEEK_SET);
+  }
+  for (int i=0; i<5; ++i) {
+    int val=(int) input->readLong(2);
+    static int const(expected[])= {-999,-999,1,0,0};
+    if (val!=expected[i])
+      f << "g" << i << "=" << val << ",";
+  }
+  ascFile.addPos(pos-4);
+  ascFile.addNote(f.str().c_str());
+  return true;
+}
+
+bool MacDrawProStyleManager::readPreferences8(MWAWEntry const &entry)
+{
+  if (!entry.valid() || !m_parserState->m_rsrcParser) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences8: the entry is bad\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = m_parserState->m_rsrcParser->getInput();
+  libmwaw::DebugFile &ascFile = m_parserState->m_rsrcParser->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(Prf8)[" << entry.type() << ":" << entry.id() << "]:";
+  entry.setParsed(true);
+  if (entry.id()!=256) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences8: the entry id is odd\n"));
+  }
+
+  long pos=entry.begin();
+  if (entry.length()!=40) {
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPreferences8: the entry seems too short\n"));
+    f << "###";
+    ascFile.addPos(pos-4);
+    ascFile.addNote(f.str().c_str());
+    return true;
+  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  for (int i=0; i<10; ++i) { // always 1 excepted f0 in 0.5 .. 1.23
+    int val=(int) input->readLong(4);
+    if (val==0x10000) continue;
+    if (val) f << "f" << i << "=" << double(val)/65536. << ",";
+  }
   ascFile.addPos(pos-4);
   ascFile.addNote(f.str().c_str());
   return true;

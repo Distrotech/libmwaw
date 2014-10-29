@@ -411,6 +411,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
+      if (type=="dLib") { // macdraw pro slide/library
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
     }
     else if (creator=="eDcR") {
       if (type=="eDoc") {
@@ -570,11 +574,19 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
+#ifndef DEBUG
+  // we need the resource fork to find the colors, patterns, ... ; so...
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
+  if (val[0]==0x644c && val[1]==0x6962 && val[2]==0x4432) { // dLibD2
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro template file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+    return res;
+  }
+#endif
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDK, 1));

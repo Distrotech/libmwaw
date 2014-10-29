@@ -74,7 +74,7 @@ protected:
   //! tries to read the header info part which corresponds to style data
   bool readHeaderInfoStylePart(std::string &extra);
   //! tries to read the style zone knowings the size and the number of data in each zones
-  bool readStyles(long const(&sizeZones)[5]);
+  bool readStyles(long const(&sizeZones)[6]);
 
   //! tries to return the color corresponding to an id
   bool getColor(int cId, MWAWColor &color) const;
@@ -82,17 +82,22 @@ protected:
   bool getDash(int dId, std::vector<float> &dash) const;
   //! tries to return the font corresponding to an id
   bool getFont(int fId, MWAWFont &font) const;
+  //! tries to return the paragraph corresponding to an id
+  bool getParagraph(int pId, MWAWParagraph &para) const;
   //! tries to return the pattern corresponding to an id
   bool getPattern(int pId, MWAWGraphicStyle::Pattern &pattern) const;
   //! tries to return the pen size corresponding to an id
   bool getPenSize(int pId, float &penSize) const;
-
+  //! tries to update the style gradient
+  bool updateGradient(int gId, MWAWGraphicStyle &style) const;
   //
   // low level
   //
 
-  //! tries to read the font style ( last style in data fork )
+  //! tries to read the font style ( last style in v0 data fork )
   bool readFontStyles(MWAWEntry const &entry);
+  //! tries to read the paragraph style ( last style in v1 data fork )
+  bool readParagraphStyles(MWAWEntry const &entry);
 
   // data fork or rsrc fork
 
@@ -128,6 +133,49 @@ protected:
 
   //! reads the Dstl:256 resource (unknown content)
   bool readRSRCDstl(MWAWEntry const &entry);
+
+  // v1
+  //! try to read a palette definition PaDB:[0-3]
+  bool readPaletteDef(MWAWEntry const &entry);
+  //! try to read a palette map
+  bool readPaletteMap(MWAWEntry const &entry, int N, int dataSz);
+  //! try to read a palette data
+  bool readPaletteData(MWAWEntry const &entry, int dataSz);
+
+  //! try to read the display color map DPCo:0
+  bool readColorMap(MWAWEntry const &entry, int N, int fSz);
+  //! try to read the display pattern DPPa:1
+  bool readPatternMap(MWAWEntry const &entry, int N, int fSz);
+  //! try to read the gradian map DPRa:2
+  bool readGradientMap(MWAWEntry const &entry, int N, int fSz);
+  //! try to read the FA map DPFa:3
+  bool readFAMap(MWAWEntry const &entry, int N, int fSz);
+
+  //! try to read the color palette resource CoEL:128
+  bool readColorPalette(MWAWEntry const &entry, int fSz);
+  //! try to read the FA palette resource FaEL:128
+  bool readFAPalette(MWAWEntry const &entry, int fSz);
+  //! try to read the gradient palette resource RaEL:128
+  bool readGradientPalette(MWAWEntry const &entry, int fSz);
+  //! try to read the pattern palette resource PaEL:128
+  bool readPatternPalette(MWAWEntry const &entry, int fSz);
+  //! try to read a list of names : CoNa:128 color name, FaNa:128 font color name, PaNa:128...
+  bool readListNames(MWAWEntry const &entry, int N=-1);
+  //! try to read a splitted list of names
+  bool readListNames(char const *type);
+
+  //! try to read the first pref resource Prf[23459]:256
+  bool readPreferencesListBool(MWAWEntry const &entry, int num);
+  //! try to read the first pref resource Prf1:256
+  bool readPreferences1(MWAWEntry const &entry);
+  //! try to read the spelling pref resource Prf6:256
+  bool readPreferences6(MWAWEntry const &entry);
+  //! try to read the 8 pref resource Prf8:256
+  bool readPreferences8(MWAWEntry const &entry);
+  //! try to read the UPDL resource, maybe U? Palette Display Layer
+  bool readUPDL(MWAWEntry const &entry);
+  //! try to read the Grid: resource, grid of palette position
+  bool readGrid(MWAWEntry const &entry);
 
   //
   // data
