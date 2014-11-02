@@ -641,7 +641,7 @@ struct Group : public ClarisWksStruct::DSET {
 //! Internal: the state of a ClarisWksGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_groupMap(), m_bitmapMap(), m_frameId(0), m_positionsComputed(false), m_ordering(0) { }
+  State() : m_numPages(0), m_masterId(-1), m_groupMap(), m_bitmapMap(), m_frameId(0), m_positionsComputed(false), m_ordering(0) { }
   /** returns a new ordering.
 
       \note: the shapes seem to appear in increasing ordering, so we can use this function.
@@ -652,6 +652,8 @@ struct State {
   }
   //! the number of pages
   int m_numPages;
+  //! the master group id ( in a draw file )
+  int m_masterId;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_groupMap;
   //! a map zoneId -> group
@@ -999,6 +1001,48 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
     m_state->m_bitmapMap[bitmap->m_id] = bitmap;
 
   return bitmap;
+}
+
+////////////////////////////////////////////////////////////
+// definition of an element of a group
+////////////////////////////////////////////////////////////
+void ClarisWksGraph::disconnectMasterFromContents() const
+{
+  if (m_parserState->m_kind != MWAWDocument::MWAW_K_DRAW)
+    return;
+  shared_ptr<ClarisWksStruct::DSET> main=m_document.getZone(1);
+  if (!main)
+    return;
+  shared_ptr<ClarisWksStruct::DSET> master=m_document.getZone(2);
+  if (!master || master->m_fathersList.size()!=1 || *master->m_fathersList.begin()!=1  ||
+      m_state->m_groupMap.find(2)==m_state->m_groupMap.end() || !m_state->m_groupMap.find(2)->second) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::disconnectMasterFromContents: can not find the master zone\n"));
+    return;
+  }
+  // check if master has only one child if so ok
+  shared_ptr<ClarisWksGraphInternal::Group> masterGroup=m_state->m_groupMap.find(2)->second;
+  if (masterGroup->m_zones.size()!=1 || !masterGroup->m_zones[0] ||
+      masterGroup->m_zones[0]->getType() != ClarisWksGraphInternal::Zone::T_Zone) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::disconnectMasterFromContents: master zone has not one child\n"));
+    return;
+  }
+  shared_ptr<ClarisWksGraphInternal::Zone> zone=masterGroup->m_zones[0];
+  int childId=static_cast<ClarisWksGraphInternal::ZoneZone const &>(*zone).m_id;
+  if (!m_document.getZone(childId)) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::disconnectMasterFromContents: oops can find the master child\n"));
+    return;
+  }
+  shared_ptr<ClarisWksStruct::DSET> masterChild=m_document.getZone(childId);
+  m_state->m_masterId=childId;
+
+  m_state->m_groupMap.find(2)->second->m_parsed=true;
+  master->m_position=ClarisWksStruct::DSET::P_GraphicMaster;
+  main->removeChild(2, true);
+  master->m_fathersList.erase(1);
+
+  masterChild->m_position=ClarisWksStruct::DSET::P_GraphicMaster;
+  master->removeChild(childId, true);
+  masterChild->m_fathersList.erase(2);
 }
 
 ////////////////////////////////////////////////////////////
@@ -2357,7 +2401,8 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
   /* update the list of zone to be send (ie. remove remaining header/footer zone in not footer zone )
      + create a map to find linked zone: list of zone sharing the same text zone
    */
-  bool isHeaderFooterBlock=group.isHeaderFooter() || group.m_position==ClarisWksStruct::DSET::P_SlideMaster;
+  bool isHeaderFooterBlock=group.isHeaderFooter() || group.m_position==ClarisWksStruct::DSET::P_SlideMaster ||
+                           group.m_position==ClarisWksStruct::DSET::P_GraphicMaster;
   std::map<int, std::map<int, size_t> > idSIdCIdMap;
   for (size_t g = 0; g < group.m_zones.size(); g++) {
     shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zones[g];
@@ -2514,8 +2559,8 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     return false;
   }
   updateGroup(group);
-  bool isSlide=group.isSlide();
-  bool mainGroup = (group.m_position == ClarisWksStruct::DSET::P_Main || isSlide);
+  bool isSlide=group.isSlide() || group.m_position == ClarisWksStruct::DSET::P_GraphicMaster;
+  bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main || isSlide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup)
@@ -3091,10 +3136,36 @@ bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) cons
   return true;
 }
 
+bool ClarisWksGraph::sendMaster(int pg)
+{
+  if (m_parserState->m_kind != MWAWDocument::MWAW_K_DRAW || m_state->m_masterId<=0)
+    return true;
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter = m_state->m_groupMap.find(m_state->m_masterId);
+  if (iter == m_state->m_groupMap.end() || !iter->second) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendMaster: can not find the group %d\n", m_state->m_masterId));
+    return false;
+  }
+  shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
+  group->m_parsed=true;
+  // time to update the child page
+  for (size_t g = 0; g < group->m_zones.size(); g++) {
+    shared_ptr<ClarisWksGraphInternal::Zone> child = group->m_zones[g];
+    if (!child) continue;
+    child->m_page = pg+1;
+  }
+  Box2f const &box=group->m_box;
+  MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
+  pos.setRelativePosition(MWAWPosition::Page);
+  pos.setPage(pg+1);
+  pos.m_wrapping =  MWAWPosition::WBackground;
+  pos.setOrder(-m_state->getOrdering());
+  group->m_page=pg;
+  return sendGroup(*group, pos);
+}
+
 bool ClarisWksGraph::sendPageGraphics(int groupId)
 {
-  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
-    = m_state->m_groupMap.find(groupId);
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter = m_state->m_groupMap.find(groupId);
   if (iter == m_state->m_groupMap.end() || !iter->second) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendPageGraphics: can not find the group %d\n", groupId));
     return false;

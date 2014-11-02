@@ -91,10 +91,12 @@ void DSET::removeChild(int cId, bool normalChild)
 }
 
 
-void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
+void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numHorizontalPages)
 {
   float const &textWidth=pageDim[0];
-  float const &textHeight=pageDim[1];
+  float textHeight=pageDim[1];
+  if (float(m_pageDimension[1])>0.5f*formLength && float(m_pageDimension[1])<formLength)
+    textHeight=float(m_pageDimension[1]);
   if (textHeight<=0) {
     MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: the height can not be null\n"));
     return;
@@ -210,6 +212,9 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     break;
   case DSET::P_Main:
     o << "main,";
+    break;
+  case DSET::P_GraphicMaster:
+    o << "graphic[master],";
     break;
   case DSET::P_Slide:
     o << "slide,";

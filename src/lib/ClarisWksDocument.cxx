@@ -2540,21 +2540,13 @@ void ClarisWksDocument::updateChildPositions()
     MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
     numHorizontalPages=1;
   }
-  float textWidth=72.0f*(float)m_parser->getPageWidth();
-  float textHeight = 72.0f*(float)getTextHeight();
+  Vec2f pageDim(72.0f*(float)m_parser->getPageWidth(), 72.0f*(float)getTextHeight());
+  float formLength = 72.0f*(float)m_parser->getFormLength();
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
     if (!zone) continue;
-    float h=textHeight;
-    if (double(zone->m_pageDimension[1])>36.0*m_parser->getFormLength() &&
-        double(zone->m_pageDimension[1])<72.0*m_parser->getFormLength())
-      h=float(zone->m_pageDimension[1]);
-    if (h <= 0) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: can not retrieve the form length\n"));
-      continue;
-    }
-    zone->updateChildPositions(Vec2f(textWidth, h), numHorizontalPages);
+    zone->updateChildPositions(pageDim, formLength, numHorizontalPages);
   }
 }
 
@@ -2797,6 +2789,9 @@ void ClarisWksDocument::cleanZonesGraph()
   bool isPresentation=m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
   if (isPresentation)
     m_presentationParser->disconnectMasterFromContents();
+  else if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
+    m_graphParser->disconnectMasterFromContents();
+
   std::set<int>::iterator it;
   for (size_t i=0; i<m_state->m_hFZonesList.size(); ++i) {
     int id=m_state->m_hFZonesList[i];

@@ -95,6 +95,9 @@ public:
   //! compute the pages position
   void computePositions() const;
 
+  //! disconnect the master zone to the content zones in a graphic document
+  void disconnectMasterFromContents() const;
+
   //! reads the zone Group DSET
   shared_ptr<ClarisWksStruct::DSET> readGroupZone
   (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool &complete);
@@ -110,6 +113,8 @@ protected:
   bool canSendGroupAsGraphic(int number) const;
   //! sends the page element
   bool sendPageGraphics(int groupId);
+  //! sends the master zone (ie. the background zone in a graphic document)
+  bool sendMaster(int pg);
   //! sends the zone data to the listener (if it exists )
   bool sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
   //! check if we can send a group as graphic

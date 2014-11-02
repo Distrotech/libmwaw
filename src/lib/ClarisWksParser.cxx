@@ -217,6 +217,10 @@ void ClarisWksParser::parse(librevenge::RVNGTextInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       std::vector<int> const &mainZonesList=m_document->getMainZonesList();
+      if (getParserState()->m_kind==MWAWDocument::MWAW_K_DRAW) {
+        for (int i=0; i<m_state->m_numPages; ++i)
+          m_document->getGraphParser()->sendMaster(i);
+      }
       for (size_t i = 0; i < mainZonesList.size(); i++)
         m_document->getGraphParser()->sendPageGraphics(mainZonesList[i]);
       if (getParserState()->m_kind==MWAWDocument::MWAW_K_TEXT) {
