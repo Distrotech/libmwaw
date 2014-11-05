@@ -92,11 +92,14 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  //! returns the page dimension if known (in point)
+  bool getPageDimension(Vec2f &dim) const;
+
   //! compute the pages position
   void computePositions() const;
 
-  //! disconnect the master zone to the content zones in a graphic document
-  void disconnectMasterFromContents() const;
+  //! find the master zone to the content zones in a graphic document
+  void findMasterPage() const;
 
   //! reads the zone Group DSET
   shared_ptr<ClarisWksStruct::DSET> readGroupZone

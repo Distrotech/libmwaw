@@ -2535,12 +2535,20 @@ bool ClarisWksDocument::readZoneA()
 void ClarisWksDocument::updateChildPositions()
 {
   // try to fix the page position corresponding to the main zone
-  int numHorizontalPages=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW ? getDocumentPages()[0] : 1;
+  bool const isDraw=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
+  int numHorizontalPages= isDraw ? getDocumentPages()[0] : 1;
   if (numHorizontalPages <= 0) {
     MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
     numHorizontalPages=1;
   }
-  Vec2f pageDim(72.0f*(float)m_parser->getPageWidth(), 72.0f*(float)getTextHeight());
+  Vec2f pageDim(72.0f*(float)m_parser->getPageWidth(), 72.0f*(float)getTextHeight()), graphPageDim;
+  if (isDraw && m_graphParser->getPageDimension(graphPageDim)) {
+    if (graphPageDim[0]>pageDim[0] || graphPageDim[1]>pageDim[1]) {
+      MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the dimension given by the graph parser seems bad\n"));
+    }
+    else
+      pageDim=graphPageDim;
+  }
   float formLength = 72.0f*(float)m_parser->getFormLength();
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
@@ -2741,17 +2749,20 @@ void ClarisWksDocument::typeMainZones()
   }
   // remove me
   bool isPresentation=m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION;
+  bool isDraw=m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW;
   for (int step=0; !isPresentation && step<2; ++step) {
     int id=step==0 ? m_state->m_headerId : m_state->m_footerId;
     if (!id) continue;
     // try to retrieve the father is also a header
     shared_ptr<ClarisWksStruct::DSET> zone=getZone(id);
     if (zone && zone->m_fathersList.size()==1) {
-      shared_ptr<ClarisWksStruct::DSET> father=getZone(*zone->m_fathersList.begin());
-      if (father && father->isHeaderFooter()) {
-        id=*zone->m_fathersList.begin();
-        if (step==0) m_state->m_headerId=id;
-        else m_state->m_footerId=id;
+      if (!isDraw) {
+        shared_ptr<ClarisWksStruct::DSET> father=getZone(*zone->m_fathersList.begin());
+        if (father && father->isHeaderFooter()) {
+          id=*zone->m_fathersList.begin();
+          if (step==0) m_state->m_headerId=id;
+          else m_state->m_footerId=id;
+        }
       }
       if (std::find(m_state->m_hFZonesList.begin(),m_state->m_hFZonesList.end(), id)==m_state->m_hFZonesList.end())
         m_state->m_hFZonesList.push_back(id);
@@ -2790,7 +2801,7 @@ void ClarisWksDocument::cleanZonesGraph()
   if (isPresentation)
     m_presentationParser->disconnectMasterFromContents();
   else if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
-    m_graphParser->disconnectMasterFromContents();
+    m_graphParser->findMasterPage();
 
   std::set<int>::iterator it;
   for (size_t i=0; i<m_state->m_hFZonesList.size(); ++i) {
