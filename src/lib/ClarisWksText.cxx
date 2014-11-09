@@ -743,6 +743,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
     f << "#position="<< (textZone->m_textType >> 4) << ",";
     break;
   }
+  // find 2,3,6,a,b,e,f
   if (textZone->m_textType != ClarisWksStruct::DSET::P_Unknown)
     textZone->m_textType &= 0xF;
   f << *textZone << ",";

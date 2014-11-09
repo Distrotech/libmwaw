@@ -2550,6 +2550,38 @@ void ClarisWksDocument::updateChildPositions()
       pageDim=graphPageDim;
   }
   float formLength = 72.0f*(float)m_parser->getFormLength();
+  float formWidth = 72.0f*(float)m_parser->getFormWidth();
+  if (isDraw) {
+    for (int i=0; i<2; ++i) {
+      if (i==0 && numHorizontalPages==1)
+        continue;
+      std::set<int> forbidden;
+      std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
+      for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
+        shared_ptr<ClarisWksStruct::DSET> zone = iter->second;
+        if (!zone) continue;
+        zone->findForbiddenPagesBreaking(pageDim[i], i==0 ? formWidth : formLength, i, forbidden);
+      }
+      if (forbidden.empty())
+        continue;
+      int last=*forbidden.rbegin();
+      if (last<=0 || last>100) {
+        MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the last page seems bad for coord %d\n", i));
+        continue;
+      }
+      MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: increase page %d dimension by a factor %d\n", i, last+1));
+      if (i==0) {
+        formWidth*=float(last+1);
+        m_parser->getPageSpan().setFormWidth((double)(last+1)*m_parser->getFormWidth());
+        numHorizontalPages=(numHorizontalPages+last)/(last+1);
+      }
+      else {
+        formLength*=float(last+1);
+        m_parser->getPageSpan().setFormLength((double)(last+1)*m_parser->getFormLength());
+      }
+      pageDim[i] *= float(last+1);
+    }
+  }
   std::map<int, shared_ptr<ClarisWksStruct::DSET> >::iterator iter;
   for (iter = m_state->m_zonesMap.begin(); iter != m_state->m_zonesMap.end(); ++iter) {
     shared_ptr<ClarisWksStruct::DSET> zone = iter->second;

@@ -1,29 +1,34 @@
 CHANGES:
 
-29/10/2014:
+11/9/2014:
+- AppleWorks/ClarisWorks parser[draw]: 
+  try to send master pages on each page of the final documents
+  try to do not cut shapes, pictures which are on several pages (by creating bigger pages)
+
+10/29/2014:
 - MacDraw Pro: add a parser for MacDraw Pro v1
 
 -------- version 0.3.4 (start)  -------------
 
-2/10/2014:
+10/2/2014:
 - RagTime v5-v6: begin to find the main structures in a document, to be continued...
 - fix some coverity problems.
 
-12/9/2014:
+9/12/2014:
 - AppleWorks: add a presentation parser
 
-22/8/2014:
+8/22/2014:
 - MacDraw II: add a parser for MacDraw II v1.0-v1.1
 
 -------- version 0.3.3 (start)  -------------
 
-28/7/2014:
+7/28/2014:
 - AppleWorks/ClarisWorks: manage multiple headers/footers + better rebuilding of complex group
 
-1/7/2014:
+7/1/2014:
 - MacDraw: add a parser for v0 and v1 documents
 
-22/6/2014:
+6/22/2014:
 - RagTime: add a parser to parse v2 and v3 documents
 
 6/6/2014:
@@ -32,19 +37,19 @@ CHANGES:
 
 -------- version 0.3.2 (start)  -------------
 
-23/5/2014
+5/23/2014
 - create version 0.3.1 to be in correspondance with librevenge-0.0.0
 
-13/5/2014
+5/13/2014
 - add code to create embedded spreadsheet
 - AppleWorks/ClarisWorks: send page's embedded spreadsheets as spreadsheet (instead of table) 
 
 -------- version 0.3.1 (start)  -------------
 
-16/3/2014
+4/16/2014
 - GreatWorks: add a database parser which uses spreadsheet interface
 
-8/3/2014
+4/8/2014
 - BeagleWorks/WordPerfect Works: add a database parser which uses spreadsheet interface
 
 4/3/2014

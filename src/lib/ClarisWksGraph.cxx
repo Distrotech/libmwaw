@@ -2757,6 +2757,10 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       }
       // groupList can not be empty
       if (groupList.size() <= 1) {
+        libmwaw::SubDocumentType subDocType;
+        if (pos.m_anchorTo==MWAWPosition::Paragraph && group.m_position == ClarisWksStruct::DSET::P_Frame &&
+            groupList[0]->getType()!=ClarisWksGraphInternal::Zone::T_Zone && listener->isSubDocumentOpened(subDocType))
+          pos.m_anchorTo=MWAWPosition::Frame;
         sendGroupChild(groupList[0], pos);
         continue;
       }
