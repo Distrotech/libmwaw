@@ -2188,18 +2188,13 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
   case 7: // polygon[smooth]
   case 8:  // polygon
     if (vers==0) {
-      if (remain<=0 || (vers==0 && (remain%8)) || (vers && (remain%10)!=2)) {
+      if (remain<=0 || (remain%8)) {
         MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read compute the number of point in polygon\n"));
         f << "###";
         break;
       }
       shape.m_shape.m_bdBox=shape.m_box;
-      int N=vers==0 ? int(remain/8) : (int) input->readULong(2);
-      if (vers && 2+N*10>remain) {
-        MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read compute the number of point in polygon\n"));
-        f << "###";
-        break;
-      }
+      int N=int(remain/8);
       f << "N=" << N << ",pts=[";
       std::vector<Vec2f> listVertices;
       Vec2f origin=shape.m_box[0];
