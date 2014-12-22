@@ -103,7 +103,14 @@ int main(int argc, char *argv[])
 
   MWAWDocument::Type type;
   MWAWDocument::Kind kind;
-  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  MWAWDocument::Confidence confidence = MWAWDocument::MWAW_C_NONE;
+  try {
+    MWAWDocument::isFileFormatSupported(&input, type, kind);
+  }
+  catch (...) {
+    confidence = MWAWDocument::MWAW_C_NONE;
+  }
+
   if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
     printf("ERROR: Unsupported file format!\n");
     return 1;

@@ -1031,6 +1031,8 @@ void ClarisWksGraph::findMasterPage() const
   if (m_parserState->m_kind != MWAWDocument::MWAW_K_DRAW || version() <= 3)
     return;
   shared_ptr<ClarisWksStruct::DSET> main=m_document.getZone(1);
+  if (m_state->m_groupMap.find(1)== m_state->m_groupMap.end())
+    return;
   shared_ptr<ClarisWksGraphInternal::Group> mainGroup=m_state->m_groupMap.find(1)->second;
   if (!main || !mainGroup)
     return;
