@@ -831,7 +831,7 @@ bool EDocParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
       int num=(int)input->readULong(1);
       f << "num=" << num << ",";
       if (num > maxData[st] || pos+1+num > endPos) {
-        MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected num of data : %x for zone %d\n", num, st));
+        MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected num of data : %d for zone %d\n", num, st));
         f << "###";
 
         ascFile.addPos(pos);
@@ -856,7 +856,7 @@ bool EDocParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinaryData &
       for (it=mapData.begin(); it != mapData.end(); ++it) {
         int n=0x8000>>(it->first);
         if (writePos+n>0x8000) {
-          MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected value writePos=%x for zone %d\n",writePos+n, st));
+          MWAW_DEBUG_MSG(("EDocParser::decodeZone: find unexpected value writePos=%x for zone %d\n",(unsigned int)(writePos+n), st));
 
           f << "###";
 

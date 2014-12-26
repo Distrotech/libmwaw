@@ -242,7 +242,7 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       return 0;
     long version = (long) inp->readU32();
     if (version != 0x20000) {
-      MWAW_DEBUG_MSG(("XAttr::unMacMIME: unknown version: %lx\n", version));
+      MWAW_DEBUG_MSG(("XAttr::unMacMIME: unknown version: %lx\n", (long unsigned int) version));
       return 0;
     }
     inp->seek(16, InputStream::SK_CUR); // filename
@@ -276,13 +276,13 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       /* try to read the data */
       inp->seek(entryPos, InputStream::SK_SET);
       if (inp->tell() != entryPos) {
-        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not seek entry pos %lx\n", entryPos));
+        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not seek entry pos %lx\n", (long unsigned int) entryPos));
         return 0;
       }
       unsigned long numBytesRead = 0;
       const unsigned char *data = inp->read(entrySize, numBytesRead);
       if (numBytesRead != entrySize || !data) {
-        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not read %lX byte\n", entryPos));
+        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not read %lX byte\n", (long unsigned int) entryPos));
         return 0;
       }
       return new StringStream(data,(unsigned long) entrySize);

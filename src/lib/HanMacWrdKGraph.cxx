@@ -942,7 +942,7 @@ std::map<long,int> HanMacWrdKGraph::getTextFrameInformations() const
       if (mapIdType.find(zId) == mapIdType.end())
         mapIdType[zId] = frame.m_type;
       else if (mapIdType.find(zId)->second != frame.m_type) {
-        MWAW_DEBUG_MSG(("HanMacWrdKGraph::getTextFrameInformations: id %lx already set\n", zId));
+        MWAW_DEBUG_MSG(("HanMacWrdKGraph::getTextFrameInformations: id %lx already set\n", (long unsigned int) zId));
       }
     }
   }
@@ -1116,7 +1116,7 @@ bool HanMacWrdKGraph::readPicture(shared_ptr<HanMacWrdKZone> zone)
   if (!fId) fId = zone->m_id;
   picture->m_fileSubId = zone->m_subId;
   if (m_state->m_picturesMap.find(fId) != m_state->m_picturesMap.end())
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: oops I already find a picture for %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::readPicture: oops I already find a picture for %lx\n", (long unsigned int) fId));
   else
     m_state->m_picturesMap[fId] = picture;
 
@@ -1141,7 +1141,7 @@ bool HanMacWrdKGraph::sendPicture(long pictId, MWAWPosition pos)
     = m_state->m_picturesMap.find(pictId);
 
   if (pIt == m_state->m_picturesMap.end() || !pIt->second) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendPicture: can not find the picture %lx\n", pictId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendPicture: can not find the picture %lx\n", (long unsigned int) pictId));
     return false;
   }
   sendPicture(*pIt->second, pos);
@@ -1185,7 +1185,7 @@ bool HanMacWrdKGraph::sendFrame(long frameId, MWAWPosition pos)
   std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendFrame: can not find frame %lx\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendFrame: can not find frame %lx\n", (long unsigned int) frameId));
     return false;
   }
   if (pos.size()[0]<=0 || pos.size()[1]<=0)
@@ -1389,7 +1389,7 @@ bool HanMacWrdKGraph::sendTableUnformatted(long fId)
   std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::iterator fIt
     = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end() || !fIt->second || fIt->second->m_type != 9) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendTableUnformatted: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendTableUnformatted: can not find table %lx\n", (long unsigned int) fId));
     return false;
   }
   HanMacWrdKGraphInternal::Table &table = static_cast<HanMacWrdKGraphInternal::Table &>(*fIt->second);
@@ -1928,12 +1928,12 @@ bool HanMacWrdKGraph::sendGroup(long groupId, MWAWPosition pos)
   std::multimap<long, shared_ptr<HanMacWrdKGraphInternal::Frame> >::const_iterator fIt=
     m_state->m_framesMap.find(groupId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find group %lx\n", groupId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: can not find group %lx\n", (long unsigned int) groupId));
     return false;
   }
   shared_ptr<HanMacWrdKGraphInternal::Frame> frame=fIt->second;
   if (!frame || frame->m_type!=11) {
-    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: %lx seems bad\n", groupId));
+    MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroup: %lx seems bad\n", (long unsigned int) groupId));
     return false;
   }
   return sendGroup(static_cast<HanMacWrdKGraphInternal::Group const &>(*frame), pos);
@@ -2038,7 +2038,7 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
     long fId=group.m_childsList[c].m_fileId;
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end() || fIt->first!=fId || !fIt->second) {
-      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", fId));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", (long unsigned int) fId));
       continue;
     }
     HanMacWrdKGraphInternal::Frame const &frame=*fIt->second;
@@ -2138,7 +2138,7 @@ void HanMacWrdKGraph::sendGroupChild(HanMacWrdKGraphInternal::Group const &group
         sendFrame(childFrame, fPos);
         continue;
       }
-      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", localFId));
+      MWAW_DEBUG_MSG(("HanMacWrdKGraph::sendGroupChild: can not find child %lx\n", (long unsigned int) localFId));
     }
     numDataToMerge=0;
   }
@@ -2161,7 +2161,7 @@ void HanMacWrdKGraph::prepareStructures()
       for (size_t l=0; l < numLink; ++l) {
         fIt2=m_state->m_framesMap.find(text.m_linkedIdList[l]);
         if (fIt2==m_state->m_framesMap.end() || fIt2->first!=text.m_linkedIdList[l] || !fIt2->second || fIt2->second->m_type!=4) {
-          MWAW_DEBUG_MSG(("HanMacWrdKGraph::prepareStructures: can not find frame %lx\n", text.m_linkedIdList[l]));
+          MWAW_DEBUG_MSG(("HanMacWrdKGraph::prepareStructures: can not find frame %lx\n", (long unsigned int) text.m_linkedIdList[l]));
           text.m_linkedIdList.resize(l);
           break;
         }

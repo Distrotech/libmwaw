@@ -1088,7 +1088,7 @@ bool MsWks4Text::readFontNames(MWAWInputStreamPtr input, MWAWEntry const &entry)
 
   if (m_state->m_fontNames.size() != n_fonts) {
     MWAW_DEBUG_MSG(("MsWks4Text::readFontNames: warning: expected %i fonts but only found %i\n",
-                    n_fonts, int(m_state->m_fontNames.size())));
+                    (int) n_fonts, (int)m_state->m_fontNames.size()));
     return false;
   }
   return true;
@@ -1825,7 +1825,7 @@ bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
 
   if (length < headerSize) {
     MWAW_DEBUG_MSG(("MsWks4Text::readFDP: warning: FDP offset=0x%X, length=0x%lx\n",
-                    page_offset, length));
+                    page_offset, (long unsigned int) length));
     return false;
   }
 
@@ -1838,7 +1838,7 @@ bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
   f << ", unk=" << input->readLong(2);
 
   if (headerSize+(4+deplSize)*cfod > length) {
-    MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: cfod = %i (0x%X)\n", cfod, cfod));
+    MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: cfod = %i (0x%X)\n", cfod, (unsigned int) cfod));
     return false;
   }
 
@@ -1894,7 +1894,7 @@ bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     if ((depl < headerSize+(4+deplSize)*cfod && depl > 0) ||
         long(page_offset)+depl  > endPage) {
       MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: pos of bfprop is bad "
-                      "%i (0x%X)\n", depl, depl));
+                      "%i (0x%X)\n", depl, (unsigned int) depl));
       return false;
     }
 
@@ -1926,7 +1926,7 @@ bool MsWks4Text::readFDP(MWAWInputStreamPtr &input, MWAWEntry const &entry,
     int szProp = (int) input->readULong(1);
     szProp++;
     if (szProp == 0) {
-      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: 0 == szProp at file offset 0x%lx\n", (input->tell())-1));
+      MWAW_DEBUG_MSG(("MsWks4Text::readFDP: error: 0 == szProp at file offset 0x%lx\n", (unsigned long int)(input->tell()-1)));
       return false;
     }
     long endPos = pos+szProp;

@@ -351,7 +351,7 @@ void FullWrtParser::sendGraphic(int id)
     FullWrtParserInternal::DocZoneStruct const &data =
       m_state->m_docZoneList[size_t(id)];
     if (data.m_type != 0x15) {
-      MWAW_DEBUG_MSG(("FullWrtParser::sendGraphic: call for zone[%x]\n", data.m_type));
+      MWAW_DEBUG_MSG(("FullWrtParser::sendGraphic: call for zone[%x]\n", (unsigned int)data.m_type));
     }
   }
   m_graphParser->sendGraphic(m_state->getFileZoneId(id));
@@ -1918,7 +1918,7 @@ void FullWrtParser::sendReference(int id)
     return;
   }
   if (m_state->m_docZoneList[size_t(id)].m_type != 0x1a) {
-    MWAW_DEBUG_MSG(("FullWrtParser::sendReference: find unexpected type for fieldDataRedirect=%x\n", m_state->m_docZoneList[size_t(id)].m_type));
+    MWAW_DEBUG_MSG(("FullWrtParser::sendReference: find unexpected type for fieldDataRedirect=%x\n", (unsigned int) m_state->m_docZoneList[size_t(id)].m_type));
     return;
   }
   if (m_state->m_referenceRedirectMap.find(id) == m_state->m_referenceRedirectMap.end())
@@ -1948,7 +1948,7 @@ void FullWrtParser::sendVariable(int id)
     return;
   }
   if (m_state->m_docZoneList[size_t(id)].m_type != 0x1e) {
-    MWAW_DEBUG_MSG(("FullWrtParser::sendVariable: find unexpected type for fieldDataRedirect=%x\n", m_state->m_docZoneList[size_t(id)].m_type));
+    MWAW_DEBUG_MSG(("FullWrtParser::sendVariable: find unexpected type for fieldDataRedirect=%x\n", (unsigned int)m_state->m_docZoneList[size_t(id)].m_type));
     return;
   }
   if (m_state->m_variableRedirectMap.find(id) == m_state->m_variableRedirectMap.end()) {
@@ -1976,7 +1976,7 @@ void FullWrtParser::sendVariable(int id)
     }
   }
   else {
-    MWAW_DEBUG_MSG(("FullWrtParser::sendVariable: find unexpected redirection type[%x] for variable %d\n", data.m_type, id));
+    MWAW_DEBUG_MSG(("FullWrtParser::sendVariable: find unexpected redirection type[%x] for variable %d\n", (unsigned int) data.m_type, id));
   }
 }
 
@@ -1994,7 +1994,7 @@ void FullWrtParser::sendText(int id, libmwaw::SubDocumentType type, MWAWNote::Ty
     if (type==libmwaw::DOC_NOTE && (docType==0xc|| docType==0xd)) ;
     else if (type == libmwaw::DOC_COMMENT_ANNOTATION && docType == 0xb) ;
     else {
-      MWAW_DEBUG_MSG(("FullWrtParser::sendText: call with %d[%x]\n", int(type),docType));
+      MWAW_DEBUG_MSG(("FullWrtParser::sendText: call with %d[%x]\n", int(type),(unsigned int)docType));
     }
   }
   else {

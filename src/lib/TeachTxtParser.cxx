@@ -398,7 +398,7 @@ bool TeachTxtParser::readStyles(MWAWEntry const &entry)
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (m_state->m_posFontMap.find(cPos) != m_state->m_posFontMap.end()) {
-      MWAW_DEBUG_MSG(("TeachTxtParser::readStyles: a style for pos=%lx already exist\n", cPos));
+      MWAW_DEBUG_MSG(("TeachTxtParser::readStyles: a style for pos=%lx already exist\n", (long unsigned int) cPos));
     }
     else
       m_state->m_posFontMap[cPos] = font;

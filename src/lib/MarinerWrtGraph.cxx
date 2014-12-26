@@ -611,7 +611,7 @@ void MarinerWrtGraph::sendToken(int zoneId, long tokenId)
     break;
   }
 
-  MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: sending type %x is not unplemented\n", token.m_type));
+  MWAW_DEBUG_MSG(("MarinerWrtGraph::sendToken: sending type %x is not unplemented\n", (unsigned int) token.m_type));
 }
 
 void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)

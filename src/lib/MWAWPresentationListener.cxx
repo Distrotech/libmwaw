@@ -210,7 +210,7 @@ void MWAWPresentationListener::insertCharacter(unsigned char c)
   int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWPresentationListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWPresentationListener::insertCharacter: Find odd char %x\n", (unsigned int)c));
     }
     else
       MWAWPresentationListener::insertChar((uint8_t) c);
@@ -244,7 +244,7 @@ int MWAWPresentationListener::insertCharacter(unsigned char c, MWAWInputStreamPt
   }
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWPresentationListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWPresentationListener::insertCharacter: Find odd char %x\n", (unsigned int)c));
     }
     else
       MWAWPresentationListener::insertChar((uint8_t) c);

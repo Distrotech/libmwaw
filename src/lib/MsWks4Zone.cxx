@@ -309,7 +309,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
     if (name[i] != 0 && name[i] != 0x20 &&
         (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90)) {
       MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
-                      (uint8_t)name[i], (uint8_t)name[i]));
+                      (unsigned int)name[i], (unsigned int)name[i]));
       m_document->ascii().addNote("###IndexEntry bad name(ignored)");
 
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);

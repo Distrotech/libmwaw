@@ -1003,7 +1003,7 @@ shared_ptr<HanMacWrdKZone> HanMacWrdKParser::decodeZone(shared_ptr<HanMacWrdKZon
     do {  /* once for each bit on path */
       if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= zone->fileEndPos()) {
-          MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: find some uncomplete data for zone%lx\n", zone->fileBeginPos()));
+          MWAW_DEBUG_MSG(("HanMacWrdKParser::decodeZone: find some uncomplete data for zone%lx\n", (long unsigned int) zone->fileBeginPos()));
           dt.append((unsigned char)a);
           ok = false;
           break;

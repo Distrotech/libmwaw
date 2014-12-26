@@ -1098,7 +1098,7 @@ bool RagTimeText::send(RagTimeTextInternal::TextZone const &zone, MWAWListenerPt
       break;
     default:
       if (c<=0x1f) {
-        MWAW_DEBUG_MSG(("RagTimeText::send:  find an odd char %x\n", int(c)));
+        MWAW_DEBUG_MSG(("RagTimeText::send:  find an odd char %x\n", (unsigned int)c));
         f << "[#" << std::hex << int(c) << std::dec << "]";
         break;
       }

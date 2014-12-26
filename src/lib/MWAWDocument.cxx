@@ -102,6 +102,7 @@ bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser
 }
 
 MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInputStream *input,  MWAWDocument::Type &type, Kind &kind)
+try
 {
   type = MWAW_T_UNKNOWN;
   kind = MWAW_K_UNKNOWN;
@@ -111,296 +112,300 @@ MWAWDocument::Confidence MWAWDocument::isFileFormatSupported(librevenge::RVNGInp
     return MWAW_C_NONE;
   }
 
-  try {
-    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-    shared_ptr<MWAWRSRCParser> rsrcParser;
-    if (rsrc)
-      rsrcParser.reset(new MWAWRSRCParser(rsrc));
-    shared_ptr<MWAWHeader> header;
+  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+  shared_ptr<MWAWRSRCParser> rsrcParser;
+  if (rsrc)
+    rsrcParser.reset(new MWAWRSRCParser(rsrc));
+  shared_ptr<MWAWHeader> header;
 #ifdef DEBUG
-    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+  header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 #else
-    header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
+  header.reset(MWAWDocumentInternal::getHeader(ip, rsrcParser, true));
 #endif
 
-    if (!header.get())
-      return MWAW_C_NONE;
-    type = (MWAWDocument::Type)header->getType();
-    kind = (MWAWDocument::Kind)header->getKind();
-    Confidence confidence = MWAW_C_NONE;
-
-    switch (type) {
-    case MWAW_T_ACTA:
-    case MWAW_T_BEAGLEWORKS:
-    case MWAW_T_CLARISRESOLVE:
-    case MWAW_T_CLARISWORKS:
-    case MWAW_T_DOCMAKER:
-    case MWAW_T_EDOC:
-    case MWAW_T_FULLWRITE:
-    case MWAW_T_GREATWORKS:
-    case MWAW_T_HANMACWORDJ:
-    case MWAW_T_HANMACWORDK:
-    case MWAW_T_LIGHTWAYTEXT:
-    case MWAW_T_MACDOC:
-    case MWAW_T_MACDRAW:
-    case MWAW_T_MACDRAWPRO:
-    case MWAW_T_MACPAINT:
-    case MWAW_T_MACWRITE:
-    case MWAW_T_MACWRITEPRO:
-    case MWAW_T_MARINERWRITE:
-    case MWAW_T_MINDWRITE:
-    case MWAW_T_MORE:
-    case MWAW_T_MICROSOFTWORD:
-    case MWAW_T_MICROSOFTWORKS:
-    case MWAW_T_NISUSWRITER:
-    case MWAW_T_RAGTIME:
-    case MWAW_T_SUPERPAINT:
-    case MWAW_T_TEACHTEXT:
-    case MWAW_T_TEXEDIT:
-    case MWAW_T_WINGZ:
-    case MWAW_T_WRITENOW:
-    case MWAW_T_WRITERPLUS:
-    case MWAW_T_ZWRITE:
-      confidence = MWAW_C_EXCELLENT;
-      break;
-    case MWAW_T_ADOBEILLUSTRATOR:
-    case MWAW_T_DBASE:
-    case MWAW_T_FAMILYTREEMAKER:
-    case MWAW_T_FILEMAKER:
-    case MWAW_T_FOXBASE:
-    case MWAW_T_FRAMEMAKER:
-    case MWAW_T_FULLIMPACT:
-    case MWAW_T_FULLPAINT:
-    case MWAW_T_INFOGENIE:
-    case MWAW_T_KALEIDAGRAPH:
-    case MWAW_T_MACDRAFT:
-    case MWAW_T_MICROSOFTFILE:
-    case MWAW_T_MICROSOFTMULTIPLAN:
-    case MWAW_T_OVERVUE:
-    case MWAW_T_PAGEMAKER:
-    case MWAW_T_PIXELPAINT:
-    case MWAW_T_READYSETGO:
-    case MWAW_T_SYMPOSIUM:
-    case MWAW_T_TRAPEZE:
-    case MWAW_T_XPRESS:
-    case MWAW_T_4DIMENSION:
-
-    case MWAW_T_RESERVED1:
-    case MWAW_T_RESERVED2:
-    case MWAW_T_RESERVED3:
-    case MWAW_T_RESERVED4:
-    case MWAW_T_RESERVED5:
-    case MWAW_T_RESERVED6:
-    case MWAW_T_RESERVED7:
-    case MWAW_T_RESERVED8:
-    case MWAW_T_RESERVED9:
-    case MWAW_T_UNKNOWN:
-    default:
-      break;
-    }
-
-    return confidence;
-  }
-  catch (...) {
-    type = MWAW_T_UNKNOWN;
-    kind = MWAW_K_UNKNOWN;
+  if (!header.get())
     return MWAW_C_NONE;
+  type = (MWAWDocument::Type)header->getType();
+  kind = (MWAWDocument::Kind)header->getKind();
+  Confidence confidence = MWAW_C_NONE;
+
+  switch (type) {
+  case MWAW_T_ACTA:
+  case MWAW_T_BEAGLEWORKS:
+  case MWAW_T_CLARISRESOLVE:
+  case MWAW_T_CLARISWORKS:
+  case MWAW_T_DOCMAKER:
+  case MWAW_T_EDOC:
+  case MWAW_T_FULLWRITE:
+  case MWAW_T_GREATWORKS:
+  case MWAW_T_HANMACWORDJ:
+  case MWAW_T_HANMACWORDK:
+  case MWAW_T_LIGHTWAYTEXT:
+  case MWAW_T_MACDOC:
+  case MWAW_T_MACDRAW:
+  case MWAW_T_MACDRAWPRO:
+  case MWAW_T_MACPAINT:
+  case MWAW_T_MACWRITE:
+  case MWAW_T_MACWRITEPRO:
+  case MWAW_T_MARINERWRITE:
+  case MWAW_T_MINDWRITE:
+  case MWAW_T_MORE:
+  case MWAW_T_MICROSOFTWORD:
+  case MWAW_T_MICROSOFTWORKS:
+  case MWAW_T_NISUSWRITER:
+  case MWAW_T_RAGTIME:
+  case MWAW_T_SUPERPAINT:
+  case MWAW_T_TEACHTEXT:
+  case MWAW_T_TEXEDIT:
+  case MWAW_T_WINGZ:
+  case MWAW_T_WRITENOW:
+  case MWAW_T_WRITERPLUS:
+  case MWAW_T_ZWRITE:
+    confidence = MWAW_C_EXCELLENT;
+    break;
+  case MWAW_T_ADOBEILLUSTRATOR:
+  case MWAW_T_DBASE:
+  case MWAW_T_FAMILYTREEMAKER:
+  case MWAW_T_FILEMAKER:
+  case MWAW_T_FOXBASE:
+  case MWAW_T_FRAMEMAKER:
+  case MWAW_T_FULLIMPACT:
+  case MWAW_T_FULLPAINT:
+  case MWAW_T_INFOGENIE:
+  case MWAW_T_KALEIDAGRAPH:
+  case MWAW_T_MACDRAFT:
+  case MWAW_T_MICROSOFTFILE:
+  case MWAW_T_MICROSOFTMULTIPLAN:
+  case MWAW_T_OVERVUE:
+  case MWAW_T_PAGEMAKER:
+  case MWAW_T_PIXELPAINT:
+  case MWAW_T_READYSETGO:
+  case MWAW_T_SYMPOSIUM:
+  case MWAW_T_TRAPEZE:
+  case MWAW_T_XPRESS:
+  case MWAW_T_4DIMENSION:
+
+  case MWAW_T_RESERVED1:
+  case MWAW_T_RESERVED2:
+  case MWAW_T_RESERVED3:
+  case MWAW_T_RESERVED4:
+  case MWAW_T_RESERVED5:
+  case MWAW_T_RESERVED6:
+  case MWAW_T_RESERVED7:
+  case MWAW_T_RESERVED8:
+  case MWAW_T_RESERVED9:
+  case MWAW_T_UNKNOWN:
+  default:
+    break;
   }
+
+  return confidence;
+}
+catch (...)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::isFileFormatSupported: exception catched\n"));
+  type = MWAW_T_UNKNOWN;
+  kind = MWAW_K_UNKNOWN;
+  return MWAW_C_NONE;
 }
 
 MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGDrawingInterface *documentInterface, char const *)
+try
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
-  Result error = MWAW_R_OK;
 
-  try {
-    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-    shared_ptr<MWAWRSRCParser> rsrcParser;
-    if (rsrc) {
-      rsrcParser.reset(new MWAWRSRCParser(rsrc));
-      rsrcParser->setAsciiName("RSRC");
-      rsrcParser->parse();
-    }
-    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+  shared_ptr<MWAWRSRCParser> rsrcParser;
+  if (rsrc) {
+    rsrcParser.reset(new MWAWRSRCParser(rsrc));
+    rsrcParser->setAsciiName("RSRC");
+    rsrcParser->parse();
+  }
+  shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 
-    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+  if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWGraphicParser> parser=MWAWDocumentInternal::getGraphicParserFromHeader(ip, rsrcParser, header.get());
-    if (!parser) return MWAW_R_UNKNOWN_ERROR;
-    parser->parse(documentInterface);
-  }
-  catch (libmwaw::FileException) {
-    MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_R_FILE_ACCESS_ERROR;
-  }
-  catch (libmwaw::ParseException) {
-    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_R_PARSE_ERROR;
-  }
-  catch (...) {
-    //fixme: too generic
-    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_R_UNKNOWN_ERROR;
-  }
+  shared_ptr<MWAWGraphicParser> parser=MWAWDocumentInternal::getGraphicParserFromHeader(ip, rsrcParser, header.get());
+  if (!parser) return MWAW_R_UNKNOWN_ERROR;
+  parser->parse(documentInterface);
 
-  return error;
+  return MWAW_R_OK;
+}
+catch (libmwaw::FileException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: File exception trapped\n"));
+  return MWAW_R_FILE_ACCESS_ERROR;
+}
+catch (libmwaw::ParseException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Parse exception trapped\n"));
+  return MWAW_R_PARSE_ERROR;
+}
+catch (...)
+{
+  //fixme: too generic
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Unknown exception trapped\n"));
+  return MWAW_R_UNKNOWN_ERROR;
 }
 
 MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGPresentationInterface *documentInterface, char const *)
+try
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
-  Result error = MWAW_R_OK;
 
-  try {
-    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-    shared_ptr<MWAWRSRCParser> rsrcParser;
-    if (rsrc) {
-      rsrcParser.reset(new MWAWRSRCParser(rsrc));
-      rsrcParser->setAsciiName("RSRC");
-      rsrcParser->parse();
-    }
-    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+  shared_ptr<MWAWRSRCParser> rsrcParser;
+  if (rsrc) {
+    rsrcParser.reset(new MWAWRSRCParser(rsrc));
+    rsrcParser->setAsciiName("RSRC");
+    rsrcParser->parse();
+  }
+  shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 
-    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+  if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWPresentationParser> parser=MWAWDocumentInternal::getPresentationParserFromHeader(ip, rsrcParser, header.get());
-    if (!parser) return MWAW_R_UNKNOWN_ERROR;
-    parser->parse(documentInterface);
-  }
-  catch (libmwaw::FileException) {
-    MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_R_FILE_ACCESS_ERROR;
-  }
-  catch (libmwaw::ParseException) {
-    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_R_PARSE_ERROR;
-  }
-  catch (...) {
-    //fixme: too generic
-    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_R_UNKNOWN_ERROR;
-  }
+  shared_ptr<MWAWPresentationParser> parser=MWAWDocumentInternal::getPresentationParserFromHeader(ip, rsrcParser, header.get());
+  if (!parser) return MWAW_R_UNKNOWN_ERROR;
+  parser->parse(documentInterface);
 
-  return error;
+  return MWAW_R_OK;
+}
+catch (libmwaw::FileException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: File exception trapped\n"));
+  return MWAW_R_FILE_ACCESS_ERROR;
+}
+catch (libmwaw::ParseException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Parse exception trapped\n"));
+  return MWAW_R_PARSE_ERROR;
+}
+catch (...)
+{
+  //fixme: too generic
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Unknown exception trapped\n"));
+  return MWAW_R_UNKNOWN_ERROR;
 }
 
 MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGSpreadsheetInterface *documentInterface, char const *)
+try
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
-  Result error = MWAW_R_OK;
 
-  try {
-    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-    shared_ptr<MWAWRSRCParser> rsrcParser;
-    if (rsrc) {
-      rsrcParser.reset(new MWAWRSRCParser(rsrc));
-      rsrcParser->setAsciiName("RSRC");
-      rsrcParser->parse();
-    }
-    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+  shared_ptr<MWAWRSRCParser> rsrcParser;
+  if (rsrc) {
+    rsrcParser.reset(new MWAWRSRCParser(rsrc));
+    rsrcParser->setAsciiName("RSRC");
+    rsrcParser->parse();
+  }
+  shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 
-    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+  if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWSpreadsheetParser> parser=MWAWDocumentInternal::getSpreadsheetParserFromHeader(ip, rsrcParser, header.get());
-    if (!parser) return MWAW_R_UNKNOWN_ERROR;
-    parser->parse(documentInterface);
-  }
-  catch (libmwaw::FileException) {
-    MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_R_FILE_ACCESS_ERROR;
-  }
-  catch (libmwaw::ParseException) {
-    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_R_PARSE_ERROR;
-  }
-  catch (...) {
-    //fixme: too generic
-    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_R_UNKNOWN_ERROR;
-  }
+  shared_ptr<MWAWSpreadsheetParser> parser=MWAWDocumentInternal::getSpreadsheetParserFromHeader(ip, rsrcParser, header.get());
+  if (!parser) return MWAW_R_UNKNOWN_ERROR;
+  parser->parse(documentInterface);
 
-  return error;
+  return MWAW_R_OK;
+}
+catch (libmwaw::FileException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: File exception trapped\n"));
+  return MWAW_R_FILE_ACCESS_ERROR;
+}
+catch (libmwaw::ParseException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Parse exception trapped\n"));
+  return MWAW_R_PARSE_ERROR;
+}
+catch (...)
+{
+  //fixme: too generic
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Unknown exception trapped\n"));
+  return MWAW_R_UNKNOWN_ERROR;
 }
 
 MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const */*password*/)
+try
 {
   if (!input)
     return MWAW_R_UNKNOWN_ERROR;
-  Result error = MWAW_R_OK;
 
-  try {
-    MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
-    MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
-    shared_ptr<MWAWRSRCParser> rsrcParser;
-    if (rsrc) {
-      rsrcParser.reset(new MWAWRSRCParser(rsrc));
-      rsrcParser->setAsciiName("RSRC");
-      rsrcParser->parse();
-    }
-    shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
+  MWAWInputStreamPtr ip(new MWAWInputStream(input, false, true));
+  MWAWInputStreamPtr rsrc=ip->getResourceForkStream();
+  shared_ptr<MWAWRSRCParser> rsrcParser;
+  if (rsrc) {
+    rsrcParser.reset(new MWAWRSRCParser(rsrc));
+    rsrcParser->setAsciiName("RSRC");
+    rsrcParser->parse();
+  }
+  shared_ptr<MWAWHeader> header(MWAWDocumentInternal::getHeader(ip, rsrcParser, false));
 
-    if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
+  if (!header.get()) return MWAW_R_UNKNOWN_ERROR;
 
-    shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getTextParserFromHeader(ip, rsrcParser, header.get());
-    if (!parser) return MWAW_R_UNKNOWN_ERROR;
-    parser->parse(documentInterface);
-  }
-  catch (libmwaw::FileException) {
-    MWAW_DEBUG_MSG(("File exception trapped\n"));
-    error = MWAW_R_FILE_ACCESS_ERROR;
-  }
-  catch (libmwaw::ParseException) {
-    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-    error = MWAW_R_PARSE_ERROR;
-  }
-  catch (...) {
-    //fixme: too generic
-    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-    error = MWAW_R_UNKNOWN_ERROR;
-  }
+  shared_ptr<MWAWTextParser> parser=MWAWDocumentInternal::getTextParserFromHeader(ip, rsrcParser, header.get());
+  if (!parser) return MWAW_R_UNKNOWN_ERROR;
+  parser->parse(documentInterface);
 
-  return error;
+  return MWAW_R_OK;
+}
+catch (libmwaw::FileException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: File exception trapped\n"));
+  return MWAW_R_FILE_ACCESS_ERROR;
+}
+catch (libmwaw::ParseException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Parse exception trapped\n"));
+  return MWAW_R_PARSE_ERROR;
+}
+catch (...)
+{
+  //fixme: too generic
+  MWAW_DEBUG_MSG(("MWAWDocument::parse: Unknown exception trapped\n"));
+  return MWAW_R_UNKNOWN_ERROR;
 }
 
 bool MWAWDocument::decodeGraphic(librevenge::RVNGBinaryData const &binary, librevenge::RVNGDrawingInterface *paintInterface)
+try
 {
   if (!paintInterface || !binary.size()) {
     MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: called with no data or no converter\n"));
     return false;
   }
   MWAWGraphicDecoder tmpHandler(paintInterface);
-  try {
-    if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
-  }
-  catch (...) {
-    MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: unknown error\n"));
-    return false;
-  }
+  if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
   return true;
+}
+catch (...)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::decodeGraphic: unknown error\n"));
+  return false;
 }
 
 bool MWAWDocument::decodeSpreadsheet(librevenge::RVNGBinaryData const &binary, librevenge::RVNGSpreadsheetInterface *sheetInterface)
+try
 {
   if (!sheetInterface || !binary.size()) {
     MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: called with no data or no converter\n"));
     return false;
   }
   MWAWSpreadsheetDecoder tmpHandler(sheetInterface);
-  try {
-    if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
-  }
-  catch (...) {
-    MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: unknown error\n"));
-    return false;
-  }
+  if (!tmpHandler.checkData(binary) || !tmpHandler.readData(binary)) return false;
   return true;
+}
+catch (...)
+{
+  MWAW_DEBUG_MSG(("MWAWDocument::decodeSpreadsheet: unknown error\n"));
+  return false;
 }
 
 bool MWAWDocument::decodeText(librevenge::RVNGBinaryData const &, librevenge::RVNGTextInterface *)
@@ -415,42 +420,47 @@ namespace MWAWDocumentInternal
 MWAWHeader *getHeader(MWAWInputStreamPtr &ip,
                       MWAWRSRCParserPtr rsrcParser,
                       bool strict)
+try
 {
   std::vector<MWAWHeader> listHeaders;
 
-  try {
-    if (!ip.get()) return 0L;
+  if (!ip.get()) return 0L;
 
-    if (ip->hasDataFork()) {
-      /** avoid very short file */
-      if (!ip->hasResourceFork() && ip->size() < 10) return 0L;
+  if (ip->hasDataFork()) {
+    /** avoid very short file */
+    if (!ip->hasResourceFork() && ip->size() < 10) return 0L;
 
-      ip->seek(0, librevenge::RVNG_SEEK_SET);
-      ip->setReadInverted(false);
-    }
-    else if (!ip->hasResourceFork())
-      return 0L;
+    ip->seek(0, librevenge::RVNG_SEEK_SET);
+    ip->setReadInverted(false);
+  }
+  else if (!ip->hasResourceFork())
+    return 0L;
 
-    listHeaders = MWAWHeader::constructHeader(ip, rsrcParser);
-    size_t numHeaders = listHeaders.size();
-    if (numHeaders==0) return 0L;
+  listHeaders = MWAWHeader::constructHeader(ip, rsrcParser);
+  size_t numHeaders = listHeaders.size();
+  if (numHeaders==0) return 0L;
 
-    for (size_t i = 0; i < numHeaders; i++) {
-      if (!MWAWDocumentInternal::checkBasicMacHeader(ip, rsrcParser, listHeaders[i], strict))
-        continue;
-      return new MWAWHeader(listHeaders[i]);
-    }
+  for (size_t i = 0; i < numHeaders; i++) {
+    if (!MWAWDocumentInternal::checkBasicMacHeader(ip, rsrcParser, listHeaders[i], strict))
+      continue;
+    return new MWAWHeader(listHeaders[i]);
   }
-  catch (libmwaw::FileException) {
-    MWAW_DEBUG_MSG(("File exception trapped\n"));
-  }
-  catch (libmwaw::ParseException) {
-    MWAW_DEBUG_MSG(("Parse exception trapped\n"));
-  }
-  catch (...) {
-    //fixme: too generic
-    MWAW_DEBUG_MSG(("Unknown exception trapped\n"));
-  }
+  return 0L;
+}
+catch (libmwaw::FileException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocumentInternal::MWAWDocument[getHeader]:File exception trapped\n"));
+  return 0L;
+}
+catch (libmwaw::ParseException)
+{
+  MWAW_DEBUG_MSG(("MWAWDocumentInternal::getHeader:Parse exception trapped\n"));
+  return 0L;
+}
+catch (...)
+{
+  //fixme: too generic
+  MWAW_DEBUG_MSG(("MWAWDocumentInternal::getHeader:Unknown exception trapped\n"));
   return 0L;
 }
 
@@ -896,22 +906,22 @@ shared_ptr<MWAWTextParser> getTextParserFromHeader(MWAWInputStreamPtr &input, MW
 
 /** Wrapper to check a basic header of a mac file */
 bool checkBasicMacHeader(MWAWInputStreamPtr &input, MWAWRSRCParserPtr rsrcParser, MWAWHeader &header, bool strict)
+try
 {
-  try {
-    shared_ptr<MWAWParser> parser=getTextParserFromHeader(input, rsrcParser, &header);
-    if (!parser)
-      parser=getSpreadsheetParserFromHeader(input, rsrcParser, &header);
-    if (!parser)
-      parser=getGraphicParserFromHeader(input, rsrcParser, &header);
-    if (!parser)
-      parser=getPresentationParserFromHeader(input, rsrcParser, &header);
-    if (!parser)
-      return false;
-    return parser->checkHeader(&header, strict);
-  }
-  catch (...) {
-  }
-
+  shared_ptr<MWAWParser> parser=getTextParserFromHeader(input, rsrcParser, &header);
+  if (!parser)
+    parser=getSpreadsheetParserFromHeader(input, rsrcParser, &header);
+  if (!parser)
+    parser=getGraphicParserFromHeader(input, rsrcParser, &header);
+  if (!parser)
+    parser=getPresentationParserFromHeader(input, rsrcParser, &header);
+  if (!parser)
+    return false;
+  return parser->checkHeader(&header, strict);
+}
+catch (...)
+{
+  MWAW_DEBUG_MSG(("MWAWDocumentInternal::checkBasicMacHeader:Unknown exception trapped\n"));
   return false;
 }
 

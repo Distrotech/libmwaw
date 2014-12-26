@@ -641,7 +641,7 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
       return false;
     long version = (long) inp->readULong(4);
     if (version != 0x20000) {
-      MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: unknown version: %lx\n", version));
+      MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: unknown version: %lx\n", (long unsigned int) version));
       return false;
     }
     inp->seek(16, librevenge::RVNG_SEEK_CUR); // filename
@@ -682,13 +682,13 @@ bool MWAWInputStream::unMacMIME(MWAWInputStream *inp,
       /* try to read the data */
       inp->seek(entryPos, librevenge::RVNG_SEEK_SET);
       if (inp->tell() != entryPos) {
-        MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not seek entry pos %lx\n", entryPos));
+        MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not seek entry pos %lx\n", (long unsigned int) entryPos));
         return false;
       }
       unsigned long numBytesRead = 0;
       const unsigned char *data = inp->read(entrySize, numBytesRead);
       if (numBytesRead != entrySize || !data) {
-        MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read %lX byte\n", entryPos));
+        MWAW_DEBUG_MSG(("MWAWInputStream::unMacMIME: can not read %lX byte\n", (long unsigned int) entryPos));
         return false;
       }
       if (wh==1)

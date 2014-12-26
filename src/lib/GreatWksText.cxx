@@ -626,7 +626,7 @@ bool GreatWksText::findNextZone()
     }
   }
 
-  MWAW_DEBUG_MSG(("GreatWksText::findNextZone: can not find begin of zone for pos=%lx\n", pos));
+  MWAW_DEBUG_MSG(("GreatWksText::findNextZone: can not find begin of zone for pos=%lx\n", (long unsigned int) pos));
   input->seek(searchPos, librevenge::RVNG_SEEK_SET);
   return false;
 }

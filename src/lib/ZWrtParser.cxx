@@ -973,7 +973,7 @@ bool ZWField::getBool(MWAWInputStreamPtr &input, bool &val) const
   else if (str[0]=='F')
     val = false;
   else {
-    MWAW_DEBUG_MSG(("ZWField::getBool: find unexpected char %x\n", int(str[0])));
+    MWAW_DEBUG_MSG(("ZWField::getBool: find unexpected char %x\n", (unsigned int)str[0]));
     return false;
   }
   return true;
@@ -1000,7 +1000,7 @@ bool ZWField::getInt(MWAWInputStreamPtr &input, int &val) const
       val = 10*val+(c-'0');
       continue;
     }
-    MWAW_DEBUG_MSG(("ZWField::getInt: find unexpected char %x\n", int(c)));
+    MWAW_DEBUG_MSG(("ZWField::getInt: find unexpected char %x\n", (unsigned int)c));
     val *= sign;
     return false;
   }
@@ -1056,7 +1056,7 @@ bool ZWField::getIntList(MWAWInputStreamPtr &input, std::vector<int> &list) cons
       val = 10*val+(c-'0');
       continue;
     }
-    MWAW_DEBUG_MSG(("ZWField::getIntList: find unexpected char %x\n", int(c)));
+    MWAW_DEBUG_MSG(("ZWField::getIntList: find unexpected char %x\n", (unsigned int)c));
     return list.size();
   }
   return true;

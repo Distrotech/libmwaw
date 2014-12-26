@@ -1199,7 +1199,7 @@ bool HanMacWrdJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinary
     do {  /* once for each bit on path */
       if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= entry.end()) {
-          MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
+          MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: find some uncomplete data for zone %lx\n", (long unsigned int) entry.begin()));
           dt.append((unsigned char)a);
           ok = false;
           break;

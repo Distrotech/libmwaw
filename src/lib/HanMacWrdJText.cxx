@@ -440,7 +440,7 @@ std::vector<long> HanMacWrdJText::getTokenIdList() const
 bool HanMacWrdJText::canSendTextAsGraphic(long id, long cPos)
 {
   if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJText::canSendTextAsGraphic: can not find text zone with id %lx\n", id));
+    MWAW_DEBUG_MSG(("HanMacWrdJText::canSendTextAsGraphic: can not find text zone with id %lx\n", (long unsigned int) id));
     return false;
   }
   int zId = m_state->m_idTextZoneMap.find(id)->second;
@@ -479,7 +479,7 @@ bool HanMacWrdJText::canSendTextAsGraphic(HanMacWrdJTextInternal::TextZone const
 bool HanMacWrdJText::sendText(long id, long cPos, MWAWListenerPtr listener)
 {
   if (m_state->m_idTextZoneMap.find(id)==m_state->m_idTextZoneMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not find text zone with id %lx\n", id));
+    MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: can not find text zone with id %lx\n", (long unsigned int) id));
     return false;
   }
   int zId = m_state->m_idTextZoneMap.find(id)->second;
@@ -788,7 +788,7 @@ bool HanMacWrdJText::sendText(HanMacWrdJTextInternal::TextZone const &zone, long
           break;
         if (c <= 0x1f || c >= 0x100) {
           f << "#[" << std::hex << c << std::dec << "]";
-          MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: find a odd char %x\n", c));
+          MWAW_DEBUG_MSG(("HanMacWrdJText::sendText: find a odd char %x\n", (unsigned int) c));
           break;
         }
         f << char(c);
@@ -860,7 +860,7 @@ void HanMacWrdJText::updateTextZoneTypes(std::map<long,int> const &idTypeMap)
   int numZones = (int) m_state->m_textZoneList.size();
   for (it=idTypeMap.begin(); it != idTypeMap.end(); ++it) {
     if (m_state->m_idTextZoneMap.find(it->first)==m_state->m_idTextZoneMap.end()) {
-      MWAW_DEBUG_MSG(("HanMacWrdJText::updateTextZoneTypes: can not find text zone with id %lx\n", it->first));
+      MWAW_DEBUG_MSG(("HanMacWrdJText::updateTextZoneTypes: can not find text zone with id %lx\n", (long unsigned int) it->first));
       continue;
     }
     int zId = m_state->m_idTextZoneMap.find(it->first)->second;

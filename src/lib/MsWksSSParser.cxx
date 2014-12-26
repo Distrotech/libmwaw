@@ -320,7 +320,7 @@ void MsWksSSParser::sendNote(int noteId)
         }
       }
       else if (c <= 0x1f) {
-        MWAW_DEBUG_MSG(("MsWksSSParser::sendNote: find char=%x\n",int(c)));
+        MWAW_DEBUG_MSG(("MsWksSSParser::sendNote: find char=%x\n", (unsigned int)c));
       }
       else
         listener->insertCharacter((unsigned char)c, input, entry.end());

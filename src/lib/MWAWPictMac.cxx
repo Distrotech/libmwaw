@@ -1773,7 +1773,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -1782,7 +1782,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     OpCode const &opCode = *(it->second);
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict error for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict error for opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -1861,7 +1861,7 @@ bool PictParser::convertToPict2(librevenge::RVNGBinaryData const &orig, libreven
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", (unsigned int) code));
       delete [] res;
       return false;
     }
@@ -1869,7 +1869,7 @@ bool PictParser::convertToPict2(librevenge::RVNGBinaryData const &orig, libreven
     OpCode const &opCode = *(it->second);
     sz = 0;
     if (!opCode.computeSize(*input, sz)) {
-      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", (unsigned int) code));
       delete [] res;
       return false;
     }
@@ -2058,7 +2058,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     int code = (int)input->readULong(2);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -2067,7 +2067,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     OpCode const &opCode = *(it->second);
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
-      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict error for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict error for opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;

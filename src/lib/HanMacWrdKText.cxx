@@ -839,7 +839,7 @@ bool HanMacWrdKText::sendText(HanMacWrdKZone &zone, MWAWListenerPtr listener)
       default: {
         if (c <= 0x1f || c >= 0x100) {
           f << "###" << std::hex << c << std::dec;
-          MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: find a odd char %x\n", c));
+          MWAW_DEBUG_MSG(("HanMacWrdKText::sendText: find a odd char %x\n", (unsigned int) c));
           break;
         }
         f << char(c);
