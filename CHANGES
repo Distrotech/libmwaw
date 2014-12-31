@@ -1,5 +1,7 @@
 CHANGES:
 
+-------- version 0.3.5 (start)  -------------
+
 11/9/2014:
 - AppleWorks/ClarisWorks parser[draw]: 
   try to send master pages on each page of the final documents
