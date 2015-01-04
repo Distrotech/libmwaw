@@ -55,7 +55,7 @@ namespace RagTimeStruct
 {
 /** a structure used to store list in a resource fork */
 struct ResourceList {
-  /** the different resource type which can be stored has list */
+  /** the different resource type which can be stored as list */
   enum Type { BuSl=0, BuGr, SpBo, SpCe, SpDE, SpTe, SpVa, gray, colr, res_, Undef};
   /** constructor */
   ResourceList() : m_type(Undef), m_headerPos(0), m_headerSize(0), m_dataPos(0), m_dataNumber(0), m_dataSize(0), m_endPos(0), m_extra("")

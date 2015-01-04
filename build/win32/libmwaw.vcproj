@@ -652,6 +652,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTime5StructManager.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\SuperPaintParser.cxx"
 				>
 			</File>
@@ -1186,6 +1190,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTime5Parser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTime5StructManager.hxx"
 				>
 			</File>
 			<File

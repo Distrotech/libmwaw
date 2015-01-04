@@ -54,9 +54,7 @@
 #include "MWAWStringStream.hxx"
 #include "MWAWSubDocument.hxx"
 
-#include "RagTimeSpreadsheet.hxx"
-#include "RagTimeStruct.hxx"
-#include "RagTimeText.hxx"
+#include "RagTime5StructManager.hxx"
 
 #include "RagTime5Parser.hxx"
 
@@ -265,9 +263,9 @@ std::string Zone::getZoneName() const
     if (m_type==Zone::Main)
       return "UnknCounter8";
     break;
-  case 10: // type=SingleRef, gd=[1,id], Data id is a list blocks
+  case 10: // type=SingleRef, gd=[1,id], Data id is a list types
     if (m_type==Zone::Main)
-      return "Blocks";
+      return "Types";
     break;
   case 11: // type=SingleRef, gd=[1,id], Did is a item cluster
     if (m_type==Zone::Main)
@@ -458,7 +456,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 RagTime5Parser::RagTime5Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_structManager()
 {
   init();
 }
@@ -469,6 +467,7 @@ RagTime5Parser::~RagTime5Parser()
 
 void RagTime5Parser::init()
 {
+  m_structManager.reset(new RagTime5StructManager);
   resetTextListener();
   setAsciiName("main-1");
 
@@ -528,11 +527,6 @@ void RagTime5Parser::parse(librevenge::RVNGTextInterface *docInterface)
     if (ok) {
       createDocument(docInterface);
       //sendZones();
-#if defined(DEBUG) && 0
-      m_textParser->flushExtra();
-      m_spreadsheetParser->flushExtra();
-      flushExtra();
-#endif
     }
 
     ascii().reset();
@@ -713,16 +707,30 @@ bool RagTime5Parser::createZones()
     }
     shared_ptr<RagTime5ParserInternal::Zone> dZone=
       m_state->m_dataIdZoneMap.find(zone->m_variableD[1])->second;
-    if (!dZone) continue;
+    if (!dZone || !dZone->m_entry.valid()) continue;
     dZone->m_name=zone->getZoneName();
-    if (dZone->getKindLastPart()=="ItemData" && readListBlock(*dZone))
-      ++numZone10;
-    else {
-      MWAW_DEBUG_MSG(("RagTime5Parser::createZones: unexpected list of block type\n"));
+    if (dZone->getKindLastPart()=="ItemData") {
+      MWAWInputStreamPtr input=dZone->getInput();
+      libmwaw::DebugFile &ascFile=dZone->ascii();
+
+      input->setReadInverted(!dZone->m_hiLoEndian);
+      input->seek(dZone->m_entry.begin(), librevenge::RVNG_SEEK_SET);
+      bool ok=m_structManager->readTypeDefinitions(input, dZone->m_entry.end(), ascFile);
+      input->setReadInverted(false);
+      if (ok) {
+        f.str("");
+        f << "zone=" << *dZone;
+        ascFile.addPos(dZone->m_entry.begin());
+        ascFile.addNote(f.str().c_str());
+        dZone->m_isParsed=true;
+        ++numZone10;
+        continue;
+      }
     }
+    MWAW_DEBUG_MSG(("RagTime5Parser::createZones: unexpected list of block type\n"));
   }
   if (numZone10!=1) {
-    MWAW_DEBUG_MSG(("RagTime5Parser::createZones: parses %d list of blocks zone, we may have a problem\n", numZone10));
+    MWAW_DEBUG_MSG(("RagTime5Parser::createZones: parses %d list of type zone, we may have a problem\n", numZone10));
   }
   //! zone 11
   it=m_state->m_mainIdZoneMap.lower_bound(11);
@@ -764,7 +772,6 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
     MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: can not find the entry\n"));
     return false;
   }
-  libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
   int usedId=zone.m_kinds[1].empty() ? 0 : 1;
   std::string actType=zone.getKindLastPart(usedId==0);
@@ -776,8 +783,8 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
     if (zone.m_kinds[1]=="BESoftware:7BitASCII:Type" && readString(zone, what))
       return true;
     MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: can not read codename for zone %d\n", zone.m_ids[0]));
-    f.str("");
     f << "Entries(CodeName)[" << zone << "]:###";
+    libmwaw::DebugFile &ascFile=zone.ascii();
     ascFile.addPos(zone.m_entry.begin());
     ascFile.addNote(f.str().c_str());
     return true;
@@ -805,8 +812,8 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
     if (readPicture(zone, zone.m_entry, pictType))
       return true;
     MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: can not read a picture zone %d\n", zone.m_ids[0]));
-    f.str("");
     f << "Entries(BADPICT)[" << zone << "]:###";
+    libmwaw::DebugFile &ascFile=zone.ascii();
     ascFile.addPos(zone.m_entry.begin());
     ascFile.addNote(f.str().c_str());
     return true;
@@ -823,8 +830,8 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
       if (readUnicodeString(zone))
         return true;
       MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: can not read a unicode zone %d\n", zone.m_ids[0]));
-      f.str("");
       f << "Entries(StringUnicode)[" << zone << "]:###";
+      libmwaw::DebugFile &ascFile=zone.ascii();
       ascFile.addPos(zone.m_entry.begin());
       ascFile.addNote(f.str().c_str());
       return true;
@@ -832,12 +839,16 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
     if (actType=="Cluster") {
       if (readItemCluster(zone)) return true;
       MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: can not read a cluster of item %d\n", zone.m_ids[0]));
-      f.str("");
       f << "Entries(ItemClster)[" << zone << "]:###";
+      libmwaw::DebugFile &ascFile=zone.ascii();
       ascFile.addPos(zone.m_entry.begin());
       ascFile.addNote(f.str().c_str());
       return true;
     }
+    if (zone.m_entry.length()>=240 && (zone.m_entry.length()%6)==0 && readUnknBlock6(zone))
+      return true;
+    if (zone.m_entry.length()>=40 && readStructZone(zone))
+      return true;
     // checkme: some basic ItemData seems very often be unicode strings for instance data19
     name="ItemDta";
   }
@@ -845,7 +856,7 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
     MWAW_DEBUG_MSG(("RagTime5Parser::readZoneData: find a unknown type for zone=%d\n", zone.m_ids[0]));
     name="UnknownZone";
   }
-  f.str("");
+  libmwaw::DebugFile &ascFile=zone.ascii();
   f << "Entries(" << name << "):" << zone;
   ascFile.addPos(zone.m_entry.begin());
   ascFile.addNote(f.str().c_str());
@@ -857,22 +868,6 @@ bool RagTime5Parser::readZoneData(RagTime5ParserInternal::Zone &zone)
 ////////////////////////////////////////////////////////////
 // parse the different zones
 ////////////////////////////////////////////////////////////
-bool RagTime5Parser::readCompressedLong(MWAWInputStreamPtr &input, long endPos, long &val)
-{
-  val=(long) input->readULong(1);
-  if ((val&0xF0)==0xC0) {
-    input->seek(-1, librevenge::RVNG_SEEK_CUR);
-    val=(long)(MWAWInputStream::readULong(input->input().get(), 4, 0, false)&0xFFFFFFF);
-  }
-  else if (val>=0xD0) { // never seems, but may be ok
-    MWAW_DEBUG_MSG(("RagTime5Parser::readCompressedLong: can not read a long\n"));
-    return false;
-  }
-  else if (val>=0x80)
-    val=((val&0x7F)<<8)+(long) input->readULong(1);
-  return input->tell()<=endPos;
-}
-
 bool RagTime5Parser::readString(RagTime5ParserInternal::Zone &zone, std::string &text)
 {
   if (!zone.m_entry.valid()) return false;
@@ -916,6 +911,9 @@ bool RagTime5Parser::readUnicodeString(RagTime5ParserInternal::Zone &zone)
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
   f << "Entries(StringUnicode)[" << zone << "]:";
+  /* checkme: the HiLo flag does not seem well set, we must probably used the document version, here
+     input->setReadInverted(!zone.m_hiLoEndian);
+   */
   input->seek(zone.m_entry.begin(), librevenge::RVNG_SEEK_SET);
   length/=2;
   f << "\"";
@@ -932,6 +930,7 @@ bool RagTime5Parser::readUnicodeString(RagTime5ParserInternal::Zone &zone)
   ascFile.addNote(f.str().c_str());
   ascFile.addPos(zone.m_entry.end());
   ascFile.addNote("_");
+  input->setReadInverted(false);
   return true;
 }
 
@@ -966,7 +965,7 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
     if (pos>=endPos) break;
     // N
     long lVal;
-    if (!readCompressedLong(input, endPos, lVal)) {
+    if (!RagTime5StructManager::readCompressedLong(input, endPos, lVal)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -975,7 +974,7 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
     f << "f0=" << lVal << ",";
     // always in big endian
     long sz;
-    if (!readCompressedLong(input,endPos,sz) || sz <= 7 || input->tell()+sz>endPos) {
+    if (!RagTime5StructManager::readCompressedLong(input,endPos,sz) || sz <= 7 || input->tell()+sz>endPos) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -988,7 +987,7 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
     f.str("");
     f << name << "-" << n << "-A:";
     if (!zone.m_hiLoEndian) f << "lohi,";
-    if (!readCompressedLong(input, endDataPos, lVal) || lVal<6 || input->tell()+lVal>endDataPos) {
+    if (!RagTime5StructManager::readCompressedLong(input, endDataPos, lVal) || lVal<6 || input->tell()+lVal>endDataPos) {
       MWAW_DEBUG_MSG(("RagTime5Parser::readItemCluster: can not read item A\n"));
       f << "###";
       ascFile.addPos(pos);
@@ -1001,11 +1000,35 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
     long endSubDataPos=input->tell()+lVal;
     int fl=(int) input->readULong(2); // [01][13][0139b]
     f << "fl=" << std::hex << fl << std::dec << ",";
-    val=(int) input->readULong(4); // a small number, or 80000000
-    if (val==(int) 0x80000000)
-      f << "f0=_,";
-    else
-      f << "f0=" << val << ",";
+    long type=(long) input->readLong(4); // a small number, or 80000000
+    std::string what("");
+    switch (type) {
+    case -2147483648: // 80000000
+      what="filename";
+      break;
+    case -5: {
+      what="header";
+      if (lVal<12) {
+        f << "###data,";
+        MWAW_DEBUG_MSG(("RagTime5Parser::readItemCluster: can not read the data id\n"));
+        break;
+      }
+      for (int i=0; i<2; ++i) { // always 0?
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i+1 << "=" << val << ",";
+      }
+      f << "id=" << input->readULong(2) << ",";
+      break;
+    }
+    default: {
+      f << "#";
+      std::stringstream s;
+      s << "type" << type;
+      what=s.str();
+      break;
+    }
+    }
+    f << what << ",";
     if (input->tell()!=endSubDataPos)
       ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
@@ -1018,10 +1041,17 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
       pos=input->tell();
       if (pos+4>endDataPos)
         break;
-      std::stringstream s;
-      s << name << "-" << n << "-B" << m++;
-      if (!readItemClusterVariable(zone, endDataPos, s.str()))
+      RagTime5StructManager::Field field;
+      if (!m_structManager->readField(field, input, endDataPos)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
         break;
+      }
+      f.str("");
+      f << name << "-" << n << "-B" << m++ << "[" << what << "]:";
+      if (!zone.m_hiLoEndian) f << "lohi,";
+      f << field;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
     }
 
     pos=input->tell();
@@ -1047,191 +1077,148 @@ bool RagTime5Parser::readItemCluster(RagTime5ParserInternal::Zone &zone)
   return true;
 }
 
-bool RagTime5Parser::readItemClusterVariable(RagTime5ParserInternal::Zone &zone, long endPos, std::string const &fieldName)
+bool RagTime5Parser::readUnknBlock6(RagTime5ParserInternal::Zone &zone)
 {
-  libmwaw::DebugFile &ascFile=zone.ascii();
-  libmwaw::DebugStream f;
-  f << fieldName << ":";
+  if (zone.m_entry.length()<240 || (zone.m_entry.length()%6)!=0) return false;
   MWAWInputStreamPtr input=zone.getInput();
-  long pos=input->tell();
-  if (pos+5>endPos) {
-    MWAW_DEBUG_MSG(("RagTime5Parser::readItemClusterVariable: the zone seems too short\n"));
-    f << "###";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    return false;
-  }
-  long type=(long) input->readULong(4);
-  if (!zone.m_hiLoEndian) f << "lohi,";
-  switch ((type>>24)) {
-  case 0:
-  case 1: {
-    f << "type=" << std::hex << type << std::dec << ",";
-    bool complex=(int) input->readULong(1)==0xc0;
-    input->seek(-1, librevenge::RVNG_SEEK_CUR);
-    long fSz=0;
-    if (!readCompressedLong(input, endPos, fSz) || fSz<=0 || input->tell()+fSz>endPos)
-      break;
-    long endDataPos=input->tell()+fSz;
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-    if (!complex) {
-      ascFile.addDelimiter(input->tell(),'|');
-      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
-      return true;
-    }
-    int n=0;
-    while (input->tell()<endDataPos) {
-      pos=input->tell();
-      std::stringstream s;
-      s << fieldName << "-" << ++n;
-      if (!readItemClusterVariable(zone, endDataPos, s.str())) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-        break;
-      }
-    }
-    if (input->tell()+4>=endDataPos) {
-      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
-      return true;
-    }
-    break;
-  }
-  default:
-    break;
-  }
-  MWAW_DEBUG_MSG(("RagTime5Parser::readItemClusterVariable: can not read some data\n"));
-  f << "###";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  input->seek(pos, librevenge::RVNG_SEEK_SET);
-  return false;
-}
-
-bool RagTime5Parser::readListBlock(RagTime5ParserInternal::Zone &zone)
-{
-  if (zone.m_entry.length()<150) return false;
-  MWAWInputStreamPtr input=zone.getInput();
-  input->setReadInverted(!zone.m_hiLoEndian);
-  libmwaw::DebugStream f;
-  f << "Entries(" << zone.m_name << ")[" << zone << "]:";
+  int N=int(zone.m_entry.length()/6);
+  // encoding seems always hiLo
   input->seek(zone.m_entry.begin(), librevenge::RVNG_SEEK_SET);
-  long N;
-  if (!readCompressedLong(input, zone.m_entry.end(), N) || N<20 || 12+14*N>zone.m_entry.length()) {
-    MWAW_DEBUG_MSG(("RagTime5Parser::readListBlock: can not read the list block zone\n"));
-    input->setReadInverted(false);
+
+  int bad=0;
+  std::set<int> seens;
+  for (int i=0; i<N; ++i) {
+    // 0, 1, 1001, 1801, 4001, 5801
+    int fl=(int) input->readULong(2);
+    if ((fl&0xff)>4) return false;
+    int id=(int) input->readULong(2);
+    input->seek(2, librevenge::RVNG_SEEK_CUR);
+    if (fl) {
+      if ((fl&0x7fe))
+        ++bad;
+      continue;
+    }
+    if (seens.find(id)!=seens.end())
+      return false;
+    else
+      seens.insert(id);
+  }
+  if (bad>10)
     return false;
+  if (bad) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknBlock6: find %d bad\n", bad));
+  }
+  // in general N seems a multiple of but sometimes...
+  if ((N%128)) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknBlock6: find N=%d\n", N));
   }
   zone.m_isParsed=true;
-  f << "N=" << N << ",";
-  int val;
-  for (int i=0; i<2; ++i) { // always 0,0
-    val=(int) input->readLong(2);
-    if (val) f << "f" << i << "=" << val << ",";
-  }
-  int sz=(int) input->readULong(1);
-  if (sz) {
-    f << "data1=[" << std::hex;
-    for (int i=0; i<sz+1; ++i) {
-      val=(int) input->readULong(1);
-      if (val) f << val << ",";
-      else f << "_,";
-    }
-    f << std::dec << "],";
-  }
-  long debPos=input->tell()+4*(N+1);
-  long remain=zone.m_entry.end()-debPos;
-  if (remain<=0) return false;
-  f << "ptr=[" << std::hex;
-  std::vector<long> listPtrs((size_t)(N+1), -1);
-  long lastPtr=0;
-  int numOk=0;
-  for (size_t i=0; i<=size_t(N); ++i) {
-    long ptr=(long) input->readULong(4);
-    if (ptr<0 || ptr>remain || ptr<lastPtr) {
-      f << "###";
-      static bool first=true;
-      if (first) {
-        first = false;
-        MWAW_DEBUG_MSG(("RagTime5Parser::readListBlock: problem reading some block position\n"));
-      }
-      listPtrs[size_t(i)]=lastPtr;
-    }
-    else {
-      ++numOk;
-      lastPtr=listPtrs[size_t(i)]=ptr;
-    }
-    f << ptr << ",";
-  }
-  f << std::dec << "],";
-  libmwaw::DebugFile &ascFile=zone.ascii();
-  ascFile.addPos(zone.m_entry.begin());
-  ascFile.addNote(f.str().c_str());
-  ascFile.addPos(zone.m_entry.end());
-  ascFile.addNote("_");
-  if (!numOk) {
-    MWAW_DEBUG_MSG(("RagTime5Parser::readListBlock: problem reading some block position\n"));
-    input->setReadInverted(false);
-    return false;
-  }
 
-  for (size_t i=0; i+1<listPtrs.size(); ++i) {
-    if (listPtrs[i]<0 || listPtrs[i]==listPtrs[i+1]) continue;
-    if (listPtrs[i]==remain) break;
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  libmwaw::DebugStream f;
+  input->seek(zone.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+
+  for (int i=0; i<N; ++i) {
+    long pos=input->tell();
     f.str("");
-    f << zone.m_name << "-" << i << "[head]:";
-    int dSz=int(listPtrs[i+1]-listPtrs[i]);
-    long pos=debPos+listPtrs[i];
-    if (dSz<6+12) {
-      f << "###";
-      MWAW_DEBUG_MSG(("RagTime5Parser::readListBlock: problem with some block size\n"));
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-    }
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    val=(int) input->readLong(4); // a small number
-    if (val!=1) f << "f0=" << val << ",";
-    int hSz=(int) input->readULong(2);
-    int nData=(dSz-4-hSz)/12;
-    if (4+hSz>dSz || dSz!=4+hSz+12*nData || nData<0 || hSz<12+8) {
-      f << "###hSz=" << hSz << ",";
-      MWAW_DEBUG_MSG(("RagTime5Parser::readListBlock: the header size seems bad\n"));
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-    }
-    val=(int) input->readULong(2);
-    if (val) f << "fl=" << std::hex << val << std::dec << ",";
-    val=(int) input->readULong(4);
-    if (val) f << "id?=" << std::hex << val << std::dec << ",";
-    if (input->tell()!=pos+4+hSz-12)
-      ascFile.addDelimiter(input->tell(),'|');
+    if (i==0)
+      f << "Entries(Block6)[" << zone << "]:";
+    else
+      f << "Block6-" << i << ":";
+    int fl=(int) input->readULong(2);
+    int id=(int) input->readULong(2);
+    int val=(int) input->readLong(2);
+    if (id)
+      f << "id=" << id << ",";
+    if ((fl&0x7fe))
+      f << "#";
+    if (fl) f << "fl=" << std::hex << fl << std::dec << ",";
+    if (val!=-1)
+      f << "f0=" << val << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
-
-    input->seek(pos+4+hSz-12, librevenge::RVNG_SEEK_SET);
-    for (int j=0; j<=nData; ++j) {
-      pos=input->tell();
-      f.str("");
-      f << zone.m_name << "-" << i << "[" << j << "]:";
-      f << "id?=" << std::hex << input->readULong(4) << std::dec << ","; // a big number
-      val=(int) input->readULong(1); // 0 or small val
-      if (val) f << "fl0=" << std::hex << val << std::dec << ",";
-      val=(int) input->readULong(2); // small val
-      if (val) f << "f0=" << std::hex << val << std::dec << ",";
-      for (int k=0; k<3; ++k) {
-        val=(int) input->readULong(1);
-        if (val) f << "fl" << k+1 << "=" << std::hex << val << std::dec << ",";
-      }
-      val=(int) input->readLong(2); // small val
-      if (val) f << "f1=" << val << ",";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
-    }
   }
-  input->setReadInverted(false);
+
+  ascFile.addPos(zone.m_entry.end());
+  ascFile.addNote("_");
   return true;
 }
 
+////////////////////////////////////////////////////////////
+// spreadsheet zone
+////////////////////////////////////////////////////////////
+bool RagTime5Parser::readStructZone(RagTime5ParserInternal::Zone &zone)
+{
+  if (zone.m_entry.length()<40) return false;
+  MWAWInputStreamPtr input=zone.getInput();
+  long pos=zone.m_entry.begin(), endPos=zone.m_entry.end();
+  input->setReadInverted(!zone.m_hiLoEndian);
+  libmwaw::DebugStream f;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  if (input->readLong(2)) {
+    input->setReadInverted(false);
+    return false;
+  }
+  input->seek(4, librevenge::RVNG_SEEK_CUR);
+  if (input->readLong(2)!=1) return false;
+  input->seek(pos+14, librevenge::RVNG_SEEK_SET);
+  RagTime5StructManager::Field field;
+  if (!m_structManager->readField(field, input, endPos)) {
+    input->setReadInverted(false);
+    return false;
+  }
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  zone.m_isParsed=true;
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
+  int n=0;
+  while (!input->isEnd()) {
+    pos=input->tell();
+    if (pos+14>endPos) break;
+    f.str("");
+    if (n==0)
+      f << "Entries(StructZone)[A0][" << zone << "]:";
+    else
+      f << "StructZone-A" << n << ":";
+    if (input->readLong(2)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f << "f0=" << input->readLong(2) << ",";
+    f << "f1=" << std::hex << input->readULong(2) << std::dec << ",";
+    int val=(int) input->readLong(2);
+    if (val) f << "id?=" << val << ",";
+    ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    if (pos+14==endPos) break;
+    int m=0;
+    input->seek(pos+14, librevenge::RVNG_SEEK_SET);
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (!m_structManager->readField(field, input, endPos)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      f.str("");
+      f << "StructZone-" << n << "-B" << ++m << ":" << field;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    ++n;
+  }
+  pos=input->tell();
+  if (pos!=endPos) {
+    ascFile.addPos(pos);
+    ascFile.addNote("StructZone-end:###");
+  }
+  ascFile.addPos(zone.m_entry.end());
+  ascFile.addNote("_");
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// zone unpack/create ascii file, ...
+////////////////////////////////////////////////////////////
 bool RagTime5Parser::update(RagTime5ParserInternal::Zone &zone)
 {
   if (zone.m_entriesList.empty())
@@ -1675,6 +1662,7 @@ bool RagTime5Parser::readPicture(RagTime5ParserInternal::Zone &zone, MWAWEntry &
   default:
     return false;
   }
+  zone.m_isParsed=true;
   libmwaw::DebugStream f;
   f << "picture[" << extension << "],";
   ascii().addPos(zone.m_defPosition);
@@ -1764,7 +1752,6 @@ bool RagTime5Parser::findDataZones(MWAWEntry const &entry)
       ascii().addNote(f.str().c_str());
       break;
     }
-    int val;
     for (int i=0; i<4-type; ++i) {
       zone->m_idsFlag[i]=(int) input->readULong(2); // alway 0/1?
       zone->m_ids[i]=(int) input->readULong(2);
@@ -1774,17 +1761,24 @@ bool RagTime5Parser::findDataZones(MWAWEntry const &entry)
       int type2=(int)  input->readULong(1);
       switch (type2) {
       case 4: // always 0, 1
-      case 0xa: // always 0, 0: never seens in v5 but frequent in v6
+      case 0xa: { // always 0, 0: never seens in v5 but frequent in v6
         ok = input->tell()+4+(type2==4 ? 1 : 0)<=entry.end();
         if (!ok) break;
-        f << "g" << std::hex << type2 << std::dec << "=[";
-        for (int i=0; i<2; ++i) {
-          val=(int) input->readULong(2);
-          if (val) f << std::hex << val << std::dec << ",";
-          else f << "_,";
+        int data[2];
+        for (int i=0; i<2; ++i)
+          data[i]=(int) input->readULong(2);
+        if (type2==4) {
+          if (data[0]==0 && data[1]==1)
+            f << "selected,";
+          else if (data[0]==0)
+            f << "#selected=" << data[1] << ",";
+          else
+            f << "#selected=[" << data[0] << "," << data[1] << "],";
         }
-        f << "],";
+        else
+          f << "g" << std::hex << type2 << std::dec << "=[" << data[0] << "," << data[1] << "],";
         break;
+      }
       case 5:
       case 6: {
         ok = input->tell()+8+(type2==6 ? 1 : 0)<=entry.end();
@@ -1849,10 +1843,6 @@ bool RagTime5Parser::findDataZones(MWAWEntry const &entry)
 //
 // Low level
 //
-////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////
-// picture zone
 ////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////

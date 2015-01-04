@@ -48,6 +48,8 @@ struct Zone;
 class SubDocument;
 }
 
+class RagTime5StructManager;
+
 /** \brief the main class to read a RagTime v5 file
  *
  *
@@ -104,18 +106,14 @@ protected:
   //! try to unpack a zone
   bool unpackZone(RagTime5ParserInternal::Zone &zone);
 
-  //! try to read a compressed long
-  bool readCompressedLong(MWAWInputStreamPtr &input, long endPos, long &val);
   //! try to read a string zone ( zone with id1=21,id2=23:24)
   bool readString(RagTime5ParserInternal::Zone &zone, std::string &string);
   //! try to read a unicode string zone
   bool readUnicodeString(RagTime5ParserInternal::Zone &zone);
   //! try to read a cluster of item
   bool readItemCluster(RagTime5ParserInternal::Zone &zone);
-  //! try to read a list of unknown block
-  bool readListBlock(RagTime5ParserInternal::Zone &zone);
-  //! try to read a list of unknown 12 bytes data
-  bool readUnknBlock12(RagTime5ParserInternal::Zone &zone);
+  //! try to read a list of unknown 6 bytes data
+  bool readUnknBlock6(RagTime5ParserInternal::Zone &zone);
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5ParserInternal::Zone &zone);
@@ -126,11 +124,11 @@ protected:
   //! try to read a picture match zone
   bool readPictureMatch(RagTime5ParserInternal::Zone &zone, bool color);
 
+  //! try to read a spreadsheet
+  bool readStructZone(RagTime5ParserInternal::Zone &zone);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
-  //! try to read a cluster of item
-  bool readItemClusterVariable(RagTime5ParserInternal::Zone &zone, long endPos, std::string const &fieldName);
 protected:
 
   //
@@ -138,6 +136,8 @@ protected:
   //
   //! the state
   shared_ptr<RagTime5ParserInternal::State> m_state;
+  //! the structure manager
+  shared_ptr<RagTime5StructManager> m_structManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
