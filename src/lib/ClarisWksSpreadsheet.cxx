@@ -455,6 +455,8 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: can not find content\n"));
     return false;
   }
+  if (m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET && zId==1)
+    minData=Vec2i(0,0);
   std::vector<float> colSize((size_t)(maxData[0]-minData[0]+1),72);
   for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
     if (c>=0 && c < int(sheet.m_colWidths.size()))
@@ -462,6 +464,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
   }
   sheetListener->openSheet(colSize, librevenge::RVNG_POINT);
   MWAWInputStreamPtr &input= m_parserState->m_input;
+  bool recomputeCellPosition=(minData!=Vec2i(0,0));
   for (int r=minData[1], fR=0; r <= maxData[1]; ++r, ++fR) {
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
       sheetListener->openSheetRow((float)sheet.m_rowHeightMap.find(r)->second, librevenge::RVNG_POINT);
@@ -478,6 +481,8 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
       // change the reference date from 1/1/1904 to 1/1/1900
       if (rec.m_format.m_format==MWAWCell::F_DATE && rec.m_content.isValueSet())
         rec.m_content.setValue(rec.m_content.m_value+1460);
+      if (recomputeCellPosition)
+        rec.updateFormulaCells(minData);
       if (rec.m_borders) {
         int wh=0;
         for (int i=0, bit=1; i < 4; ++i, bit*=2) {

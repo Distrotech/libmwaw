@@ -83,7 +83,8 @@ public:
       m_content(), m_valueType(MWAWCellContent::C_UNKNOWN), m_hasNaNValue(false), m_backgroundColor(MWAWColor::white()), m_font(3,9), m_borders(0)
     {
     }
-
+    //! update the formula cell (removing delta to each position)
+    void updateFormulaCells(Vec2i const &removeDelta);
     //! the style if known
     int m_style;
     //! the format

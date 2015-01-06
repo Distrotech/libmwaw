@@ -1393,4 +1393,33 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
 
   return true;
 }
+
+////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////
+void ClarisWksDbaseContent::Record::updateFormulaCells(Vec2i const &removeDelta)
+{
+  if (m_content.m_contentType!=MWAWCellContent::C_FORMULA)
+    return;
+  std::vector<MWAWCellContent::FormulaInstruction> &formula=m_content.m_formula;
+  for (size_t i=0; i<formula.size(); ++i) {
+    MWAWCellContent::FormulaInstruction &instr=formula[i];
+    int numCell=instr.m_type==MWAWCellContent::FormulaInstruction::F_Cell ? 1 :
+                instr.m_type==MWAWCellContent::FormulaInstruction::F_CellList ? 2 : 0;
+    for (int c=0; c<numCell; ++c) {
+      instr.m_position[c]-=removeDelta;
+      if (instr.m_position[c][0]<0 || instr.m_position[c][1]<0) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("ClarisWksDbaseContent::Record::updateFormulaCells: some cell's positions are bad, remove formula\n"));
+          first=false;
+          // revert to the basic cell type
+          m_content.m_contentType=m_valueType;
+          return;
+        }
+      }
+    }
+  }
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
