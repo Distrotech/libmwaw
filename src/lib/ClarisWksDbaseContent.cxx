@@ -1413,10 +1413,10 @@ void ClarisWksDbaseContent::Record::updateFormulaCells(Vec2i const &removeDelta)
         if (first) {
           MWAW_DEBUG_MSG(("ClarisWksDbaseContent::Record::updateFormulaCells: some cell's positions are bad, remove formula\n"));
           first=false;
-          // revert to the basic cell type
-          m_content.m_contentType=m_valueType;
-          return;
         }
+        // revert to the basic cell type
+        m_content.m_contentType=m_valueType;
+        return;
       }
     }
   }
