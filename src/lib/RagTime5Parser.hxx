@@ -41,13 +41,15 @@
 
 #include "MWAWParser.hxx"
 
+#include "RagTime5StructManager.hxx"
+
 namespace RagTime5ParserInternal
 {
 struct State;
-struct Zone;
 class SubDocument;
 }
 
+class RagTime5Graph;
 class RagTime5StructManager;
 
 /** \brief the main class to read a RagTime v5 file
@@ -57,12 +59,10 @@ class RagTime5StructManager;
  */
 class RagTime5Parser : public MWAWTextParser
 {
+  friend class RagTime5Graph;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
-  //! enum used to defined list of classical pict
-  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
-
   //! constructor
   RagTime5Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
   //! destructor
@@ -82,6 +82,8 @@ protected:
   // interface
   //
 
+  //! returns the structure manager
+  shared_ptr<RagTime5StructManager> getStructManager();
   //! returns the ith color ( if possible)
   bool getColor(int colId, MWAWColor &color, int listId=-1) const;
 
@@ -97,35 +99,36 @@ protected:
   bool createZones();
   //! try to create the main data zones list
   bool findDataZones(MWAWEntry const &entry);
+  //! returns the zone corresponding to a data id (or 0)
+  shared_ptr<RagTime5StructManager::Zone> getDataZone(int dataId) const;
   //! try to update a zone: create a new input if the zone is stored in different positions, ...
-  bool update(RagTime5ParserInternal::Zone &zone);
+  bool update(RagTime5StructManager::Zone &zone);
   //! try to read the zone data
-  bool readZoneData(RagTime5ParserInternal::Zone &zone);
+  bool readZoneData(RagTime5StructManager::Zone &zone);
   //! try to unpack a zone
-  bool unpackZone(RagTime5ParserInternal::Zone &zone, MWAWEntry const &entry, std::vector<unsigned char> &data);
+  bool unpackZone(RagTime5StructManager::Zone &zone, MWAWEntry const &entry, std::vector<unsigned char> &data);
   //! try to unpack a zone
-  bool unpackZone(RagTime5ParserInternal::Zone &zone);
+  bool unpackZone(RagTime5StructManager::Zone &zone);
+
+  //! try to read the different cluster zones
+  bool readClusterZones();
+  //! try to read a cluster zone
+  bool readClusterZone(RagTime5StructManager::Zone &zone);
+  //! try to read a cluster list (in general Data14)
+  bool readClusterList(RagTime5StructManager::Zone &zone);
 
   //! try to read a string zone ( zone with id1=21,id2=23:24)
-  bool readString(RagTime5ParserInternal::Zone &zone, std::string &string);
+  bool readString(RagTime5StructManager::Zone &zone, std::string &string);
   //! try to read a unicode string zone
-  bool readUnicodeString(RagTime5ParserInternal::Zone &zone);
-  //! try to read a cluster of item
-  bool readItemCluster(RagTime5ParserInternal::Zone &zone);
-  //! try to read a list of unknown 6 bytes data
-  bool readUnknBlock6(RagTime5ParserInternal::Zone &zone);
+  bool readUnicodeString(RagTime5StructManager::Zone &zone);
+  //! try to read a list of unknown zone 6 bytes data
+  bool readUnknZoneA(RagTime5StructManager::Zone &zone, int N);
 
   //! try to read the document version zone
-  bool readDocumentVersion(RagTime5ParserInternal::Zone &zone);
-  //! try to read a picture zone
-  bool readPicture(RagTime5ParserInternal::Zone &zone, MWAWEntry &entry, PictureType type);
-  //! try to read a picture list
-  bool readPictureList(RagTime5ParserInternal::Zone &zone, std::vector<int> &listIds);
-  //! try to read a picture match zone
-  bool readPictureMatch(RagTime5ParserInternal::Zone &zone, bool color);
+  bool readDocumentVersion(RagTime5StructManager::Zone &zone);
 
   //! try to read a spreadsheet
-  bool readStructZone(RagTime5ParserInternal::Zone &zone);
+  bool readStructZone(RagTime5StructManager::Zone &zone);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
@@ -136,6 +139,8 @@ protected:
   //
   //! the state
   shared_ptr<RagTime5ParserInternal::State> m_state;
+  //! the graph manager
+  shared_ptr<RagTime5Graph> m_graphParser;
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
 };

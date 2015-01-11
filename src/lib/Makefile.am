@@ -257,6 +257,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTimeStruct.hxx		\
 	RagTimeText.cxx			\
 	RagTimeText.hxx			\
+	RagTime5Graph.cxx		\
+	RagTime5Graph.hxx		\
 	RagTime5Parser.cxx		\
 	RagTime5Parser.hxx		\
 	RagTime5StructManager.cxx	\
