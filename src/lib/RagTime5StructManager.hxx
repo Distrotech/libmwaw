@@ -119,7 +119,6 @@ public:
       for (int i=0; i<3; ++i) m_ids[i]=m_idsFlag[i]=0;
       for (int i=0; i<2; ++i) m_kinds[i]="";
       for (int i=0; i<2; ++i) m_variableD[i]=0;
-      for (int i=0; i<2; ++i) m_graphicZoneId[i]=0;
     }
     //! destructor
     virtual ~Zone() {}
@@ -197,8 +196,6 @@ public:
     std::string m_extra;
     //! the content of the zone D if it exists
     int m_variableD[2];
-    //! the graphic zone id
-    int m_graphicZoneId[2];
     //! a flag to know if the zone is parsed
     bool m_isParsed;
   protected:
@@ -216,6 +213,99 @@ public:
     Zone(Zone const &orig);
     Zone &operator=(Zone const &orig);
   };
+
+  //! a link to a small zone (or set of zones) in RagTime 5/6 documents
+  struct ZoneLink {
+    //! the link type
+    enum Type { L_Graphic, L_GraphicList, L_UnicodeList, L_List, L_Unknown };
+    //! constructor
+    ZoneLink(Type type=L_Unknown) : m_type(type), m_ids(), m_clusterIds(), m_N(0), m_fieldSize(0), m_longList()
+    {
+      for (int i=0; i<2; ++i)
+        m_fileType[i]=0;
+    }
+    //! returns true if all link are empty
+    bool empty() const
+    {
+      for (size_t i=0; i<m_ids.size(); ++i)
+        if (m_ids[i]>0) return false;
+      return true;
+    }
+    //! returns the zone name
+    std::string getZoneName() const
+    {
+      switch (m_type) {
+      case L_Graphic:
+        return "graphLink";
+      case L_GraphicList:
+        return "graphListLink";
+      case L_UnicodeList:
+        return "unicodeListLink,";
+      case L_List:
+      case L_Unknown:
+      default:
+        break;
+      }
+      std::stringstream s;
+      if (m_type==L_List)
+        s << "ListZone";
+      else
+        s << "FixZone";
+      s << std::hex << m_fileType[0] << "_" << m_fileType[1] << std::dec;
+      if (m_fieldSize)
+        s << "_" << m_fieldSize;
+      s << "A";
+      return s.str();
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, ZoneLink const &z)
+    {
+      if (z.empty()) return o;
+      o << z.getZoneName() << ":";
+      size_t numLinks=z.m_ids.size();
+      if (numLinks>1) o << "[";
+      for (size_t i=0; i<numLinks; ++i) {
+        if (z.m_ids[i]<=0)
+          o << "_";
+        else
+          o << "data" << z.m_ids[i] << "A";
+        if (i+1!=numLinks) o << ",";
+      }
+      if (numLinks>1) o << "]";
+      if (!z.m_clusterIds.empty()) {
+        size_t numClusters=z.m_clusterIds.size();
+        o << "[clusters=";
+        for (size_t i=0; i<numClusters; ++i) {
+          if (z.m_clusterIds[i]<=0)
+            o << "_";
+          else
+            o << "data" << z.m_clusterIds[i] << "A";
+          if (i+1!=numClusters) o << ",";
+        }
+        o<< "]";
+      }
+      if (z.m_fieldSize&0x8000)
+        o << "[" << std::hex << z.m_fieldSize << std::dec << ":" << z.m_N << "]";
+      else
+        o << "[" << z.m_fieldSize << ":" << z.m_N << "]";
+      return o;
+    }
+    //! the link type
+    Type m_type;
+    //! the data ids
+    std::vector<int> m_ids;
+    //! the cluster ids
+    std::vector<int> m_clusterIds;
+    //! the number of data ( or some flag if m_N & 0x8020)
+    int m_N;
+    //! the field size
+    int m_fieldSize;
+    //! the zone type in file
+    long m_fileType[2];
+    //! a list of long used to store decal
+    std::vector<long> m_longList;
+  };
+
 private:
   RagTime5StructManager(RagTime5StructManager const &orig);
   RagTime5StructManager operator=(RagTime5StructManager const &orig);

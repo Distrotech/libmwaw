@@ -39,6 +39,7 @@
 #  define RAGTIME5_GRAPH
 
 #include <string>
+#include <map>
 #include <vector>
 
 #include <librevenge/librevenge.h>
@@ -114,10 +115,15 @@ protected:
   // basic graphic
   //
 
+  //! try to read a main graphic zone ( shape type + style )
+  bool readMainGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+
   //! try to read a graphic zone
-  bool readGraphicZone(RagTime5StructManager::Zone &zone);
-  //! try to read a graphic zone position in data
+  bool readGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  //! try to read a graphic zone positions in data
   bool readGraphicPositions(int posId, std::vector<long> &listPosition);
+  //! try to read a graphic unknown zone in data
+  bool readGraphicUnknown(int typeId, std::map<int, int> &idToTypeMap);
   //! try to read a graphic
   bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n);
 

@@ -771,6 +771,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_name="3unknList";
     break;
   default:
+    // find also 16c1825 with 00042040000000000001001400000006404003000008 : a list of 42040 ?
     MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected list type=%lx\n", (unsigned long) type));
     field.m_name="#unknList";
     break;

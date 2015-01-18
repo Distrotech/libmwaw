@@ -121,14 +121,18 @@ protected:
   bool readString(RagTime5StructManager::Zone &zone, std::string &string);
   //! try to read a unicode string zone
   bool readUnicodeString(RagTime5StructManager::Zone &zone);
+  //! try to read a list of unicode string zone
+  bool readUnicodeStringList(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
   //! try to read a list of unknown zone 6 bytes data
-  bool readUnknZoneA(RagTime5StructManager::Zone &zone, int N);
+  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5StructManager::Zone &zone);
 
-  //! try to read a spreadsheet
+  //! try to read a structured zone
   bool readStructZone(RagTime5StructManager::Zone &zone);
+  //! try to read a list zone
+  bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
