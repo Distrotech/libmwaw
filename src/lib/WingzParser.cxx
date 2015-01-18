@@ -1118,9 +1118,9 @@ bool WingzParser::readSpreadsheetStyle()
 
   int patId=0;
   MWAWColor colors[4];
-  for (int i=0; i<4; ++i) { // font, back, unknown,font color
+  for (int i=0; i<4; ++i) { // front, back, unknown,font color
     val=(int) input->readULong(4);
-    int col=((val>>16)&0xFF)|(val&0xFF00)|((val<<16)&0xFFFFFF);
+    int col=((val>>16)&0xFF)|(val&0xFF00)|((val&0xFF)<<16);
     int high=(val>>24);
     colors[i]=MWAWColor(uint32_t(col)|0xFF000000);
     switch (i) {
