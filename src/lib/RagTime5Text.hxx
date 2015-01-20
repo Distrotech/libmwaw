@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to RagTime 5-6 document ( graphic part )
+ * Parser to RagTime 5-6 document ( text part )
  *
  */
-#ifndef RAGTIME5_GRAPH
-#  define RAGTIME5_GRAPH
+#ifndef RAGTIME5_TEXT
+#  define RAGTIME5_TEXT
 
 #include <string>
 #include <map>
@@ -52,7 +52,7 @@
 
 #include "RagTime5StructManager.hxx"
 
-namespace RagTime5GraphInternal
+namespace RagTime5TextInternal
 {
 struct State;
 
@@ -62,26 +62,22 @@ class SubDocument;
 class RagTime5Parser;
 class RagTime5StructManager;
 
-class MWAWGraphicStyle;
-
-/** \brief the main class to read the graphic part of RagTime 56 file
+/** \brief the main class to read the text part of RagTime 56 file
  *
  *
  *
  */
-class RagTime5Graph
+class RagTime5Text
 {
-  friend class RagTime5GraphInternal::SubDocument;
+  friend class RagTime5TextInternal::SubDocument;
   friend class RagTime5Parser;
 
 public:
-  //! enum used to defined list of classical pict
-  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
 
   //! constructor
-  RagTime5Graph(RagTime5Parser &parser);
+  RagTime5Text(RagTime5Parser &parser);
   //! destructor
-  virtual ~RagTime5Graph();
+  virtual ~RagTime5Text();
 
   /** returns the file version */
   int version() const;
@@ -102,37 +98,14 @@ protected:
   //
 
   //
-  // picture
+  // basic text
   //
 
-  //! try to read a picture zone
-  bool readPicture(RagTime5StructManager::Zone &zone, MWAWEntry &entry, PictureType type);
-  //! try to read a picture list
-  bool readPictureList(RagTime5StructManager::Zone &zone, std::vector<int> &listIds);
-  //! try to read a picture match zone
-  bool readPictureMatch(RagTime5StructManager::Zone &zone, bool color);
+  //! try to read a main text styles
+  bool readTextStyles(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  //! try to read a text style
+  bool readTextStyle(RagTime5StructManager::Zone &zone, long endPos, int n);
 
-  //
-  // basic graphic
-  //
-
-  //! try to read a main graphic zone ( shape type )
-  bool readMainGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
-
-  //! try to read a main graphic styles
-  bool readGraphicStyles(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
-  //! try to read a graphic style
-  bool readGraphicStyle(RagTime5StructManager::Zone &zone, long endPos, int n);
-
-  //! try to read a graphic zone
-  bool readGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
-  //! try to read a graphic unknown zone in data
-  bool readGraphicUnknown(int typeId);
-  //! try to read a graphic
-  bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n);
-
-  //! try to read a graphic transformations zone
-  bool readGraphicTransformations(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
 
   //
   // low level
@@ -140,8 +113,8 @@ protected:
 
 
 private:
-  RagTime5Graph(RagTime5Graph const &orig);
-  RagTime5Graph &operator=(RagTime5Graph const &orig);
+  RagTime5Text(RagTime5Text const &orig);
+  RagTime5Text &operator=(RagTime5Text const &orig);
 
 protected:
   //
@@ -156,7 +129,7 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<RagTime5GraphInternal::State> m_state;
+  shared_ptr<RagTime5TextInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

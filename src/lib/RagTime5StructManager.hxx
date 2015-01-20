@@ -41,7 +41,7 @@
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
-#include "MWAWInputStream.hxx"
+#include "MWAWGraphicStyle.hxx"
 
 //! basic class used to store RagTime 5/6 structures
 class RagTime5StructManager
@@ -65,19 +65,13 @@ public:
   //! a field of RagTime 5/6 structures
   struct Field {
     //! the different type
-    enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_Unicode, T_Unstructured };
+    enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_DoubleList, T_Code, T_Color, T_Unicode, T_Unstructured };
 
     //! constructor
-    Field() : m_type(T_Unknown), m_fileType(0), m_name(""), m_doubleValue(0), m_longList(), m_numLongByData(1), m_fieldList(), m_entry(), m_extra("")
+    Field() : m_type(T_Unknown), m_fileType(0), m_name(""), m_doubleValue(0), m_color(), m_code(""), m_longList(), m_doubleList(),
+      m_numLongByData(1), m_fieldList(), m_entry(), m_extra("")
     {
       for (int i=0; i<2; ++i) m_longValue[i]=0;
-    }
-    //! copy constructor
-    Field(Field const &orig) : m_type(orig.m_type), m_fileType(orig.m_fileType), m_name(orig.m_name), m_doubleValue(orig.m_doubleValue),
-      m_longList(orig.m_longList), m_numLongByData(orig.m_numLongByData), m_fieldList(orig.m_fieldList), m_entry(orig.m_entry), m_extra(orig.m_extra)
-    {
-      for (int i=0; i<2; ++i)
-        m_longValue[i]=orig.m_longValue[i];
     }
     //! destructor
     ~Field()
@@ -95,14 +89,78 @@ public:
     long m_longValue[2];
     //! the double value
     double m_doubleValue;
+    //! the color
+    MWAWColor m_color;
+    //! small string use to store a 4 char code
+    std::string m_code;
     //! the list of long value
     std::vector<long> m_longList;
+    //! the list of double value
+    std::vector<double> m_doubleList;
     //! the number of long by data (in m_longList)
     int m_numLongByData;
     //! the list of field
     std::vector<Field> m_fieldList;
     //! entry to defined the position of a String or Unstructured data
     MWAWEntry m_entry;
+    //! extra data
+    std::string m_extra;
+  };
+  //! the graphic style of a RagTime v5-v6 document
+  struct GraphicStyle {
+    //! constructor
+    GraphicStyle() : m_parentId(-1), m_width(-1), m_dash(), m_pattern(), m_gradient(0), m_gradientRotation(0), m_gradientCenter(0.5f,0.5f),
+      m_position(2), m_cap(1), m_mitter(1), m_limitPercent(1), m_hidden(false), m_extra("")
+    {
+      m_colors[0]=MWAWColor::black();
+      m_colors[1]=MWAWColor::white();
+      m_colorsAlpha[0]=m_colorsAlpha[1]=1;
+    }
+    //! destructor
+    virtual ~GraphicStyle()
+    {
+    }
+    //! returns true if the line style is default
+    bool isDefault() const
+    {
+      return m_parentId<0 && m_width<0 && m_dash.empty() && !m_pattern &&
+             m_gradient==0 && m_gradientRotation<=0 && m_gradientRotation>=0 && m_gradientCenter!=Vec2f(0.5f, 0.5f) &&
+             m_position==2 && m_cap==1 && m_mitter==1 &&
+             m_colors[0].isBlack() && m_colors[1].isWhite() && m_colorsAlpha[0]>=1 && m_colorsAlpha[1]>=1 &&
+             m_limitPercent>=1 && m_limitPercent<=1 && !m_hidden && m_extra.empty();
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, GraphicStyle const &line);
+    //! try to read a line style
+    bool read(MWAWInputStreamPtr &input, Field const &field);
+    //! the parent id
+    int m_parentId;
+    //! the line width (in point)
+    float m_width;
+    //! the first and second color
+    MWAWColor m_colors[2];
+    //! alpha of the first and second color
+    float m_colorsAlpha[2];
+    //! the line dash/...
+    std::vector<long> m_dash;
+    //! the line pattern
+    shared_ptr<MWAWGraphicStyle::Pattern> m_pattern;
+    //! the gradient 0: none, normal, radial
+    int m_gradient;
+    //! the gradient rotation(checkme)
+    float m_gradientRotation;
+    //! the rotation center(checkme)
+    Vec2f m_gradientCenter;
+    //! the line position inside=1/normal/outside/round
+    int m_position;
+    //! the line caps ( normal=1, round, square)
+    int m_cap;
+    //! the line mitter ( triangle=1, round, out)
+    int m_mitter;
+    //! the line limit
+    float m_limitPercent;
+    //! flag to know if we need to print the shape
+    bool m_hidden;
     //! extra data
     std::string m_extra;
   };
@@ -217,7 +275,10 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct ZoneLink {
     //! the link type
-    enum Type { L_Graphic, L_GraphicList, L_UnicodeList, L_List, L_Unknown };
+    enum Type { L_Graphic, L_GraphicStyle, L_GraphicTransform, L_GraphicType,
+                L_TextStyle,
+                L_UnicodeList, L_List, L_Unknown
+              };
     //! constructor
     ZoneLink(Type type=L_Unknown) : m_type(type), m_ids(), m_clusterIds(), m_N(0), m_fieldSize(0), m_longList()
     {
@@ -236,9 +297,15 @@ public:
     {
       switch (m_type) {
       case L_Graphic:
-        return "graphLink";
-      case L_GraphicList:
-        return "graphListLink";
+        return "graphData";
+      case L_GraphicStyle:
+        return "graphStyle";
+      case L_GraphicTransform:
+        return "graphTransform";
+      case L_GraphicType:
+        return "graphType";
+      case L_TextStyle:
+        return "textStyle";
       case L_UnicodeList:
         return "unicodeListLink,";
       case L_List:

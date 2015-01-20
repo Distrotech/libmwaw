@@ -237,7 +237,11 @@ RagTimeParser : parser of RagTime : v2-3
 -   RagTimeStruct: small classes which define some file's basic structures
 -   RagTimeText: class which reads the text's zones
 
-RagTime5Parser : parser of RagTime : v5-6 ; only try find the main structures of the document, ie not functional
+RagTime5Parser : parser of RagTime : v5-6
+  only try find the main structures of the document and parse some structures, ie not functional
+-   RagTime5Graph: class which reads the graphic's zones
+-   RagTime5StructManager: small classes which define some file's basic structures
+-   RagTime5Text: class which reads the text's zones
 
 SuperPaintParser: parser of drawing and paint SuperPaint files : v1 
 

@@ -303,6 +303,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_name="uint";
     field.m_longValue[0]=(long) input->readULong(2);
     return true;
+  case 0xb6000: // color percent
   case 0x1493800: // checkme double(as int)
   case 0x1494800: // checkme double(as int)
   case 0x1495800: // checkme double(as int)
@@ -335,7 +336,6 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     return true;
   }
   case 0x34800:
-  case 0xb6000:
   case 0x14510b7: // 2 long, not in typedef
   case 0x147415a: // checkme, find always with 0x0
   case 0x15e3017: // 2 long, not in typedef
@@ -403,26 +403,19 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_extra=f.str();
     return true;
   }
-  case 0x74040: // maybe one element
-  case 0x1474040: // maybe one element
+  case 0x74040: // maybe one element: ie. 2 float
+  case 0x1474040: // maybe one element: ie. 2 float
   case 0x81474040: {
     if ((fSz%8)!=0) {
-      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for floatx2int\n"));
-      f << "###floatx2int";
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for floatx2\n"));
+      f << "###2xfloat[list]";
       break;
     }
-    field.m_type=Field::T_Unstructured;
-    field.m_name="floatx2int";
-    int N=int(fSz/8);
-    for (int i=0; i<N; ++i) {
-      f << double(input->readLong(4))/65536.;
-      int val=(int) input->readLong(2);
-      if (val) f << ":" << val;
-      else f << ":_";
-      val=(int) input->readLong(2);
-      if (val) f << ":" << std::hex << val << std::dec;
-      f << ",";
-    }
+    field.m_type=Field::T_DoubleList;
+    field.m_name="2xfloat";
+    int N=int(fSz/4);
+    for (int i=0; i<N; ++i)
+      field.m_doubleList.push_back(double(input->readLong(4))/65536.);
     field.m_extra=f.str();
     return true;
   }
@@ -445,32 +438,31 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     f << double(input->readLong(4))/65536. << ",";
     field.m_extra=f.str();
     return true;
-  case 0x84040:
+  case 0x84040: {
     if (fSz!=10) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for rgba\n"));
       f << "###rgba";
       break;
     }
-    field.m_type=Field::T_LongList;
+    field.m_type=Field::T_Color;
     field.m_name="rgba";
-    field.m_longList.push_back(input->readLong(2)); // numUsed
+    field.m_longValue[0]=(long) input->readLong(2); // id or numUsed
+    unsigned char col[4];
     for (long i=0; i<4; ++i) // rgba
-      field.m_longList.push_back(long(input->readULong(2)>>8));
-    field.m_extra=f.str();
+      col[i]=(unsigned char)(input->readULong(2)>>8);
+    field.m_color=MWAWColor(col[0],col[1],col[2],col[3]);
     return true;
+  }
   case 0x8d000:
     if (fSz!=4) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for rsrcName\n"));
       f << "###rsrcName";
       break;
     }
-    field.m_type=Field::T_Unstructured;
+    field.m_type=Field::T_Code;
     field.m_name="rsrcName";
-    field.m_entry.setBegin(input->tell());
-    field.m_entry.setEnd(endDataPos);
     for (long i=0; i<4; ++i)
-      f << (char) input->readULong(1);
-    field.m_extra=f.str();
+      field.m_code += (char) input->readULong(1);
     return true;
   case 0x148c01a: // 2 int + 8 bytes for pat ?
     if (fSz!=12) {
@@ -667,6 +659,9 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x146902a: // double
   case 0x146903a: // double
   case 0x17d484a: // with type=34800
+  case 0x14753aa: // min word spacing
+  case 0x14753ca: // optimal word spacing
+  case 0x14753ea: // max word spacing
 
   case 0x147404a: // with type=149c94
   case 0x7d02a: // rgba color?
@@ -828,6 +823,15 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
   case RagTime5StructManager::Field::T_2Long:
     o << "=" << field.m_longValue[0] << ":" <<  field.m_longValue[1] << ",";
     break;
+  case RagTime5StructManager::Field::T_Color:
+    o << "=" << field.m_color;
+    if (field.m_longValue[0])
+      o << "[" << field.m_longValue[0] << "]";
+    o << ",";
+    return o;
+  case RagTime5StructManager::Field::T_Code:
+    o << "=" << field.m_code << ",";
+    return o;
   case RagTime5StructManager::Field::T_Unicode:
     o << "=" << field.m_extra << ",";
     return o;
@@ -842,6 +846,14 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
       o << "]";
     }
     o << ",";
+    break;
+  case RagTime5StructManager::Field::T_DoubleList:
+    if (!field.m_doubleList.empty()) {
+      o << "=[";
+      for (size_t i=0; i<field.m_doubleList.size(); ++i)
+        o << field.m_doubleList[i] << ",";
+      o << "],";
+    }
     break;
   case RagTime5StructManager::Field::T_LongList:
     if (!field.m_longList.empty() && field.m_numLongByData>0) {
@@ -875,6 +887,357 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
   return o;
 }
 
+////////////////////////////////////////////////////////////
+// style functions
+////////////////////////////////////////////////////////////
+bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTime5StructManager::Field const &field)
+{
+  std::stringstream s;
+  if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
+    switch (field.m_fileType) {
+    case 0x7d02a:
+    case 0x145e05a: {
+      int wh=field.m_fileType==0x7d02a ? 0 : 1;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Color && child.m_fileType==0x84040) {
+          m_colors[wh]=child.m_color;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown color %d block\n", wh));
+        s << "##col[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x145e02a:
+    case 0x145e0ea: {
+      int wh=field.m_fileType==0x145e02a ? 0 : 1;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0xb6000) {
+          m_colorsAlpha[wh]=float(child.m_doubleValue);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown colorAlpha[%d] block\n", wh));
+        s << "###colorAlpha[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x145e01a: {
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147c080) {
+          m_parentId=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown parent block\n"));
+        s << "###parent=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x7d04a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1494800) {
+          m_width=float(child.m_doubleValue);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown width block\n"));
+        s << "###w=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x145e0ba: {
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Bool && child.m_fileType==0x360c0) {
+          m_hidden=child.m_longValue[0]!=0;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown no print block\n"));
+        s << "###hidden=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+
+    case 0x14600ca:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_LongList && child.m_fileType==(long)0x80033000) {
+          m_dash=child.m_longList;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown dash block\n"));
+        s << "###dash=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x146005a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_code=="LiOu")
+            m_position=3;
+          else if (child.m_code=="LiIn")
+            m_position=1;
+          else if (child.m_code=="LiRo")
+            m_position=4;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown position string %s\n", child.m_code.c_str()));
+            s << "##pos=" << child.m_code << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown position block\n"));
+        s << "###pos=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x146007a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_code=="LiRo")
+            m_mitter=2;
+          else if (child.m_code=="LiBe")
+            m_mitter=3;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown mitter string %s\n", child.m_code.c_str()));
+            s << "##mitter=" << child.m_code << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown mitter block\n"));
+        s << "###mitter=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x148981a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_code=="GrNo")
+            m_gradient=1;
+          else if (child.m_code=="GrRa")
+            m_gradient=2;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown gradient string %s\n", child.m_code.c_str()));
+            s << "##gradient=" << child.m_code << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown gradient block\n"));
+        s << "###gradient=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x14600aa:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_code=="CaRo")
+            m_cap=2;
+          else if (child.m_code=="CaSq")
+            m_cap=3;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown cap string %s\n", child.m_code.c_str()));
+            s << "##cap=" << child.m_code << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown cap block\n"));
+        s << "###cap=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x148985a: // checkme
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1495800) {
+          m_gradientRotation=float(360*child.m_doubleValue);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown grad rotation block\n"));
+        s << "###rot[grad]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x148983a: // checkme
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_DoubleList && child.m_doubleList.size()==2 && child.m_fileType==0x74040) {
+          m_gradientCenter=Vec2f((float) child.m_doubleList[0], (float) child.m_doubleList[1]);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown grad center block\n"));
+        s << "###rot[center]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x146008a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0xb6000) {
+          m_limitPercent=(float) child.m_doubleValue;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown limit percent block\n"));
+        s << "###limitPercent=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    // unknown small id
+    case 0x145e11a: { // frequent
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x17d5880) {
+          s << "#unkn0=" << child.m_longValue[0] << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown unkn0 block\n"));
+        s << "###unkn0=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x145e12a: // unknown small int 2|3
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x17d5880) {
+          MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unkn1 block\n"));
+          s << "#unkn1=" << child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown unkn1 block\n"));
+        s << "###unkn1=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    default:
+      break;
+    }
+  }
+  else if (field.m_type==RagTime5StructManager::Field::T_Unstructured) {
+    switch (field.m_fileType) {
+    case 0x148c01a: {
+      if (field.m_entry.length()!=12) {
+        MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some odd size for pattern\n"));
+        s << "##pattern=" << field << ",";
+        m_extra+=s.str();
+        return true;
+      }
+      input->seek(field.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+      for (int i=0; i<2; ++i) {
+        static int const(expected[])= {0xb, 0x40};
+        int val=(int) input->readULong(2);
+        if (val!=expected[i])
+          s << "pat" << i << "=" << std::hex << val << std::dec << ",";
+      }
+      m_pattern.reset(new MWAWGraphicStyle::Pattern);
+      m_pattern->m_colors[0]=MWAWColor::white();
+      m_pattern->m_colors[1]=MWAWColor::black();
+      m_pattern->m_dim=Vec2i(8,8);
+      m_pattern->m_data.resize(8);
+      for (size_t i=0; i<8; ++i)
+        m_pattern->m_data[i]=(unsigned char) input->readULong(1);
+      m_extra+=s.str();
+      return true;
+    }
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
+std::ostream &operator<<(std::ostream &o, RagTime5StructManager::GraphicStyle const &style)
+{
+  if (style.m_parentId>=0) o << "parent=S" << style.m_parentId << ",";
+  if (style.m_width>=0) o << "w=" << style.m_width << ",";
+  if (!style.m_colors[0].isBlack()) o << "color0=" << style.m_colors[0] << ",";
+  if (!style.m_colors[1].isWhite()) o << "color1=" << style.m_colors[1] << ",";
+  for (int i=0; i<2; ++i) {
+    if (style.m_colorsAlpha[i]<1)
+      o << "color" << i << "[alpha]=" << style.m_colorsAlpha[i] << ",";
+  }
+  if (!style.m_dash.empty()) {
+    o << "dash=";
+    for (size_t i=0; i<style.m_dash.size(); ++i)
+      o << style.m_dash[i] << ":";
+    o << ",";
+  }
+  if (style.m_pattern)
+    o << "pattern=[" << *style.m_pattern << "],";
+  switch (style.m_gradient) {
+  case 0:
+    break;
+  case 1:
+    o << "grad[normal],";
+    break;
+  case 2:
+    o << "grad[radial],";
+    break;
+  default:
+    o<< "##gradient=" << style.m_gradient;
+    break;
+  }
+  if (style.m_gradientRotation<0 || style.m_gradientRotation>0)
+    o << "rot[grad]=" << style.m_gradientRotation << ",";
+  if (style.m_gradientCenter!=Vec2f(0.5f,0.5f))
+    o << "center[grad]=" << style.m_gradientCenter << ",";
+  switch (style.m_position) {
+  case 1:
+    o << "pos[inside],";
+    break;
+  case 2:
+    break;
+  case 3:
+    o << "pos[outside],";
+    break;
+  case 4:
+    o << "pos[round],";
+    break;
+  default:
+    o << "#pos=" << style.m_position << ",";
+    break;
+  }
+  switch (style.m_cap) {
+  case 1: // triangle
+    break;
+  case 2:
+    o << "cap[round],";
+    break;
+  case 3:
+    o << "cap[square],";
+    break;
+  default:
+    o << "#cap=" << style.m_cap << ",";
+    break;
+  }
+  switch (style.m_mitter) {
+  case 1: // no add
+    break;
+  case 2:
+    o << "mitter[round],";
+    break;
+  case 3:
+    o << "mitter[out],";
+    break;
+  default:
+    o << "#mitter=" << style.m_mitter << ",";
+    break;
+  }
+  if (style.m_limitPercent<1||style.m_limitPercent>1)
+    o << "limit=" << 100*style.m_limitPercent << "%";
+  if (style.m_hidden)
+    o << "hidden,";
+  o << style.m_extra;
+  return o;
+}
 ////////////////////////////////////////////////////////////
 // zone function
 ////////////////////////////////////////////////////////////

@@ -50,6 +50,7 @@ class SubDocument;
 }
 
 class RagTime5Graph;
+class RagTime5Text;
 class RagTime5StructManager;
 
 /** \brief the main class to read a RagTime v5 file
@@ -60,6 +61,7 @@ class RagTime5StructManager;
 class RagTime5Parser : public MWAWTextParser
 {
   friend class RagTime5Graph;
+  friend class RagTime5Text;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
@@ -84,8 +86,6 @@ protected:
 
   //! returns the structure manager
   shared_ptr<RagTime5StructManager> getStructManager();
-  //! returns the ith color ( if possible)
-  bool getColor(int colId, MWAWColor &color, int listId=-1) const;
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
@@ -121,6 +121,8 @@ protected:
   bool readString(RagTime5StructManager::Zone &zone, std::string &string);
   //! try to read a unicode string zone
   bool readUnicodeString(RagTime5StructManager::Zone &zone);
+  //! try to read a positions zone in data
+  bool readPositions(int posId, std::vector<long> &listPosition);
   //! try to read a list of unicode string zone
   bool readUnicodeStringList(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
   //! try to read a list of unknown zone 6 bytes data
@@ -145,6 +147,8 @@ protected:
   shared_ptr<RagTime5ParserInternal::State> m_state;
   //! the graph manager
   shared_ptr<RagTime5Graph> m_graphParser;
+  //! the text manager
+  shared_ptr<RagTime5Text> m_textParser;
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
 };

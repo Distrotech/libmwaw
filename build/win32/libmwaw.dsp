@@ -575,6 +575,10 @@ SOURCE=..\..\src\lib\RagTime5StructManager.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\RagTime5Text.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\SuperPaintParser.cxx
 # End Source File
 # Begin Source File
@@ -1116,6 +1120,10 @@ SOURCE=..\..\src\lib\RagTime5Parser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTime5StructManager.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTime5Text.hxx
 # End Source File
 # Begin Source File
 
