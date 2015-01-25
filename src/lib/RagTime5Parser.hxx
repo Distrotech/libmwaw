@@ -46,6 +46,7 @@
 namespace RagTime5ParserInternal
 {
 struct State;
+struct FieldParser;
 class SubDocument;
 }
 
@@ -62,6 +63,7 @@ class RagTime5Parser : public MWAWTextParser
 {
   friend class RagTime5Graph;
   friend class RagTime5Text;
+  friend struct RagTime5ParserInternal::FieldParser;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
@@ -124,17 +126,22 @@ protected:
   //! try to read a positions zone in data
   bool readPositions(int posId, std::vector<long> &listPosition);
   //! try to read a list of unicode string zone
-  bool readUnicodeStringList(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readUnicodeStringList(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
   //! try to read a list of unknown zone 6 bytes data
-  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5StructManager::Zone &zone);
 
   //! try to read a structured zone
-  bool readStructZone(RagTime5StructManager::Zone &zone);
+  bool readStructZone(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser);
+  //! try to read a data in a structured zone
+  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, RagTime5StructManager::FieldParser &parser);
+
+  //! try to read a data in a structured zone
+  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, std::string const &zoneName);
   //! try to read a list zone
-  bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
   //! flush unsent zone (debugging function)
   void flushExtra();
 

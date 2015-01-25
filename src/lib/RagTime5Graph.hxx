@@ -55,6 +55,7 @@
 namespace RagTime5GraphInternal
 {
 struct State;
+struct FieldParser;
 
 class SubDocument;
 }
@@ -71,6 +72,7 @@ class MWAWGraphicStyle;
  */
 class RagTime5Graph
 {
+  friend struct RagTime5GraphInternal::FieldParser;
   friend class RagTime5GraphInternal::SubDocument;
   friend class RagTime5Parser;
 
@@ -117,22 +119,23 @@ protected:
   //
 
   //! try to read a main graphic zone ( shape type )
-  bool readMainGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readMainGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //! try to read a main graphic styles
-  bool readGraphicStyles(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
-  //! try to read a graphic style
-  bool readGraphicStyle(RagTime5StructManager::Zone &zone, long endPos, int n);
+  bool readGraphicStyles(RagTime5StructManager::Cluster &cluster);
+
+  //! try to read a graphic color zone
+  bool readGraphicColors(RagTime5StructManager::Cluster &cluster);
 
   //! try to read a graphic zone
-  bool readGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readGraphicZone(RagTime5StructManager::Cluster &cluster);
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
   //! try to read a graphic
   bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n);
 
   //! try to read a graphic transformations zone
-  bool readGraphicTransformations(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
+  bool readGraphicTransformations(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //
   // low level

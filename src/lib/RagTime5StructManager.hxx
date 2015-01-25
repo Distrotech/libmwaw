@@ -61,15 +61,59 @@ public:
   bool readField(Zone &zone, long endPos, Field &field, long fSz=0);
   //! try to read a compressed long
   static bool readCompressedLong(MWAWInputStreamPtr &input, long endPos, long &val);
+  //! try to read a unicode string
+  static bool readUnicodeString(MWAWInputStreamPtr input, long endPos, librevenge::RVNGString &string);
 
+  //! a tabulation in RagTime 5/6 structures
+  struct TabStop {
+    //! constructor
+    TabStop() : m_position(0), m_type(1), m_leader("")
+    {
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, TabStop const &tab)
+    {
+      o << tab.m_position;
+      switch (tab.m_type) {
+      case 1:
+        break;
+      case 2:
+        o << "R";
+        break;
+      case 3:
+        o << "C";
+        break;
+      case 4:
+        o << "D";
+        break;
+      case 5: // Kintou Waritsuke: sort of center
+        o << "K";
+        break;
+      default:
+        o << ":#type=" << tab.m_type;
+        break;
+      }
+      if (!tab.m_leader.empty())
+        o << ":leader=" << tab.m_leader.cstr();
+      return o;
+    }
+    //! the position
+    float m_position;
+    //! the type
+    int m_type;
+    //! the leader char
+    librevenge::RVNGString m_leader;
+  };
   //! a field of RagTime 5/6 structures
   struct Field {
     //! the different type
-    enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_DoubleList, T_Code, T_Color, T_Unicode, T_Unstructured };
+    enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_DoubleList, T_TabList,
+                T_Code, T_Color, T_Unicode, T_LongDouble, T_Unstructured
+              };
 
     //! constructor
-    Field() : m_type(T_Unknown), m_fileType(0), m_name(""), m_doubleValue(0), m_color(), m_code(""), m_longList(), m_doubleList(),
-      m_numLongByData(1), m_fieldList(), m_entry(), m_extra("")
+    Field() : m_type(T_Unknown), m_fileType(0), m_name(""), m_doubleValue(0), m_color(), m_string(""),
+      m_longList(), m_doubleList(), m_numLongByData(1), m_tabList(), m_fieldList(), m_entry(), m_extra("")
     {
       for (int i=0; i<2; ++i) m_longValue[i]=0;
     }
@@ -91,20 +135,44 @@ public:
     double m_doubleValue;
     //! the color
     MWAWColor m_color;
-    //! small string use to store a 4 char code
-    std::string m_code;
+    //! small string use to store a string or a 4 char code
+    librevenge::RVNGString m_string;
     //! the list of long value
     std::vector<long> m_longList;
     //! the list of double value
     std::vector<double> m_doubleList;
     //! the number of long by data (in m_longList)
     int m_numLongByData;
+    //! the list of tabStop
+    std::vector<TabStop> m_tabList;
     //! the list of field
     std::vector<Field> m_fieldList;
     //! entry to defined the position of a String or Unstructured data
     MWAWEntry m_entry;
     //! extra data
     std::string m_extra;
+  };
+  //! virtual class use to parse the field data
+  struct FieldParser {
+    //! constructor
+    FieldParser() : m_regroupFields(false) {}
+    //! destructor
+    virtual ~FieldParser() {}
+    //! return the debug name corresponding to a zone
+    virtual std::string getZoneName() const=0;
+    //! return the debug name corresponding to a field
+    virtual std::string getZoneName(int n) const=0;
+    //! parse a field
+    virtual bool parseField(Field &field, Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
+    {
+      f << field;
+      return true;
+    }
+    //! a flag use to decide if we output one debug message by field or not
+    bool m_regroupFields;
+  private:
+    FieldParser(FieldParser const &orig);
+    FieldParser &operator=(FieldParser const &orig);
   };
   //! the graphic style of a RagTime v5-v6 document
   struct GraphicStyle {
@@ -130,7 +198,7 @@ public:
              m_limitPercent>=1 && m_limitPercent<=1 && !m_hidden && m_extra.empty();
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, GraphicStyle const &line);
+    friend std::ostream &operator<<(std::ostream &o, GraphicStyle const &style);
     //! try to read a line style
     bool read(MWAWInputStreamPtr &input, Field const &field);
     //! the parent id
@@ -164,13 +232,110 @@ public:
     //! extra data
     std::string m_extra;
   };
+  //! the text style of a RagTime v5-v6 document
+  struct TextStyle {
+    //! constructor
+    TextStyle() : m_linkIdList(),
+      m_graphStyleId(-1), m_keepWithNext(false), m_justify(-1), m_breakMethod(-1), m_tabList(),
+      m_fontName(""), m_fontId(-1), m_fontSize(-1), m_scriptPosition(0), m_fontScaling(-1), m_underline(-1), m_caps(-1), m_language(-1),
+      m_numColumns(-1), m_columnGap(-1), m_extra("")
+    {
+      m_parentId[0]=m_parentId[1]=-1;
+      m_fontFlags[0]=m_fontFlags[1]=0;
+      for (int i=0; i<3; ++i) {
+        m_margins[i]=-1;
+        m_spacings[i]=-1;
+        m_spacingUnits[i]=-1;
+        m_letterSpacings[i]=-1;
+      }
+    }
+    //! destructor
+    virtual ~TextStyle()
+    {
+    }
+    //! returns true if the line style is default
+    bool isDefault() const
+    {
+      if (m_parentId[0]>=0 || m_parentId[1]>=0 || !m_linkIdList.empty() ||
+          m_graphStyleId>=0 || m_keepWithNext.isSet() || m_justify>=0 || m_breakMethod>=0 || !m_tabList.empty() ||
+          !m_fontName.empty() || m_fontId>=0 || m_fontSize>=0 || m_fontFlags[0] || m_fontFlags[1] || m_scriptPosition.isSet() ||
+          m_fontScaling>=0 || m_underline>=0 || m_caps>=0 || m_language>=0 ||
+          m_numColumns>=0 || m_columnGap>=0 || !m_extra.empty())
+        return false;
+      for (int i=0; i<3; ++i) {
+        if (m_margins[i]>=0 || m_spacings[i]>=0 || m_spacingUnits[i]>=0 || m_letterSpacings[i]>=0)
+          return false;
+      }
+      return true;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, TextStyle const &style);
+    //! try to read a line style
+    bool read(MWAWInputStreamPtr &input, Field const &field);
+    //! the parent id ( main and style ?)
+    int m_parentId[2];
+    //! the link id list
+    std::vector<int> m_linkIdList;
+    //! the graphic style id
+    int m_graphStyleId;
+
+    // paragraph
+
+    //! the keep with next flag
+    Variable<bool> m_keepWithNext;
+    //! justify 0: left, 1:center, 2:right, 3:full, 4:full all
+    int m_justify;
+    //! the interline/before/after value
+    double m_spacings[3];
+    //! the interline/before/after unit 0: line, 1:point
+    int m_spacingUnits[3];
+    //! the break method 0: asIs, next container, next page, next even page, next odd page
+    int m_breakMethod;
+    //! the spacings in point ( left, right, first)
+    double m_margins[3];
+    //! the tabulations
+    std::vector<TabStop> m_tabList;
+
+    // character
+
+    //! the font name
+    librevenge::RVNGString m_fontName;
+    //! the font id
+    long m_fontId;
+    //! the font size
+    float m_fontSize;
+    //! the font flags (add and remove )
+    uint32_t m_fontFlags[2];
+    //! the font script position ( in percent)
+    Variable<float> m_scriptPosition;
+    //! the font script position ( in percent)
+    float m_fontScaling;
+    //! underline : none, single, double
+    int m_underline;
+    //! caps : none, all caps, lower caps, inital caps + other lowers
+    int m_caps;
+    //! the language
+    int m_language;
+    //! the spacings in percent ( normal, minimum, maximum)
+    double m_letterSpacings[3];
+
+    // column
+
+    //! the number of columns
+    int m_numColumns;
+    //! the gap between columns
+    double m_columnGap;
+
+    //! extra data
+    std::string m_extra;
+  };
   //! main zone in a RagTime v5-v6 document
   struct Zone {
-    //! the zone type
-    enum Type { Main, Data, Empty, Unknown };
+    //! the zone file type
+    enum FileType { F_Main, F_Data, F_Empty, F_Unknown };
     //! constructor
     Zone(MWAWInputStreamPtr input, libmwaw::DebugFile &asc):
-      m_type(Unknown), m_subType(0), m_defPosition(0), m_entry(), m_name(""), m_hiLoEndian(true),
+      m_fileType(F_Unknown), m_subType(0), m_defPosition(0), m_entry(), m_name(""), m_hiLoEndian(true),
       m_entriesList(), m_extra(""), m_isParsed(false),
       m_input(input), m_defaultInput(true), m_asciiName(""), m_asciiFile(&asc), m_localAsciiFile()
     {
@@ -185,8 +350,8 @@ public:
     //! returns true if the zone is a header zone(header, list zone, ...)
     bool isHeaderZone() const
     {
-      return (m_type==Data && m_ids[0]==0) ||
-             (m_type==Main && (m_ids[0]==1 || m_ids[0]==4 || m_ids[0]==5));
+      return (m_fileType==F_Data && m_ids[0]==0) ||
+             (m_fileType==F_Main && (m_ids[0]==1 || m_ids[0]==4 || m_ids[0]==5));
     }
     //! returns the main type
     std::string getKindLastPart(bool main=true) const
@@ -230,8 +395,8 @@ public:
     //! creates the ascii file
     void createAsciiFile();
 
-    //! the zone type
-    Type m_type;
+    //! the zone file type
+    FileType m_fileType;
     //! the zone sub type
     int m_subType;
     //! the position of the definition in the main zones
@@ -273,14 +438,14 @@ public:
   };
 
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
-  struct ZoneLink {
+  struct Link {
     //! the link type
-    enum Type { L_Graphic, L_GraphicStyle, L_GraphicTransform, L_GraphicType,
-                L_TextStyle,
-                L_UnicodeList, L_List, L_Unknown
+    enum Type { L_Graphic, L_GraphicTransform, L_GraphicType,
+                L_Text, L_TextUnknown,
+                L_FieldsList, L_UnicodeList, L_List, L_Unknown
               };
     //! constructor
-    ZoneLink(Type type=L_Unknown) : m_type(type), m_ids(), m_clusterIds(), m_N(0), m_fieldSize(0), m_longList()
+    Link(Type type=L_Unknown) : m_type(type), m_name(""), m_ids(), m_N(0), m_fieldSize(0), m_longList()
     {
       for (int i=0; i<2; ++i)
         m_fileType[i]=0;
@@ -298,16 +463,20 @@ public:
       switch (m_type) {
       case L_Graphic:
         return "graphData";
-      case L_GraphicStyle:
-        return "graphStyle";
       case L_GraphicTransform:
         return "graphTransform";
       case L_GraphicType:
         return "graphType";
-      case L_TextStyle:
-        return "textStyle";
+      case L_Text:
+        return "textData";
+      case L_TextUnknown:
+        return "TextUnknown";
       case L_UnicodeList:
-        return "unicodeListLink,";
+        return "unicodeListLink";
+      case L_FieldsList:
+        if (!m_name.empty())
+          return m_name;
+        return "fieldsList[unkn]";
       case L_List:
       case L_Unknown:
       default:
@@ -325,7 +494,7 @@ public:
       return s.str();
     }
     //! operator<<
-    friend std::ostream &operator<<(std::ostream &o, ZoneLink const &z)
+    friend std::ostream &operator<<(std::ostream &o, Link const &z)
     {
       if (z.empty()) return o;
       o << z.getZoneName() << ":";
@@ -339,18 +508,6 @@ public:
         if (i+1!=numLinks) o << ",";
       }
       if (numLinks>1) o << "]";
-      if (!z.m_clusterIds.empty()) {
-        size_t numClusters=z.m_clusterIds.size();
-        o << "[clusters=";
-        for (size_t i=0; i<numClusters; ++i) {
-          if (z.m_clusterIds[i]<=0)
-            o << "_";
-          else
-            o << "data" << z.m_clusterIds[i] << "A";
-          if (i+1!=numClusters) o << ",";
-        }
-        o<< "]";
-      }
       if (z.m_fieldSize&0x8000)
         o << "[" << std::hex << z.m_fieldSize << std::dec << ":" << z.m_N << "]";
       else
@@ -359,10 +516,10 @@ public:
     }
     //! the link type
     Type m_type;
+    //! the link name
+    std::string m_name;
     //! the data ids
     std::vector<int> m_ids;
-    //! the cluster ids
-    std::vector<int> m_clusterIds;
     //! the number of data ( or some flag if m_N & 0x8020)
     int m_N;
     //! the field size
@@ -372,7 +529,34 @@ public:
     //! a list of long used to store decal
     std::vector<long> m_longList;
   };
+  //! the cluster data
+  struct Cluster {
+    //! constructor
+    Cluster() : m_type(C_Unknown), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
+    {
+    }
+    //! the cluster type
+    enum Type {
+      C_GraphicData, C_GraphicColors, C_GraphicStyles,
+      C_TextStyles,
+      C_Units,
+      C_Unknown
+    };
+    //! the cluster type
+    Type m_type;
+    //! the main data link
+    Link m_dataLink;
+    //! the name link
+    Link m_nameLink;
+    //! the link list
+    std::vector<Link> m_linksList;
+    //! the cluster ids
+    std::vector<int> m_clusterIds;
 
+  private:
+    Cluster(Cluster const &);
+    Cluster operator=(Cluster const &);
+  };
 private:
   RagTime5StructManager(RagTime5StructManager const &orig);
   RagTime5StructManager operator=(RagTime5StructManager const &orig);

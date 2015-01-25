@@ -58,6 +58,52 @@
 /** Internal: the structures of a RagTime5Graph */
 namespace RagTime5GraphInternal
 {
+////////////////////////////////////////
+//! Internal: the helper to read field for a RagTime5Graph
+struct FieldParser : public RagTime5StructManager::FieldParser {
+  //! enum used to define the zone type
+  enum Type { Z_Styles, Z_Colors };
+
+  //! constructor
+  FieldParser(RagTime5Graph &parser, Type type) : m_type(type), m_mainParser(parser)
+  {
+    m_regroupFields=(m_type==Z_Styles);
+  }
+  //! return the debug name corresponding to the zone
+  std::string getZoneName() const
+  {
+    return m_type==Z_Styles ? "GraphStyle" : "GraphColor";
+  }
+  //! return the debug name corresponding to a field
+  std::string getZoneName(int n) const
+  {
+    std::stringstream s;
+    s << (m_type==Z_Styles ? "GraphStyle-GS" : "GraphColor-GC") << n;
+    return s.str();
+  }
+  //! parse a field
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5StructManager::Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  {
+    if (m_type==Z_Styles) {
+      RagTime5StructManager::GraphicStyle style;
+      MWAWInputStreamPtr input=zone.getInput();
+      if (style.read(input, field))
+        f << style;
+      else
+        f << "##" << field;
+    }
+    else
+      f << field;
+    return true;
+  }
+
+protected:
+  //! the zone type
+  Type m_type;
+  //! the main parser
+  RagTime5Graph &m_mainParser;
+};
+
 //! Internal: the shape of a RagTime5Graph
 struct Shape {
   //! the different shape
@@ -148,7 +194,7 @@ int RagTime5Graph::numPages() const
 ////////////////////////////////////////////////////////////
 // main graphic
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::ZoneLink const &link)
+bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
 {
   if (link.m_ids.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: call with no zone\n"));
@@ -230,140 +276,30 @@ bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, R
 }
 
 ////////////////////////////////////////////////////////////
-// style
+// colors
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicStyles(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::ZoneLink const &link)
+bool RagTime5Graph::readGraphicColors(RagTime5StructManager::Cluster &cluster)
 {
-  if (link.m_ids.size()<2 || !link.m_ids[1])
-    return false;
-
-  std::vector<long> decal;
-  if (link.m_ids[0])
-    m_mainParser.readPositions(link.m_ids[0], decal);
-  if (decal.empty())
-    decal=link.m_longList;
-  int const dataId=link.m_ids[1];
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
-  if (!dataZone || !dataZone->m_entry.valid() ||
-      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicStyles: the data zone %d seems bad\n", dataId));
-    return false;
-  }
-
-  dataZone->m_isParsed=true;
-  MWAWEntry entry=dataZone->m_entry;
-  libmwaw::DebugFile &ascFile=dataZone->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(GraphStyle)[" << *dataZone << "]:";
-  ascFile.addPos(entry.end());
-  ascFile.addNote("_");
-  ascFile.addPos(entry.begin());
-  ascFile.addNote(f.str().c_str());
-
-  int N=int(decal.size());
-  MWAWInputStreamPtr input=dataZone->getInput();
-  input->setReadInverted(!dataZone->m_hiLoEndian);
-  long debPos=entry.begin();
-  long endPos=entry.end();
-  if (N==0) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicStyles: can not find decal list for zone %d, let try to continue\n", dataId));
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    int n=0;
-    while (input->tell()+14 < endPos) {
-      long pos=input->tell();
-      if (!readGraphicStyle(*dataZone, endPos, n++)) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-        break;
-      }
-    }
-    if (input->tell()!=endPos) {
-      static bool first=true;
-      if (first) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicStyles: can not read some block\n"));
-        first=false;
-      }
-      ascFile.addPos(debPos);
-      ascFile.addNote("###");
-    }
-  }
-  else {
-    for (int i=0; i<N-1; ++i) {
-      long pos=decal[size_t(i)];
-      long nextPos=decal[size_t(i+1)];
-      if (pos==nextPos) continue;
-      if (pos<0 || debPos+pos>endPos) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicStyles: can not read the data zone %d-%d seems bad\n", dataId, i));
-        continue;
-      }
-      input->seek(debPos+pos, librevenge::RVNG_SEEK_SET);
-      readGraphicStyle(*dataZone, debPos+nextPos, i);
-      if (input->tell()!=debPos+nextPos) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicStyles: can not read some block\n"));
-          first=false;
-        }
-        ascFile.addPos(debPos+pos);
-        ascFile.addNote("###");
-      }
-    }
-  }
-  return true;
+  RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Colors);
+  return m_mainParser.readStructZone(cluster, fieldParser);
 }
 
-bool RagTime5Graph::readGraphicStyle(RagTime5StructManager::Zone &zone, long endPos, int n)
-{
-  MWAWInputStreamPtr input=zone.getInput();
-  long pos=input->tell();
-  if (pos+14>endPos) return false;
-  libmwaw::DebugFile &ascFile=zone.ascii();
-  libmwaw::DebugStream f;
-  f << "GraphStyle-GS" << n+1 << "[A]:";
-  int val=(int) input->readLong(4);
-  if (val!=1) f << "numUsed=" << val << ",";
-  f << "f1=" << std::hex << input->readULong(2) << std::dec << ",";
-  val=(int) input->readLong(2); // sometimes form an increasing sequence but not always
-  if (val!=n+1) f << "id=" << val << ",";
-  f << "type=" << std::hex << input->readULong(4) << std::dec << ","; // 0 or 0x14[5-b][0-f][08]42 or 17d5042
-  val=(int) input->readLong(2); // small number
-  if (val) f << "f3=" << val << ",";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
 
-  pos=input->tell();
-  f.str("");
-  RagTime5StructManager::GraphicStyle style;
-  while (!input->isEnd()) {
-    long actPos=input->tell();
-    if (actPos>=endPos) break;
-    RagTime5StructManager::Field field;
-    if (!m_structManager->readField(zone, endPos, field)) {
-      input->seek(actPos, librevenge::RVNG_SEEK_SET);
-      break;
-    }
-    actPos=input->tell();
-    if (style.read(input, field)) {
-      input->seek(actPos, librevenge::RVNG_SEEK_SET);
-      continue;
-    }
-    f << "##" << field;
-  }
-  std::string extra=f.str();
-  f.str("");
-  f << "GraphStyle-GS" << n+1 << "[B]:";
-  if (!style.isDefault())
-    f << style << ",";
-  f << extra;
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-  return true;
+////////////////////////////////////////////////////////////
+// style
+////////////////////////////////////////////////////////////
+bool RagTime5Graph::readGraphicStyles(RagTime5StructManager::Cluster &cluster)
+{
+  RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Styles);
+  return m_mainParser.readStructZone(cluster, fieldParser);
 }
 
 ////////////////////////////////////////////////////////////
 // shape
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::ZoneLink const &link)
+bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Cluster &cluster)
 {
+  RagTime5StructManager::Link const &link= cluster.m_dataLink;
   if (link.m_ids.size()<3 || !link.m_ids[1])
     return false;
   if (link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
@@ -679,7 +615,7 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
   shared_ptr<RagTime5StructManager::Zone> zone=m_mainParser.getDataZone(typeId);
   if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%10) ||
       zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicUnknown: the position zone %d seems bad\n", typeId));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicUnknown: the entry of zone %d seems bad\n", typeId));
     return false;
   }
   MWAWEntry entry=zone->m_entry;
@@ -726,7 +662,7 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
 ////////////////////////////////////////////////////////////
 // transformation
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicTransformations(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::ZoneLink const &link)
+bool RagTime5Graph::readGraphicTransformations(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
 {
   if (link.empty() || link.m_ids[0]==0 || link.m_fieldSize<34) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTransformations: can not find the transformation id\n"));

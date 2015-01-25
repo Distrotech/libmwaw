@@ -58,6 +58,42 @@
 namespace RagTime5TextInternal
 {
 ////////////////////////////////////////
+//! Internal: the helper to read field for a RagTime5Text
+struct FieldParser : public RagTime5StructManager::FieldParser {
+  //! constructor
+  FieldParser(RagTime5Text &parser) : m_mainParser(parser)
+  {
+  }
+  //! return the debug name corresponding to the zone
+  std::string getZoneName() const
+  {
+    return "TextStyle";
+  }
+  //! return the debug name corresponding to a field
+  std::string getZoneName(int n) const
+  {
+    std::stringstream s;
+    s << "TextStyle-TS" << n;
+    return s.str();
+  }
+  //! parse a field
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5StructManager::Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  {
+    RagTime5StructManager::TextStyle style;
+    MWAWInputStreamPtr input=zone.getInput();
+    if (style.read(input, field))
+      f << style;
+    else
+      f << "#" << field;
+    return true;
+  }
+
+protected:
+  //! the main parser
+  RagTime5Text &m_mainParser;
+};
+
+////////////////////////////////////////
 //! Internal: the state of a RagTime5Text
 struct State {
   //! constructor
@@ -101,118 +137,87 @@ int RagTime5Text::numPages() const
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextStyles(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::ZoneLink const &link)
+bool RagTime5Text::readTextStyles(RagTime5StructManager::Cluster &cluster)
+{
+  RagTime5TextInternal::FieldParser fieldParser(*this);
+  return m_mainParser.readStructZone(cluster, fieldParser);
+}
+
+////////////////////////////////////////////////////////////
+// main zone
+////////////////////////////////////////////////////////////
+bool RagTime5Text::readTextZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
 {
   if (link.m_ids.size()<2 || !link.m_ids[1])
     return false;
 
-  std::vector<long> decal;
-  if (link.m_ids[0])
-    m_mainParser.readPositions(link.m_ids[0], decal);
-  if (decal.empty())
-    decal=link.m_longList;
-  int const dataId=link.m_ids[1];
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || !dataZone->m_entry.valid() ||
       dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: the data zone %d seems bad\n", dataId));
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: can not find the first zone %d\n", link.m_ids[0]));
+  }
+  else {
+    dataZone->m_isParsed=true;
+    MWAWEntry entry=dataZone->m_entry;
+    libmwaw::DebugFile &ascFile=dataZone->ascii();
+    libmwaw::DebugStream f;
+    f << "Entries(TextPosition)[" << *dataZone << "]:";
+    ascFile.addPos(entry.end());
+    ascFile.addNote("_");
+    ascFile.addPos(entry.begin());
+    ascFile.addNote(f.str().c_str());
+  }
+  int const dataId=link.m_ids[1];
+  dataZone=m_mainParser.getDataZone(dataId);
+  if (!dataZone || !dataZone->m_entry.valid() ||
+      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="Unicode") {
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: the text zone %d seems bad\n", dataId));
     return false;
   }
+  return m_mainParser.readUnicodeString(*dataZone);
+}
 
-  dataZone->m_isParsed=true;
-  MWAWEntry entry=dataZone->m_entry;
-  libmwaw::DebugFile &ascFile=dataZone->ascii();
+////////////////////////////////////////////////////////////
+// unknown
+////////////////////////////////////////////////////////////
+bool RagTime5Text::readTextUnknown(int typeId)
+{
+  if (!typeId)
+    return false;
+
+  shared_ptr<RagTime5StructManager::Zone> zone=m_mainParser.getDataZone(typeId);
+  if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%6) ||
+      zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextUnknown: the entry of zone %d seems bad\n", typeId));
+    return false;
+  }
+  MWAWEntry entry=zone->m_entry;
+  MWAWInputStreamPtr input=zone->getInput();
+  input->setReadInverted(!zone->m_hiLoEndian);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+
+  libmwaw::DebugFile &ascFile=zone->ascii();
   libmwaw::DebugStream f;
-  f << "Entries(TextStyle)[" << *dataZone << "]:";
+  zone->m_isParsed=true;
   ascFile.addPos(entry.end());
   ascFile.addNote("_");
+
+  f << "Entries(TextUnknown)[" << *zone << "]:";
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
 
-  int N=int(decal.size());
-  MWAWInputStreamPtr input=dataZone->getInput();
-  input->setReadInverted(!dataZone->m_hiLoEndian);
-  long debPos=entry.begin();
-  long endPos=entry.end();
-  if (N==0) {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: can not find decal list for zone %d, let try to continue\n", dataId));
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    int n=0;
-    while (input->tell()+14 < endPos) {
-      long pos=input->tell();
-      if (!readTextStyle(*dataZone, endPos, n++)) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-        break;
-      }
-    }
-    if (input->tell()!=endPos) {
-      static bool first=true;
-      if (first) {
-        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: can not read some block\n"));
-        first=false;
-      }
-      ascFile.addPos(debPos);
-      ascFile.addNote("###");
-    }
-  }
-  else {
-    for (int i=0; i<N-1; ++i) {
-      long pos=decal[size_t(i)];
-      long nextPos=decal[size_t(i+1)];
-      if (pos==nextPos) continue;
-      if (pos<0 || debPos+pos>endPos) {
-        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: can not read the data zone %d-%d seems bad\n", dataId, i));
-        continue;
-      }
-      input->seek(debPos+pos, librevenge::RVNG_SEEK_SET);
-      readTextStyle(*dataZone, debPos+nextPos, i);
-      if (input->tell()!=debPos+nextPos) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: can not read some block\n"));
-          first=false;
-        }
-        ascFile.addPos(debPos+pos);
-        ascFile.addNote("###");
-      }
-    }
-  }
-  return true;
-}
-
-bool RagTime5Text::readTextStyle(RagTime5StructManager::Zone &zone, long endPos, int n)
-{
-  MWAWInputStreamPtr input=zone.getInput();
-  long pos=input->tell();
-  if (pos+14>endPos) return false;
-  libmwaw::DebugFile &ascFile=zone.ascii();
-  libmwaw::DebugStream f;
-  f << "TextStyle-S" << n+1 << "[A]:";
-  int val=(int) input->readLong(4);
-  if (val!=1) f << "numUsed=" << val << ",";
-  f << "f1=" << std::hex << input->readULong(2) << std::dec << ",";
-  val=(int) input->readLong(2); // sometimes form an increasing sequence but not always
-  if (val!=n+1) f << "id=" << val << ",";
-  f << "type=" << std::hex << input->readULong(4) << std::dec << ","; // 0 or 0x14[5-b][0-f][08]42 or 17d5042
-  val=(int) input->readLong(2); // small number
-  if (val) f << "f3=" << val << ",";
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  int m=0;
-  while (!input->isEnd()) {
-    pos=input->tell();
-    if (pos>=endPos) break;
-    RagTime5StructManager::Field field;
-    if (!m_structManager->readField(zone, endPos, field)) {
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      break;
-    }
+  int N=int(entry.length()/6);
+  for (int i=0; i<N; ++i) {
+    long pos=input->tell();
     f.str("");
-    f << "TextStyle-A" << n << "-B" << ++m << ":" << field;
+    f << "TextUnknown-" << i << ":";
+    f << "offset?=" << input->readULong(4) << ",";
+    f << "TS" << input->readULong(2) << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
+
+  input->setReadInverted(false);
   return true;
 }
 

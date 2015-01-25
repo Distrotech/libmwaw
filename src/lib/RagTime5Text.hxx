@@ -55,6 +55,7 @@
 namespace RagTime5TextInternal
 {
 struct State;
+struct FieldParser;
 
 class SubDocument;
 }
@@ -69,6 +70,7 @@ class RagTime5StructManager;
  */
 class RagTime5Text
 {
+  friend struct RagTime5TextInternal::FieldParser;
   friend class RagTime5TextInternal::SubDocument;
   friend class RagTime5Parser;
 
@@ -92,7 +94,6 @@ protected:
 
   // interface with main parser
 
-
   //
   // Intermediate level
   //
@@ -102,10 +103,12 @@ protected:
   //
 
   //! try to read a main text styles
-  bool readTextStyles(RagTime5StructManager::Zone &zone, RagTime5StructManager::ZoneLink const &link);
-  //! try to read a text style
-  bool readTextStyle(RagTime5StructManager::Zone &zone, long endPos, int n);
+  bool readTextStyles(RagTime5StructManager::Cluster &cluster);
 
+  //! try to read a text zone
+  bool readTextZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  //! try to read a text unknown zone in data
+  bool readTextUnknown(int typeId);
 
   //
   // low level

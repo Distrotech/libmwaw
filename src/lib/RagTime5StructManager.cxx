@@ -224,6 +224,23 @@ bool RagTime5StructManager::readTypeDefinitions(RagTime5StructManager::Zone &zon
   return true;
 }
 
+
+bool RagTime5StructManager::readUnicodeString(MWAWInputStreamPtr input, long endPos, librevenge::RVNGString &string)
+{
+  string="";
+  long pos=input->tell();
+  if (pos==endPos) return true;
+  long length=endPos-pos;
+  if (length<0 || (length%2)==1) {
+    MWAW_DEBUG_MSG(("RagTime5StructManager::readUnicodeString: find unexpected data length\n"));
+    return false;
+  }
+  length/=2;
+  for (long i=0; i<length; ++i)
+    libmwaw::appendUnicode((uint32_t) input->readULong(2), string);
+  return true;
+}
+
 bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long endPos, RagTime5StructManager::Field &field, long fSz)
 {
   MWAWInputStreamPtr input=zone.getInput();
@@ -306,6 +323,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0xb6000: // color percent
   case 0x1493800: // checkme double(as int)
   case 0x1494800: // checkme double(as int)
+  case 0x1495000:
   case 0x1495800: // checkme double(as int)
     if (fSz!=4) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for double4\n"));
@@ -339,7 +357,6 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x14510b7: // 2 long, not in typedef
   case 0x147415a: // checkme, find always with 0x0
   case 0x15e3017: // 2 long, not in typedef
-  case 0x1495000:
     if (fSz!=4) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for 2xint\n"));
       f << "###2xint,";
@@ -358,34 +375,22 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     }
     field.m_type=Field::T_Unicode;
     field.m_name="unicode";
-    field.m_entry.setBegin(input->tell());
-    field.m_entry.setLength(fSz);
-    fSz/=2;
-    f << "\"";
-    for (long i=0; i<fSz; ++i) {
-      int c=(int) input->readULong(2);
-      if (c<0x100)
-        f << char(c);
-      else
-        f << "[" << std::hex << c << std::dec << "]";
-    }
-    f << "\",";
+    if (!readUnicodeString(input, endDataPos, field.m_string))
+      f << "###";
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     field.m_extra=f.str();
     return true;
   }
   case 0x149a940: {
     if (fSz!=6) {
-      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for intxfloat\n"));
-      f << "###intxfloat";
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for interline\n"));
+      f << "###interline";
       break;
     }
-    field.m_type=Field::T_Unstructured;
-    field.m_name="intxfloat";
-    int val=(int) input->readLong(2);
-    if (val) f << ":" << val;
-    else f << ":_";
-    f << double(input->readLong(4))/65536.;
-    field.m_extra=f.str();
+    field.m_type=Field::T_LongDouble;
+    field.m_name="interline";
+    field.m_longValue[0]=(int) input->readLong(2);
+    field.m_doubleValue=double(input->readLong(4))/65536.;
     return true;
   }
   case 0x149c940: { // checkme
@@ -394,29 +399,43 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
       f << "###floatxint";
       break;
     }
-    field.m_type=Field::T_Unstructured;
+    field.m_type=Field::T_LongDouble;
     field.m_name="floatxint";
-    f << double(input->readLong(4))/65536.;
-    int val=(int) input->readLong(2);
-    if (val) f << ":" << val;
-    else f << ":_";
-    field.m_extra=f.str();
+    field.m_doubleValue=double(input->readLong(4))/65536.;
+    field.m_longValue[0]=(int) input->readLong(2);
     return true;
   }
-  case 0x74040: // maybe one element: ie. 2 float
-  case 0x1474040: // maybe one element: ie. 2 float
-  case 0x81474040: {
-    if ((fSz%8)!=0) {
-      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for floatx2\n"));
-      f << "###2xfloat[list]";
+  case 0x74040: {
+    if (fSz!=8) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for 2xfloat\n"));
+      f << "###2xfloat";
       break;
     }
     field.m_type=Field::T_DoubleList;
     field.m_name="2xfloat";
-    int N=int(fSz/4);
-    for (int i=0; i<N; ++i)
-      field.m_doubleList.push_back(double(input->readLong(4))/65536.);
-    field.m_extra=f.str();
+    for (int i=0; i<2; ++i)
+      field.m_doubleList.push_back(double(input->readLong(4))/65536);
+    return true;
+  }
+  case 0x1474040: // maybe one tab
+  case 0x81474040: {
+    if ((fSz%8)!=0) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for tab\n"));
+      f << "###tab[list]";
+      break;
+    }
+    field.m_type=Field::T_TabList;
+    field.m_name="tab";
+    int N=int(fSz/8);
+    for (int i=0; i<N; ++i) {
+      TabStop tab;
+      tab.m_position=float(input->readLong(4))/65536.f;
+      tab.m_type=(int) input->readLong(2);
+      int val=(int) input->readULong(2);
+      if (val)
+        libmwaw::appendUnicode((uint32_t) val, tab.m_leader);
+      field.m_tabList.push_back(tab);
+    }
     return true;
   }
 
@@ -462,7 +481,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_type=Field::T_Code;
     field.m_name="rsrcName";
     for (long i=0; i<4; ++i)
-      field.m_code += (char) input->readULong(1);
+      field.m_string.append((char) input->readULong(1));
     return true;
   case 0x148c01a: // 2 int + 8 bytes for pat ?
     if (fSz!=12) {
@@ -579,11 +598,30 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
       field.m_longList.push_back((long) input->readLong(2));
     return true;
   }
+  case 0xa4000:
+    if (fSz!=4) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of uint32_t\n"));
+      f << "###uint32";
+      break;
+    }
+    field.m_type=Field::T_Long;
+    field.m_longValue[0]=(long) input->readULong(4);
+    return true;
+  case 0xa4840:
+    if (fSz!=8) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of 2xuint32_t\n"));
+      f << "###2xuint32";
+      break;
+    }
+    field.m_type=Field::T_2Long;
+    field.m_name="2xuint32";
+    for (long i=0; i<2; ++i)
+      field.m_longValue[i]=(long) input->readULong(4);
+    return true;
+
   case 0x33000: // maybe one 2xint
-  case 0xa4000: // maybe one 2xint
-  case 0xa4840: // maybe one 4xint
   case 0x1671817:
-  case 0x80033000: {
+  case 0x80033000:
     if ((fSz%4)!=0) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of 2xint\n"));
       f << "###";
@@ -596,7 +634,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     for (long i=0; i<fSz; ++i)
       field.m_longList.push_back((long) input->readLong(2));
     return true;
-  }
+
   case 0xa7017: // unicode
   case 0xa7027:
   case 0xa7037:
@@ -650,6 +688,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x147405a:
   case 0x14741ca: // 2 long
   case 0x145e02a: // with type=b600000
+  case 0x14741ba: // with type=b600000
   case 0x145e0ea:
   case 0x146008a:
   case 0x14752da: // with type=1495000
@@ -659,13 +698,21 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x146902a: // double
   case 0x146903a: // double
   case 0x17d484a: // with type=34800
-  case 0x14753aa: // min word spacing
-  case 0x14753ca: // optimal word spacing
-  case 0x14753ea: // max word spacing
-
   case 0x147404a: // with type=149c94
   case 0x7d02a: // rgba color?
   case 0x145e05a:
+
+  case 0x14750ea: // keep with next para
+  case 0x147530a: // break behavior
+  case 0x14753aa: // min word spacing
+  case 0x14753ca: // optimal word spacing
+  case 0x14753ea: // max word spacing
+  case 0x147546a: // number line in widows
+  case 0x147548a: // number line in orphan
+  case 0x147552a: // do not use spacing for single word
+  case 0x147516a: // align paragraph on grid
+  case 0x147418a: // small caps scaling x
+  case 0x14741aa: // small caps scaling y
 
   case 0x7a09a: // with a4000 or a4840
   case 0x7a05a: // unknown
@@ -823,6 +870,9 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
   case RagTime5StructManager::Field::T_2Long:
     o << "=" << field.m_longValue[0] << ":" <<  field.m_longValue[1] << ",";
     break;
+  case RagTime5StructManager::Field::T_LongDouble:
+    o << "=" << field.m_doubleValue << ":" <<  field.m_longValue[0] << ",";
+    break;
   case RagTime5StructManager::Field::T_Color:
     o << "=" << field.m_color;
     if (field.m_longValue[0])
@@ -830,10 +880,10 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
     o << ",";
     return o;
   case RagTime5StructManager::Field::T_Code:
-    o << "=" << field.m_code << ",";
+    o << "=" << field.m_string.cstr() << ",";
     return o;
   case RagTime5StructManager::Field::T_Unicode:
-    o << "=" << field.m_extra << ",";
+    o << "=\"" << field.m_string.cstr() << "\",";
     return o;
   case RagTime5StructManager::Field::T_Unstructured:
     o << "=" << field.m_extra << ",";
@@ -877,6 +927,14 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
       o << "]";
     }
     o << ",";
+    break;
+  case RagTime5StructManager::Field::T_TabList:
+    if (!field.m_tabList.empty()) {
+      o << "=[";
+      for (size_t i=0; i<field.m_tabList.size(); ++i)
+        o << field.m_tabList[i] << ",";
+      o << "],";
+    }
     break;
   case RagTime5StructManager::Field::T_Unknown:
   default:
@@ -980,15 +1038,17 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
-          if (child.m_code=="LiOu")
+          if (child.m_string=="LiOu")
             m_position=3;
-          else if (child.m_code=="LiIn")
+          else if (child.m_string=="LiCe") // checkme
+            m_position=2;
+          else if (child.m_string=="LiIn")
             m_position=1;
-          else if (child.m_code=="LiRo")
+          else if (child.m_string=="LiRo")
             m_position=4;
           else {
-            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown position string %s\n", child.m_code.c_str()));
-            s << "##pos=" << child.m_code << ",";
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown position string %s\n", child.m_string.cstr()));
+            s << "##pos=" << child.m_string.cstr() << ",";
           }
           continue;
         }
@@ -1001,13 +1061,13 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
-          if (child.m_code=="LiRo")
+          if (child.m_string=="LiRo")
             m_mitter=2;
-          else if (child.m_code=="LiBe")
+          else if (child.m_string=="LiBe")
             m_mitter=3;
           else {
-            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown mitter string %s\n", child.m_code.c_str()));
-            s << "##mitter=" << child.m_code << ",";
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown mitter string %s\n", child.m_string.cstr()));
+            s << "##mitter=" << child.m_string.cstr() << ",";
           }
           continue;
         }
@@ -1020,13 +1080,13 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
-          if (child.m_code=="GrNo")
+          if (child.m_string=="GrNo")
             m_gradient=1;
-          else if (child.m_code=="GrRa")
+          else if (child.m_string=="GrRa")
             m_gradient=2;
           else {
-            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown gradient string %s\n", child.m_code.c_str()));
-            s << "##gradient=" << child.m_code << ",";
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown gradient string %s\n", child.m_string.cstr()));
+            s << "##gradient=" << child.m_string.cstr() << ",";
           }
           continue;
         }
@@ -1039,13 +1099,13 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
-          if (child.m_code=="CaRo")
+          if (child.m_string=="CaRo")
             m_cap=2;
-          else if (child.m_code=="CaSq")
+          else if (child.m_string=="CaSq")
             m_cap=3;
           else {
-            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown cap string %s\n", child.m_code.c_str()));
-            s << "##cap=" << child.m_code << ",";
+            MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown cap string %s\n", child.m_string.cstr()));
+            s << "##cap=" << child.m_string.cstr() << ",";
           }
           continue;
         }
@@ -1156,7 +1216,7 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
 
 std::ostream &operator<<(std::ostream &o, RagTime5StructManager::GraphicStyle const &style)
 {
-  if (style.m_parentId>=0) o << "parent=S" << style.m_parentId << ",";
+  if (style.m_parentId>=0) o << "parent=GS" << style.m_parentId << ",";
   if (style.m_width>=0) o << "w=" << style.m_width << ",";
   if (!style.m_colors[0].isBlack()) o << "color0=" << style.m_colors[0] << ",";
   if (!style.m_colors[1].isWhite()) o << "color1=" << style.m_colors[1] << ",";
@@ -1238,6 +1298,650 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::GraphicStyle co
   o << style.m_extra;
   return o;
 }
+
+bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTime5StructManager::Field const &field)
+{
+  std::stringstream s;
+  if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
+    switch (field.m_fileType) {
+    case 0x7a0aa: // style parent id?
+    case 0x1474042: { // main parent id?
+      int wh=field.m_fileType==0x1474042 ? 0 : 1;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x1479080) {
+          m_parentId[wh]=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown parent id[%d] block\n", wh));
+        s << "###parent" << wh << "[id]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x14741fa:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_LongList && child.m_fileType==(long)0x80045080) {
+          for (size_t j=0; j<child.m_longList.size(); ++j)
+            m_linkIdList.push_back((int) child.m_longList[j]);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown link id block\n"));
+        s << "###link[id]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x145e01a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147c080) {
+          m_graphStyleId=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown graphic style block\n"));
+        s << "###graph[id]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    //
+    // para
+    //
+    case 0x14750ea:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Bool && child.m_fileType==0x360c0) {
+          m_keepWithNext=child.m_longValue[0]!=0;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown keep with next block\n"));
+        s << "###keep[withNext]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147505a: // left margin
+    case 0x147506a: // right margin
+    case 0x147507a: { // first margin
+      int wh=int(((field.m_fileType&0xF0)>>4)-5);
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1493800) {
+          m_margins[wh]=child.m_doubleValue;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown margins[%d] block\n", wh));
+        s << "###margins[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x147501a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_string=="----") // checkme
+            m_justify=-1;
+          else if (child.m_string=="left")
+            m_justify=0;
+          else if (child.m_string=="cent")
+            m_justify=1;
+          else if (child.m_string=="rght")
+            m_justify=2;
+          else if (child.m_string=="full")
+            m_justify=3;
+          else if (child.m_string=="fful")
+            m_justify=4;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some justify block %s\n", child.m_string.cstr()));
+            s << "##justify=" << child.m_string.cstr() << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown justify block\n"));
+        s << "###justify=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147502a:
+    case 0x14750aa:
+    case 0x14750ba: {
+      int wh=field.m_fileType==0x147502a ? 0 : field.m_fileType==0x14750aa ? 1 : 2;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_LongDouble && child.m_fileType==0x149a940) {
+          m_spacings[wh]=child.m_doubleValue;
+          m_spacingUnits[wh]=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown spacings %d block\n", wh));
+        s << "###spacings[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x14752da:
+    case 0x147536a:
+    case 0x147538a: {
+      int wh=field.m_fileType==0x14752da ? 0 : field.m_fileType==0x147536a ? 1 : 2;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1495000) {
+          s << "delta[" << (wh==0 ? "interline" : wh==1 ? "before" : "after") << "]=" << child.m_doubleValue << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown spacings delta %d block\n", wh));
+        s << "###delta[spacings" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x147530a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_string=="----") // checkme
+            m_breakMethod=0;
+          else if (child.m_string=="nxtC")
+            m_breakMethod=1;
+          else if (child.m_string=="nxtP")
+            m_breakMethod=2;
+          else if (child.m_string=="nxtE")
+            m_breakMethod=3;
+          else if (child.m_string=="nxtO")
+            m_breakMethod=4;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown break method block %s\n", child.m_string.cstr()));
+            s << "##break[method]=" << child.m_string.cstr() << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown break method block\n"));
+        s << "###break[method]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147550a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Bool && child.m_fileType==0x360c0) {
+          if (child.m_longValue[0])
+            s << "text[margins]=canOverlap,";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown text margin overlap block\n"));
+        s << "###text[margins]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147516a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Bool && child.m_fileType==0x360c0) {
+          if (child.m_longValue[0])
+            s << "line[align]=ongrid,";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown line grid align block\n"));
+        s << "###line[gridalign]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147546a:
+    case 0x147548a: {
+      std::string wh(field.m_fileType==0x147546a ? "orphan" : "widows");
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x328c0) {
+          s << wh << "=" << child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown number %s block\n", wh.c_str()));
+        s << "###" << wh << "=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x14754ba:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Unstructured && child.m_fileType==0x1476840) {
+          // height in line, number of character, first line with text, scaling
+          s << "drop[initial]=" << child.m_extra << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown drop initial block\n"));
+        s << "###drop[initial]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x14750ca: // one tab, remove tab?
+    case 0x147510a:
+      if (field.m_fileType==0x14750ca) s << "#tab0";
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_TabList && (child.m_fileType==(long)0x81474040 || child.m_fileType==0x1474040)) {
+          m_tabList=child.m_tabList;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown tab block\n"));
+        s << "###tab=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    //
+    // char
+    //
+    case 0x7a05a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1495000) {
+          m_fontSize=float(child.m_doubleValue);
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font size block\n"));
+        s << "###size[font]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    case 0xa7017:
+    case 0xa7037:
+    case 0xa7047:
+    case 0xa7057:
+    case 0xa7067: {
+      int wh=int(((field.m_fileType&0x70)>>4)-1);
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Unicode && child.m_fileType==0xc8042) {
+          if (wh==2)
+            m_fontName=child.m_string;
+          else {
+            static char const *(what[])= {"[full]" /* unsure */, "[##UNDEF]", "", "[style]" /* regular, ...*/, "[from]", "[full2]"};
+            s << "font" << what[wh] << "=\"" << child.m_string.cstr() << "\",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some font name[%d] block\n", wh));
+        s << "###font[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+      return true;
+    }
+    case 0xa7077:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x3b880) {
+          m_fontId=child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font id block\n"));
+        s << "###id[font]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x7a09a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_2Long && child.m_fileType==0xa4840) {
+          m_fontFlags[0]=(uint32_t)child.m_longValue[0];
+          m_fontFlags[1]=(uint32_t)child.m_longValue[1];
+          continue;
+        }
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0xa4000) {
+          m_fontFlags[0]=(uint32_t)child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font flags block\n"));
+        s << "###flags[font]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x14740ba:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_string=="----") // checkme
+            m_underline=0;
+          else if (child.m_string=="undl")
+            m_underline=1;
+          else if (child.m_string=="Dund")
+            m_underline=2;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown underline block %s\n", child.m_string.cstr()));
+            s << "##underline=" << child.m_string.cstr() << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some underline block\n"));
+        s << "###underline=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147403a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Code && child.m_fileType==0x8d000) {
+          if (child.m_string=="----") // checkme
+            m_caps=0;
+          else if (child.m_string=="alcp")
+            m_caps=1;
+          else if (child.m_string=="lowc")
+            m_caps=2;
+          else if (child.m_string=="Icas")
+            m_caps=3;
+          else {
+            MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown caps block %s\n", child.m_string.cstr()));
+            s << "##caps=" << child.m_string.cstr() << ",";
+          }
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some caps block\n"));
+        s << "###caps=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x14753aa: // min spacing
+    case 0x14753ca: // optimal spacing
+    case 0x14753ea: { // max spacing
+      int wh=field.m_fileType==0x14753aa ? 1 : field.m_fileType==0x14753ca ? 0 : 2;
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0xb6000) {
+          m_letterSpacings[wh]=child.m_doubleValue;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown spacings[%d] block\n", wh));
+        s << "###spacings[" << wh << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+
+    case 0x147404a: // space scaling
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_LongDouble && child.m_fileType==0x149c940) {
+          s << "space[scaling]=" << child.m_doubleValue;
+          // no sure what do to about this int : a number between 0 and 256...
+          if (child.m_longValue[0]) s << "[" << child.m_longValue[0] << "],";
+          else s << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown space scaling block\n"));
+        s << "###space[scaling]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    case 0x147405a: // script position
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_LongDouble && child.m_fileType==0x149c940) {
+          m_scriptPosition=(float) child.m_doubleValue;
+          // no sure what do to about this int : a number between 0 and 256...
+          if (child.m_longValue[0]) s << "script2[pos]?=" << child.m_longValue[0] << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font script block\n"));
+        s << "###font[script]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    case 0x14741ba:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0xb6000) {
+          m_fontScaling=(float) child.m_doubleValue;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font scaling block\n"));
+        s << "###scaling=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    case 0x14740ea: // horizontal streching
+    case 0x147418a: // small cap horizontal scaling
+    case 0x14741aa: { // small cap vertical scaling
+      std::string wh(field.m_fileType==0x14740ea ? "font[strech]" :
+                     field.m_fileType==0x147418a ? "font[smallScaleH]" : "font[smallScaleV]");
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0xb6000) {
+          s << wh << "=" << child.m_doubleValue << ",";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown %s block\n", wh.c_str()));
+        s << "###" << wh << "=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x147406a: // automatic hyphenation
+    case 0x147552a: { // ignore 1 word ( for spacings )
+      std::string wh(field.m_fileType==0x147406a ? "hyphen" : "spacings[ignore1Word]");
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Bool && child.m_fileType==0x360c0) {
+          if (child.m_longValue[0])
+            s << wh << ",";
+          else
+            s << wh << "=no,";
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown %s block\n", wh.c_str()));
+        s << "###" << wh << "=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    }
+    case 0x147402a: // language
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x34080) {
+          m_language=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown language block\n"));
+        s << "###language=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
+    //
+    // columns
+    //
+    case 0x147512a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x328c0) {
+          m_numColumns=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown column's number block\n"));
+        s << "###num[cols]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    case 0x147513a:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Double && child.m_fileType==0x1493800) {
+          m_columnGap=child.m_doubleValue;
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown columns gaps block\n"));
+        s << "###col[gap]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+std::ostream &operator<<(std::ostream &o, RagTime5StructManager::TextStyle const &style)
+{
+  if (style.m_parentId[0]>=0) o << "parent=TS" << style.m_parentId[0] << ",";
+  if (style.m_parentId[1]>=0) o << "parent[style?]=TS" << style.m_parentId[1] << ",";
+  if (!style.m_linkIdList.empty()) {
+    // fixme: 3 text style's id values with unknown meaning, probably important...
+    o << "link=[";
+    for (size_t i=0; i<style.m_linkIdList.size(); ++i)
+      o << "TS" << style.m_linkIdList[i] << ",";
+    o << "],";
+  }
+  if (style.m_graphStyleId>=0) o << "graph[id]=GS" << style.m_graphStyleId << ",";
+  if (style.m_keepWithNext.isSet()) {
+    o << "keep[withNext]";
+    if (!*style.m_keepWithNext)
+      o << "=false,";
+    else
+      o << ",";
+  }
+  switch (style.m_justify) {
+  case 0: // left
+    break;
+  case 1:
+    o << "justify=center,";
+    break;
+  case 2:
+    o << "justify=right,";
+    break;
+  case 3:
+    o << "justify=full,";
+    break;
+  case 4:
+    o << "justify=full[all],";
+    break;
+  default:
+    if (style.m_justify>=0)
+      o << "##justify=" << style.m_justify << ",";
+  }
+
+  switch (style.m_breakMethod) {
+  case 0: // as is
+    break;
+  case 1:
+    o << "break[method]=next[container],";
+    break;
+  case 2:
+    o << "break[method]=next[page],";
+    break;
+  case 3:
+    o << "break[method]=next[evenP],";
+    break;
+  case 4:
+    o << "break[method]=next[oddP],";
+    break;
+  default:
+    if (style.m_breakMethod>=0)
+      o << "##break[method]=" << style.m_breakMethod << ",";
+  }
+  for (int i=0; i<3; ++i) {
+    if (style.m_margins[i]<0) continue;
+    static char const *(wh[])= {"left", "right", "first"};
+    o << "margins[" << wh[i] << "]=" << style.m_margins[i] << ",";
+  }
+  for (int i=0; i<3; ++i) {
+    if (style.m_spacings[i]<0) continue;
+    o << (i==0 ? "interline" : i==1 ? "before[spacing]" : "after[spacing]");
+    o << "=" << style.m_spacings[i];
+    if (style.m_spacingUnits[i]==0)
+      o << "%";
+    else if (style.m_spacingUnits[i]==1)
+      o << "pt";
+    else
+      o << "[###unit]=" << style.m_spacingUnits[i];
+    o << ",";
+  }
+  if (!style.m_tabList.empty()) {
+    o << "tabs=[";
+    for (size_t i=0; i<style.m_tabList.size(); ++i)
+      o << style.m_tabList[i] << ",";
+    o << "],";
+  }
+  // char
+  if (!style.m_fontName.empty())
+    o << "font=\"" << style.m_fontName.cstr() << "\",";
+  if (style.m_fontId>=0)
+    o << "id[font]=" << style.m_fontId << ",";
+  if (style.m_fontSize>=0)
+    o << "sz[font]=" << style.m_fontSize << ",";
+  for (int i=0; i<2; ++i) {
+    uint32_t fl=style.m_fontFlags[i];
+    if (!fl) continue;
+    if (i==1)
+      o << "flag[rm]=[";
+    if (fl&1) o << "bold,";
+    if (fl&2) o << "it,";
+    // 4 underline?
+    if (fl&8) o << "outline,";
+    if (fl&0x10) o << "shadow,";
+    if (fl&0x200) o << "strike[through],";
+    if (fl&0x400) o << "small[caps],";
+    if (fl&0x800) o << "kumoraru,"; // ie. with some char overlapping
+    if (fl&0x20000) o << "underline[word],";
+    if (fl&0x80000) o << "key[pairing],";
+    fl &= 0xFFF5F1E4;
+    if (fl) o << "#fontFlags=" << std::hex << fl << std::dec << ",";
+    if (i==1)
+      o << "],";
+  }
+  switch (style.m_caps) {
+  case 0:
+    break;
+  case 1:
+    o << "upper[caps],";
+    break;
+  case 2:
+    o << "lower[caps],";
+    break;
+  case 3:
+    o << "upper[initial+...],";
+    break;
+  default:
+    if (style.m_caps >= 0)
+      o << "###caps=" << style.m_caps << ",";
+    break;
+  }
+  switch (style.m_underline) {
+  case 0:
+    break;
+  case 1:
+    o << "underline=single,";
+    break;
+  case 2:
+    o << "underline=double,";
+    break;
+  default:
+    if (style.m_underline>=0)
+      o << "###underline=" << style.m_underline << ",";
+  }
+  if (style.m_scriptPosition.isSet())
+    o << "ypos[font]=" << *style.m_scriptPosition << "%,";
+  if (style.m_fontScaling>=0)
+    o << "scale[font]=" << style.m_fontScaling << "%,";
+
+  for (int i=0; i<3; ++i) {
+    if (style.m_letterSpacings[i]<0) continue;
+    static char const *(wh[])= {"", "[min]", "[max]"};
+    o << "letterSpacing" << wh[i] << "=" << style.m_letterSpacings[i] << ",";
+  }
+  if (style.m_language>=0)
+    o << "language=" << std::hex << style.m_language << std::dec << ",";
+  // column
+  if (style.m_numColumns>=0)
+    o << "num[col]=" << style.m_numColumns << ",";
+  if (style.m_columnGap>=0)
+    o << "col[gap]=" << style.m_columnGap << ",";
+  o << style.m_extra;
+  return o;
+}
 ////////////////////////////////////////////////////////////
 // zone function
 ////////////////////////////////////////////////////////////
@@ -1259,56 +1963,56 @@ std::string RagTime5StructManager::Zone::getZoneName() const
 {
   switch (m_ids[0]) {
   case 0:
-    if (m_type==Data)
+    if (m_fileType==F_Data)
       return "FileHeader";
     break;
   case 1: // with g4=1, gd=[1, lastDataZones]
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "ZoneInfo";
     break;
   case 3: // with no value or gd=[1,_] (if multiple)
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "Main3A";
     break;
   case 4:
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "ZoneLimits,";
     break;
   case 5:
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "FileLimits";
     break;
   case 6: // gd=[_,_]
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "Main6A";
     break;
   case 8: // type=UseCount, gd=[0,num>1], can be multiple
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "UnknCounter8";
     break;
   case 10: // type=SingleRef, gd=[1,id], Data id is a list types
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "Types";
     break;
   case 11: // type=SingleRef, gd=[1,id]
-    if (m_type==Main)
+    if (m_fileType==F_Main)
       return "Cluster";
     break;
   default:
     break;
   }
   std::stringstream s;
-  switch (m_type) {
-  case Main:
+  switch (m_fileType) {
+  case F_Main:
     s << "Main" << m_ids[0] << "A";
     break;
-  case Data:
+  case F_Data:
     s << "Data" << m_ids[0] << "A";
     break;
-  case Empty:
+  case F_Empty:
     s << "unused" << m_ids[0];
     break;
-  case Unknown:
+  case F_Unknown:
   default:
     s << "##zone" << m_subType << ":" << m_ids[0] << "";
     break;
