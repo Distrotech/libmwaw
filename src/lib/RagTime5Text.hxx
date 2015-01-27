@@ -106,7 +106,7 @@ protected:
   bool readTextStyles(RagTime5StructManager::Cluster &cluster);
 
   //! try to read a text zone
-  bool readTextZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readTextZone(RagTime5StructManager::Cluster &cluster);
   //! try to read a text unknown zone in data
   bool readTextUnknown(int typeId);
 

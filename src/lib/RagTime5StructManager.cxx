@@ -236,8 +236,20 @@ bool RagTime5StructManager::readUnicodeString(MWAWInputStreamPtr input, long end
     return false;
   }
   length/=2;
-  for (long i=0; i<length; ++i)
-    libmwaw::appendUnicode((uint32_t) input->readULong(2), string);
+  int lEndian=0, hEndian=0; // for checking if little/big endian is set correctly
+  for (long i=0; i<length; ++i) {
+    uint32_t c=(uint32_t) input->readULong(2);
+    if ((c&0xFF000)==0) ++hEndian;
+    else if ((c&0xFF)==0) ++lEndian;
+    libmwaw::appendUnicode(c, string);
+  }
+  if (lEndian>hEndian) {
+    static bool first=true;
+    if (first) {
+      first=false;
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readUnicodeString: the endian reading seems bad...\n"));
+    }
+  }
   return true;
 }
 
@@ -521,12 +533,12 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_entry.setEnd(endDataPos);
     field.m_extra="...";
     zone.ascii().addPos(input->tell()+70);
-    zone.ascii().addNote("StructZone-para-B0:");
+    zone.ascii().addNote("TextStyle-para-B0:");
     zone.ascii().addPos(input->tell()+166);
-    zone.ascii().addNote("StructZone-para-B1:");
+    zone.ascii().addNote("TextStyle-para-B1:");
     if (fSz>262) {
       zone.ascii().addPos(input->tell()+262);
-      zone.ascii().addNote("StructZone-para-C:");
+      zone.ascii().addNote("TextStyle-para-C:");
     }
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
@@ -1391,6 +1403,7 @@ bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTi
             m_justify=3;
           else if (child.m_string=="fful")
             m_justify=4;
+          // find also thgr
           else {
             MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some justify block %s\n", child.m_string.cstr()));
             s << "##justify=" << child.m_string.cstr() << ",";

@@ -442,7 +442,9 @@ public:
     //! the link type
     enum Type { L_Graphic, L_GraphicTransform, L_GraphicType,
                 L_Text, L_TextUnknown,
-                L_FieldsList, L_UnicodeList, L_List, L_Unknown
+                L_FieldsList, L_UnicodeList, L_List,
+                L_UnknownZoneB,
+                L_Unknown
               };
     //! constructor
     Link(Type type=L_Unknown) : m_type(type), m_name(""), m_ids(), m_N(0), m_fieldSize(0), m_longList()
@@ -477,6 +479,8 @@ public:
         if (!m_name.empty())
           return m_name;
         return "fieldsList[unkn]";
+      case L_UnknownZoneB:
+        return "UnknZoneB";
       case L_List:
       case L_Unknown:
       default:
@@ -538,8 +542,9 @@ public:
     //! the cluster type
     enum Type {
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
-      C_TextStyles,
+      C_TextData, C_TextStyles,
       C_Units,
+      C_Formats,
       C_Unknown
     };
     //! the cluster type

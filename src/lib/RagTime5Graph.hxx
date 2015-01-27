@@ -77,9 +77,6 @@ class RagTime5Graph
   friend class RagTime5Parser;
 
 public:
-  //! enum used to defined list of classical pict
-  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
-
   //! constructor
   RagTime5Graph(RagTime5Parser &parser);
   //! destructor
@@ -108,9 +105,9 @@ protected:
   //
 
   //! try to read a picture zone
-  bool readPicture(RagTime5StructManager::Zone &zone, MWAWEntry &entry, PictureType type);
+  bool readPicture(RagTime5StructManager::Zone &zone);
   //! try to read a picture list
-  bool readPictureList(RagTime5StructManager::Zone &zone, std::vector<int> &listIds);
+  bool readPictureList(RagTime5StructManager::Zone &zone);
   //! try to read a picture match zone
   bool readPictureMatch(RagTime5StructManager::Zone &zone, bool color);
 
@@ -132,7 +129,7 @@ protected:
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
   //! try to read a graphic
-  bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n);
+  bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
 
   //! try to read a graphic transformations zone
   bool readGraphicTransformations(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);

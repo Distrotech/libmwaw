@@ -34,7 +34,9 @@
 #ifndef RAG_TIME_5_PARSER
 #  define RAG_TIME_5_PARSER
 
+#include <map>
 #include <string>
+#include <vector>
 
 #include "MWAWDebug.hxx"
 #include "MWAWInputStream.hxx"
@@ -126,20 +128,24 @@ protected:
   //! try to read a positions zone in data
   bool readPositions(int posId, std::vector<long> &listPosition);
   //! try to read a list of unicode string zone
-  bool readUnicodeStringList(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
-  //! try to read a list of unknown zone 6 bytes data
-  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readUnicodeStringList(RagTime5StructManager::Link const &link, std::map<int, librevenge::RVNGString> &idToStringMap);
+
+  //! try to read n data id
+  bool readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds) const;
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5StructManager::Zone &zone);
+  //! try to read a the list of format
+  bool readFormats(RagTime5StructManager::Cluster &cluster);
+  //! try to read a list of unknown zone 6 bytes data
+  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //! try to read a structured zone
   bool readStructZone(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser);
   //! try to read a data in a structured zone
-  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, RagTime5StructManager::FieldParser &parser);
+  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, RagTime5StructManager::FieldParser &parser,
+                      librevenge::RVNGString const &dataName);
 
-  //! try to read a data in a structured zone
-  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, std::string const &zoneName);
   //! try to read a list zone
   bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
   //! flush unsent zone (debugging function)

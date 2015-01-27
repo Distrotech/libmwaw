@@ -146,10 +146,13 @@ bool RagTime5Text::readTextStyles(RagTime5StructManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // main zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
+bool RagTime5Text::readTextZone(RagTime5StructManager::Cluster &cluster)
 {
-  if (link.m_ids.size()<2 || !link.m_ids[1])
+  RagTime5StructManager::Link const &link=cluster.m_dataLink;
+  if (link.m_ids.size()<2 || !link.m_ids[1]) {
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: can not find the data zone\n"));
     return false;
+  }
 
   shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || !dataZone->m_entry.valid() ||
