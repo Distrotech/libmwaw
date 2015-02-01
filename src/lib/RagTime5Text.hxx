@@ -110,6 +110,9 @@ protected:
   //! try to read a text unknown zone in data
   bool readTextUnknown(int typeId);
 
+  //! try to read a list of list/link definition
+  bool readListZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+
   //
   // low level
   //

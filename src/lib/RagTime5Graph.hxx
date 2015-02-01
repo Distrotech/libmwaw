@@ -115,8 +115,8 @@ protected:
   // basic graphic
   //
 
-  //! try to read a main graphic zone ( shape type )
-  bool readMainGraphicZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  //! try to read a main graphic types
+  bool readGraphicTypes(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //! try to read a main graphic styles
   bool readGraphicStyles(RagTime5StructManager::Cluster &cluster);

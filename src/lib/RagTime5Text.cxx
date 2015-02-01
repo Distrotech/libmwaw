@@ -181,6 +181,144 @@ bool RagTime5Text::readTextZone(RagTime5StructManager::Cluster &cluster)
 }
 
 ////////////////////////////////////////////////////////////
+// list definition
+////////////////////////////////////////////////////////////
+bool RagTime5Text::readListZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link)
+{
+  if (link.m_ids.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5Text::readListZones: can not find the first zone id\n"));
+    return false;
+  }
+  if (link.m_ids.size()>=3 && link.m_ids[2]) {
+    std::vector<long> decal;
+    if (link.m_ids[1])
+      m_mainParser.readPositions(link.m_ids[1], decal);
+    if (decal.empty())
+      decal=link.m_longList;
+    int const dataId=link.m_ids[2];
+    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+    if (!dataZone || !dataZone->m_entry.valid() ||
+        dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+      if (decal.size()==1) {
+        // a graphic zone with 0 zone is ok...
+        dataZone->m_isParsed=true;
+      }
+      MWAW_DEBUG_MSG(("RagTime5Text::readListZones: the data zone %d seems bad\n", dataId));
+    }
+    else {
+      MWAWEntry entry=dataZone->m_entry;
+      dataZone->m_isParsed=true;
+
+      libmwaw::DebugFile &ascFile=dataZone->ascii();
+      libmwaw::DebugStream f;
+      f << "Entries(ListDef)[" << *dataZone << "]:";
+      ascFile.addPos(entry.end());
+      ascFile.addNote("_");
+
+      if (decal.size() <= 1) {
+        MWAW_DEBUG_MSG(("RagTime5Text::readListZones: can not find position for the data zone %d\n", dataId));
+        f << "###";
+        ascFile.addPos(entry.begin());
+        ascFile.addNote(f.str().c_str());
+      }
+      else {
+        int N=int(decal.size());
+        MWAWInputStreamPtr input=dataZone->getInput();
+        input->setReadInverted(!cluster.m_hiLoEndian); // checkme maybe zone
+
+        ascFile.addPos(entry.begin());
+        ascFile.addNote(f.str().c_str());
+
+        for (int i=0; i<N-1; ++i) {
+          long pos=decal[size_t(i)], nextPos=decal[size_t(i+1)];
+          if (pos==nextPos) continue;
+          if (pos<0 || pos>entry.length()) {
+            MWAW_DEBUG_MSG(("RagTime5Text::readListZones: can not read the data zone %d-%d seems bad\n", dataId, i));
+            continue;
+          }
+          f.str("");
+          f << "ListDef-" << i+1 << ":";
+          librevenge::RVNGString string;
+          input->seek(pos+entry.begin(), librevenge::RVNG_SEEK_SET);
+          if (nextPos>entry.length() || !m_structManager->readUnicodeString(input, entry.begin()+nextPos, string)) {
+            MWAW_DEBUG_MSG(("RagTime5Text::readListZones: can not read a string\n"));
+            f << "###";
+          }
+          else if (!string.empty() && string.cstr()[0]=='\0')
+            f << "\"" << string.cstr()+1 << "\",";
+          else
+            f << "\"" << string.cstr() << "\",";
+          ascFile.addPos(entry.begin()+pos);
+          ascFile.addNote(f.str().c_str());
+        }
+        input->setReadInverted(false);
+      }
+    }
+  }
+  // ok no list
+  if (!link.m_ids[0])
+    return true;
+  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
+  if (!dataZone || dataZone->getKindLastPart()!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Text::readListZones: can not find the first zone %d\n", link.m_ids[0]));
+    return false;
+  }
+
+  // ok no list
+  if (!dataZone->m_entry.valid())
+    return true;
+
+  MWAWInputStreamPtr input=dataZone->getInput();
+  bool const hiLo=dataZone->m_hiLoEndian;
+  input->setReadInverted(!hiLo);
+  input->seek(dataZone->m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  dataZone->m_isParsed=true;
+
+  libmwaw::DebugFile &ascFile=dataZone->ascii();
+  libmwaw::DebugStream f;
+  ascFile.addPos(dataZone->m_entry.end());
+  ascFile.addNote("_");
+
+  if (dataZone->m_entry.length()<link.m_fieldSize*link.m_N || link.m_fieldSize<=0 || link.m_N<=0) {
+    MWAW_DEBUG_MSG(("RagTime5Text::readListZones: the position zone %d seems bad\n", dataZone->m_ids[0]));
+    f << "Entries(ListPos)[" << *dataZone << "]:" << link << "###,";
+    input->setReadInverted(false);
+    ascFile.addPos(dataZone->m_entry.begin());
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+  for (int i=0; i<link.m_N; ++i) {
+    long pos=input->tell();
+    f.str("");
+    if (i==0)
+      f << "Entries(ListPos)[" << *dataZone << "]:";
+    else
+      f << "ListPos-" << i << ":";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+link.m_fieldSize, librevenge::RVNG_SEEK_SET);
+  }
+  if (input->tell()<dataZone->m_entry.end()) {
+    f.str("");
+    f << "ListPos-:end";
+    // check me: the size seems always a multiple of 16, so maybe reserved data...
+    if (dataZone->m_entry.length()%link.m_fieldSize) {
+      f << "###";
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("RagTime5Text::readListZones: find some extra data\n"));
+        first=false;
+      }
+    }
+    ascFile.addPos(input->tell());
+    ascFile.addNote(f.str().c_str());
+  }
+  input->setReadInverted(false);
+  return true;
+}
+
+
+////////////////////////////////////////////////////////////
 // unknown
 ////////////////////////////////////////////////////////////
 bool RagTime5Text::readTextUnknown(int typeId)

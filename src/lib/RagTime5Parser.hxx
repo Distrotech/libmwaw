@@ -141,10 +141,10 @@ protected:
   bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
 
   //! try to read a structured zone
-  bool readStructZone(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser);
+  bool readStructZone(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, bool hasHeader=true);
   //! try to read a data in a structured zone
-  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, RagTime5StructManager::FieldParser &parser,
-                      librevenge::RVNGString const &dataName);
+  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, bool hasHeader,
+                      RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
 
   //! try to read a list zone
   bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);

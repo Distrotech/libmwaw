@@ -58,9 +58,6 @@
 /** Internal: the structures of a RagTime5Graph */
 namespace RagTime5GraphInternal
 {
-//! enum used to defined list of classical pict
-enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
-
 ////////////////////////////////////////
 //! Internal: the helper to read field for a RagTime5Graph
 struct FieldParser : public RagTime5StructManager::FieldParser {
@@ -115,6 +112,9 @@ struct Shape {
 ////////////////////////////////////////
 //! Internal: the state of a RagTime5Graph
 struct State {
+  //! enum used to defined list of classical pict
+  enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
+
   //! constructor
   State() : m_numPages(0), m_shapeTypeIdVector() { }
   //! the number of pages
@@ -209,24 +209,25 @@ int RagTime5Graph::numPages() const
 ////////////////////////////////////////////////////////////
 // main graphic
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
+bool RagTime5Graph::readGraphicTypes(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
 {
   if (link.m_ids.empty()) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: call with no zone\n"));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: call with no zone\n"));
     return false;
   }
   shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
-  if (!dataZone || !dataZone->m_entry.valid() ||
-      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: the first zone seems bad\n"));
+  // not frequent, but can happen...
+  if (dataZone && !dataZone->m_entry.valid())
+    return true;
+  if (!dataZone || dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: the first zone seems bad\n"));
     return false;
   }
-
   long length=dataZone->m_entry.length();
   std::vector<long> const &positions=link.m_longList;
   if (!length) {
     if (positions.empty()) return true;
-    MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: can not find the type positions for zone %d\n", link.m_ids[0]));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: can not find the type positions for zone %d\n", link.m_ids[0]));
     return false;
   }
 
@@ -256,7 +257,7 @@ bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, R
     f.str("");
     f  << "GraphType-" << i << ":";
     if (positions[i+1]>length || dLength<16) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: something look bad for positions %d\n", (int) i));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: something look bad for positions %d\n", (int) i));
       f << "###";
       if (positions[i]<length) {
         ascFile.addPos(pos);
@@ -274,7 +275,7 @@ bool RagTime5Graph::readMainGraphicZone(RagTime5StructManager::Zone &/*zone*/, R
     }
     int N=(int) input->readULong(4);
     if (dLength!=N*4+16) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readMainGraphicZone: the number of data seems bad\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: the number of data seems bad\n"));
       f << "##N=" << N << ",";
       N=0;
     }
@@ -797,6 +798,15 @@ bool RagTime5Graph::readPictureList(RagTime5StructManager::Zone &zone)
     MWAW_DEBUG_MSG(("RagTime5Graph::readPictureList: can not find the list of pictures\n"));
     return false;
   }
+  for (size_t i=0; i<listIds.size(); ++i) {
+    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(listIds[i]);
+    if (!dataZone || !dataZone->m_entry.valid() ||
+        m_state->getPictureType(dataZone->getKindLastPart())==RagTime5GraphInternal::State::P_Unknown) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readPictureList: can not find the picture %d\n", listIds[i]));
+      continue;
+    }
+    readPicture(*dataZone);
+  }
   return true;
 }
 
@@ -805,16 +815,16 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
   MWAWEntry const &entry=zone.m_entry;
   if (entry.length()<=40)
     return false;
-  RagTime5GraphInternal::PictureType type=m_state->getPictureType(zone.getKindLastPart());
+  RagTime5GraphInternal::State::PictureType type=m_state->getPictureType(zone.getKindLastPart());
   bool testForScreenRep=false;
-  if (type==RagTime5GraphInternal::P_ScreenRep && !zone.m_kinds[1].empty()) {
+  if (type==RagTime5GraphInternal::State::P_ScreenRep && !zone.m_kinds[1].empty()) {
     type=m_state->getPictureType(zone.getKindLastPart(false));
-    if (type==RagTime5GraphInternal::P_Unknown)
-      type=RagTime5GraphInternal::P_ScreenRep;
+    if (type==RagTime5GraphInternal::State::P_Unknown)
+      type=RagTime5GraphInternal::State::P_ScreenRep;
     else
       testForScreenRep=true;
   }
-  if (type==RagTime5GraphInternal::P_Unknown)
+  if (type==RagTime5GraphInternal::State::P_Unknown)
     return false;
   MWAWInputStreamPtr input = zone.getInput();
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
@@ -822,7 +832,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
   std::string extension("");
   bool ok=true;
   switch (type) {
-  case RagTime5GraphInternal::P_Epsf:
+  case RagTime5GraphInternal::State::P_Epsf:
     val=(long) input->readULong(4);
     if (val!=(long) 0xc5d0d3c6 && val != (long) 0x25215053) {
       ok=false;
@@ -855,7 +865,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     // now first fEntry=eps file, second WMF?, third=tiff file
 #endif
     break;
-  case RagTime5GraphInternal::P_Jpeg:
+  case RagTime5GraphInternal::State::P_Jpeg:
     val=(long) input->readULong(2);
     // jpeg format begin by 0xffd8 and jpeg-2000 format begin by 0000 000c 6a50...
     if (val!=0xffd8 && (val!=0 || input->readULong(4)!=0xc6a50 || input->readULong(4)!=0x20200d0a)) {
@@ -864,7 +874,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     }
     extension="jpg";
     break;
-  case RagTime5GraphInternal::P_Pict:
+  case RagTime5GraphInternal::State::P_Pict:
     input->seek(10, librevenge::RVNG_SEEK_CUR);
     val=(long) input->readULong(2);
     if (val!=0x1101 && val !=0x11) {
@@ -873,14 +883,14 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     }
     extension="pct";
     break;
-  case RagTime5GraphInternal::P_PNG:
+  case RagTime5GraphInternal::State::P_PNG:
     if (input->readULong(4) != 0x89504e47) {
       ok=false;
       break;
     }
     extension="png";
     break;
-  case RagTime5GraphInternal::P_ScreenRep:
+  case RagTime5GraphInternal::State::P_ScreenRep:
     val=(long) input->readULong(1);
     if (val!=0x49 && val!=0x4d) {
       ok=false;
@@ -889,7 +899,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     MWAW_DEBUG_MSG(("RagTime5Graph::readPicture: find unknown picture format for zone %d\n", zone.m_ids[0]));
     extension="sRep";
     break;
-  case RagTime5GraphInternal::P_Tiff:
+  case RagTime5GraphInternal::State::P_Tiff:
     val=(long) input->readULong(2);
     if (val!=0x4949 && val != 0x4d4d) {
       ok=false;
@@ -909,14 +919,14 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     else
       extension="tiff";
     break;
-  case RagTime5GraphInternal::P_WMF:
+  case RagTime5GraphInternal::State::P_WMF:
     if (input->readULong(4)!=0x01000900) {
       ok=false;
       break;
     }
     extension="wmf";
     break;
-  case RagTime5GraphInternal::P_Unknown:
+  case RagTime5GraphInternal::State::P_Unknown:
   default:
     ok=false;
     break;
@@ -928,7 +938,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
       ok=true;
       MWAW_DEBUG_MSG(("RagTime5Graph::readPicture: find unknown picture format for zone %d\n", zone.m_ids[0]));
       extension="sRep";
-      type=RagTime5GraphInternal::P_ScreenRep;
+      type=RagTime5GraphInternal::State::P_ScreenRep;
     }
   }
   zone.m_isParsed=true;
@@ -945,7 +955,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
     return true;
   }
 #ifdef DEBUG_WITH_FILES
-  if (type==RagTime5GraphInternal::P_ScreenRep) {
+  if (type==RagTime5GraphInternal::State::P_ScreenRep) {
     libmwaw::DebugFile &ascFile=zone.ascii();
     f.str("");
     f << "Entries(ScrRep)[" << zone << "]:";

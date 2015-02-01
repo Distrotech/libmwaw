@@ -35,6 +35,7 @@
 #include <sstream>
 
 #include "MWAWDebug.hxx"
+#include "MWAWPrinter.hxx"
 
 #include "RagTime5StructManager.hxx"
 
@@ -283,6 +284,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   long endDataPos=debDataPos+fSz;
   switch (type) {
   case 0x360c0:
+  case 0x368c0:
     if (fSz!=1) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for bool\n"));
       f << "###bool,";
@@ -311,6 +313,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x147b880:
   case 0x147c080:
   case 0x149d880:
+  case 0x149e080:
   case 0x17d5880:
     if (fSz!=2) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for int\n"));
@@ -366,6 +369,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     return true;
   }
   case 0x34800:
+  case 0x234800:  // checkme, find always with 0x0
   case 0x14510b7: // 2 long, not in typedef
   case 0x147415a: // checkme, find always with 0x0
   case 0x15e3017: // 2 long, not in typedef
@@ -379,16 +383,26 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_name="2xint";
     field.m_longValue[1]=(long) input->readLong(2);
     return true;
-  case 0xc8042: { // unicode: header, fl=2000|0, f2=8
-    if ((fSz%2)!=0) {
+  case 0x7d01a:
+  case 0xc8042: { // unicode
+    if (fSz<2) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for unicode\n"));
       f << "###unicode";
       break;
     }
     field.m_type=Field::T_Unicode;
     field.m_name="unicode";
-    if (!readUnicodeString(input, endDataPos, field.m_string))
-      f << "###";
+    int val=(int) input->readULong(2);
+    if ((val&0xF0FF)==0) {
+      if ((val>>8)>2) f << "f1=" << (val>>8);
+      for (int i=2; i<fSz; ++i)
+        libmwaw::appendUnicode((uint32_t) input->readULong(1), field.m_string);
+    }
+    else {
+      input->seek(debDataPos, librevenge::RVNG_SEEK_SET);
+      if (!readUnicodeString(input, endDataPos, field.m_string))
+        f << "###";
+    }
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     field.m_extra=f.str();
     return true;
@@ -450,6 +464,18 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     }
     return true;
   }
+  case 0x74840: // dimension
+    if (fSz!=16) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for dim\n"));
+      f << "###dim";
+      break;
+    }
+    field.m_type=Field::T_DoubleList;
+    field.m_name="dim";
+    for (long i=0; i<4; ++i)
+      field.m_doubleList.push_back(double(input->readLong(4))/65536.);
+    field.m_extra=f.str();
+    return true;
 
   case 0x1476840:
     if (fSz!=10) {
@@ -494,6 +520,64 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_name="rsrcName";
     for (long i=0; i<4; ++i)
       field.m_string.append((char) input->readULong(1));
+    return true;
+  case 0x31e040:
+    // <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    if (fSz<30) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for xml printer\n"));
+      f << "###printInfoX";
+      break;
+    }
+    field.m_type=Field::T_String;
+    field.m_name="printInfoX";
+    for (long i=0; i<fSz && i<30; ++i)
+      field.m_string.append((char) input->readULong(1));
+    field.m_string.append("...");
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    return true;
+  case 0x2fd040: {
+    if (fSz<120) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for printInfo\n"));
+      f << "###printInfo";
+      break;
+    }
+    libmwaw::PrinterInfo info;
+    if (!info.read(input)) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read printInfo\n"));
+      f << "###printInfo";
+      break;
+    }
+    field.m_type=Field::T_PrintInfo;
+    field.m_name="printInfo";
+    f << info << ",";
+    field.m_extra=f.str();
+    // then sometimes 4 string title, ...
+    if (input->tell()!=endDataPos)
+      zone.ascii().addDelimiter(input->tell(),'|');
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+  case 0x333140: // AppleWriter pref, probably safe to ignore
+    if (fSz!=908) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for AppleWriter prefs\n"));
+      f << "###appleWriterInfo";
+      break;
+    }
+    field.m_type=Field::T_Unstructured;
+    field.m_name="appleWriterInfo";
+    field.m_entry.setBegin(input->tell());
+    field.m_entry.setEnd(endDataPos);
+    // name in lohi ?
+    for (int i=0; i<32; ++i) {
+      int c=(int)input->readULong(1);
+      c+=(int)(input->readULong(1)<<8);
+      if (c==0) break;
+      f << (char) c;
+    }
+    f << "...";
+    field.m_extra=f.str();
+    zone.ascii().addDelimiter(input->tell(),'|');
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   case 0x148c01a: // 2 int + 8 bytes for pat ?
     if (fSz!=12) {
@@ -543,6 +627,35 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
+  case 0x71940: // checkme: locale data ?
+    if (fSz!=108) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for locale\n"));
+      f << "###locale";
+      break;
+    }
+    field.m_type=Field::T_Unstructured;
+    field.m_name="locale";
+    field.m_entry.setBegin(input->tell());
+    field.m_entry.setEnd(endDataPos);
+    f << "fls=[" << std::hex;
+    for (long i=0; i<8; ++i) {
+      int val=(int) input->readLong(1);
+      if (val==1) f << "_,";
+      else f << val << ",";
+    }
+    f << "],";
+    f << "chars=[";
+    for (long i=0; i<21; ++i) {
+      int val=(int) input->readULong(2);
+      if (!val) f << "_,";
+      else if (val<128) f << (char) val << ",";
+      else f << std::hex << val << std::dec << ",";
+    }
+    f << "],";
+    zone.ascii().addDelimiter(input->tell(),'|');
+    field.m_extra=f.str();
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    return true;
   case 0x227140: { // border checkme
     if ((fSz%6)!=2) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of border\n"));
@@ -610,6 +723,9 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
       field.m_longList.push_back((long) input->readLong(2));
     return true;
   }
+  case 0x35000:
+  case 0x35800: // unsure, ie small int
+  case 0x3e800: // unsure, find with 000af040, 00049840 or 0004c040
   case 0xa4000:
     if (fSz!=4) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of uint32_t\n"));
@@ -726,6 +842,12 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x147418a: // small caps scaling x
   case 0x14741aa: // small caps scaling y
 
+  case 0x14c2042: /* function container*/
+  case 0x1559842:
+  case 0x1663842:
+  case 0x1e16842:
+  case 0x23b4042:
+
   case 0x7a09a: // with a4000 or a4840
   case 0x7a05a: // unknown
   case 0x7a0aa:
@@ -746,7 +868,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x148983a: // with type=0074040
   case 0x148985a: { // with type=1495800
     if (fSz<4) {
-      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data type list field\n"));
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected list field size\n"));
       f << "###list,";
       break;
     }
@@ -763,7 +885,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_type=Field::T_FieldList;
     field.m_fieldList.push_back(child);
     if (input->tell() != endDataPos) {
-      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some data\n"));
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some field list data\n"));
       f.str("");
       f << "###pos=" << pos-debPos;
       field.m_extra+=f.str();
@@ -772,6 +894,196 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     return true;
   }
 
+  // condition, function, ...
+  case 0xe2c59:
+  case 0x1a473a:
+  case 0x1c58b1:
+  case 0x1dad60:
+  case 0x1e1c3b:
+  case 0x329eef:
+  case 0x6604ee:
+  case 0xcfdfc0:
+  case 0x1466794:
+  case 0x1468721:
+  case 0x1919327:
+  case 0x28b427c:
+  case 0x2a72e5f:
+  case 0x3217ef3: {
+    if (fSz!=12) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for condition\n"));
+      f << "###condition";
+      break;
+    }
+    field.m_type=Field::T_CondColor;
+    field.m_name="condition";
+    field.m_longValue[0]=(long) input->readLong(2); // numUsed ?
+    field.m_longValue[1]=(long) input->readLong(2); // formula id ?
+    unsigned char col[4];
+    for (long i=0; i<4; ++i) // rgba
+      col[i]=(unsigned char)(input->readULong(2)>>8);
+    field.m_color=MWAWColor(col[0],col[1],col[2],col[3]);
+    return true;
+  }
+
+  case 0x154a840: {
+    if (fSz<6) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected field size for functions def list\n"));
+      f << "###func[def],";
+      break;
+    }
+    int val=(int) input->readLong(1); // always 0?
+    if (val) f << "f1=" << val << ",";
+    int N=(int) input->readULong(1);
+    if (6+N!=fSz) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected field N for functions def list\n"));
+      f << "###func[def],N=" << N << ",";
+      break;
+    }
+    for (int i=0; i<3; ++i) { // 0,-1|0|1,0
+      val=(int) input->readLong(1);
+      if (!val) continue;
+      f << "f" << i+2 << "=" << val << ",";
+    }
+    val=(int) input->readULong(1); //0|40|c0
+    if (val) f << "f5=" << std::hex << val << std::dec << ",";
+    // list of [0|1|20]*
+    field.m_type=Field::T_LongList;
+    field.m_name="func[def]";
+    for (int i=0; i<N; ++i)
+      field.m_longList.push_back((int) input->readULong(1));
+    field.m_extra=f.str();
+    return true;
+  }
+  case 0x14c2017: // function name
+  case 0x14c2037:
+  case 0x1559937:
+  case 0x1559f47:
+  case 0x1559857:
+  case 0x1559987:
+  case 0x15598a7:
+  case 0x15598b7:
+  case 0x15598d7:
+  case 0x15598e7:
+  case 0x1559907:
+  case 0x1559a27:
+  case 0x1559bc7:
+  case 0x1559df7:
+  case 0x1559e07:
+  case 0x1559e37:
+  case 0x1559e57:
+  case 0x1559e67:
+  case 0x1559f17:
+  case 0x1559f37:
+  case 0x1559f57:
+  case 0x1559f67:
+  case 0x1559fe7:
+  case 0x1559ff7:
+  case 0x155a1c7:
+  case 0x155a017:
+  case 0x155a027:
+  case 0x155a047:
+  case 0x155a077:
+  case 0x155a087:
+  case 0x155a1f7:
+  case 0x155a207:
+  case 0x1663817:
+  case 0x1663827:
+  case 0x16638a7:
+  case 0x16638c7:
+  case 0x1663907:
+  case 0x1663917:
+  case 0x1663947:
+  case 0x1663967:
+  case 0x1663977:
+  case 0x1663987:
+  case 0x16639e7:
+  case 0x16639f7:
+  case 0x1663a07:
+  case 0x1663a17:
+  case 0x1e16827:
+  case 0x1e16837:
+  case 0x1e16847:
+  case 0x1e16857:
+  case 0x1e16867:
+  case 0x1e16877:
+  case 0x1e16887:
+  case 0x1e16897:
+  case 0x1e168a7:
+  case 0x1e168b7:
+  case 0x1e168c7:
+  case 0x1e168d7:
+  case 0x1e168e7:
+  case 0x23b4027: {
+    if (fSz<14) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected field size for functions name list\n"));
+      f << "###func[name],";
+      break;
+    }
+    int val;
+    for (int i=0; i<3; ++i) { // f1=0|-1, f2=small number, other 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << i+1 << "=" << val << ",";
+    }
+    field.m_type=Field::T_FieldList;
+    field.m_name="func[name]";
+    bool ok=true;
+    for (int i=0; i<2; ++i) {
+      Field child;
+      long pos=input->tell();
+      if (!readField(zone, endDataPos, child)) {
+        ok=false;
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      field.m_fieldList.push_back(child);
+    }
+    if (!ok || input->tell() != endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some 2fields list data\n"));
+      f.str("");
+      f << "###pos=" << input->tell()-debPos;
+      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    }
+    field.m_extra+=f.str();
+    return true;
+  }
+  case 0x42040: {
+    if (fSz<10) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected field size for day/month list\n"));
+      f << "###list[day/month],";
+      break;
+    }
+    int val;
+    for (int i=0; i<2; ++i) { // always 0?
+      val=(int) input->readULong(2);
+      if (val) f << "f" << i+1 << "=" << val << ",";
+    }
+    int N=(int) input->readULong(2);
+    val=(int) input->readULong(2); // always 20 ?
+    if (val!=20) f << "f3=" << val << ",";
+    val=(int) input->readULong(2); // always 0 ?
+    if (val) f << "f4=" << val << ",";
+    field.m_type=Field::T_FieldList;
+    field.m_name="list[day/month]";
+    bool ok=true;
+    for (int i=0; i<N; ++i) {
+      Field child;
+      long pos=input->tell();
+      if (!readField(zone, endDataPos, child)) {
+        ok=false;
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      field.m_fieldList.push_back(child);
+    }
+    if (!ok || input->tell() != endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some day/month list data\n"));
+      f.str("");
+      f << "###pos=" << input->tell()-debPos;
+      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    }
+    field.m_extra+=f.str();
+    return true;
+  }
   case 0xd7842: { // list of ? : header fl=0|4000, f2=3
     if ((fSz%6)!=0) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for 0xd7842\n"));
@@ -811,6 +1123,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   case 0x14e6825: // maybe a list of coldim
   case 0x14eb015: // maybe a list of rowdim
   case 0x14f1825:
+  case 0x15f4815: // maybe related to list
   case 0x160f815:
   case 0x1671845:
     field.m_name="longList";
@@ -891,12 +1204,17 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
       o << "[" << field.m_longValue[0] << "]";
     o << ",";
     return o;
+  case RagTime5StructManager::Field::T_CondColor:
+    o << "=" << field.m_color << "[" << field.m_longValue[0] << "," << field.m_longValue[1] << "],";
+    return o;
+  case RagTime5StructManager::Field::T_String:
   case RagTime5StructManager::Field::T_Code:
     o << "=" << field.m_string.cstr() << ",";
     return o;
   case RagTime5StructManager::Field::T_Unicode:
     o << "=\"" << field.m_string.cstr() << "\",";
     return o;
+  case RagTime5StructManager::Field::T_PrintInfo:
   case RagTime5StructManager::Field::T_Unstructured:
     o << "=" << field.m_extra << ",";
     return o;
@@ -1344,18 +1662,35 @@ bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTi
       }
       m_extra+=s.str();
       return true;
-    case 0x145e01a:
+    case 0x1469840:
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
-        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147c080) {
-          m_graphStyleId=(int) child.m_longValue[0];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147b880) {
+          m_dateStyleId=(int) child.m_longValue[0];
           continue;
         }
-        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown graphic style block\n"));
-        s << "###graph[id]=" << child << ",";
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown date style block\n"));
+        s << "###date[id]=" << child << ",";
       }
       m_extra+=s.str();
       return true;
+    case 0x145e01a:
+    case 0x14741ea:
+      for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+        RagTime5StructManager::Field const &child=field.m_fieldList[i];
+        if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147c080) {
+          if (field.m_fileType==0x145e01a)
+            m_graphStyleId=(int) child.m_longValue[0];
+          else
+            m_graphLineStyleId=(int) child.m_longValue[0];
+          continue;
+        }
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown graphic style block\n"));
+        s << "###graph[" << std::hex << field.m_fileType << std::dec << "]=" << child << ",";
+      }
+      m_extra+=s.str();
+      return true;
+
     //
     // para
     //
@@ -1583,14 +1918,29 @@ bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTi
       return true;
     }
     case 0xa7077:
+    case 0x147407a:
+    case 0x147408a:
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x3b880) {
-          m_fontId=child.m_longValue[0];
+          switch (field.m_fileType) {
+          case 0xa7077:
+            m_fontId=child.m_longValue[0];
+            break;
+          case 0x147407a:
+            s << "hyph[minSyl]=" << child.m_longValue[0] << ",";
+            break;
+          case 0x147408a:
+            s << "hyph[minWord]=" << child.m_longValue[0] << ",";
+            break;
+          default:
+            MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown long=%lx\n", (unsigned long)field.m_fileType));
+            break;
+          }
           continue;
         }
-        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown font id block\n"));
-        s << "###id[font]=" << child << ",";
+        MWAW_DEBUG_MSG(("RagTime5StructManager::TextStyle::read: find some unknown long=%lx block\n", (unsigned long)field.m_fileType));
+        s << "###long[" << std::hex << field.m_fileType << std::dec << "]=" << child << ",";
       }
       m_extra+=s.str();
       return true;
@@ -1791,6 +2141,7 @@ bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTi
       }
       m_extra+=s.str();
       return true;
+
     default:
       break;
     }
@@ -1809,6 +2160,8 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::TextStyle const
     o << "],";
   }
   if (style.m_graphStyleId>=0) o << "graph[id]=GS" << style.m_graphStyleId << ",";
+  if (style.m_graphLineStyleId>=0) o << "graphLine[id]=GS" << style.m_graphLineStyleId << ",";
+  if (style.m_dateStyleId>=0) o << "date[id]=DS" << style.m_dateStyleId << ",";
   if (style.m_keepWithNext.isSet()) {
     o << "keep[withNext]";
     if (!*style.m_keepWithNext)

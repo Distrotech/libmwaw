@@ -108,7 +108,7 @@ public:
   struct Field {
     //! the different type
     enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_DoubleList, T_TabList,
-                T_Code, T_Color, T_Unicode, T_LongDouble, T_Unstructured
+                T_Code, T_Color, T_CondColor, T_PrintInfo, T_String, T_Unicode, T_LongDouble, T_Unstructured
               };
 
     //! constructor
@@ -236,7 +236,7 @@ public:
   struct TextStyle {
     //! constructor
     TextStyle() : m_linkIdList(),
-      m_graphStyleId(-1), m_keepWithNext(false), m_justify(-1), m_breakMethod(-1), m_tabList(),
+      m_dateStyleId(-1), m_graphStyleId(-1), m_graphLineStyleId(-1), m_keepWithNext(false), m_justify(-1), m_breakMethod(-1), m_tabList(),
       m_fontName(""), m_fontId(-1), m_fontSize(-1), m_scriptPosition(0), m_fontScaling(-1), m_underline(-1), m_caps(-1), m_language(-1),
       m_numColumns(-1), m_columnGap(-1), m_extra("")
     {
@@ -257,7 +257,8 @@ public:
     bool isDefault() const
     {
       if (m_parentId[0]>=0 || m_parentId[1]>=0 || !m_linkIdList.empty() ||
-          m_graphStyleId>=0 || m_keepWithNext.isSet() || m_justify>=0 || m_breakMethod>=0 || !m_tabList.empty() ||
+          m_dateStyleId>=0 || m_graphStyleId>=0 || m_graphLineStyleId>=0 ||
+          m_keepWithNext.isSet() || m_justify>=0 || m_breakMethod>=0 || !m_tabList.empty() ||
           !m_fontName.empty() || m_fontId>=0 || m_fontSize>=0 || m_fontFlags[0] || m_fontFlags[1] || m_scriptPosition.isSet() ||
           m_fontScaling>=0 || m_underline>=0 || m_caps>=0 || m_language>=0 ||
           m_numColumns>=0 || m_columnGap>=0 || !m_extra.empty())
@@ -276,8 +277,12 @@ public:
     int m_parentId[2];
     //! the link id list
     std::vector<int> m_linkIdList;
+    //! the date style id
+    int m_dateStyleId;
     //! the graphic style id
     int m_graphStyleId;
+    //! the graphic line style id
+    int m_graphLineStyleId;
 
     // paragraph
 
@@ -442,8 +447,9 @@ public:
     //! the link type
     enum Type { L_Graphic, L_GraphicTransform, L_GraphicType,
                 L_Text, L_TextUnknown,
-                L_FieldsList, L_UnicodeList, L_List,
-                L_UnknownZoneB,
+                L_ConditionFormula, L_ListDef, L_SettingsList, L_UnicodeList,
+                L_FieldsList, L_List,
+                L_UnknownZoneB, L_UnknownZoneC,
                 L_Unknown
               };
     //! constructor
@@ -463,12 +469,18 @@ public:
     std::string getZoneName() const
     {
       switch (m_type) {
+      case L_ConditionFormula:
+        return "condFormData";
       case L_Graphic:
         return "graphData";
       case L_GraphicTransform:
         return "graphTransform";
       case L_GraphicType:
         return "graphType";
+      case L_ListDef:
+        return "listDef";
+      case L_SettingsList:
+        return "settings";
       case L_Text:
         return "textData";
       case L_TextUnknown:
@@ -481,6 +493,8 @@ public:
         return "fieldsList[unkn]";
       case L_UnknownZoneB:
         return "UnknZoneB";
+      case L_UnknownZoneC:
+        return "UnknZoneC";
       case L_List:
       case L_Unknown:
       default:
@@ -536,7 +550,7 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
+    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_childId(0), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
     {
     }
     //! the cluster type
@@ -549,6 +563,10 @@ public:
     };
     //! the cluster type
     Type m_type;
+    //! the cluster hiLo endian
+    bool m_hiLoEndian;
+    //! the cluster child id
+    int m_childId;
     //! the main data link
     Link m_dataLink;
     //! the name link
