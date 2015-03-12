@@ -32,6 +32,8 @@
 */
 
 #include <cmath>
+#include <cstdarg>
+#include <cstdio>
 #include <iomanip>
 #include <string>
 #include <sstream>
@@ -382,6 +384,17 @@ Box2f rotateBoxFromCenter(Box2f const &box, float angle)
   }
   return Box2f(minPt,maxPt);
 }
+
+// debug message
+#ifdef DEBUG
+void printDebugMsg(const char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  std::vfprintf(stderr, format, args);
+  va_end(args);
+}
+#endif
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
