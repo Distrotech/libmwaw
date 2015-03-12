@@ -112,7 +112,7 @@ struct MWAW_shared_ptr_noop_deleter {
 
 /* ---------- debug  --------------- */
 #ifdef DEBUG
-namespace libwps
+namespace libmwaw
 {
 void printDebugMsg(const char *format, ...) __attribute__((format(printf, 1, 2)));
 }
