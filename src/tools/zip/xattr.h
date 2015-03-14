@@ -32,6 +32,8 @@
 
 #include <string>
 
+#include "zip_internal.h"
+
 namespace libmwaw_zip
 {
 class InputStream;

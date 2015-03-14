@@ -30,7 +30,6 @@
 #include <string.h>
 #include <iostream>
 
-#include <libmwaw_internal.hxx>
 #include "file_internal.h"
 #include "input.h"
 

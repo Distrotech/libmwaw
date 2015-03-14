@@ -32,7 +32,6 @@
 
 #include <algorithm>
 
-#include <libmwaw_internal.hxx>
 #include "file_internal.h"
 #include "input.h"
 #include "xattr.h"

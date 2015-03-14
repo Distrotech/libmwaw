@@ -42,14 +42,10 @@
 #include <string>
 #include <vector>
 
-#include <libmwaw_internal.hxx>
 #include "input.h"
 #include "xattr.h"
 #include "zip.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "zip_internal.h"
 
 #ifndef VERSION
 #define VERSION "UNKNOWN VERSION"

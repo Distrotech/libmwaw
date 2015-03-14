@@ -18,7 +18,8 @@ mwawZip_SOURCES = 		\
 	xattr.h			\
 	xattr.cpp		\
 	zip.h			\
-	zip.cpp
+	zip.cpp			\
+	zip_internal.h
 
 if OS_WIN32
 @MWAWZIP_WIN32_RESOURCE@ : mwawZip.rc $(mwawZip_OBJECTS)
@@ -33,4 +34,4 @@ EXTRA_DIST = \
 # These may be in the builddir too
 BUILD_EXTRA_DIST = \
 	mwawZip.rc	 
- 
+

@@ -30,3 +30,6 @@ rpm: dist
 zip: install
 	sh libmwaw-zip
 
+astyle:
+	astyle -HU -A3 -k3 -y -n -s2 -r \*.cpp \*.h \*.?xx
+

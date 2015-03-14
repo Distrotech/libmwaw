@@ -31,9 +31,9 @@
 
 #include <algorithm>
 
-#include <libmwaw_internal.hxx>
 #include "input.h"
 #include "xattr.h"
+#include "zip_internal.h"
 
 #include <sys/stat.h>
 #if WITH_EXTENDED_FS

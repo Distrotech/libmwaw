@@ -31,7 +31,6 @@
 #include <sstream>
 #include <string>
 
-#include <libmwaw_internal.hxx>
 #include "file_internal.h"
 #include "input.h"
 #include "rsrc.h"

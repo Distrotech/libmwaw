@@ -27,8 +27,12 @@
 * instead of those above.
 */
 
-#ifndef FILE_INTERNAL_H
-#  define FILE_INTERNAL_H
+#ifndef ZIP_INTERNAL_H
+#  define ZIP_INTERNAL_H
+
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
 
 #include <string.h>
 #include <stdio.h>
@@ -37,6 +41,17 @@
 #define MWAW_DEBUG_MSG(M) printf M
 #else
 #define MWAW_DEBUG_MSG(M)
+#endif
+
+#if defined(SHAREDPTR_TR1)
+#include <tr1/memory>
+using std::tr1::shared_ptr;
+#elif defined(SHAREDPTR_STD)
+#include <memory>
+using std::shared_ptr;
+#else
+#include <boost/shared_ptr.hpp>
+using boost::shared_ptr;
 #endif
 
 #endif

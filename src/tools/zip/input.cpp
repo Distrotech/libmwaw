@@ -30,7 +30,8 @@
 #include <string.h>
 #include <iostream>
 
-#include <libmwaw_internal.hxx>
+#include "zip_internal.h"
+
 #include "input.h"
 
 namespace libmwaw_zip

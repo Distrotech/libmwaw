@@ -110,11 +110,17 @@ struct MWAW_shared_ptr_noop_deleter {
   void operator()(T *) {}
 };
 
+#if defined(__clang__) || defined(__GNUC__)
+#  define LIBMWAW_ATTRIBUTE_PRINTF(fmt, arg) __attribute__((__format__(__printf__, fmt, arg)))
+#else
+#  define LIBMWAW_ATTRIBUTE_PRINTF(fmt, arg)
+#endif
+
 /* ---------- debug  --------------- */
 #ifdef DEBUG
 namespace libmwaw
 {
-void printDebugMsg(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void printDebugMsg(const char *format, ...) LIBMWAW_ATTRIBUTE_PRINTF(1,2);
 }
 #define MWAW_DEBUG_MSG(M) libmwaw::printDebugMsg M
 #else

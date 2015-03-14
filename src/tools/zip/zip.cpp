@@ -36,9 +36,9 @@
 #include <fstream>
 #include <iostream>
 
-#include <libmwaw_internal.hxx>
 #include "input.h"
 #include "zip.h"
+#include "zip_internal.h"
 
 namespace libmwaw_zip
 {
