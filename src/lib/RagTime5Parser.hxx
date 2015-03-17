@@ -117,9 +117,12 @@ protected:
   //! try to read the different cluster zones
   bool readClusterZones();
   //! try to read a cluster zone
-  bool readClusterZone(RagTime5StructManager::Zone &zone);
+  bool readClusterZone(RagTime5StructManager::Zone &zone, int type=-1);
   //! try to read a cluster list (in general Data14)
   bool readClusterList(RagTime5StructManager::Zone &zone);
+  //! try to read a cluster link zone
+  bool readClusterLinkList(RagTime5StructManager::Zone &zone,
+                           RagTime5StructManager::Link const &link);
 
   //! try to read a string zone ( zone with id1=21,id2=23:24)
   bool readString(RagTime5StructManager::Zone &zone, std::string &string);

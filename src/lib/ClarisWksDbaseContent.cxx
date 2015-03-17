@@ -1252,7 +1252,6 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
   }
   case 0x13: {
     ok=readCellInFormula(cPos,instr);
-    if (!ok) break;
     break;
   }
   case 0x1b:

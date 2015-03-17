@@ -445,11 +445,14 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_Graphic, L_GraphicTransform, L_GraphicType,
+    enum Type { L_FieldDef, L_FieldPos,
+                L_ColorPattern,
+                L_Graphic, L_GraphicTransform, L_GraphicType,
                 L_Text, L_TextUnknown,
-                L_ConditionFormula, L_ListDef, L_SettingsList, L_UnicodeList,
+                L_ClusterLink,
+                L_ConditionFormula, L_LinkDef, L_SettingsList, L_UnicodeList,
                 L_FieldsList, L_List,
-                L_UnknownZoneB, L_UnknownZoneC,
+                L_UnknownZoneB,
                 L_Unknown
               };
     //! constructor
@@ -469,6 +472,14 @@ public:
     std::string getZoneName() const
     {
       switch (m_type) {
+      case L_ClusterLink:
+        return "clustLink";
+      case L_FieldDef:
+        return "fieldDef";
+      case L_FieldPos:
+        return "fieldPos";
+      case L_ColorPattern:
+        return "color/pattern";
       case L_ConditionFormula:
         return "condFormData";
       case L_Graphic:
@@ -477,8 +488,8 @@ public:
         return "graphTransform";
       case L_GraphicType:
         return "graphType";
-      case L_ListDef:
-        return "listDef";
+      case L_LinkDef:
+        return "linkDef";
       case L_SettingsList:
         return "settings";
       case L_Text:
@@ -493,8 +504,6 @@ public:
         return "fieldsList[unkn]";
       case L_UnknownZoneB:
         return "UnknZoneB";
-      case L_UnknownZoneC:
-        return "UnknZoneC";
       case L_List:
       case L_Unknown:
       default:
@@ -550,11 +559,12 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_childId(0), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
+    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_childClusterIds(0), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
     {
     }
     //! the cluster type
     enum Type {
+      C_ColorPattern,
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
       C_TextData, C_TextStyles,
       C_Units,
@@ -565,8 +575,8 @@ public:
     Type m_type;
     //! the cluster hiLo endian
     bool m_hiLoEndian;
-    //! the cluster child id
-    int m_childId;
+    //! the clusters child id
+    std::vector<int> m_childClusterIds;
     //! the main data link
     Link m_dataLink;
     //! the name link

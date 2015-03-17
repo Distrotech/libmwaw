@@ -1154,7 +1154,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     }
     field.m_fieldList.push_back(child);
   }
-  if (input->tell()+4>=endDataPos) {
+  if (input->tell()+4<endDataPos) {
     zone.ascii().addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;

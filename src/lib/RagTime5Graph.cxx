@@ -301,6 +301,69 @@ bool RagTime5Graph::readGraphicColors(RagTime5StructManager::Cluster &cluster)
   return m_mainParser.readStructZone(cluster, fieldParser);
 }
 
+bool RagTime5Graph::readColorPatternZone(RagTime5StructManager::Cluster &cluster)
+{
+  // normally empty, but ...
+  std::map<int, librevenge::RVNGString> idToNameMap;
+  if (!cluster.m_nameLink.empty()) {
+    m_mainParser.readUnicodeStringList(cluster.m_nameLink, idToNameMap);
+    cluster.m_nameLink=RagTime5StructManager::Link();
+  }
+
+  RagTime5StructManager::Link const &link=cluster.m_dataLink;
+  if (link.m_ids.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readColorPatternZone: can not find any zone\n"));
+    return false;
+  }
+  for (size_t i=0; i<2; ++i) {
+    if (i>=link.m_ids.size()) break;
+    int const dataId=link.m_ids[i];
+    if (dataId==0) continue;
+
+    std::string what(i==0 ? "GraphCPCol" : "GraphCPPat");
+    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+    if (!dataZone || !dataZone->m_entry.valid() ||
+        dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readColorPatternZone: the data zone %s seems bad\n", what.c_str()));
+      continue;
+    }
+
+    dataZone->m_isParsed=true;
+    MWAWEntry entry=dataZone->m_entry;
+    libmwaw::DebugFile &ascFile=dataZone->ascii();
+    libmwaw::DebugStream f;
+    f << "Entries(" << what << ")[" << *dataZone << "]:";
+    ascFile.addPos(entry.end());
+    ascFile.addNote("_");
+    int const expectedSz=i==0 ? 10 : 8;
+    if ((entry.length()%expectedSz)!=0) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readColorPatternZone: the zone %s size seems bad\n", what.c_str()));
+      f << "###";
+      ascFile.addPos(entry.begin());
+      ascFile.addNote(f.str().c_str());
+      continue;
+    }
+
+    ascFile.addPos(entry.begin());
+    ascFile.addNote(f.str().c_str());
+
+    MWAWInputStreamPtr input=dataZone->getInput();
+
+    int N=int(entry.length()/expectedSz);
+    input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+    for (int j=0; j<N; ++j) {
+      long pos=input->tell();
+      f.str("");
+      f << what << "-" << j+1 << ":";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+expectedSz, librevenge::RVNG_SEEK_SET);
+    }
+    input->setReadInverted(false);
+  }
+
+  return true;
+}
 
 ////////////////////////////////////////////////////////////
 // style
@@ -703,6 +766,12 @@ bool RagTime5Graph::readGraphicTransformations(RagTime5StructManager::Zone &/*zo
   shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || !dataZone->m_entry.valid() || dataZone->m_entry.length()!=link.m_N*link.m_fieldSize ||
       dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+    if (link.m_N==0 && !dataZone->m_entry.valid()) {
+      // an empty transformation zone is ok...
+      dataZone->m_isParsed=true;
+      return true;
+    }
+
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTransformations: the transformation zone %d seems bad\n", link.m_ids[0]));
     return false;
   }

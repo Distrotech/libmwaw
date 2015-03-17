@@ -110,8 +110,15 @@ protected:
   //! try to read a text unknown zone in data
   bool readTextUnknown(int typeId);
 
-  //! try to read a list of list/link definition
-  bool readListZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+  //! try to read a list of link/list definition
+  bool readLinkZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+
+  //! try to read a list of field definition
+  bool readFieldZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+  //! try to read a field definition
+  bool readFieldDefinition(RagTime5StructManager::Zone &zone, long endPos, int n);
+  //! try to read a field position
+  bool readFieldPosition(RagTime5StructManager::Zone &zone, long endPos, int n);
 
   //
   // low level

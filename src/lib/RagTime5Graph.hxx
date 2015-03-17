@@ -124,6 +124,9 @@ protected:
   //! try to read a graphic color zone
   bool readGraphicColors(RagTime5StructManager::Cluster &cluster);
 
+  //! try to read a zone of color and pattern
+  bool readColorPatternZone(RagTime5StructManager::Cluster &cluster);
+
   //! try to read a graphic zone
   bool readGraphicZone(RagTime5StructManager::Cluster &cluster);
   //! try to read a graphic unknown zone in data
