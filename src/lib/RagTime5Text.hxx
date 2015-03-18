@@ -51,6 +51,7 @@
 #include "MWAWPosition.hxx"
 
 #include "RagTime5StructManager.hxx"
+#include "RagTime5ZoneManager.hxx"
 
 namespace RagTime5TextInternal
 {
@@ -62,6 +63,7 @@ class SubDocument;
 
 class RagTime5Parser;
 class RagTime5StructManager;
+class RagTime5Zone;
 
 /** \brief the main class to read the text part of RagTime 56 file
  *
@@ -103,22 +105,22 @@ protected:
   //
 
   //! try to read a main text styles
-  bool readTextStyles(RagTime5StructManager::Cluster &cluster);
+  bool readTextStyles(RagTime5ZoneManager::Cluster &cluster);
 
   //! try to read a text zone
-  bool readTextZone(RagTime5StructManager::Cluster &cluster);
+  bool readTextZone(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a text unknown zone in data
   bool readTextUnknown(int typeId);
 
   //! try to read a list of link/list definition
-  bool readLinkZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+  bool readLinkZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link);
 
   //! try to read a list of field definition
-  bool readFieldZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link);
+  bool readFieldZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link);
   //! try to read a field definition
-  bool readFieldDefinition(RagTime5StructManager::Zone &zone, long endPos, int n);
+  bool readFieldDefinition(RagTime5Zone &zone, long endPos, int n);
   //! try to read a field position
-  bool readFieldPosition(RagTime5StructManager::Zone &zone, long endPos, int n);
+  bool readFieldPosition(RagTime5Zone &zone, long endPos, int n);
 
   //
   // low level

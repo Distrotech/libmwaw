@@ -49,6 +49,7 @@
 
 #include "RagTime5Parser.hxx"
 #include "RagTime5StructManager.hxx"
+#include "RagTime5ZoneManager.hxx"
 
 #include "RagTime5Text.hxx"
 
@@ -77,7 +78,7 @@ struct FieldParser : public RagTime5StructManager::FieldParser {
     return s.str();
   }
   //! parse a field
-  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5StructManager::Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int /*n*/, libmwaw::DebugStream &f)
   {
     RagTime5StructManager::TextStyle style;
     MWAWInputStreamPtr input=zone.getInput();
@@ -137,7 +138,7 @@ int RagTime5Text::numPages() const
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextStyles(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Text::readTextStyles(RagTime5ZoneManager::Cluster &cluster)
 {
   RagTime5TextInternal::FieldParser fieldParser(*this);
   return m_mainParser.readStructZone(cluster, fieldParser);
@@ -146,15 +147,15 @@ bool RagTime5Text::readTextStyles(RagTime5StructManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // main zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextZone(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Text::readTextZone(RagTime5ZoneManager::Cluster &cluster)
 {
-  RagTime5StructManager::Link const &link=cluster.m_dataLink;
+  RagTime5ZoneManager::Link const &link=cluster.m_dataLink;
   if (link.m_ids.size()<2 || !link.m_ids[1]) {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: can not find the data zone\n"));
     return false;
   }
 
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || !dataZone->m_entry.valid() ||
       dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: can not find the first zone %d\n", link.m_ids[0]));
@@ -183,7 +184,7 @@ bool RagTime5Text::readTextZone(RagTime5StructManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // link/list definition
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readFieldZones(RagTime5StructManager::Cluster &/*cluster*/, RagTime5StructManager::Link const &link)
+bool RagTime5Text::readFieldZones(RagTime5ZoneManager::Cluster &/*cluster*/, RagTime5ZoneManager::Link const &link)
 {
   if (link.m_ids.size()<2 || !link.m_ids[1])
     return false;
@@ -195,7 +196,7 @@ bool RagTime5Text::readFieldZones(RagTime5StructManager::Cluster &/*cluster*/, R
     decal=link.m_longList;
 
   int const dataId=link.m_ids[1];
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
   int N=int(decal.size());
 
   if (!dataZone || !dataZone->m_entry.valid() ||
@@ -210,7 +211,7 @@ bool RagTime5Text::readFieldZones(RagTime5StructManager::Cluster &/*cluster*/, R
   }
 
   dataZone->m_isParsed=true;
-  bool isDefinition=link.m_type==RagTime5StructManager::Link::L_FieldDef;
+  bool isDefinition=link.m_type==RagTime5ZoneManager::Link::L_FieldDef;
   MWAWEntry entry=dataZone->m_entry;
   libmwaw::DebugFile &ascFile=dataZone->ascii();
   libmwaw::DebugStream f;
@@ -254,7 +255,7 @@ bool RagTime5Text::readFieldZones(RagTime5StructManager::Cluster &/*cluster*/, R
   return true;
 }
 
-bool RagTime5Text::readFieldDefinition(RagTime5StructManager::Zone &zone, long endPos, int n)
+bool RagTime5Text::readFieldDefinition(RagTime5Zone &zone, long endPos, int n)
 {
   MWAWInputStreamPtr input=zone.getInput();
   long pos=input->tell();
@@ -342,7 +343,7 @@ bool RagTime5Text::readFieldDefinition(RagTime5StructManager::Zone &zone, long e
         }
         input->seek(begDataPos, librevenge::RVNG_SEEK_SET);
         std::vector<int> listIds;
-        if (begDataPos+8>endDataPos || !m_mainParser.readDataIdList(input, 1, listIds)) {
+        if (begDataPos+8>endDataPos || !m_structManager->readDataIdList(input, 1, listIds)) {
           MWAW_DEBUG_MSG(("RagTime5Text::readFieldDefinition: can not read data  for zone 2\n"));
           f << "#type=" << std::hex << lVal << std::dec << ",";
           break;
@@ -380,7 +381,7 @@ bool RagTime5Text::readFieldDefinition(RagTime5StructManager::Zone &zone, long e
   return true;
 }
 
-bool RagTime5Text::readFieldPosition(RagTime5StructManager::Zone &zone, long endPos, int n)
+bool RagTime5Text::readFieldPosition(RagTime5Zone &zone, long endPos, int n)
 {
   MWAWInputStreamPtr input=zone.getInput();
   long pos=input->tell();
@@ -399,7 +400,7 @@ bool RagTime5Text::readFieldPosition(RagTime5StructManager::Zone &zone, long end
   for (int i=0; i<N; ++i) {
     long actPos=input->tell();
     std::vector<int> listIds; // the cluster which contains the definition
-    if (!m_mainParser.readDataIdList(input, 1, listIds)) {
+    if (!m_structManager->readDataIdList(input, 1, listIds)) {
       MWAW_DEBUG_MSG(("RagTime5Text::readFieldPosition: find unknown block type\n"));
       f << "##type,";
       input->seek(actPos+8, librevenge::RVNG_SEEK_SET);
@@ -418,7 +419,7 @@ bool RagTime5Text::readFieldPosition(RagTime5StructManager::Zone &zone, long end
 ////////////////////////////////////////////////////////////
 // link/list definition
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readLinkZones(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::Link const &link)
+bool RagTime5Text::readLinkZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link)
 {
   if (link.m_ids.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Text::readLinkZones: can not find the first zone id\n"));
@@ -431,7 +432,7 @@ bool RagTime5Text::readLinkZones(RagTime5StructManager::Cluster &cluster, RagTim
     if (decal.empty())
       decal=link.m_longList;
     int const dataId=link.m_ids[2];
-    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+    shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
     if (!dataZone || !dataZone->m_entry.valid() ||
         dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
       if (decal.size()==1) {
@@ -493,7 +494,7 @@ bool RagTime5Text::readLinkZones(RagTime5StructManager::Cluster &cluster, RagTim
   // ok no list
   if (!link.m_ids[0])
     return true;
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || dataZone->getKindLastPart()!="ItemData") {
     MWAW_DEBUG_MSG(("RagTime5Text::readLinkZones: can not find the first zone %d\n", link.m_ids[0]));
     return false;
@@ -561,7 +562,7 @@ bool RagTime5Text::readTextUnknown(int typeId)
   if (!typeId)
     return false;
 
-  shared_ptr<RagTime5StructManager::Zone> zone=m_mainParser.getDataZone(typeId);
+  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(typeId);
   if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%6) ||
       zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextUnknown: the entry of zone %d seems bad\n", typeId));

@@ -51,6 +51,7 @@
 #include "MWAWPosition.hxx"
 
 #include "RagTime5StructManager.hxx"
+#include "RagTime5ZoneManager.hxx"
 
 namespace RagTime5GraphInternal
 {
@@ -62,6 +63,7 @@ class SubDocument;
 
 class RagTime5Parser;
 class RagTime5StructManager;
+class RagTime5Zone;
 
 class MWAWGraphicStyle;
 
@@ -105,37 +107,37 @@ protected:
   //
 
   //! try to read a picture zone
-  bool readPicture(RagTime5StructManager::Zone &zone);
+  bool readPicture(RagTime5Zone &zone);
   //! try to read a picture list
-  bool readPictureList(RagTime5StructManager::Zone &zone);
+  bool readPictureList(RagTime5Zone &zone);
   //! try to read a picture match zone
-  bool readPictureMatch(RagTime5StructManager::Zone &zone, bool color);
+  bool readPictureMatch(RagTime5Zone &zone, bool color);
 
   //
   // basic graphic
   //
 
   //! try to read a main graphic types
-  bool readGraphicTypes(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readGraphicTypes(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
   //! try to read a main graphic styles
-  bool readGraphicStyles(RagTime5StructManager::Cluster &cluster);
+  bool readGraphicStyles(RagTime5ZoneManager::Cluster &cluster);
 
   //! try to read a graphic color zone
-  bool readGraphicColors(RagTime5StructManager::Cluster &cluster);
+  bool readGraphicColors(RagTime5ZoneManager::Cluster &cluster);
 
   //! try to read a zone of color and pattern
-  bool readColorPatternZone(RagTime5StructManager::Cluster &cluster);
+  bool readColorPatternZone(RagTime5ZoneManager::Cluster &cluster);
 
   //! try to read a graphic zone
-  bool readGraphicZone(RagTime5StructManager::Cluster &cluster);
+  bool readGraphicZone(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
   //! try to read a graphic
-  bool readGraphic(RagTime5StructManager::Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
+  bool readGraphic(RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
 
   //! try to read a graphic transformations zone
-  bool readGraphicTransformations(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readGraphicTransformations(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
   //
   // low level

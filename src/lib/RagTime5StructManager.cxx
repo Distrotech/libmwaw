@@ -37,6 +37,8 @@
 #include "MWAWDebug.hxx"
 #include "MWAWPrinter.hxx"
 
+#include "RagTime5ZoneManager.hxx"
+
 #include "RagTime5StructManager.hxx"
 
 ////////////////////////////////////////////////////////////
@@ -69,7 +71,7 @@ bool RagTime5StructManager::readCompressedLong(MWAWInputStreamPtr &input, long e
   return input->tell()<=endPos;
 }
 
-bool RagTime5StructManager::readTypeDefinitions(RagTime5StructManager::Zone &zone)
+bool RagTime5StructManager::readTypeDefinitions(RagTime5Zone &zone)
 {
   if (zone.m_entry.length()<26) return false;
   MWAWInputStreamPtr input=zone.getInput();
@@ -254,9 +256,30 @@ bool RagTime5StructManager::readUnicodeString(MWAWInputStreamPtr input, long end
   return true;
 }
 
-bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long endPos, RagTime5StructManager::Field &field, long fSz)
+bool RagTime5StructManager::readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds)
 {
-  MWAWInputStreamPtr input=zone.getInput();
+  listIds.clear();
+  long pos=input->tell();
+  for (int i=0; i<n; ++i) {
+    int val=(int) MWAWInputStream::readULong(input->input().get(), 2, 0, false);
+    if (val==0) {
+      listIds.push_back(0);
+      input->seek(2, librevenge::RVNG_SEEK_CUR);
+      continue;
+    }
+    if (val!=1) {
+      // update the position
+      input->seek(pos+4*n, librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    listIds.push_back((int) MWAWInputStream::readULong(input->input().get(), 2, 0, false));
+  }
+  return true;
+}
+
+bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, libmwaw::DebugFile &ascFile,
+                                      RagTime5StructManager::Field &field, long fSz)
+{
   libmwaw::DebugStream f;
   long debPos=input->tell();
   if ((fSz && (fSz<4 || debPos+fSz<endPos)) || (!fSz && debPos+5>endPos)) {
@@ -553,7 +576,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_extra=f.str();
     // then sometimes 4 string title, ...
     if (input->tell()!=endDataPos)
-      zone.ascii().addDelimiter(input->tell(),'|');
+      ascFile.addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -576,7 +599,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     }
     f << "...";
     field.m_extra=f.str();
-    zone.ascii().addDelimiter(input->tell(),'|');
+    ascFile.addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   case 0x148c01a: // 2 int + 8 bytes for pat ?
@@ -616,13 +639,13 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_entry.setBegin(input->tell());
     field.m_entry.setEnd(endDataPos);
     field.m_extra="...";
-    zone.ascii().addPos(input->tell()+70);
-    zone.ascii().addNote("TextStyle-para-B0:");
-    zone.ascii().addPos(input->tell()+166);
-    zone.ascii().addNote("TextStyle-para-B1:");
+    ascFile.addPos(input->tell()+70);
+    ascFile.addNote("TextStyle-para-B0:");
+    ascFile.addPos(input->tell()+166);
+    ascFile.addNote("TextStyle-para-B1:");
     if (fSz>262) {
-      zone.ascii().addPos(input->tell()+262);
-      zone.ascii().addNote("TextStyle-para-C:");
+      ascFile.addPos(input->tell()+262);
+      ascFile.addNote("TextStyle-para-C:");
     }
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
@@ -652,7 +675,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
       else f << std::hex << val << std::dec << ",";
     }
     f << "],";
-    zone.ascii().addDelimiter(input->tell(),'|');
+    ascFile.addDelimiter(input->tell(),'|');
     field.m_extra=f.str();
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
@@ -875,7 +898,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
 
     long pos=input->tell();
     Field child;
-    if (!readField(zone, endDataPos, child, fSz)) {
+    if (!readField(input, endDataPos, ascFile, child, fSz)) {
       f << "###pos=" << pos-debPos;
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
@@ -1030,7 +1053,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     for (int i=0; i<2; ++i) {
       Field child;
       long pos=input->tell();
-      if (!readField(zone, endDataPos, child)) {
+      if (!readField(input, endDataPos, ascFile, child)) {
         ok=false;
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         break;
@@ -1068,7 +1091,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     for (int i=0; i<N; ++i) {
       Field child;
       long pos=input->tell();
-      if (!readField(zone, endDataPos, child)) {
+      if (!readField(input, endDataPos, ascFile, child)) {
         ok=false;
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         break;
@@ -1110,7 +1133,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
       first=false;
     }
     field.m_name="#unknType";
-    zone.ascii().addDelimiter(input->tell(),'|');
+    ascFile.addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -1147,7 +1170,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
   while (input->tell()<endDataPos) {
     long pos=input->tell();
     Field child;
-    if (!readField(zone, endDataPos, child)) {
+    if (!readField(input, endDataPos, ascFile, child)) {
       f << "###pos=" << pos-debPos;
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
@@ -1155,7 +1178,7 @@ bool RagTime5StructManager::readField(RagTime5StructManager::Zone &zone, long en
     field.m_fieldList.push_back(child);
   }
   if (input->tell()+4<endDataPos) {
-    zone.ascii().addDelimiter(input->tell(),'|');
+    ascFile.addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -2306,121 +2329,6 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::TextStyle const
   if (style.m_columnGap>=0)
     o << "col[gap]=" << style.m_columnGap << ",";
   o << style.m_extra;
-  return o;
-}
-////////////////////////////////////////////////////////////
-// zone function
-////////////////////////////////////////////////////////////
-void RagTime5StructManager::Zone::createAsciiFile()
-{
-  if (m_asciiName.empty()) {
-    MWAW_DEBUG_MSG(("RagTime5StructManager::Zone::createAsciiFile: can not find the ascii name\n"));
-    return;
-  }
-  if (m_localAsciiFile) {
-    MWAW_DEBUG_MSG(("RagTime5StructManager::Zone::createAsciiFile: the ascii file already exist\n"));
-  }
-  m_localAsciiFile.reset(new libmwaw::DebugFile(m_input));
-  m_asciiFile = m_localAsciiFile.get();
-  m_asciiFile->open(m_asciiName.c_str());
-}
-
-std::string RagTime5StructManager::Zone::getZoneName() const
-{
-  switch (m_ids[0]) {
-  case 0:
-    if (m_fileType==F_Data)
-      return "FileHeader";
-    break;
-  case 1: // with g4=1, gd=[1, lastDataZones]
-    if (m_fileType==F_Main)
-      return "ZoneInfo";
-    break;
-  case 3: // with no value or gd=[1,_] (if multiple)
-    if (m_fileType==F_Main)
-      return "Main3A";
-    break;
-  case 4:
-    if (m_fileType==F_Main)
-      return "ZoneLimits,";
-    break;
-  case 5:
-    if (m_fileType==F_Main)
-      return "FileLimits";
-    break;
-  case 6: // gd=[_,_]
-    if (m_fileType==F_Main)
-      return "Main6A";
-    break;
-  case 8: // type=UseCount, gd=[0,num>1], can be multiple
-    if (m_fileType==F_Main)
-      return "UnknCounter8";
-    break;
-  case 10: // type=SingleRef, gd=[1,id], Data id is a list types
-    if (m_fileType==F_Main)
-      return "Types";
-    break;
-  case 11: // type=SingleRef, gd=[1,id]
-    if (m_fileType==F_Main)
-      return "Cluster";
-    break;
-  default:
-    break;
-  }
-  std::stringstream s;
-  switch (m_fileType) {
-  case F_Main:
-    s << "Main" << m_ids[0] << "A";
-    break;
-  case F_Data:
-    s << "Data" << m_ids[0] << "A";
-    break;
-  case F_Empty:
-    s << "unused" << m_ids[0];
-    break;
-  case F_Unknown:
-  default:
-    s << "##zone" << m_subType << ":" << m_ids[0] << "";
-    break;
-  }
-  return s.str();
-}
-
-std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Zone const &z)
-{
-  o << z.getZoneName();
-  if (z.m_idsFlag[0])
-    o << "[" << z.m_idsFlag[0] << "],";
-  else
-    o << ",";
-  for (int i=1; i<3; ++i) {
-    if (!z.m_kinds[i-1].empty()) {
-      o << z.m_kinds[i-1] << ",";
-      continue;
-    }
-    if (!z.m_ids[i] && !z.m_idsFlag[i]) continue;
-    o << "id" << i << "=" << z.m_ids[i];
-    if (z.m_idsFlag[i]==0)
-      o << "*";
-    else if (z.m_idsFlag[i]!=1)
-      o << ":" << z.m_idsFlag[i] << ",";
-    o << ",";
-  }
-  if (z.m_variableD[0] || z.m_variableD[1])
-    o << "varD=[" << z.m_variableD[0] << "," << z.m_variableD[1] << "],";
-  if (z.m_entry.valid())
-    o << z.m_entry.begin() << "<->" << z.m_entry.end() << ",";
-  else if (!z.m_entriesList.empty()) {
-    o << "ptr=" << std::hex;
-    for (size_t i=0; i< z.m_entriesList.size(); ++i) {
-      o << z.m_entriesList[i].begin() << "<->" << z.m_entriesList[i].end();
-      if (i+1<z.m_entriesList.size())
-        o << "+";
-    }
-    o << std::dec << ",";
-  }
-  if (!z.m_hiLoEndian) o << "loHi[endian],";
-  o << z.m_extra << ",";
   return o;
 }
 

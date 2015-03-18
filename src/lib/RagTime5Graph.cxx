@@ -50,6 +50,7 @@
 
 #include "RagTime5Parser.hxx"
 #include "RagTime5StructManager.hxx"
+#include "RagTime5ZoneManager.hxx"
 
 #include "RagTime5Graph.hxx"
 
@@ -82,7 +83,7 @@ struct FieldParser : public RagTime5StructManager::FieldParser {
     return s.str();
   }
   //! parse a field
-  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5StructManager::Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int /*n*/, libmwaw::DebugStream &f)
   {
     if (m_type==Z_Styles) {
       RagTime5StructManager::GraphicStyle style;
@@ -209,13 +210,13 @@ int RagTime5Graph::numPages() const
 ////////////////////////////////////////////////////////////
 // main graphic
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicTypes(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
+bool RagTime5Graph::readGraphicTypes(RagTime5Zone &/*zone*/, RagTime5ZoneManager::Link const &link)
 {
   if (link.m_ids.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: call with no zone\n"));
     return false;
   }
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   // not frequent, but can happen...
   if (dataZone && !dataZone->m_entry.valid())
     return true;
@@ -295,22 +296,22 @@ bool RagTime5Graph::readGraphicTypes(RagTime5StructManager::Zone &/*zone*/, RagT
 ////////////////////////////////////////////////////////////
 // colors
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicColors(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Graph::readGraphicColors(RagTime5ZoneManager::Cluster &cluster)
 {
   RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Colors);
   return m_mainParser.readStructZone(cluster, fieldParser);
 }
 
-bool RagTime5Graph::readColorPatternZone(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Graph::readColorPatternZone(RagTime5ZoneManager::Cluster &cluster)
 {
   // normally empty, but ...
   std::map<int, librevenge::RVNGString> idToNameMap;
   if (!cluster.m_nameLink.empty()) {
     m_mainParser.readUnicodeStringList(cluster.m_nameLink, idToNameMap);
-    cluster.m_nameLink=RagTime5StructManager::Link();
+    cluster.m_nameLink=RagTime5ZoneManager::Link();
   }
 
-  RagTime5StructManager::Link const &link=cluster.m_dataLink;
+  RagTime5ZoneManager::Link const &link=cluster.m_dataLink;
   if (link.m_ids.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readColorPatternZone: can not find any zone\n"));
     return false;
@@ -321,7 +322,7 @@ bool RagTime5Graph::readColorPatternZone(RagTime5StructManager::Cluster &cluster
     if (dataId==0) continue;
 
     std::string what(i==0 ? "GraphCPCol" : "GraphCPPat");
-    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+    shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
     if (!dataZone || !dataZone->m_entry.valid() ||
         dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
       MWAW_DEBUG_MSG(("RagTime5Graph::readColorPatternZone: the data zone %s seems bad\n", what.c_str()));
@@ -368,7 +369,7 @@ bool RagTime5Graph::readColorPatternZone(RagTime5StructManager::Cluster &cluster
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicStyles(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Graph::readGraphicStyles(RagTime5ZoneManager::Cluster &cluster)
 {
   RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Styles);
   return m_mainParser.readStructZone(cluster, fieldParser);
@@ -377,9 +378,9 @@ bool RagTime5Graph::readGraphicStyles(RagTime5StructManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // shape
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Cluster &cluster)
+bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::Cluster &cluster)
 {
-  RagTime5StructManager::Link const &link= cluster.m_dataLink;
+  RagTime5ZoneManager::Link const &link= cluster.m_dataLink;
   if (link.m_ids.size()<3 || !link.m_ids[1])
     return false;
   if (link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
@@ -388,7 +389,7 @@ bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Cluster &cluster)
   std::map<int, librevenge::RVNGString> idToNameMap;
   if (!cluster.m_nameLink.empty()) {
     m_mainParser.readUnicodeStringList(cluster.m_nameLink, idToNameMap);
-    cluster.m_nameLink=RagTime5StructManager::Link();
+    cluster.m_nameLink=RagTime5ZoneManager::Link();
   }
 
   std::vector<long> decal;
@@ -397,7 +398,7 @@ bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Cluster &cluster)
   if (decal.empty())
     decal=link.m_longList;
   int const dataId=link.m_ids[1];
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(dataId);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
   if (!dataZone || !dataZone->m_entry.valid() ||
       dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
     if (decal.size()==1) {
@@ -475,7 +476,7 @@ bool RagTime5Graph::readGraphicZone(RagTime5StructManager::Cluster &cluster)
   return true;
 }
 
-bool RagTime5Graph::readGraphic(RagTime5StructManager::Zone &zone, long endPos, int n, librevenge::RVNGString const &dataName)
+bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, librevenge::RVNGString const &dataName)
 {
   MWAWInputStreamPtr input=zone.getInput();
   long pos=input->tell();
@@ -706,7 +707,7 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
   if (!typeId)
     return false;
 
-  shared_ptr<RagTime5StructManager::Zone> zone=m_mainParser.getDataZone(typeId);
+  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(typeId);
   if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%10) ||
       zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicUnknown: the entry of zone %d seems bad\n", typeId));
@@ -756,14 +757,14 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
 ////////////////////////////////////////////////////////////
 // transformation
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicTransformations(RagTime5StructManager::Zone &/*zone*/, RagTime5StructManager::Link const &link)
+bool RagTime5Graph::readGraphicTransformations(RagTime5Zone &/*zone*/, RagTime5ZoneManager::Link const &link)
 {
   if (link.empty() || link.m_ids[0]==0 || link.m_fieldSize<34) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTransformations: can not find the transformation id\n"));
     return false;
   }
 
-  shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(link.m_ids[0]);
   if (!dataZone || !dataZone->m_entry.valid() || dataZone->m_entry.length()!=link.m_N*link.m_fieldSize ||
       dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
     if (link.m_N==0 && !dataZone->m_entry.valid()) {
@@ -817,7 +818,7 @@ bool RagTime5Graph::readGraphicTransformations(RagTime5StructManager::Zone &/*zo
 ////////////////////////////////////////////////////////////
 // picture
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readPictureList(RagTime5StructManager::Zone &zone)
+bool RagTime5Graph::readPictureList(RagTime5Zone &zone)
 {
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
@@ -868,7 +869,7 @@ bool RagTime5Graph::readPictureList(RagTime5StructManager::Zone &zone)
     return false;
   }
   for (size_t i=0; i<listIds.size(); ++i) {
-    shared_ptr<RagTime5StructManager::Zone> dataZone=m_mainParser.getDataZone(listIds[i]);
+    shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(listIds[i]);
     if (!dataZone || !dataZone->m_entry.valid() ||
         m_state->getPictureType(dataZone->getKindLastPart())==RagTime5GraphInternal::State::P_Unknown) {
       MWAW_DEBUG_MSG(("RagTime5Graph::readPictureList: can not find the picture %d\n", listIds[i]));
@@ -879,7 +880,7 @@ bool RagTime5Graph::readPictureList(RagTime5StructManager::Zone &zone)
   return true;
 }
 
-bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
+bool RagTime5Graph::readPicture(RagTime5Zone &zone)
 {
   MWAWEntry const &entry=zone.m_entry;
   if (entry.length()<=40)
@@ -1045,7 +1046,7 @@ bool RagTime5Graph::readPicture(RagTime5StructManager::Zone &zone)
   return true;
 }
 
-bool RagTime5Graph::readPictureMatch(RagTime5StructManager::Zone &zone, bool color)
+bool RagTime5Graph::readPictureMatch(RagTime5Zone &zone, bool color)
 {
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;

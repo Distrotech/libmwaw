@@ -44,6 +44,7 @@
 #include "MWAWParser.hxx"
 
 #include "RagTime5StructManager.hxx"
+#include "RagTime5ZoneManager.hxx"
 
 namespace RagTime5ParserInternal
 {
@@ -53,8 +54,10 @@ class SubDocument;
 }
 
 class RagTime5Graph;
-class RagTime5Text;
 class RagTime5StructManager;
+class RagTime5Text;
+class RagTime5Zone;
+class RagTime5ZoneManager;
 
 /** \brief the main class to read a RagTime v5 file
  *
@@ -65,6 +68,7 @@ class RagTime5Parser : public MWAWTextParser
 {
   friend class RagTime5Graph;
   friend class RagTime5Text;
+  friend class RagTime5ZoneManager;
   friend struct RagTime5ParserInternal::FieldParser;
   friend class RagTime5ParserInternal::SubDocument;
 
@@ -104,53 +108,50 @@ protected:
   //! try to create the main data zones list
   bool findDataZones(MWAWEntry const &entry);
   //! returns the zone corresponding to a data id (or 0)
-  shared_ptr<RagTime5StructManager::Zone> getDataZone(int dataId) const;
+  shared_ptr<RagTime5Zone> getDataZone(int dataId) const;
   //! try to update a zone: create a new input if the zone is stored in different positions, ...
-  bool update(RagTime5StructManager::Zone &zone);
+  bool update(RagTime5Zone &zone);
   //! try to read the zone data
-  bool readZoneData(RagTime5StructManager::Zone &zone);
+  bool readZoneData(RagTime5Zone &zone);
   //! try to unpack a zone
-  bool unpackZone(RagTime5StructManager::Zone &zone, MWAWEntry const &entry, std::vector<unsigned char> &data);
+  bool unpackZone(RagTime5Zone &zone, MWAWEntry const &entry, std::vector<unsigned char> &data);
   //! try to unpack a zone
-  bool unpackZone(RagTime5StructManager::Zone &zone);
+  bool unpackZone(RagTime5Zone &zone);
 
   //! try to read the different cluster zones
   bool readClusterZones();
   //! try to read a cluster zone
-  bool readClusterZone(RagTime5StructManager::Zone &zone, int type=-1);
+  bool readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read a cluster list (in general Data14)
-  bool readClusterList(RagTime5StructManager::Zone &zone);
+  bool readClusterList(RagTime5Zone &zone);
   //! try to read a cluster link zone
-  bool readClusterLinkList(RagTime5StructManager::Zone &zone,
-                           RagTime5StructManager::Link const &link);
+  bool readClusterLinkList(RagTime5Zone &zone,
+                           RagTime5ZoneManager::Link const &link);
 
   //! try to read a string zone ( zone with id1=21,id2=23:24)
-  bool readString(RagTime5StructManager::Zone &zone, std::string &string);
+  bool readString(RagTime5Zone &zone, std::string &string);
   //! try to read a unicode string zone
-  bool readUnicodeString(RagTime5StructManager::Zone &zone);
+  bool readUnicodeString(RagTime5Zone &zone);
   //! try to read a positions zone in data
   bool readPositions(int posId, std::vector<long> &listPosition);
   //! try to read a list of unicode string zone
-  bool readUnicodeStringList(RagTime5StructManager::Link const &link, std::map<int, librevenge::RVNGString> &idToStringMap);
-
-  //! try to read n data id
-  bool readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds) const;
+  bool readUnicodeStringList(RagTime5ZoneManager::Link const &link, std::map<int, librevenge::RVNGString> &idToStringMap);
 
   //! try to read the document version zone
-  bool readDocumentVersion(RagTime5StructManager::Zone &zone);
+  bool readDocumentVersion(RagTime5Zone &zone);
   //! try to read a the list of format
-  bool readFormats(RagTime5StructManager::Cluster &cluster);
+  bool readFormats(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a list of unknown zone 6 bytes data
-  bool readUnknZoneA(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readUnknZoneA(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
   //! try to read a structured zone
-  bool readStructZone(RagTime5StructManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, bool hasHeader=true);
+  bool readStructZone(RagTime5ZoneManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, bool hasHeader=true);
   //! try to read a data in a structured zone
-  bool readStructData(RagTime5StructManager::Zone &zone, long endPos, int n, bool hasHeader,
+  bool readStructData(RagTime5Zone &zone, long endPos, int n, bool hasHeader,
                       RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
 
   //! try to read a list zone
-  bool readListZone(RagTime5StructManager::Zone &zone, RagTime5StructManager::Link const &link);
+  bool readListZone(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
@@ -167,6 +168,8 @@ protected:
   shared_ptr<RagTime5Text> m_textParser;
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
+  //! the zone manager
+  shared_ptr<RagTime5ZoneManager> m_zoneManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

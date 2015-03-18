@@ -265,6 +265,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTime5StructManager.hxx	\
 	RagTime5Text.cxx		\
 	RagTime5Text.hxx		\
+	RagTime5ZoneManager.cxx		\
+	RagTime5ZoneManager.hxx		\
 	SuperPaintParser.cxx		\
 	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\
