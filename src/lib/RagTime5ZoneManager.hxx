@@ -175,6 +175,9 @@ public:
   //! try to read a style cluster: C_Formats, C_Units, C_GraphicColors, C_TextStyles, C_GraphicStyles;
   bool readStyleCluster(RagTime5Zone &zone, Cluster &cluster);
 
+  //! try to read a 104,204,4204 cluster
+  bool readUnknownClusterA(RagTime5Zone &zone, Cluster &cluster);
+
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
@@ -185,7 +188,6 @@ public:
                 L_ClusterLink,
                 L_ConditionFormula, L_LinkDef, L_SettingsList, L_UnicodeList,
                 L_FieldsList, L_List,
-                L_UnknownZoneB,
                 L_Unknown
               };
     //! constructor
@@ -235,8 +237,6 @@ public:
         if (!m_name.empty())
           return m_name;
         return "fieldsList[unkn]";
-      case L_UnknownZoneB:
-        return "UnknZoneB";
       case L_List:
       case L_Unknown:
       default:
@@ -298,10 +298,11 @@ public:
     //! the cluster type
     enum Type {
       C_ColorPattern,
+      C_Formats,
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
       C_TextData, C_TextStyles,
       C_Units,
-      C_Formats,
+      C_ClusterA,
       C_Unknown
     };
     //! the cluster type

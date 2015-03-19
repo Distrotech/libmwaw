@@ -854,6 +854,8 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
     m_graphParser->readGraphicZone(cluster);
   else if (cluster.m_type==RagTime5ZoneManager::Cluster::C_TextData)
     m_textParser->readTextZone(cluster);
+  else if (cluster.m_type==RagTime5ZoneManager::Cluster::C_ClusterA)
+    return readUnknownClusterAData(cluster);
   else if (!cluster.m_dataLink.empty()) {
     RagTime5ParserInternal::FieldParser defaultParser(*this);
     readStructZone(cluster, defaultParser);
@@ -933,7 +935,6 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
       break;
     case RagTime5ZoneManager::Link::L_LinkDef:
     case RagTime5ZoneManager::Link::L_Unknown:
-    case RagTime5ZoneManager::Link::L_UnknownZoneB:
     default: {
       if (!data->m_entry.valid()) {
         if (link.m_N*link.m_fieldSize) {
@@ -1011,10 +1012,19 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone,
     f.str("");
     f << "ClustLink-" << i << ":";
     std::vector<int> listIds;
-    if (!m_structManager->readDataIdList(input, 1, listIds) || listIds[0]==0) {
+    if (!m_structManager->readDataIdList(input, 1, listIds)) {
       MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLinkList: a link seems bad\n"));
       f << "###id,";
-      input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+      continue;
+    }
+    else if (listIds[0]==0) {
+      ascFile.addPos(pos);
+      ascFile.addNote("_");
+      input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+      continue;
     }
     else
       f << "data" << listIds[0] << ",";
@@ -1160,20 +1170,21 @@ bool RagTime5Parser::readFormats(RagTime5ZoneManager::Cluster &cluster)
   for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
     RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];
     shared_ptr<RagTime5Zone> data=getDataZone(lnk.m_ids[0]);
-
     if (!data->m_entry.valid()) {
       if (lnk.m_N*lnk.m_fieldSize) {
         MWAW_DEBUG_MSG(("RagTime5Parser::readFormats: can not find data zone %d\n", lnk.m_ids[0]));
       }
       continue;
     }
+    std::string name("Form");
+    name += (lnk.m_fileType[0]==0x3e800 ? "A" : lnk.m_fileType[0]==0x35800 ? "B" : lnk.getZoneName().c_str());
     long pos=data->m_entry.begin();
     data->m_isParsed=true;
     libmwaw::DebugFile &dAscFile=data->ascii();
     if (lnk.m_fieldSize<=0 || lnk.m_N*lnk.m_fieldSize!=data->m_entry.length()) {
       MWAW_DEBUG_MSG(("RagTime5Parser::readFormats: bad fieldSize/N for zone %d\n", lnk.m_ids[0]));
       f.str("");
-      f << "Entries(Form" << lnk.getZoneName() << ")[" << *data << "]:" << "###";
+      f << "Entries(" << name << ")[" << *data << "]:" << "###";
       dAscFile.addPos(pos);
       dAscFile.addNote(f.str().c_str());
       continue;
@@ -1181,9 +1192,83 @@ bool RagTime5Parser::readFormats(RagTime5ZoneManager::Cluster &cluster)
     for (int j=0; j<lnk.m_N; ++j) {
       f.str("");
       if (j==0)
-        f << "Entries(Form" << lnk.getZoneName() << ")[" << *data << "]:";
+        f << "Entries(" << name << ")[" << *data << "]:";
       else
-        f << "Form" << lnk.getZoneName() << "-" << j << ":";
+        f << name << "-" << j << ":";
+      dAscFile.addPos(pos);
+      dAscFile.addNote(f.str().c_str());
+      pos+=lnk.m_fieldSize;
+    }
+  }
+
+  return true;
+}
+
+bool RagTime5Parser::readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster)
+{
+  RagTime5ZoneManager::Link const &link=cluster.m_dataLink;
+  if (link.m_ids.empty() || !link.m_ids[0]) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: can not find the main data\n"));
+    return false;
+  }
+  shared_ptr<RagTime5Zone> dataZone=getDataZone(link.m_ids[0]);
+  if (!dataZone || !dataZone->m_entry.valid() ||
+      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: the data zone %d seems bad\n", link.m_ids[0]));
+    return false;
+  }
+
+  libmwaw::DebugFile &ascFile=dataZone->ascii();
+  libmwaw::DebugStream f;
+  long pos=dataZone->m_entry.begin();
+  dataZone->m_isParsed=true;
+  if (link.m_fieldSize<=0 || link.m_N*link.m_fieldSize!=dataZone->m_entry.length()) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: bad fieldSize/N for zone %d\n", link.m_ids[0]));
+    f << "Entries(ClustAData)[" << *dataZone << "]:" << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  else {
+    for (int i=0; i<link.m_N; ++i) {
+      f.str("");
+      if (i==0)
+        f << "Entries(ClustAData)[" << *dataZone << "]:";
+      else
+        f << "ClustAData-" << i << ":";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      pos+=link.m_fieldSize;
+    }
+  }
+
+  for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
+    RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];
+    shared_ptr<RagTime5Zone> data=getDataZone(lnk.m_ids[0]);
+    if (!data->m_entry.valid()) {
+      if (lnk.m_N*lnk.m_fieldSize) {
+        MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: can not find data zone %d\n", lnk.m_ids[0]));
+      }
+      continue;
+    }
+    std::string name("Form");
+    name += (lnk.m_fileType[0]==0x3e800 ? "A" : lnk.m_fileType[0]==0x35800 ? "B" : lnk.getZoneName().c_str());
+    pos=data->m_entry.begin();
+    data->m_isParsed=true;
+    libmwaw::DebugFile &dAscFile=data->ascii();
+    if (lnk.m_fieldSize<=0 || lnk.m_N*lnk.m_fieldSize!=data->m_entry.length()) {
+      MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: bad fieldSize/N for zone %d\n", lnk.m_ids[0]));
+      f.str("");
+      f << "Entries(ClustADatB)[" << *data << "]:" << "###";
+      dAscFile.addPos(pos);
+      dAscFile.addNote(f.str().c_str());
+      continue;
+    }
+    for (int j=0; j<lnk.m_N; ++j) {
+      f.str("");
+      if (j==0)
+        f << "Entries(ClustADatB)[" << *data << "]:";
+      else
+        f << "ClustADatB-" << j << ":";
       dAscFile.addPos(pos);
       dAscFile.addNote(f.str().c_str());
       pos+=lnk.m_fieldSize;

@@ -139,8 +139,10 @@ protected:
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5Zone &zone);
-  //! try to read a the list of format
+  //! try to read the list of format
   bool readFormats(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the unknown cluster a data
+  bool readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a list of unknown zone 6 bytes data
   bool readUnknZoneA(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
