@@ -34,6 +34,7 @@
 #ifndef RAG_TIME_5_ZONE_MANAGER
 #  define RAG_TIME_5_ZONE_MANAGER
 
+#include <map>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -159,6 +160,7 @@ private:
 class RagTime5ZoneManager
 {
 public:
+  struct Link;
   struct Cluster;
 
   //! constructor
@@ -174,20 +176,32 @@ public:
 
   //! try to read a style cluster: C_Formats, C_Units, C_GraphicColors, C_TextStyles, C_GraphicStyles;
   bool readStyleCluster(RagTime5Zone &zone, Cluster &cluster);
+  //! try to read a field cluster: either fielddef or fieldpos
+  bool readFieldCluster(RagTime5Zone &zone, Cluster &cluster, int type);
 
   //! try to read a 104,204,4204 cluster
   bool readUnknownClusterA(RagTime5Zone &zone, Cluster &cluster);
+  //! try to read a unknown cluster ( first internal child of the root cluster )
+  bool readUnknownClusterB(RagTime5Zone &zone, Cluster &cluster);
+  //! try to read a unknown cluster
+  bool readUnknownClusterC(RagTime5Zone &zone, Cluster &cluster, int type);
+
+  //! try to read some field cluster
+  bool readFieldClusters(Link const &link);
+  //! try to read some unknown cluster
+  bool readUnknownClusterC(Link const &link);
 
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_FieldDef, L_FieldPos,
+    enum Type { L_FieldCluster, L_FieldDef, L_FieldPos,
                 L_ColorPattern,
                 L_Graphic, L_GraphicTransform, L_GraphicType,
                 L_Text, L_TextUnknown,
                 L_ClusterLink,
                 L_ConditionFormula, L_LinkDef, L_SettingsList, L_UnicodeList,
                 L_FieldsList, L_List,
+                L_UnknownClusterB, L_UnknownClusterC,
                 L_Unknown
               };
     //! constructor
@@ -209,6 +223,8 @@ public:
       switch (m_type) {
       case L_ClusterLink:
         return "clustLink";
+      case L_FieldCluster:
+        return "fieldCluster";
       case L_FieldDef:
         return "fieldDef";
       case L_FieldPos:
@@ -233,6 +249,10 @@ public:
         return "TextUnknown";
       case L_UnicodeList:
         return "unicodeListLink";
+      case L_UnknownClusterB:
+        return "unknClustB";
+      case L_UnknownClusterC:
+        return "unknClustC";
       case L_FieldsList:
         if (!m_name.empty())
           return m_name;
@@ -292,7 +312,7 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_childClusterIds(0), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
+    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
     {
     }
     //! the cluster type
@@ -302,15 +322,13 @@ public:
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
       C_TextData, C_TextStyles,
       C_Units,
-      C_ClusterA,
+      C_ClusterA, C_ClusterB, C_ClusterC,
       C_Unknown
     };
     //! the cluster type
     Type m_type;
     //! the cluster hiLo endian
     bool m_hiLoEndian;
-    //! the clusters child id
-    std::vector<int> m_childClusterIds;
     //! the main data link
     Link m_dataLink;
     //! the name link

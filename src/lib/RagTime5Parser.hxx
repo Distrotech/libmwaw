@@ -49,7 +49,6 @@
 namespace RagTime5ParserInternal
 {
 struct State;
-struct FieldParser;
 class SubDocument;
 }
 
@@ -69,7 +68,6 @@ class RagTime5Parser : public MWAWTextParser
   friend class RagTime5Graph;
   friend class RagTime5Text;
   friend class RagTime5ZoneManager;
-  friend struct RagTime5ParserInternal::FieldParser;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
@@ -141,8 +139,10 @@ protected:
   bool readDocumentVersion(RagTime5Zone &zone);
   //! try to read the list of format
   bool readFormats(RagTime5ZoneManager::Cluster &cluster);
-  //! try to read the unknown cluster a data
+  //! try to read the unknown clusterA data
   bool readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the unknown clusterC data
+  bool readUnknownClusterCData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a list of unknown zone 6 bytes data
   bool readUnknZoneA(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
@@ -153,7 +153,9 @@ protected:
                       RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
 
   //! try to read a list zone
-  bool readListZone(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
+  bool readListZone(RagTime5ZoneManager::Link const &link);
+  //! try to read a list zone
+  bool readListZone(RagTime5ZoneManager::Link const &link, RagTime5StructManager::DataParser &parser);
   //! flush unsent zone (debugging function)
   void flushExtra();
 

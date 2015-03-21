@@ -195,6 +195,45 @@ std::ostream &operator<<(std::ostream &o, RagTime5Zone const &z)
 }
 
 ////////////////////////////////////////////////////////////
+// link to cluster
+////////////////////////////////////////////////////////////
+bool RagTime5ZoneManager::readFieldClusters(Link const &link)
+{
+  if (link.m_ids.size()!=2) {
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readFieldClusters: call with bad ids\n"));
+    return false;
+  }
+  for (size_t i=0; i<2; ++i) {  // fielddef and fieldpos
+    if (!link.m_ids[i]) continue;
+    shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(link.m_ids[i]);
+    if (!data || data->m_isParsed || data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readFieldClusters: the child cluster id %d seems bad\n", link.m_ids[i]));
+      continue;
+    }
+    m_mainParser.readClusterZone(*data, 0x20000+int(i));
+  }
+  return true;
+}
+
+bool RagTime5ZoneManager::readUnknownClusterC(Link const &link)
+{
+  if (link.m_ids.size()!=4) {
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: call with bad ids\n"));
+    return false;
+  }
+  for (size_t i=0; i<4; ++i) {
+    if (!link.m_ids[i]) continue;
+    shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(link.m_ids[i]);
+    if (!data || data->m_isParsed || data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: the child cluster id %d seems bad\n", link.m_ids[i]));
+      continue;
+    }
+    m_mainParser.readClusterZone(*data, 0x30000+int(i));
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
 // style cluster
 ////////////////////////////////////////////////////////////
 bool RagTime5ZoneManager::readStyleCluster(RagTime5Zone &zone, Cluster &cluster)
@@ -615,7 +654,6 @@ bool RagTime5ZoneManager::readUnknownClusterA(RagTime5Zone &zone, Cluster &clust
   input->setReadInverted(!zone.m_hiLoEndian);
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
-  std::string zoneName(f.str());
   f.str("");
   f << "Entries(ClustUnkA)[" << zone << "]:";
   int val;
@@ -723,7 +761,7 @@ bool RagTime5ZoneManager::readUnknownClusterA(RagTime5Zone &zone, Cluster &clust
       if (listIds[0]) {
         link.m_ids.push_back(listIds[0]);
         cluster.m_dataLink=link;
-        f << "clustAData=data" << listIds[0] << "A,";
+        f << "data1=data" << listIds[0] << "A,";
       }
       cluster.m_clusterIds.push_back(listIds[1]);
       if (listIds[1])
@@ -775,7 +813,7 @@ bool RagTime5ZoneManager::readUnknownClusterA(RagTime5Zone &zone, Cluster &clust
       if (listIds[0]) {
         link.m_ids.clear();
         link.m_ids.push_back(listIds[0]);
-        f << "clustADatB=data" << listIds[0] << "A,";
+        f << "data2=data" << listIds[0] << "A,";
         cluster.m_linksList.push_back(link);
       }
       break;
@@ -832,16 +870,397 @@ bool RagTime5ZoneManager::readUnknownClusterA(RagTime5Zone &zone, Cluster &clust
   }
   input->setReadInverted(false);
 
-  // check cluster id
-  for (size_t j=0; j<cluster.m_clusterIds.size(); ++j) {
-    int cId=cluster.m_clusterIds[j];
-    if (cId==0) continue;
-    shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(cId);
-    if (!data || !data->m_entry.valid() || data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
-      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: the cluster zone %d seems bad\n", cId));
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// unknown cluster B ( first internal child of a root cluster )
+////////////////////////////////////////////////////////////
+bool RagTime5ZoneManager::readUnknownClusterB(RagTime5Zone &zone, Cluster &cluster)
+{
+  MWAWEntry &entry=zone.m_entry;
+  if (entry.length()==0) return true;
+  if (entry.length()<13) return false;
+
+  MWAWInputStreamPtr input=zone.getInput();
+  long endPos=entry.end();
+  input->setReadInverted(!zone.m_hiLoEndian);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  f << "Entries(ClustUnkB)[" << zone << "]:";
+  int val;
+  for (int i=0; i<4; ++i) { // f0=f1=0, f2=1, f3=0|1|4
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  zone.m_isParsed=true;
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  cluster.m_hiLoEndian=zone.m_hiLoEndian;
+  cluster.m_type=Cluster::C_ClusterB;
+  // normally 1 zone
+  for (int n=0; n< 2; ++n) {
+    long pos=input->tell();
+    if (pos>=endPos || input->isEnd()) break;
+    long lVal;
+    if (!m_structManager->readCompressedLong(input, endPos, lVal)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f.str("");
+    f << "ClustUnkB-" << n << ":";
+    f << "f0=" << lVal << ","; // 13|16|31|32|47...
+    // always in big endian
+    long sz;
+    if (!m_structManager->readCompressedLong(input,endPos,sz) || sz <= 7 || input->tell()+sz>endPos) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f << "sz=" << sz << ",";
+    long endDataPos=input->tell()+sz;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+
+    pos=input->tell();
+    f.str("");
+    f << "ClustUnkB-" << n << "-A:";
+    if (!zone.m_hiLoEndian) f << "lohi,";
+    long fSz;
+    if (!m_structManager->readCompressedLong(input, endDataPos, fSz) || fSz<6 || input->tell()+fSz>endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: can not read item A\n"));
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+
+      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
       continue;
     }
+    long debSubDataPos=input->tell();
+    long endSubDataPos=debSubDataPos+fSz;
+    int fl=(int) input->readULong(2);
+    if ((n==0 && fl!=0x30) || (n==1 && fl!=0x10))
+      f << "fl=" << std::hex << fl << std::dec << ",";
+    int N=(int) input->readLong(4);
+
+    Link link;
+    if (N<=0) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: find unexpected header\n"));
+      f << "###type" << std::hex << N << std::dec;
+    }
+    else if (n==0 && fSz==32) {
+      for (int i=0; i<8; ++i) { // find g0=3c|60 when type==0x30002, other 0
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      link.m_type=Link::L_List;
+      link.m_fileType[1]=(long) input->readULong(2);
+      if (link.m_fileType[1]!=0x4030 && link.m_fileType[1]!=0x4038)
+        f << "#fileType=" << std::hex << link.m_fileType[1] << std::dec << ",";
+      if (!m_structManager->readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: can not read the data pos\n"));
+        f << "###noData,";
+        link=Link();
+      }
+      else
+        f << link << ",";
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: find unknown block\n"));
+      f << "###unknown,";
+    }
+
+    if (input->tell()!=pos && input->tell()!=endSubDataPos)
+      ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(endSubDataPos, librevenge::RVNG_SEEK_SET);
+
+    int m=0;
+
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (pos+4>endDataPos)
+        break;
+      RagTime5StructManager::Field field;
+      if (!m_structManager->readField(input, endDataPos, ascFile, field)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      f.str("");
+      f << "ClustUnkB-" << n << "-B" << m++ << ":";
+      if (!zone.m_hiLoEndian) f << "lohi,";
+
+      if (n==0) {
+        if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
+          f << "pos=[";
+          for (size_t i=0; i<field.m_longList.size(); ++i)
+            f << field.m_longList[i] << ",";
+          f << "],";
+          link.m_longList=field.m_longList;
+          ascFile.addPos(pos);
+          ascFile.addNote(f.str().c_str());
+          continue;
+        }
+      }
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: find some fields\n"));
+      f << "###" << field;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    if (!link.empty()) {
+      // ADDME
+      /*
+      if (n==0)
+        cluster.m_dataLink=link;
+        else */
+      cluster.m_linksList.push_back(link);
+    }
+
+    pos=input->tell();
+    if (pos!=endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: find some extra data\n"));
+      f.str("");
+      f << "ClustUnkB-" << n << ":" << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
   }
+
+  long pos=input->tell();
+  if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterB: find some extra data\n"));
+    f.str("");
+    f << "ClustUnkB-###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  input->setReadInverted(false);
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// unknown cluster C
+////////////////////////////////////////////////////////////
+bool RagTime5ZoneManager::readUnknownClusterC(RagTime5Zone &zone, Cluster &cluster, int type)
+{
+  MWAWEntry &entry=zone.m_entry;
+  if (entry.length()==0) return true;
+  if (entry.length()<13) return false;
+
+  MWAWInputStreamPtr input=zone.getInput();
+  long endPos=entry.end();
+  input->setReadInverted(!zone.m_hiLoEndian);
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+  libmwaw::DebugStream f;
+  std::string zoneName;
+  switch (type) {
+  case 0x30000:
+    zoneName="ClustUnkC_A";
+    break;
+  case 0x30001:
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find zone ClustUnkC_B\n"));
+    zoneName="ClustUnkC_B";
+    break;
+  case 0x30002:
+    zoneName="ClustUnkC_C";
+    break;
+  case 0x30003:
+    zoneName="ClustUnkC_D";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find unexpected type\n"));
+    zoneName="ClustUnkC_BAD";
+    break;
+  }
+  f.str("");
+  f << "Entries(" << zoneName << ")[" << zone << "]:";
+  int val;
+  for (int i=0; i<4; ++i) { // f0=f1=0, f2=1, f3=0|1|3|4
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  zone.m_isParsed=true;
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  ascFile.addPos(endPos);
+  ascFile.addNote("_");
+
+  cluster.m_hiLoEndian=zone.m_hiLoEndian;
+  cluster.m_type=Cluster::C_ClusterC;
+  // normally 1 zone for ClustUnkC_A and ClustUnkC_D, 2 zone for ClustUnkC_C, ??? zone for ClustUnkC_B
+  for (int n=0; n<(type==0x30002) ? 3 : 2; ++n) {
+    long pos=input->tell();
+    if (pos>=endPos || input->isEnd()) break;
+    long lVal;
+    if (!m_structManager->readCompressedLong(input, endPos, lVal)) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f.str("");
+    f << zoneName << "-" << n << ":";
+    f << "f0=" << lVal << ","; // 59, 7b...
+    // always in big endian
+    long sz;
+    if (!m_structManager->readCompressedLong(input,endPos,sz) || sz <= 7 || input->tell()+sz>endPos) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    f << "sz=" << sz << ",";
+    long endDataPos=input->tell()+sz;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+
+    pos=input->tell();
+    f.str("");
+    f << zoneName << "-" << n << "-A:";
+    if (!zone.m_hiLoEndian) f << "lohi,";
+    long fSz;
+    if (!m_structManager->readCompressedLong(input, endDataPos, fSz) || fSz<6 || input->tell()+fSz>endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: can not read item A\n"));
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+
+      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+      continue;
+    }
+    long debSubDataPos=input->tell();
+    long endSubDataPos=debSubDataPos+fSz;
+    int fl=(int) input->readULong(2);
+    if ((n==0 && fl!=0x30) || (n==1 && fl!=0x10))
+      f << "fl=" << std::hex << fl << std::dec << ",";
+    int N=(int) input->readLong(4);
+
+    Link link;
+    link.m_fileType[0]=(type-0x30000);
+    if (N<=0) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find unexpected header\n"));
+      f << "###type" << std::hex << N << std::dec;
+    }
+    else if (n==0 && ((fSz==40 && type==0x30002) || (fSz==32 && type==0x30003))) {
+      for (int i=0; i<8; ++i) { // find g0=3c|60 when type==0x30002, other 0
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      link.m_type=Link::L_List;
+      link.m_fileType[1]=(long) input->readULong(2);
+      if ((type==0x30002 && link.m_fileType[1]!=0x8030) || (type==0x30003 && link.m_fileType[1]!=0x330))
+        f << "#fileType=" << std::hex << link.m_fileType[1] << std::dec << ",";
+      if (!m_structManager->readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: can not read the data pos\n"));
+        f << "###noData,";
+        link=Link();
+      }
+      else
+        f << link << ",";
+      if (fSz==40) {
+        for (int i=0; i<2; ++i) { // find g0=2, g1=0
+          val=(int) input->readLong(4);
+          if (val) f << "g" << i << "=" << val << ",";
+        }
+      }
+    }
+    else if ((n==0 && fSz==34 && type==0x30000) || (fSz==30 && type==0x30002 && n>0)) {
+      for (int i=0; i<8; ++i) { // g1=54, other 0?
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      link.m_N=N;
+      link.m_fileType[1]=(long) input->readULong(2);
+      if (link.m_fileType[1]!=0x50)
+        f << "#fileType=" << std::hex << link.m_fileType[1] << ",";
+      link.m_fieldSize=(int) input->readULong(2);
+      if (!m_structManager->readDataIdList(input, 1, link.m_ids) || !link.m_ids[0]) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: can not read the data pos\n"));
+        f << "###noData,";
+        link=Link();
+      }
+      else
+        f << link << ",";
+      if (fSz==34) {
+        for (int i=0; i<2; ++i) { // find 0
+          val=(int) input->readLong(2);
+          if (val) f << "g" << i << "=" << val << ",";
+        }
+      }
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find unknown block\n"));
+      f << "###unknown,";
+    }
+
+    if (input->tell()!=pos && input->tell()!=endSubDataPos)
+      ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(endSubDataPos, librevenge::RVNG_SEEK_SET);
+
+    int m=0;
+
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (pos+4>endDataPos)
+        break;
+      RagTime5StructManager::Field field;
+      if (!m_structManager->readField(input, endDataPos, ascFile, field)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      f.str("");
+      f << zoneName << "-" << n << "-B" << m++ << ":";
+      if (!zone.m_hiLoEndian) f << "lohi,";
+
+      if (n==0) {
+        if ((type==0x30002 || type==0x30003) && field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
+          f << "pos=[";
+          for (size_t i=0; i<field.m_longList.size(); ++i)
+            f << field.m_longList[i] << ",";
+          f << "],";
+          link.m_longList=field.m_longList;
+          ascFile.addPos(pos);
+          ascFile.addNote(f.str().c_str());
+          continue;
+        }
+      }
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find some fields\n"));
+      f << "###" << field;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    if (!link.empty()) {
+      if (n==0)
+        cluster.m_dataLink=link;
+      else
+        cluster.m_linksList.push_back(link);
+    }
+
+    pos=input->tell();
+    if (pos!=endDataPos) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find some extra data\n"));
+      f.str("");
+      f << zoneName << "-" << n << ":" << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+  }
+
+  long pos=input->tell();
+  if (pos!=endPos) {
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterC: find some extra data\n"));
+    f.str("");
+    f << zoneName << "-###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  input->setReadInverted(false);
 
   return true;
 }
@@ -855,6 +1274,16 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
   }
   else if (zoneType==0x104 || zoneType==0x204 || zoneType==0x4104 || zoneType==0x4204) {
     if (readUnknownClusterA(zone, cluster))
+      return true;
+    cluster=Cluster();
+  }
+  else if (zoneType==0x10000) {
+    if (readUnknownClusterB(zone, cluster))
+      return true;
+    cluster=Cluster();
+  }
+  else if (zoneType>=0x30000 && zoneType<=0x30003) {
+    if (readUnknownClusterC(zone, cluster, zoneType))
       return true;
     cluster=Cluster();
   }
@@ -1074,9 +1503,12 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
         f << "###cluster[child],";
         MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone[head2]: can not find the cluster's child\n"));
       }
-      else {
-        cluster.m_childClusterIds.push_back(listIds[0]);
-        f << "cluster[child]=data" << listIds[0] << "A,";
+      else { // a ListZone0_4030|8A
+        Link fieldLink;
+        fieldLink.m_type=Link::L_UnknownClusterB;
+        fieldLink.m_ids=listIds;
+        cluster.m_linksList.push_back(fieldLink);
+        f << fieldLink << ",";
       }
       for (int i=0; i<21; ++i) { // always g0=g11=g18=16, other 0 ?
         val=(int) input->readLong(2);
@@ -1329,11 +1761,12 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
           f << "###";
           break;
         }
-        for (size_t i=0; i<2; ++i) {
-          if (!listIds[i])
-            continue;
-          cluster.m_childClusterIds.push_back(listIds[i]);
-          f << "clusterId" << i << "=data" << listIds[i] << "A,";
+        if (listIds[0] || listIds[1]) { // fielddef and fieldpos
+          Link fieldLink;
+          fieldLink.m_type=Link::L_FieldCluster;
+          fieldLink.m_ids=listIds;
+          cluster.m_linksList.push_back(fieldLink);
+          f << fieldLink << ",";
         }
         val=(int) input->readULong(4);
         if (val) f << "id2=" << val << ",";
@@ -1364,12 +1797,14 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
           f << "###";
           break;
         }
-        for (size_t i=0; i<4; ++i) {
-          if (!listIds[i])
-            continue;
-          cluster.m_childClusterIds.push_back(listIds[i]);
-          f << "clusterId" << i+2 << "=data" << listIds[i] << "A,";
+        if (listIds[0] || listIds[1] || listIds[2] || listIds[3]) {
+          Link fieldLink;
+          fieldLink.m_type=Link::L_UnknownClusterC;
+          fieldLink.m_ids=listIds;
+          cluster.m_linksList.push_back(fieldLink);
+          f << fieldLink << ",";
         }
+
         val=(int) input->readULong(4);
         if (val) f << "id3=" << val << ",";
         break;
@@ -1656,17 +2091,6 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
     ascFile.addNote(f.str().c_str());
   }
   input->setReadInverted(false);
-
-  // check cluster id
-  for (size_t j=0; j<cluster.m_clusterIds.size(); ++j) {
-    int cId=cluster.m_clusterIds[j];
-    if (cId==0) continue;
-    shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(cId);
-    if (!data || !data->m_entry.valid() || data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
-      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone: the cluster zone %d seems bad\n", cId));
-      continue;
-    }
-  }
 
   return true;
 }

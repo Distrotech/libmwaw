@@ -35,6 +35,7 @@
 #  define RAG_TIME_5_STRUCT_MANAGER
 
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -158,13 +159,21 @@ public:
   //! virtual class use to parse the field data
   struct FieldParser {
     //! constructor
-    FieldParser() : m_regroupFields(false) {}
+    FieldParser(std::string const &zoneName) : m_regroupFields(false), m_name(zoneName) {}
     //! destructor
     virtual ~FieldParser() {}
     //! return the debug name corresponding to a zone
-    virtual std::string getZoneName() const=0;
+    virtual std::string getZoneName() const
+    {
+      return m_name;
+    }
     //! return the debug name corresponding to a field
-    virtual std::string getZoneName(int n) const=0;
+    virtual std::string getZoneName(int n) const
+    {
+      std::stringstream s;
+      s << m_name << "-" << n;
+      return s.str();
+    }
     //! parse a field
     virtual bool parseField(Field &field, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
     {
@@ -173,9 +182,42 @@ public:
     }
     //! a flag use to decide if we output one debug message by field or not
     bool m_regroupFields;
+  protected:
+    //! the field name
+    std::string m_name;
   private:
     FieldParser(FieldParser const &orig);
     FieldParser &operator=(FieldParser const &orig);
+  };
+  //! virtual class use to parse the unstructured data
+  struct DataParser {
+    //! constructor
+    DataParser(std::string const &zoneName) : m_name(zoneName)  {}
+    //! destructor
+    virtual ~DataParser() {}
+    //! return the debug name corresponding to a zone
+    virtual std::string getZoneName() const
+    {
+      return m_name;
+    }
+    //! return the debug name corresponding to a field
+    virtual std::string getZoneName(int n) const
+    {
+      std::stringstream s;
+      s << m_name << "-" << n;
+      return s.str();
+    }
+    //! parse a data
+    virtual bool parseData(MWAWInputStreamPtr &/*input*/, long /*endPos*/, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &/*f*/)
+    {
+      return true;
+    }
+  protected:
+    //! the field name
+    std::string m_name;
+  private:
+    DataParser(DataParser const &orig);
+    DataParser &operator=(DataParser const &orig);
   };
   //! the graphic style of a RagTime v5-v6 document
   struct GraphicStyle {

@@ -62,13 +62,8 @@ namespace RagTime5TextInternal
 //! Internal: the helper to read field for a RagTime5Text
 struct FieldParser : public RagTime5StructManager::FieldParser {
   //! constructor
-  FieldParser(RagTime5Text &parser) : m_mainParser(parser)
+  FieldParser(RagTime5Text &parser) : RagTime5StructManager::FieldParser("TextStyle"), m_mainParser(parser)
   {
-  }
-  //! return the debug name corresponding to the zone
-  std::string getZoneName() const
-  {
-    return "TextStyle";
   }
   //! return the debug name corresponding to a field
   std::string getZoneName(int n) const

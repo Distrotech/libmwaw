@@ -66,14 +66,10 @@ struct FieldParser : public RagTime5StructManager::FieldParser {
   enum Type { Z_Styles, Z_Colors };
 
   //! constructor
-  FieldParser(RagTime5Graph &parser, Type type) : m_type(type), m_mainParser(parser)
+  FieldParser(RagTime5Graph &parser, Type type) :
+    RagTime5StructManager::FieldParser(type==Z_Styles ? "GraphStyle" : "GraphColor"), m_type(type), m_mainParser(parser)
   {
     m_regroupFields=(m_type==Z_Styles);
-  }
-  //! return the debug name corresponding to the zone
-  std::string getZoneName() const
-  {
-    return m_type==Z_Styles ? "GraphStyle" : "GraphColor";
   }
   //! return the debug name corresponding to a field
   std::string getZoneName(int n) const
