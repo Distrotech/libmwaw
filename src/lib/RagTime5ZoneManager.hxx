@@ -162,6 +162,7 @@ class RagTime5ZoneManager
 public:
   struct Link;
   struct Cluster;
+  struct ClusterRoot;
 
   //! constructor
   RagTime5ZoneManager(RagTime5Parser &parser);
@@ -174,10 +175,14 @@ public:
   //! try to read a cluster zone
   bool readClusterZone(RagTime5Zone &zone, Cluster &cluster, int type=-1);
 
+  //! try to read the root cluster
+  bool readRootCluster(RagTime5Zone &zone, ClusterRoot &cluster);
   //! try to read a style cluster: C_Formats, C_Units, C_GraphicColors, C_TextStyles, C_GraphicStyles;
   bool readStyleCluster(RagTime5Zone &zone, Cluster &cluster);
   //! try to read a field cluster: either fielddef or fieldpos
   bool readFieldCluster(RagTime5Zone &zone, Cluster &cluster, int type);
+  //! try to read a color pattern cluster
+  bool readColPatCluster(RagTime5Zone &zone, Cluster &cluster);
 
   //! try to read a 104,204,4204 cluster
   bool readUnknownClusterA(RagTime5Zone &zone, Cluster &cluster);
@@ -194,14 +199,14 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_FieldCluster, L_FieldDef, L_FieldPos,
-                L_ColorPattern,
-                L_Graphic, L_GraphicTransform, L_GraphicType,
+    enum Type { L_FieldCluster,
+                L_ColorPatternId,
+                L_Graphic, L_GraphicTransform,
                 L_Text, L_TextUnknown,
                 L_ClusterLink,
                 L_ConditionFormula, L_LinkDef, L_SettingsList, L_UnicodeList,
                 L_FieldsList, L_List,
-                L_UnknownClusterB, L_UnknownClusterC,
+                L_UnknownClusterC,
                 L_Unknown
               };
     //! constructor
@@ -225,20 +230,14 @@ public:
         return "clustLink";
       case L_FieldCluster:
         return "fieldCluster";
-      case L_FieldDef:
-        return "fieldDef";
-      case L_FieldPos:
-        return "fieldPos";
-      case L_ColorPattern:
-        return "color/pattern";
+      case L_ColorPatternId:
+        return "color/pattern[id]";
       case L_ConditionFormula:
         return "condFormData";
       case L_Graphic:
         return "graphData";
       case L_GraphicTransform:
         return "graphTransform";
-      case L_GraphicType:
-        return "graphType";
       case L_LinkDef:
         return "linkDef";
       case L_SettingsList:
@@ -249,8 +248,6 @@ public:
         return "TextUnknown";
       case L_UnicodeList:
         return "unicodeListLink";
-      case L_UnknownClusterB:
-        return "unknClustB";
       case L_UnknownClusterC:
         return "unknClustC";
       case L_FieldsList:
@@ -312,12 +309,15 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIds()
+    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIdsList()
     {
     }
+    //! destructor
+    virtual ~Cluster() {}
     //! the cluster type
     enum Type {
       C_ColorPattern,
+      C_Fields,
       C_Formats,
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
       C_TextData, C_TextStyles,
@@ -336,7 +336,37 @@ public:
     //! the link list
     std::vector<Link> m_linksList;
     //! the cluster ids
-    std::vector<int> m_clusterIds;
+    std::vector<int> m_clusterIdsList;
+  };
+
+  //! the cluster for root
+  struct ClusterRoot : public Cluster {
+    //! constructor
+    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_listClusterId(0), m_listClusterName(), m_listClusterOrderings(), m_fileName("")
+    {
+      for (int i=0; i<8; ++i) m_styleClusterIds[i]=0;
+      for (int i=0; i<1; ++i) m_clusterIds[i]=0;
+    }
+    //! destructor
+    virtual ~ClusterRoot() {}
+    //! the list of style cluster ( graph, units, unitsbis, text, format, unknown, graphcolor, col/pattern id)
+    int m_styleClusterIds[8];
+
+    //! other cluster id (unknown cluster b, )
+    int m_clusterIds[1];
+
+    //! the graphic type id
+    Link m_graphicTypeLink;
+
+    //! the cluster list id
+    int m_listClusterId;
+    //! the cluster list id name zone link
+    Link m_listClusterName;
+    //! a int for each cluster in cluster list ( maybe an order list, unsure )
+    std::vector<int> m_listClusterOrderings;
+
+    //! the filename if known
+    librevenge::RVNGString m_fileName;
   };
 protected:
   //! the main parser

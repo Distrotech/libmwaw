@@ -136,7 +136,7 @@ int RagTime5Text::numPages() const
 bool RagTime5Text::readTextStyles(RagTime5ZoneManager::Cluster &cluster)
 {
   RagTime5TextInternal::FieldParser fieldParser(*this);
-  return m_mainParser.readStructZone(cluster, fieldParser);
+  return m_mainParser.readStructZone(cluster, fieldParser, 14);
 }
 
 ////////////////////////////////////////////////////////////
@@ -179,7 +179,8 @@ bool RagTime5Text::readTextZone(RagTime5ZoneManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // link/list definition
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readFieldZones(RagTime5ZoneManager::Cluster &/*cluster*/, RagTime5ZoneManager::Link const &link)
+bool RagTime5Text::readFieldZones(RagTime5ZoneManager::Cluster &/*cluster*/, RagTime5ZoneManager::Link const &link,
+                                  bool isDefinition)
 {
   if (link.m_ids.size()<2 || !link.m_ids[1])
     return false;
@@ -206,7 +207,6 @@ bool RagTime5Text::readFieldZones(RagTime5ZoneManager::Cluster &/*cluster*/, Rag
   }
 
   dataZone->m_isParsed=true;
-  bool isDefinition=link.m_type==RagTime5ZoneManager::Link::L_FieldDef;
   MWAWEntry entry=dataZone->m_entry;
   libmwaw::DebugFile &ascFile=dataZone->ascii();
   libmwaw::DebugStream f;

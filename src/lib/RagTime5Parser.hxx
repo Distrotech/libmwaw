@@ -36,6 +36,7 @@
 
 #include <map>
 #include <string>
+#include <set>
 #include <vector>
 
 #include "MWAWDebug.hxx"
@@ -118,10 +119,12 @@ protected:
 
   //! try to read the different cluster zones
   bool readClusterZones();
+  //! try to read the main cluster
+  bool readClusterRoot(RagTime5Zone &zone);
+  //! try to read the cluster root list (in general Data14)
+  bool readClusterRootList(RagTime5ZoneManager::ClusterRoot &root, std::set<int> &seens);
   //! try to read a cluster zone
   bool readClusterZone(RagTime5Zone &zone, int type=-1);
-  //! try to read a cluster list (in general Data14)
-  bool readClusterList(RagTime5Zone &zone);
   //! try to read a cluster link zone
   bool readClusterLinkList(RagTime5Zone &zone,
                            RagTime5ZoneManager::Link const &link);
@@ -139,17 +142,21 @@ protected:
   bool readDocumentVersion(RagTime5Zone &zone);
   //! try to read the list of format
   bool readFormats(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the field data
+  bool readClusterFieldsData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterA data
   bool readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the unknown clusterB data
+  bool readUnknownClusterBData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterC data
   bool readUnknownClusterCData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read a list of unknown zone 6 bytes data
   bool readUnknZoneA(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 
   //! try to read a structured zone
-  bool readStructZone(RagTime5ZoneManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, bool hasHeader=true);
+  bool readStructZone(RagTime5ZoneManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, int headerSz);
   //! try to read a data in a structured zone
-  bool readStructData(RagTime5Zone &zone, long endPos, int n, bool hasHeader,
+  bool readStructData(RagTime5Zone &zone, long endPos, int n, int headerSz,
                       RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
 
   //! try to read a list zone

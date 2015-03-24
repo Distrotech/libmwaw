@@ -112,7 +112,7 @@ public:
   struct Field {
     //! the different type
     enum Type { T_Unknown, T_Bool, T_Double, T_Long, T_2Long, T_FieldList, T_LongList, T_DoubleList, T_TabList,
-                T_Code, T_Color, T_CondColor, T_PrintInfo, T_String, T_Unicode, T_LongDouble, T_Unstructured
+                T_Code, T_Color, T_CondColor, T_PrintInfo, T_String, T_Unicode, T_ZoneId, T_LongDouble, T_Unstructured
               };
 
     //! constructor

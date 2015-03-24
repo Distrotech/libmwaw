@@ -391,9 +391,21 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     field.m_doubleValue=res;
     return true;
   }
+  case 0x14510b7: {
+    std::vector<int> listIds;
+    if (!readDataIdList(input, 1, listIds)) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read the cluster id\n"));
+      f << "###clustId,";
+      break;
+    }
+    field.m_name="colPatId";
+    field.m_type=Field::T_ZoneId;
+    field.m_longValue[0]=listIds[0];
+    return true;
+  }
   case 0x34800:
+  case 0x8c000: // a dim
   case 0x234800:  // checkme, find always with 0x0
-  case 0x14510b7: // 2 long, not in typedef
   case 0x147415a: // checkme, find always with 0x0
   case 0x15e3017: // 2 long, not in typedef
     if (fSz!=4) {
@@ -488,6 +500,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     return true;
   }
   case 0x74840: // dimension
+  case 0x112040: // also some dimension ? ( often 0,0,0,1 but can be 0,-0.00564575,0,0.25 )
     if (fSz!=16) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for dim\n"));
       f << "###dim";
@@ -518,6 +531,31 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     f << double(input->readLong(4))/65536. << ",";
     field.m_extra=f.str();
     return true;
+  case 0x79040: { // checkme: unsure
+    if (fSz!=14) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for 0x79040\n"));
+      f << "###unstr";
+      break;
+    }
+    field.m_type=Field::T_Unstructured;
+    field.m_name="unstr";
+    field.m_entry.setBegin(input->tell());
+    field.m_entry.setEnd(endDataPos);
+    for (long i=0; i<2; ++i) { // something like 49c4x6c2b
+      f << std::hex << input->readULong(4) << std::dec;
+      if (i==0) f << "x";
+      else f << ",";
+    }
+    for (int i=0; i<2; ++i) { // often 4000, 3fed
+      f << std::hex << input->readULong(2) << std::dec;
+      if (i==0) f << "x";
+      else f << ",";
+    }
+    int val=(int) input->readLong(2);
+    if (val!=0x100) f << val << ":";
+    field.m_extra=f.str();
+    return true;
+  }
   case 0x84040: {
     if (fSz!=10) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for rgba\n"));
@@ -785,7 +823,29 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     for (long i=0; i<fSz; ++i)
       field.m_longList.push_back((long) input->readLong(2));
     return true;
-
+  case 0x81452040: {
+    if (fSz!=8) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for id+long\n"));
+      f << "###clustIdxlong";
+      break;
+    }
+    field.m_type=Field::T_Unstructured;
+    field.m_name="clustIdxlong";
+    field.m_entry.setBegin(input->tell());
+    field.m_entry.setEnd(endDataPos);
+    std::vector<int> listIds;
+    if (!readDataIdList(input, 1, listIds)) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read the cluster id for id+long\n"));
+      f << "###clustId,";
+      break;
+    }
+    if (listIds[0]) // checkme seems a basic cluster
+      f << "data" << listIds[0] << "A,";
+    unsigned long val= input->readULong(4); // always 90000001
+    if (val!=0x90000001) f << std::hex << val << std::dec << ",";
+    field.m_extra=f.str();
+    return true;
+  }
   case 0xa7017: // unicode
   case 0xa7027:
   case 0xa7037:
@@ -889,7 +949,18 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
   case 0x147513a: // with type=1493800
   case 0x14754ba: // with type=1476840
   case 0x148983a: // with type=0074040
-  case 0x148985a: { // with type=1495800
+  case 0x148985a: // with type=1495800
+
+  // cluster B zone
+  case 0x6615a:
+  case 0x6616a:
+  case 0x6617a:
+  case 0x6619a:
+  case 0x111817:
+  case 0x111827:
+  case 0x1467837:
+  case 0x146789a:
+  case 0x14678aa: {
     if (fSz<4) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected list field size\n"));
       f << "###list,";
@@ -1233,6 +1304,10 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::Field const &fi
   case RagTime5StructManager::Field::T_String:
   case RagTime5StructManager::Field::T_Code:
     o << "=" << field.m_string.cstr() << ",";
+    return o;
+  case RagTime5StructManager::Field::T_ZoneId:
+    if (field.m_longValue[0])
+      o << "=data" << field.m_longValue[0] << "A,";
     return o;
   case RagTime5StructManager::Field::T_Unicode:
     o << "=\"" << field.m_string.cstr() << "\",";

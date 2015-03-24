@@ -118,7 +118,7 @@ protected:
   //
 
   //! try to read a main graphic types
-  bool readGraphicTypes(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
+  bool readGraphicTypes(RagTime5ZoneManager::Link const &link);
 
   //! try to read a main graphic styles
   bool readGraphicStyles(RagTime5ZoneManager::Cluster &cluster);

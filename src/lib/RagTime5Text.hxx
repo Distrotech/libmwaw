@@ -116,7 +116,7 @@ protected:
   bool readLinkZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link);
 
   //! try to read a list of field definition
-  bool readFieldZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link);
+  bool readFieldZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link, bool isDefinition);
   //! try to read a field definition
   bool readFieldDefinition(RagTime5Zone &zone, long endPos, int n);
   //! try to read a field position
