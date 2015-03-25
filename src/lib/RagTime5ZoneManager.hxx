@@ -200,11 +200,11 @@ public:
   struct Link {
     //! the link type
     enum Type { L_FieldCluster,
-                L_ColorPatternId,
                 L_Graphic, L_GraphicTransform,
                 L_Text, L_TextUnknown,
                 L_ClusterLink,
-                L_ConditionFormula, L_LinkDef, L_SettingsList, L_UnicodeList,
+                L_ConditionFormula, L_LinkDef, L_SettingsList,
+                L_LongList, L_UnicodeList,
                 L_FieldsList, L_List,
                 L_UnknownClusterC,
                 L_Unknown
@@ -218,6 +218,8 @@ public:
     //! returns true if all link are empty
     bool empty() const
     {
+      if (m_type==L_LongList && !m_longList.empty())
+        return false;
       for (size_t i=0; i<m_ids.size(); ++i)
         if (m_ids[i]>0) return false;
       return true;
@@ -230,8 +232,6 @@ public:
         return "clustLink";
       case L_FieldCluster:
         return "fieldCluster";
-      case L_ColorPatternId:
-        return "color/pattern[id]";
       case L_ConditionFormula:
         return "condFormData";
       case L_Graphic:
@@ -240,6 +240,14 @@ public:
         return "graphTransform";
       case L_LinkDef:
         return "linkDef";
+      case L_LongList:
+        if (!m_name.empty())
+          return m_name;
+        else {
+          std::stringstream s;
+          s << "longList" << m_fieldSize;
+          return s.str();
+        }
       case L_SettingsList:
         return "settings";
       case L_Text:
@@ -342,7 +350,7 @@ public:
   //! the cluster for root
   struct ClusterRoot : public Cluster {
     //! constructor
-    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_listClusterId(0), m_listClusterName(), m_listClusterOrderings(), m_fileName("")
+    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_listClusterId(0), m_listClusterName(), m_listClusterUnkn(), m_fileName("")
     {
       for (int i=0; i<8; ++i) m_styleClusterIds[i]=0;
       for (int i=0; i<1; ++i) m_clusterIds[i]=0;
@@ -362,8 +370,8 @@ public:
     int m_listClusterId;
     //! the cluster list id name zone link
     Link m_listClusterName;
-    //! a int for each cluster in cluster list ( maybe an order list, unsure )
-    std::vector<int> m_listClusterOrderings;
+    //! an unknown link related to the cluster list
+    Link m_listClusterUnkn;
 
     //! the filename if known
     librevenge::RVNGString m_fileName;

@@ -133,8 +133,12 @@ protected:
   bool readString(RagTime5Zone &zone, std::string &string);
   //! try to read a unicode string zone
   bool readUnicodeString(RagTime5Zone &zone);
+  //! try to read a int/long zone data
+  bool readLongListWithSize(int dataId, int fSz, std::vector<long> &list, std::string const &zoneName="");
   //! try to read a positions zone in data
   bool readPositions(int posId, std::vector<long> &listPosition);
+  //! try to read/get the list of long of a L_LongList
+  bool readLongList(RagTime5ZoneManager::Link const &link, std::vector<long> &list);
   //! try to read a list of unicode string zone
   bool readUnicodeStringList(RagTime5ZoneManager::Link const &link, std::map<int, librevenge::RVNGString> &idToStringMap);
 

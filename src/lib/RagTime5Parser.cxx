@@ -603,15 +603,16 @@ bool RagTime5Parser::readUnicodeStringList(RagTime5ZoneManager::Link const &link
   return true;
 }
 
-bool RagTime5Parser::readPositions(int posId, std::vector<long> &listPosition)
+bool RagTime5Parser::readLongListWithSize(int dataId, int fSz, std::vector<long> &listPosition, std::string const &zoneName)
 {
-  if (!posId)
+  listPosition.clear();
+  if (!dataId || fSz<=0 || fSz>4)
     return false;
 
-  shared_ptr<RagTime5Zone> zone=getDataZone(posId);
-  if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%4) ||
+  shared_ptr<RagTime5Zone> zone=getDataZone(dataId);
+  if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%fSz) ||
       zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Parser::readPositions: the position zone %d seems bad\n", posId));
+    MWAW_DEBUG_MSG(("RagTime5Parser::readLongListWithSize: the zone %d seems bad\n", dataId));
     return false;
   }
   MWAWEntry entry=zone->m_entry;
@@ -621,13 +622,18 @@ bool RagTime5Parser::readPositions(int posId, std::vector<long> &listPosition)
 
   zone->m_isParsed=true;
   libmwaw::DebugStream f;
-  f << "Entries(Positions)[" << *zone << "]:";
-
-  int N=int(entry.length()/4);
+  if (!zoneName.empty())
+    f << "Entries(" << zoneName << ")[" << *zone << "]:";
+  else
+    f << "Entries(ListLong" << fSz << ")[" << *zone << "]:";
+  int N=int(entry.length()/fSz);
   for (int i=0; i<N; ++i) {
-    long ptr=input->readLong(4);
+    long ptr=input->readLong(fSz);
     listPosition.push_back(ptr);
-    f << ptr << ",";
+    if (ptr)
+      f << ptr << ",";
+    else
+      f << "_,";
   }
   input->setReadInverted(false);
   zone->ascii().addPos(entry.begin());
@@ -635,6 +641,20 @@ bool RagTime5Parser::readPositions(int posId, std::vector<long> &listPosition)
   zone->ascii().addPos(entry.end());
   zone->ascii().addNote("_");
   return true;
+}
+
+bool RagTime5Parser::readLongList(RagTime5ZoneManager::Link const &link, std::vector<long> &list)
+{
+  if (!link.m_ids.empty() && link.m_ids[0] &&
+      readLongListWithSize(link.m_ids[0], link.m_fieldSize, list, link.m_name))
+    return true;
+  list=link.m_longList;
+  return !list.empty();
+}
+
+bool RagTime5Parser::readPositions(int posId, std::vector<long> &listPosition)
+{
+  return readLongListWithSize(posId, 4, listPosition, "Positions");
 }
 
 ////////////////////////////////////////////////////////////
@@ -687,7 +707,9 @@ bool RagTime5Parser::readClusterRootList(RagTime5ZoneManager::ClusterRoot &root,
   std::map<int, librevenge::RVNGString> idToNameMap;
   if (!root.m_listClusterName.empty())
     readUnicodeStringList(root.m_listClusterName, idToNameMap);
-
+  std::vector<long> unknList;
+  if (!root.m_listClusterUnkn.empty())
+    readLongList(root.m_listClusterUnkn, unknList);
   shared_ptr<RagTime5Zone> zone=getDataZone(root.m_listClusterId);
   if (!zone || zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData" ||
       zone->m_entry.length()<24 || (zone->m_entry.length()%8)) {
@@ -763,10 +785,12 @@ bool RagTime5Parser::readClusterRoot(RagTime5Zone &zone)
     return false;
 
   std::set<int> seens;
+  // the list of graphic type
   if (!cluster->m_graphicTypeLink.empty() && m_graphParser->readGraphicTypes(cluster->m_graphicTypeLink)) {
     if (cluster->m_graphicTypeLink.m_ids.size()>2 && cluster->m_graphicTypeLink.m_ids[1])
       seens.insert(cluster->m_graphicTypeLink.m_ids[1]);
   }
+  // the different styles ( beginning with colors, then graphic styles and text styles )
   for (int i=0; i<8; ++i) {
     int const(order[])= {7, 6, 1, 2, 0, 4, 3, 5};
     int cId=cluster->m_styleClusterIds[order[i]];
@@ -779,10 +803,8 @@ bool RagTime5Parser::readClusterRoot(RagTime5Zone &zone)
       continue;
     }
     seens.insert(cId);
-
   }
-  readClusterRootList(*cluster, seens);
-
+  // now the main cluster
   for (int i=0; i<1; ++i) {
     int cId=cluster->m_clusterIds[i];
     if (cId==0) continue;
@@ -791,15 +813,12 @@ bool RagTime5Parser::readClusterRoot(RagTime5Zone &zone)
       MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterRoot: the cluster zone %d seems bad\n", cId));
       continue;
     }
-    seens.insert(cId);
-    switch (i) {
-    case 0:
-      readClusterZone(*data, 0x10000);
-      break;
-    default:
-      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterRoot: unexpected child id=%d\n", i));
-    }
+    int const(wh[])= {0x10000};
+    if (readClusterZone(*data, wh[i]))
+      seens.insert(cId);
   }
+
+  readClusterRootList(*cluster, seens);
 
   if (cluster->m_listClusterId==0) {
     MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterRoot: cluster list id is not set, try zone id+1\n"));
@@ -841,6 +860,11 @@ bool RagTime5Parser::readClusterRoot(RagTime5Zone &zone)
       readListZone(link);
       continue;
     }
+    else if (link.m_type==RagTime5ZoneManager::Link::L_LongList) {
+      std::vector<long> list;
+      readLongList(link, list);
+      continue;
+    }
     else if (link.m_type==RagTime5ZoneManager::Link::L_FieldCluster) {
       m_zoneManager->readFieldClusters(link);
       continue;
@@ -871,17 +895,11 @@ bool RagTime5Parser::readClusterRoot(RagTime5Zone &zone)
     case RagTime5ZoneManager::Link::L_FieldsList:
     case RagTime5ZoneManager::Link::L_Graphic:
     case RagTime5ZoneManager::Link::L_List:
+    case RagTime5ZoneManager::Link::L_LongList:
     case RagTime5ZoneManager::Link::L_SettingsList:
     case RagTime5ZoneManager::Link::L_Text:
     case RagTime5ZoneManager::Link::L_UnicodeList:
     case RagTime5ZoneManager::Link::L_UnknownClusterC:
-      break;
-    case RagTime5ZoneManager::Link::L_ColorPatternId:
-      if (data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterRoot: the child color/pattern id %d seems bad\n", link.m_ids[0]));
-        break;
-      }
-      readClusterZone(*data, 0x40000);
       break;
     case RagTime5ZoneManager::Link::L_GraphicTransform:
       m_graphParser->readGraphicTransformations(*data, link);
@@ -1019,6 +1037,11 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
       readListZone(link);
       continue;
     }
+    else if (link.m_type==RagTime5ZoneManager::Link::L_LongList) {
+      std::vector<long> list;
+      readLongList(link, list);
+      continue;
+    }
     else if (link.m_type==RagTime5ZoneManager::Link::L_FieldCluster) {
       m_zoneManager->readFieldClusters(link);
       continue;
@@ -1049,17 +1072,11 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
     case RagTime5ZoneManager::Link::L_FieldsList:
     case RagTime5ZoneManager::Link::L_Graphic:
     case RagTime5ZoneManager::Link::L_List:
+    case RagTime5ZoneManager::Link::L_LongList:
     case RagTime5ZoneManager::Link::L_SettingsList:
     case RagTime5ZoneManager::Link::L_Text:
     case RagTime5ZoneManager::Link::L_UnicodeList:
     case RagTime5ZoneManager::Link::L_UnknownClusterC:
-      break;
-    case RagTime5ZoneManager::Link::L_ColorPatternId:
-      if (data->getKindLastPart(data->m_kinds[1].empty())!="Cluster") {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone: the child color/pattern id %d seems bad\n", link.m_ids[0]));
-        break;
-      }
-      readClusterZone(*data, 0x40000);
       break;
     case RagTime5ZoneManager::Link::L_GraphicTransform:
       m_graphParser->readGraphicTransformations(*data, link);
