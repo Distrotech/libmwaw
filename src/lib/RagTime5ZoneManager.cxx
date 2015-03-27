@@ -1738,6 +1738,7 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
   ascFile.addPos(endPos);
   ascFile.addNote("_");
 
+  cluster.m_type=Cluster::C_Root;
   cluster.m_hiLoEndian=zone.m_hiLoEndian;
   int expectedN=-1, n=0;
   while (!input->isEnd()) {
@@ -1806,8 +1807,7 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
     What what=W_Unknown;
     std::string name=s.str();
     Link link;
-    bool isNamedLink=false;
-
+    int linkItemId=-1, linkOtherId=-1;
     if ((zone.m_hiLoEndian && N==int(0x80000000)) || (!zone.m_hiLoEndian && N==0x8000)) {
       if (expectedN<5 || expectedN>7)  {
         MWAW_DEBUG_MSG(("RagTime5ZoneManager::readRootCluster: expected N seems bad\n"));
@@ -2097,7 +2097,6 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
         }
         link.m_N=N;
         link.m_fileType[1]=(long) input->readULong(2);
-        bool find=true;
         if (expectedN==1) {
           if (link.m_fileType[1]!=0x220 && link.m_fileType[1]!=0x200) {
             MWAW_DEBUG_MSG(("RagTime5ZoneManager::readRootCluster: unexpected type1 for zone[name]\n"));
@@ -2105,32 +2104,32 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
           }
         }
         else if ((link.m_fileType[1]&0xFFD7)==0x8010) {
-          // TODO: check structure
           what=W_ListLink;
           link.m_type=Link::L_List;
+          linkOtherId=0;
           expectedN=5;
-          f << "field5";
-          name="field5";
+          f << "field5,";
+          link.m_name=name="docInfo";
         }
         else if ((link.m_fileType[1]&0xFFD7)==0xc010) {
-          // TODO: check structure
           what=W_ListLink;
           link.m_type=Link::L_List;
+          linkOtherId=1;
           expectedN=6;
-          f << "field6";
-          name="field6";
+          f << "field6,";
+          link.m_name=name="unknZoneC";
         }
         else if (link.m_fileType[0]==0x47040 && (link.m_fileType[1]&0xFFD7)==0) {
-          // TODO: move to cluster field
           what=W_ListLink;
-          name="settings";
-          link.m_type=Link::L_SettingsList;
+          link.m_type=Link::L_List;
+          linkItemId=1;
+          link.m_name=name="settings";
         }
         else if (link.m_fileType[0]==0 && (link.m_fileType[1]&0xFFD7)==0x10) {
-          // TODO: move to cluster root file
           what=W_ListLink;
-          name="condFormula";
-          link.m_type=Link::L_ConditionFormula;
+          link.m_type=Link::L_List;
+          linkItemId=0;
+          link.m_name=name="condFormula";
         }
         else if (link.m_fileType[0]==0 && (link.m_fileType[1]&0xFFD7)==0x310) {
           // TODO: check what is it: an unicode list ?
@@ -2142,14 +2141,11 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
         else {
           MWAW_DEBUG_MSG(("RagTime5ZoneManager::readRootCluster: unexpected type1 for zone with fSz=32\n"));
           f << "##fileType1=" << std::hex << link.m_fileType[0] << std::dec << ",";
-          find=false;
         }
         if (!m_structManager->readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
           f << "###noData," << link;
           link=Link();
         }
-        else
-          f << link << ",";
         break;
       }
       // n==4
@@ -2240,12 +2236,11 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
           break;
         }
         if (listIds[0] || listIds[1]) { // fielddef and fieldpos
-          // TODO: move in a cluster field
           Link fieldLink;
-          fieldLink.m_type=Link::L_FieldCluster;
+          fieldLink.m_type=Link::L_ClusterLink;
           fieldLink.m_ids=listIds;
-          cluster.m_linksList.push_back(fieldLink);
-          f << fieldLink << ",";
+          cluster.m_fieldClusterLink=fieldLink;
+          f << "fields," << fieldLink << ",";
         }
         val=(int) input->readULong(4);
         if (val) f << "id2=" << val << ",";
@@ -2452,14 +2447,14 @@ bool RagTime5ZoneManager::readRootCluster(RagTime5Zone &zone, RagTime5ZoneManage
         cluster.m_listClusterName=link;
       else if (what==W_ListLong && n==2)
         cluster.m_listClusterUnkn=link;
-      else if (isNamedLink) {
-        if (cluster.m_nameLink.empty())
-          cluster.m_nameLink=link;
-        else {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readRootCluster: oops the name link is already set\n"));
-          cluster.m_linksList.push_back(link);
-        }
-      }
+      else if (link.m_type==Link::L_List && linkItemId==0)
+        cluster.m_conditionFormulaLinks.push_back(link);
+      else if (link.m_type==Link::L_List && linkItemId==1)
+        cluster.m_settingLinks.push_back(link);
+      else if (what==W_ListLink && linkOtherId==0)
+        cluster.m_docInfoLink=link;
+      else if (what==W_ListLink && linkOtherId==1)
+        cluster.m_linkUnknown=link;
       else
         cluster.m_linksList.push_back(link);
     }
@@ -2611,6 +2606,7 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
     What what=W_Unknown;
     std::string name=s.str();
     Link link;
+    int linkItemId=-1;
     bool isMainLink=false, isNamedLink=false;
 
     switch (N) {
@@ -2692,10 +2688,10 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
         }
         if (listIds[0] || listIds[1]) { // fielddef and fieldpos
           Link fieldLink;
-          fieldLink.m_type=Link::L_FieldCluster;
+          fieldLink.m_type=Link::L_ClusterLink;
           fieldLink.m_ids=listIds;
-          cluster.m_linksList.push_back(fieldLink);
-          f << fieldLink << ",";
+          cluster.m_fieldClusterLink=fieldLink;
+          f << "fields," << fieldLink << ",";
         }
         break;
       }
@@ -2861,18 +2857,18 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
           if (link.m_fileType[1]==0x20)
             f << "hasNoPos,";
           else if (link.m_fileType[1]) {
-            MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone[settins]: find unexpected flags\n"));
+            MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone[settings]: find unexpected flags\n"));
             f << "###flags=" << std::hex << link.m_fileType[1] << std::dec << ",";
           }
-          name="settings";
-          link.m_type=Link::L_SettingsList;
+          linkItemId=1;
+          link.m_name=name="settings";
         }
         // fSz=41 is the field list
         // todo 0x80045080 is a list of 2 int
         // fileType[1]==4030: layout list
         else if (link.m_fileType[1]==0x30 && fSz==32) {
-          name="condFormula";
-          link.m_type=Link::L_ConditionFormula;
+          linkItemId=0;
+          link.m_name=name="condFormula";
         }
         else
           name="listLink";
@@ -2904,10 +2900,10 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
         }
         if (listIds[0] || listIds[1]) { // fielddef and fieldpos
           Link fieldLink;
-          fieldLink.m_type=Link::L_FieldCluster;
+          fieldLink.m_type=Link::L_ClusterLink;
           fieldLink.m_ids=listIds;
-          cluster.m_linksList.push_back(fieldLink);
-          f << fieldLink << ",";
+          cluster.m_fieldClusterLink=fieldLink;
+          f << "fields," << fieldLink << ",";
         }
         val=(int) input->readULong(4);
         if (val) f << "id2=" << val << ",";
@@ -3151,6 +3147,10 @@ bool RagTime5ZoneManager::readClusterZone(RagTime5Zone &zone, RagTime5ZoneManage
           cluster.m_linksList.push_back(link);
         }
       }
+      else if (link.m_type==Link::L_List && linkItemId==0)
+        cluster.m_conditionFormulaLinks.push_back(link);
+      else if (link.m_type==Link::L_List && linkItemId==1)
+        cluster.m_settingLinks.push_back(link);
       else if (isNamedLink) {
         if (cluster.m_nameLink.empty())
           cluster.m_nameLink=link;

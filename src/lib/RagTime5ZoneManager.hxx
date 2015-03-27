@@ -199,11 +199,10 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_FieldCluster,
-                L_Graphic, L_GraphicTransform,
+    enum Type { L_Graphic, L_GraphicTransform,
                 L_Text, L_TextUnknown,
                 L_ClusterLink,
-                L_ConditionFormula, L_LinkDef, L_SettingsList,
+                L_LinkDef,
                 L_LongList, L_UnicodeList,
                 L_FieldsList, L_List,
                 L_UnknownClusterC,
@@ -230,10 +229,6 @@ public:
       switch (m_type) {
       case L_ClusterLink:
         return "clustLink";
-      case L_FieldCluster:
-        return "fieldCluster";
-      case L_ConditionFormula:
-        return "condFormData";
       case L_Graphic:
         return "graphData";
       case L_GraphicTransform:
@@ -248,8 +243,6 @@ public:
           s << "longList" << m_fieldSize;
           return s.str();
         }
-      case L_SettingsList:
-        return "settings";
       case L_Text:
         return "textData";
       case L_TextUnknown:
@@ -263,6 +256,9 @@ public:
           return m_name;
         return "fieldsList[unkn]";
       case L_List:
+        if (!m_name.empty())
+          return m_name;
+        break;
       case L_Unknown:
       default:
         break;
@@ -317,7 +313,8 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_linksList(), m_clusterIdsList()
+    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
+      m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList()
     {
     }
     //! destructor
@@ -328,6 +325,7 @@ public:
       C_Fields,
       C_Formats,
       C_GraphicData, C_GraphicColors, C_GraphicStyles,
+      C_Root,
       C_TextData, C_TextStyles,
       C_Units,
       C_ClusterA, C_ClusterB, C_ClusterC,
@@ -341,6 +339,12 @@ public:
     Link m_dataLink;
     //! the name link
     Link m_nameLink;
+    //! the field cluster links (def and pos)
+    Link m_fieldClusterLink;
+    //! the conditions formula links
+    std::vector<Link> m_conditionFormulaLinks;
+    //! the settings links
+    std::vector<Link> m_settingLinks;
     //! the link list
     std::vector<Link> m_linksList;
     //! the cluster ids
@@ -350,7 +354,8 @@ public:
   //! the cluster for root
   struct ClusterRoot : public Cluster {
     //! constructor
-    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_listClusterId(0), m_listClusterName(), m_listClusterUnkn(), m_fileName("")
+    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_docInfoLink(),
+      m_listClusterId(0), m_listClusterName(), m_listClusterUnkn(), m_linkUnknown(), m_fileName("")
     {
       for (int i=0; i<8; ++i) m_styleClusterIds[i]=0;
       for (int i=0; i<1; ++i) m_clusterIds[i]=0;
@@ -366,12 +371,18 @@ public:
     //! the graphic type id
     Link m_graphicTypeLink;
 
+    //! the doc info link
+    Link m_docInfoLink;
+
     //! the cluster list id
     int m_listClusterId;
     //! the cluster list id name zone link
     Link m_listClusterName;
     //! an unknown link related to the cluster list
     Link m_listClusterUnkn;
+
+    //! other link: scripts and field 6
+    Link m_linkUnknown;
 
     //! the filename if known
     librevenge::RVNGString m_fileName;

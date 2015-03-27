@@ -242,9 +242,10 @@ bool RagTime5StructManager::readUnicodeString(MWAWInputStreamPtr input, long end
   int lEndian=0, hEndian=0; // for checking if little/big endian is set correctly
   for (long i=0; i<length; ++i) {
     uint32_t c=(uint32_t) input->readULong(2);
-    if ((c&0xFF000)==0) ++hEndian;
+    if ((c&0xFF00)==0) ++hEndian;
     else if ((c&0xFF)==0) ++lEndian;
-    libmwaw::appendUnicode(c, string);
+    if (c!=0)
+      libmwaw::appendUnicode(c, string);
   }
   if (lEndian>hEndian) {
     static bool first=true;
@@ -432,6 +433,41 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
       if ((val>>8)>2) f << "f1=" << (val>>8);
       for (int i=2; i<fSz; ++i)
         libmwaw::appendUnicode((uint32_t) input->readULong(1), field.m_string);
+    }
+    else {
+      input->seek(debDataPos, librevenge::RVNG_SEEK_SET);
+      if (!readUnicodeString(input, endDataPos, field.m_string))
+        f << "###";
+    }
+    input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+    field.m_extra=f.str();
+    return true;
+  }
+  case 0x1f6817:
+  case 0x1f6827:
+  case 0x1f7877: { // CHECKME: is this also valid for unicode ?
+    if (fSz<2) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for int+unicode\n"));
+      f << "###int+unicode";
+      break;
+    }
+    field.m_type=Field::T_Unicode;
+    field.m_name="int+unicode";
+    int val=(int) input->readULong(2);
+    if (val==0xFF00) {
+      f << "multistring,";
+      val=(int) input->readULong(2);
+    }
+    if ((val&0xF0FF)==0) {
+      if ((val>>8)>2) f << "f1=" << (val>>8);
+      fSz=int(endDataPos-input->tell());
+      for (int i=0; i<fSz; ++i) {
+        uint32_t c=(uint32_t) input->readULong(1);
+        if (c)
+          libmwaw::appendUnicode(c, field.m_string);
+        else
+          field.m_string.append('#');
+      }
     }
     else {
       input->seek(debDataPos, librevenge::RVNG_SEEK_SET);
@@ -717,6 +753,21 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     field.m_extra=f.str();
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
+  case 0x32040:
+    if (fSz<160) {
+      MWAW_DEBUG_MSG(("RagTime5StructManager::readField: the data fSz for docInfo data seems too short\n"));
+      f << "###docInfo";
+      break;
+    }
+    else {
+      field.m_type=Field::T_Unstructured;
+      field.m_name="docInfo";
+      field.m_entry.setBegin(input->tell());
+      field.m_entry.setEnd(endDataPos);
+      field.m_extra="...";
+      input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
+      return true;
+    }
   case 0x227140: { // border checkme
     if ((fSz%6)!=2) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected data fSz for list of border\n"));
@@ -784,7 +835,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
       field.m_longList.push_back((long) input->readLong(2));
     return true;
   }
-  case 0x35000:
+  case 0x35000: // checkme find also a string code here...
   case 0x35800: // unsure, ie small int
   case 0x3e800: // unsure, find with 000af040, 00049840 or 0004c040
   case 0xa4000:
@@ -950,6 +1001,14 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
   case 0x14754ba: // with type=1476840
   case 0x148983a: // with type=0074040
   case 0x148985a: // with type=1495800
+
+  // docinfo zone
+  case 0x1f7817:
+  case 0x1f7827:
+  case 0x1f7837:
+  case 0x1f7847:
+  case 0x1f7857:
+  case 0x1f7887:
 
   // cluster B zone
   case 0x6615a:

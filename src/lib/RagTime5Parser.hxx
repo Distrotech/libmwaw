@@ -49,6 +49,7 @@
 
 namespace RagTime5ParserInternal
 {
+struct DocInfoFieldParser;
 struct State;
 class SubDocument;
 }
@@ -69,6 +70,7 @@ class RagTime5Parser : public MWAWTextParser
   friend class RagTime5Graph;
   friend class RagTime5Text;
   friend class RagTime5ZoneManager;
+  friend struct RagTime5ParserInternal::DocInfoFieldParser;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
@@ -148,6 +150,8 @@ protected:
   bool readFormats(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the field data
   bool readClusterFieldsData(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the main doc info cluster data
+  bool readDocInfoClusterData(RagTime5Zone &zone, MWAWEntry const &entry);
   //! try to read the unknown clusterA data
   bool readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterB data
