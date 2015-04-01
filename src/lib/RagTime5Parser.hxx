@@ -121,8 +121,6 @@ protected:
 
   //! try to read the different cluster zones
   bool readClusterZones();
-  //! try to read the main cluster
-  bool readClusterRoot(RagTime5Zone &zone);
   //! try to read the cluster root list (in general Data14)
   bool readClusterRootList(RagTime5ZoneManager::ClusterRoot &root, std::set<int> &seens);
   //! try to read a cluster zone
@@ -146,14 +144,18 @@ protected:
 
   //! try to read the document version zone
   bool readDocumentVersion(RagTime5Zone &zone);
+  //! try to read the main cluster
+  bool readClusterRootData(RagTime5ZoneManager::ClusterRoot &cluster);
   //! try to read the list of format
   bool readFormats(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the field data
   bool readClusterFieldsData(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the layout cluster (type 4001)
+  bool readClusterLayoutData(RagTime5ZoneManager::ClusterLayout &cluster);
+  //! try to read the pipeline cluster data
+  bool readClusterPipelineData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the main doc info cluster data
   bool readDocInfoClusterData(RagTime5Zone &zone, MWAWEntry const &entry);
-  //! try to read the unknown clusterA data
-  bool readUnknownClusterAData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterB data
   bool readUnknownClusterBData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterC data
@@ -171,6 +173,10 @@ protected:
   bool readListZone(RagTime5ZoneManager::Link const &link);
   //! try to read a list zone
   bool readListZone(RagTime5ZoneManager::Link const &link, RagTime5StructManager::DataParser &parser);
+  //! try to read a fixed size zone
+  bool readFixedSizeZone(RagTime5ZoneManager::Link const &link, std::string const &name);
+  //! try to read a fixed size zone
+  bool readFixedSizeZone(RagTime5ZoneManager::Link const &link, RagTime5StructManager::DataParser &parser);
   //! flush unsent zone (debugging function)
   void flushExtra();
 

@@ -398,9 +398,9 @@ bool RagTime5Graph::readGraphicStyles(RagTime5ZoneManager::Cluster &cluster)
 bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::Cluster &cluster)
 {
   RagTime5ZoneManager::Link const &link= cluster.m_dataLink;
-  if (link.m_ids.size()<3 || !link.m_ids[1])
+  if (link.m_ids.size()<2 || !link.m_ids[1])
     return false;
-  if (link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
+  if (link.m_ids.size()>=3 && link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicZone: the zone id=%d seems bad\n", link.m_ids[2]));
   }
   std::map<int, librevenge::RVNGString> idToNameMap;

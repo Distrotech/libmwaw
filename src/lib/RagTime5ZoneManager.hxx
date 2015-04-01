@@ -162,6 +162,7 @@ class RagTime5ZoneManager
 public:
   struct Link;
   struct Cluster;
+  struct ClusterLayout;
   struct ClusterRoot;
 
   //! constructor
@@ -173,28 +174,36 @@ public:
   static bool readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds);
 
   //! try to read a cluster zone
-  bool readClusterZone(RagTime5Zone &zone, Cluster &cluster, int type=-1);
-
+  shared_ptr<Cluster> readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read the root cluster
-  bool readRootCluster(RagTime5Zone &zone, ClusterRoot &cluster);
-  //! try to read a style cluster: C_Formats, C_Units, C_GraphicColors, C_TextStyles, C_GraphicStyles;
-  bool readStyleCluster(RagTime5Zone &zone, Cluster &cluster);
+  shared_ptr<ClusterRoot> readRootCluster(RagTime5Zone &zone);
+  //! try to read a style cluster: C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles
+  shared_ptr<Cluster> readStyleCluster(RagTime5Zone &zone);
   //! try to read a field cluster: either fielddef or fieldpos
-  bool readFieldCluster(RagTime5Zone &zone, Cluster &cluster, int type);
+  shared_ptr<Cluster> readFieldCluster(RagTime5Zone &zone, int type);
   //! try to read a color pattern cluster
-  bool readColPatCluster(RagTime5Zone &zone, Cluster &cluster);
+  shared_ptr<Cluster> readColPatCluster(RagTime5Zone &zone);
+  //! try to read a layout cluster 4001
+  shared_ptr<ClusterLayout> readLayoutCluster(RagTime5Zone &zone);
+  //! try to read a 104,204,4104, 4204 cluster : pipeline cluster ?
+  shared_ptr<Cluster> readPipelineCluster(RagTime5Zone &zone, int type);
 
-  //! try to read a 104,204,4204 cluster
-  bool readUnknownClusterA(RagTime5Zone &zone, Cluster &cluster);
   //! try to read a unknown cluster ( first internal child of the root cluster )
-  bool readUnknownClusterB(RagTime5Zone &zone, Cluster &cluster);
+  shared_ptr<Cluster> readUnknownClusterB(RagTime5Zone &zone);
   //! try to read a unknown cluster
-  bool readUnknownClusterC(RagTime5Zone &zone, Cluster &cluster, int type);
+  shared_ptr<Cluster> readUnknownClusterC(RagTime5Zone &zone, int type);
 
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
   //! try to read some unknown cluster
   bool readUnknownClusterC(Link const &link);
+  //! try to find a cluster zone type ( heuristic when the cluster type is unknown )
+  int getClusterZoneType(RagTime5Zone &zone);
+
+  // low level
+
+  //! try to read a field header, if ok set the endDataPos positions
+  bool readFieldHeader(RagTime5Zone &zone, long endPos, std::string const &headerName, long &endDataPos, long expectedLVal=-99999);
 
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
@@ -205,7 +214,7 @@ public:
                 L_LinkDef,
                 L_LongList, L_UnicodeList,
                 L_FieldsList, L_List,
-                L_UnknownClusterC,
+                L_UnknownClusterC, L_UnknownItem,
                 L_Unknown
               };
     //! constructor
@@ -250,7 +259,11 @@ public:
       case L_UnicodeList:
         return "unicodeListLink";
       case L_UnknownClusterC:
-        return "unknClustC";
+        return "unknownClusterC";
+      case L_UnknownItem:
+        if (!m_name.empty())
+          return m_name;
+        return "UnknownItem";
       case L_FieldsList:
         if (!m_name.empty())
           return m_name;
@@ -313,7 +326,7 @@ public:
   //! the cluster data
   struct Cluster {
     //! constructor
-    Cluster() : m_type(C_Unknown), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
+    Cluster() : m_type(C_Unknown), m_zoneId(0), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
       m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList()
     {
     }
@@ -323,16 +336,18 @@ public:
     enum Type {
       C_ColorPattern,
       C_Fields,
-      C_Formats,
-      C_GraphicData, C_GraphicColors, C_GraphicStyles,
+      C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
+      C_GraphicData,
       C_Root,
-      C_TextData, C_TextStyles,
-      C_Units,
-      C_ClusterA, C_ClusterB, C_ClusterC,
+      C_TextData,
+      C_ClusterB, C_ClusterC,
+      C_Layout, C_Pipeline,
       C_Unknown
     };
     //! the cluster type
     Type m_type;
+    //! the zone id
+    int m_zoneId;
     //! the cluster hiLo endian
     bool m_hiLoEndian;
     //! the main data link
@@ -386,6 +401,21 @@ public:
 
     //! the filename if known
     librevenge::RVNGString m_fileName;
+  };
+  //! the layout cluster ( 4001 zone)
+  struct ClusterLayout : public Cluster {
+    //! constructor
+    ClusterLayout() : Cluster(), m_zoneDimensions(), m_pipelineLink(), m_listItemLink()
+    {
+    }
+    //! destructor
+    virtual ~ClusterLayout() {}
+    //! list of zone's dimensions
+    std::vector<Vec2f> m_zoneDimensions;
+    //! link to a pipeline cluster list
+    Link m_pipelineLink;
+    //! link to  a zone of fieldSize 8(unknown)
+    Link m_listItemLink;
   };
 protected:
   //! the main parser

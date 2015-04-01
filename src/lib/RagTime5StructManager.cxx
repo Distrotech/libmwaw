@@ -454,7 +454,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     field.m_type=Field::T_Unicode;
     field.m_name="int+unicode";
     int val=(int) input->readULong(2);
-    if (val==0xFF00) {
+    if (val==0xFF00 || val==1) {
       f << "multistring,";
       val=(int) input->readULong(2);
     }
@@ -471,8 +471,9 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     }
     else {
       input->seek(debDataPos, librevenge::RVNG_SEEK_SET);
-      if (!readUnicodeString(input, endDataPos, field.m_string))
-        f << "###";
+      if (!readUnicodeString(input, endDataPos, field.m_string)) {
+        field.m_string="###";
+      }
     }
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     field.m_extra=f.str();
