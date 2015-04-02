@@ -162,7 +162,7 @@ class RagTime5ZoneManager
 public:
   struct Link;
   struct Cluster;
-  struct ClusterA;
+  struct ClusterScript;
   struct ClusterLayout;
   struct ClusterRoot;
 
@@ -188,9 +188,8 @@ public:
   shared_ptr<ClusterLayout> readLayoutCluster(RagTime5Zone &zone);
   //! try to read a 104,204,4104, 4204 cluster : pipeline cluster ?
   shared_ptr<Cluster> readPipelineCluster(RagTime5Zone &zone, int type);
-
-  //! try to read a 2,a,4002,400a cluster
-  shared_ptr<ClusterA> readUnknownClusterA(RagTime5Zone &zone, int type);
+  //! try to read a script cluster : zone 2,a,4002,400a
+  shared_ptr<ClusterScript> readScriptCluster(RagTime5Zone &zone, int type);
   //! try to read a unknown cluster ( first internal child of the root cluster )
   shared_ptr<Cluster> readUnknownClusterB(RagTime5Zone &zone);
   //! try to read a unknown cluster
@@ -337,14 +336,14 @@ public:
     virtual ~Cluster() {}
     //! the cluster type
     enum Type {
-      C_ColorPattern,
-      C_Fields,
+      C_ColorPattern, C_Fields, C_GraphicData, C_Layout, C_Pipeline,
+      C_Root, C_Script, C_TextData,
+
+      // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
-      C_GraphicData,
-      C_Root,
-      C_TextData,
-      C_ClusterA, C_ClusterB, C_ClusterC,
-      C_Layout, C_Pipeline,
+      // unknown clusters
+      C_ClusterB, C_ClusterC,
+
       C_Unknown
     };
     //! the cluster type
@@ -405,14 +404,18 @@ public:
     //! the filename if known
     librevenge::RVNGString m_fileName;
   };
-  //! the cluster A ( 2/a/4002/400a zone)
-  struct ClusterA : public Cluster {
+  //! the cluster script ( 2/a/4002/400a zone)
+  struct ClusterScript : public Cluster {
     //! constructor
-    ClusterA() : Cluster()
+    ClusterScript() : Cluster(), m_scriptComment(), m_scriptName("")
     {
     }
     //! destructor
-    virtual ~ClusterA() {}
+    virtual ~ClusterScript() {}
+    //! the script comment zone
+    Link m_scriptComment;
+    //! the scriptname if known
+    librevenge::RVNGString m_scriptName;
   };
 
   //! the layout cluster ( 4001 zone)

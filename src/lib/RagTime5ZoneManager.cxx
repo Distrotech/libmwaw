@@ -1312,15 +1312,15 @@ shared_ptr<RagTime5ZoneManager::Cluster> RagTime5ZoneManager::readPipelineCluste
 ////////////////////////////////////////////////////////////
 // unknown cluster A ( 2|a|4002|400a type)
 ////////////////////////////////////////////////////////////
-shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownClusterA(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ZoneManager::ClusterScript> RagTime5ZoneManager::readScriptCluster(RagTime5Zone &zone, int zoneType)
 {
   MWAWEntry &entry=zone.m_entry;
   if (entry.length()==0 || entry.length()<13)
-    return shared_ptr<ClusterA>();
+    return shared_ptr<ClusterScript>();
 
-  shared_ptr<ClusterA> cluster(new ClusterA);
+  shared_ptr<ClusterScript> cluster(new ClusterScript);
   cluster->m_hiLoEndian=zone.m_hiLoEndian;
-  cluster->m_type=Cluster::C_ClusterA;
+  cluster->m_type=Cluster::C_Script;
   cluster->m_zoneId=zone.m_ids[0];
 
   MWAWInputStreamPtr input=zone.getInput();
@@ -1328,7 +1328,7 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
   input->setReadInverted(!zone.m_hiLoEndian);
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
-  f << "Entries(ClustUnkA)[" << zone << "]:";
+  f << "Entries(ClustScript)[" << zone << "]:";
   int val;
   for (int i=0; i<4; ++i) { // f0=f1=0, f2=1, f3=0|1|4
     val=(int) input->readLong(2);
@@ -1347,7 +1347,7 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
     long pos=input->tell();
     if (pos>=endPos) break;
     f.str("");
-    f << "ClustUnkA-" << n;
+    f << "ClustScript-" << n;
     long endDataPos;
     if (!readFieldHeader(zone, endPos, f.str(), endDataPos)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1356,11 +1356,11 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
 
     pos=input->tell();
     f.str("");
-    f << "ClustUnkA-" << n << "-A:";
+    f << "ClustScript-" << n << "-A:";
     if (!zone.m_hiLoEndian) f << "lohi,";
     long fSz;
     if (!RagTime5StructManager::readCompressedLong(input, endDataPos, fSz) || fSz<6 || input->tell()+fSz>endDataPos) {
-      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: can not read item A\n"));
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: can not read item A\n"));
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -1377,18 +1377,25 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
     std::stringstream s;
     s << "type" << std::hex << N << std::dec;
 
-    enum What { W_Unknown, W_ListLink };
-    What what=W_Unknown;
+    int what=-1; // 0: main, 1:scriptname, 2: list names, 3: list data
     std::string name=s.str();
     Link link;
-    bool isNamedLink=false;
+
+    if ((zone.m_hiLoEndian && N==int(0x80000000)) || (!zone.m_hiLoEndian && N==0x8000)) {
+      if (n!=1)  {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: expected n seems bad\n"));
+        f << "#n=" << n << ",";
+      }
+      name="script:name";
+      what=1;
+    }
 
     switch (N) {
-    case -5:
+    case -5: // either 38 or 74, no auxilliar data
       name="header";
-      if (fSz<12) {
+      if (fSz<12 || n!=0) {
         f << "###data,";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: can not read the data id\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: can not read the data id\n"));
         break;
       }
       for (int i=0; i<2; ++i) { // always 0?
@@ -1399,11 +1406,11 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
       f << "id=" << val << ",";
       val=(int) input->readULong(2);
       if (val!=zoneType) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: unexpected zone type[graph]\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: unexpected zone type[graph]\n"));
         f << "##zoneType=" << std::hex << val << std::dec << ",";
       }
       if (fSz==38) { // find in zone a ( with a next data field which is a link to a cluster )
-        f << "sz38,";
+        what=0;
         // probably in relation with zone fSz=60
         val=(int) input->readLong(4); // find with 2, probably a number
         if (val) f << "f0=" << val << ",";
@@ -1421,7 +1428,7 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
         break;
       }
       if (fSz==74) { // no sure, related to macros ?
-        f << "sz74,";
+        what=0;
         val=(int) input->readLong(4); // find with 0|3|4, probably a number
         if (val) f << "f0=" << val << ",";
         for (int i=0; i<10; ++i) { // f4=2|8, f6=0|1|2|5, f7=1-5, f8=3, f10=0-4
@@ -1434,24 +1441,25 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
         if (val) f << "f11=" << val << ",";
         val=(int) input->readLong(2);
         if (val!=0 && val!=2) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: the unicode field size seems bad [74]\n"));
+          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: the unicode field size seems bad\n"));
           f << "#fieldSize=" << val << ",";
         }
         long actPos=input->tell();
         std::vector<int> listIds;
         if (!m_structManager->readDataIdList(input, 1, listIds)) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: can not find the unicode string data[74]\n"));
+          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: can not find the unicode string data\n"));
           f << "##noData,";
           link.m_ids.clear();
           input->seek(actPos+2, librevenge::RVNG_SEEK_SET);
         }
         else if (listIds[0]) {
-          // TODO: store me
-          Link unicodeLink;
-          unicodeLink.m_type=Link::L_List;
-          unicodeLink.m_name="unicodeString";
-          unicodeLink.m_ids.push_back(listIds[0]);
-          f << unicodeLink << ",";
+          // find a script comment
+          Link scriptLink;
+          scriptLink.m_type=Link::L_List;
+          scriptLink.m_name="scriptComment";
+          scriptLink.m_ids.push_back(listIds[0]);
+          cluster->m_scriptComment=scriptLink;
+          f << scriptLink << ",";
         }
         for (int i=0; i<10; ++i) { // g0=1-8d, g2=2|3, g3=1f40, g5=0-26, g9=0|30
           val=(int) input->readLong(2);
@@ -1467,47 +1475,58 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
         if (!code.empty()) f << "align=" << code << ",";
         break;
       }
-      f << "unknMain,";
+      f << "###mainBlock,";
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unknown main block\n"));
       break;
     default: {
-      if (what!=W_Unknown) break;
-
-      if (fSz==32 || fSz==36 || fSz==41) {
-        what=W_ListLink;
-        long unknType=(long) input->readULong(4);
-        if (unknType) f << "unknType=" << std::hex << unknType << std::dec << ",";
-        link.m_fileType[0]=(long) input->readULong(4);
-        input->seek(debSubDataPos+20, librevenge::RVNG_SEEK_SET);
-        link.m_type=Link::L_List;
-        val=(int) input->readLong(2);
-        if (val) f << "f3=" << val << ",";
-        link.m_fileType[1]=(long) input->readULong(2);
-        if (!m_structManager->readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
-          if (fSz==41 || fSz==36)
-            what=W_Unknown;
-          else
-            f << "###";
-          link=Link();
-          break;
-        }
-        if (link.m_fileType[1]==0x220 || link.m_fileType[1]==0x200 || link.m_fileType[1]==0x620) {
-          name="unicodeList";
-          if (link.m_fileType[0]==0x7d01a) name+="[layout]";
-          isNamedLink=true;
-          link.m_type=Link::L_UnicodeList;
-        }
-        // fSz=41 is the field list
-        // todo 0x80045080 is a list of 2 int
-        // fileType[1]==4030: layout list
-        else
-          name="listLink";
-        /* checkme:
-           link.m_fileType[0]==20|0 is a list of fields
-           link.m_fileType[0]==1010|1038 is a list of sequence of 16 bytes
-        */
-        ascFile.addDelimiter(debSubDataPos+20,'|');
+      if (what==1)
+        break;
+      if (N<0 || n==0) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unexpected data block\n"));
+        f << "###N=" << N << ",";
         break;
       }
+
+      if (fSz==32 || fSz==36) {
+        link.m_type=Link::L_List;
+        for (int i=0; i<8; ++i) {
+          val=(int) input->readLong(2);
+          if (val) f << "f" << i << "=" << val << ",";
+        }
+        link.m_fileType[1]=(long) input->readULong(2);
+        long actPos=input->tell();
+        if (!m_structManager->readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: can not read the data id\n"));
+          f << "#noData,";
+          input->seek(actPos, librevenge::RVNG_SEEK_SET);
+        }
+        if (fSz==32) {
+          if ((link.m_fileType[1]&0xFFDF)!=0x600) {
+            MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unknown filetype1 id\n"));
+            f << "##fileType1=" << std::hex << link.m_fileType[1] << std::dec << ",";
+          }
+          what=2;
+          name="unicodeList";
+          link.m_type=Link::L_UnicodeList;
+        }
+        else {
+          if ((link.m_fileType[1]&0xFFD7)!=0x10) {
+            MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unknown filetype1 id\n"));
+            f << "##fileType1=" << std::hex << link.m_fileType[1] << std::dec << ",";
+          }
+          what=3;
+          name="scriptLink";
+          link.m_name="scriptDataA";
+          for (int i=0; i<2; ++i) { // g0: small number between 38 and 64, g1: 0|-1
+            val=(int) input->readLong(2);
+            if (val) f << "g" << i << "=" << val << ",";
+          }
+        }
+        break;
+      }
+
+      f << "###dataBlock,";
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unknown data block\n"));
       break;
     }
     }
@@ -1533,61 +1552,64 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
         break;
       }
       f.str("");
-      f << "ClustUnkA-" << n << "-B" << m++ << "[" << name << "]:";
+      f << "ClustScript-" << n << "-B" << m++ << "[" << name << "]:";
       if (!zone.m_hiLoEndian) f << "lohi,";
-      bool done=false;
       switch (what) {
-      case W_ListLink: {
+      case 1:
+        if (field.m_type==RagTime5StructManager::Field::T_Unicode && field.m_fileType==0xc8042) {
+          cluster->m_scriptName=field.m_string.cstr();
+          f << field.m_string.cstr();
+          break;
+        }
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readRootCluster: find unexpected filename field\n"));
+        f << "###" << field;
+        break;
+      case 2:
+      case 3: {
         if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
           f << "pos=[";
           for (size_t i=0; i<field.m_longList.size(); ++i)
             f << field.m_longList[i] << ",";
           f << "],";
           link.m_longList=field.m_longList;
-          done=true;
           break;
         }
         if (field.m_type==RagTime5StructManager::Field::T_Unstructured && field.m_fileType==0xce017) {
-          // a small value 2|4|a|1c|40
+          // a small value 2 (can be first data)
           f << "unkn="<<field.m_extra << ",";
-          done=true;
           break;
         }
-        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: find unexpected list link field\n"));
-        f << "###";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unexpected list link field\n"));
+        f << "###" << field;
         break;
       }
-
-      case W_Unknown:
       default:
+        MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find unexpected field\n"));
+        f << "###" << field;
         break;
       }
-      if (done) {
-        ascFile.addPos(pos);
-        ascFile.addNote(f.str().c_str());
-        continue;
-      }
-      f << field;
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
     if (!link.empty()) {
-      if (isNamedLink) {
+      if (what==2) {
         if (cluster->m_nameLink.empty())
           cluster->m_nameLink=link;
         else {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: oops the name link is already set\n"));
+          MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: oops the name link is already set\n"));
           cluster->m_linksList.push_back(link);
         }
       }
+      else if (what==3)
+        cluster->m_dataLink=link;
       else
         cluster->m_linksList.push_back(link);
     }
     pos=input->tell();
     if (pos!=endDataPos) {
-      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: find some extra data\n"));
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find some extra data\n"));
       f.str("");
-      f << "ClustUnkA-" << n << ":" << "###";
+      f << "ClustScript-" << n << ":" << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
     }
@@ -1596,9 +1618,9 @@ shared_ptr<RagTime5ZoneManager::ClusterA> RagTime5ZoneManager::readUnknownCluste
   }
   long pos=input->tell();
   if (pos!=endPos) {
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readUnknownClusterA: find some extra data\n"));
+    MWAW_DEBUG_MSG(("RagTime5ZoneManager::readScriptCluster: find some extra data\n"));
     f.str("");
-    f << "ClustUnkA###";
+    f << "ClustScript###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -3575,7 +3597,7 @@ shared_ptr<RagTime5ZoneManager::Cluster> RagTime5ZoneManager::readClusterZone(Ra
   case 0x4002:
   case 0xa:
   case 0x400a:
-    return readUnknownClusterA(zone, zoneType);
+    return readScriptCluster(zone, zoneType);
 
   case 0x104:
   case 0x204:
@@ -3701,7 +3723,7 @@ shared_ptr<RagTime5ZoneManager::Cluster> RagTime5ZoneManager::readClusterZone(Ra
         f << "##zoneType=" << std::hex << val << std::dec << ",";
       }
       if (fSz==64) {  // find in zone b ( with a next data field which is a link to a cluster )
-        // probably in relation with zone UnknClusterA: fSz=38
+        // probably in relation with zone ClusterScript
         f << "sz64,";
         val=(int) input->readLong(4); // find with 2, probably a number
         if (val) f << "f0=" << val << ",";
