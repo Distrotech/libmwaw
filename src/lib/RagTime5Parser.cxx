@@ -1621,7 +1621,6 @@ bool RagTime5Parser::readUnknownClusterCData(RagTime5ZoneManager::Cluster &clust
   std::stringstream s;
   s << "Data1_clustUnknC" << link.m_fileType[0];
   std::string zoneName=s.str();
-  libmwaw::DebugStream f;
 
   if (link.m_type==RagTime5ZoneManager::Link::L_List) {
     if (link.m_fileType[1]==0x330) {

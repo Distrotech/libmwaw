@@ -162,6 +162,7 @@ class RagTime5ZoneManager
 public:
   struct Link;
   struct Cluster;
+  struct ClusterA;
   struct ClusterLayout;
   struct ClusterRoot;
 
@@ -188,6 +189,8 @@ public:
   //! try to read a 104,204,4104, 4204 cluster : pipeline cluster ?
   shared_ptr<Cluster> readPipelineCluster(RagTime5Zone &zone, int type);
 
+  //! try to read a 2,a,4002,400a cluster
+  shared_ptr<ClusterA> readUnknownClusterA(RagTime5Zone &zone, int type);
   //! try to read a unknown cluster ( first internal child of the root cluster )
   shared_ptr<Cluster> readUnknownClusterB(RagTime5Zone &zone);
   //! try to read a unknown cluster
@@ -340,7 +343,7 @@ public:
       C_GraphicData,
       C_Root,
       C_TextData,
-      C_ClusterB, C_ClusterC,
+      C_ClusterA, C_ClusterB, C_ClusterC,
       C_Layout, C_Pipeline,
       C_Unknown
     };
@@ -402,6 +405,16 @@ public:
     //! the filename if known
     librevenge::RVNGString m_fileName;
   };
+  //! the cluster A ( 2/a/4002/400a zone)
+  struct ClusterA : public Cluster {
+    //! constructor
+    ClusterA() : Cluster()
+    {
+    }
+    //! destructor
+    virtual ~ClusterA() {}
+  };
+
   //! the layout cluster ( 4001 zone)
   struct ClusterLayout : public Cluster {
     //! constructor
