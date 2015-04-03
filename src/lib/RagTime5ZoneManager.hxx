@@ -36,12 +36,15 @@
 
 #include <map>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "libmwaw_internal.hxx"
 #include "MWAWDebug.hxx"
 #include "MWAWEntry.hxx"
+
+#include "RagTime5StructManager.hxx"
 
 class RagTime5Parser;
 class RagTime5StructManager;
@@ -161,10 +164,13 @@ class RagTime5ZoneManager
 {
 public:
   struct Link;
+
   struct Cluster;
   struct ClusterScript;
   struct ClusterLayout;
   struct ClusterRoot;
+
+  struct ClusterParser;
 
   //! constructor
   RagTime5ZoneManager(RagTime5Parser &parser);
@@ -175,23 +181,17 @@ public:
   static bool readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds);
 
   //! try to read a cluster zone
+  bool readClusterZone(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
+  //! try to read a cluster zone
   shared_ptr<Cluster> readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read the root cluster
   shared_ptr<ClusterRoot> readRootCluster(RagTime5Zone &zone);
   //! try to read a style cluster: C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles
   shared_ptr<Cluster> readStyleCluster(RagTime5Zone &zone);
-  //! try to read a field cluster: either fielddef or fieldpos
-  shared_ptr<Cluster> readFieldCluster(RagTime5Zone &zone, int type);
-  //! try to read a color pattern cluster
-  shared_ptr<Cluster> readColPatCluster(RagTime5Zone &zone);
   //! try to read a layout cluster 4001
   shared_ptr<ClusterLayout> readLayoutCluster(RagTime5Zone &zone);
-  //! try to read a 104,204,4104, 4204 cluster : pipeline cluster ?
-  shared_ptr<Cluster> readPipelineCluster(RagTime5Zone &zone, int type);
   //! try to read a script cluster : zone 2,a,4002,400a
   shared_ptr<ClusterScript> readScriptCluster(RagTime5Zone &zone, int type);
-  //! try to read a unknown cluster ( first internal child of the root cluster )
-  shared_ptr<Cluster> readUnknownClusterB(RagTime5Zone &zone);
   //! try to read a unknown cluster
   shared_ptr<Cluster> readUnknownClusterC(RagTime5Zone &zone, int type);
 
@@ -325,6 +325,11 @@ public:
     //! a list of long used to store decal
     std::vector<long> m_longList;
   };
+
+  ////////////////////////////////////////////////////////////
+  // cluster classes
+  ////////////////////////////////////////////////////////////
+
   //! the cluster data
   struct Cluster {
     //! constructor
@@ -366,6 +371,22 @@ public:
     std::vector<Link> m_linksList;
     //! the cluster ids
     std::vector<int> m_clusterIdsList;
+  };
+
+  //! the layout cluster ( 4001 zone)
+  struct ClusterLayout : public Cluster {
+    //! constructor
+    ClusterLayout() : Cluster(), m_zoneDimensions(), m_pipelineLink(), m_listItemLink()
+    {
+    }
+    //! destructor
+    virtual ~ClusterLayout() {}
+    //! list of zone's dimensions
+    std::vector<Vec2f> m_zoneDimensions;
+    //! link to a pipeline cluster list
+    Link m_pipelineLink;
+    //! link to  a zone of fieldSize 8(unknown)
+    Link m_listItemLink;
   };
 
   //! the cluster for root
@@ -418,20 +439,66 @@ public:
     librevenge::RVNGString m_scriptName;
   };
 
-  //! the layout cluster ( 4001 zone)
-  struct ClusterLayout : public Cluster {
+  ////////////////////////////////////////////////////////////
+  // parser class
+  ////////////////////////////////////////////////////////////
+
+  //! virtual class use to parse the cluster data
+  struct ClusterParser {
     //! constructor
-    ClusterLayout() : Cluster(), m_zoneDimensions(), m_pipelineLink(), m_listItemLink()
+    ClusterParser(int type, std::string const &zoneName) :
+      m_type(type), m_hiLoEndian(true), m_name(zoneName), m_cluster(), m_dataId(0), m_link()
     {
     }
     //! destructor
-    virtual ~ClusterLayout() {}
-    //! list of zone's dimensions
-    std::vector<Vec2f> m_zoneDimensions;
-    //! link to a pipeline cluster list
-    Link m_pipelineLink;
-    //! link to  a zone of fieldSize 8(unknown)
-    Link m_listItemLink;
+    virtual ~ClusterParser() {}
+    //! return the debug name corresponding to a zone
+    virtual std::string getZoneName() const
+    {
+      return m_name;
+    }
+    //! return the debug name corresponding to a cluster
+    virtual std::string getZoneName(int n, int m=-1) const
+    {
+      std::stringstream s;
+      s << m_name << "-" << n;
+      if (m>=0)
+        s << "-B" << m;
+      return s.str();
+    }
+    //! start a new zone
+    virtual void startZone()
+    {
+    }
+    //! parse a zone
+    virtual bool parseZone(MWAWInputStreamPtr &/*input*/, long /*fSz*/, int /*N*/, int /*flag*/, libmwaw::DebugStream &/*f*/)
+    {
+      return false;
+    }
+    //! end of a start zone call
+    virtual void endZone()
+    {
+    }
+    //! parse a n_dataId:m
+    virtual bool parseField(RagTime5StructManager::Field const &/*field*/, int /*m*/, libmwaw::DebugStream &/*f*/)
+    {
+      return false;
+    }
+    //! the cluster type
+    int m_type;
+    //! zone endian
+    bool m_hiLoEndian;
+    //! the cluster name
+    std::string m_name;
+    //! the current cluster
+    shared_ptr<Cluster> m_cluster;
+    //! the actual zone id
+    int m_dataId;
+    //! the actual link
+    Link m_link;
+  private:
+    ClusterParser(ClusterParser const &orig);
+    ClusterParser &operator=(ClusterParser const &orig);
   };
 protected:
   //! the main parser
