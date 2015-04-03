@@ -190,10 +190,6 @@ public:
   shared_ptr<Cluster> readStyleCluster(RagTime5Zone &zone);
   //! try to read a layout cluster 4001
   shared_ptr<ClusterLayout> readLayoutCluster(RagTime5Zone &zone);
-  //! try to read a script cluster : zone 2,a,4002,400a
-  shared_ptr<ClusterScript> readScriptCluster(RagTime5Zone &zone, int type);
-  //! try to read a unknown cluster
-  shared_ptr<Cluster> readUnknownClusterC(RagTime5Zone &zone, int type);
 
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
@@ -447,11 +443,13 @@ public:
   struct ClusterParser {
     //! constructor
     ClusterParser(int type, std::string const &zoneName) :
-      m_type(type), m_hiLoEndian(true), m_name(zoneName), m_cluster(), m_dataId(0), m_link()
+      m_type(type), m_hiLoEndian(true), m_name(zoneName), m_dataId(0), m_link()
     {
     }
     //! destructor
     virtual ~ClusterParser() {}
+    //! return the current cluster
+    virtual shared_ptr<Cluster> getCluster()=0;
     //! return the debug name corresponding to a zone
     virtual std::string getZoneName() const
     {
@@ -484,14 +482,28 @@ public:
     {
       return false;
     }
+
+    //
+    // some tools
+    //
+
+    //! return true if N correspond to a file/script name
+    bool isANameHeader(long N) const
+    {
+      return (m_hiLoEndian && N==int(0x80000000)) || (!m_hiLoEndian && N==0x8000);
+    }
+
+    //! read the first part of a link list (fSz>=32)
+    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[6], libmwaw::DebugStream &f);
+    //! read the first part of a fixed size list (fSz>=30)
+    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[6], libmwaw::DebugStream &f);
+
     //! the cluster type
     int m_type;
     //! zone endian
     bool m_hiLoEndian;
     //! the cluster name
     std::string m_name;
-    //! the current cluster
-    shared_ptr<Cluster> m_cluster;
     //! the actual zone id
     int m_dataId;
     //! the actual link
