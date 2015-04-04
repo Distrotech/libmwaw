@@ -166,9 +166,9 @@ public:
   struct Link;
 
   struct Cluster;
-  struct ClusterScript;
   struct ClusterLayout;
   struct ClusterRoot;
+  struct ClusterScript;
 
   struct ClusterParser;
 
@@ -177,19 +177,10 @@ public:
   //! destructor
   ~RagTime5ZoneManager();
 
-  //! try to read n data id
-  static bool readDataIdList(MWAWInputStreamPtr input, int n, std::vector<int> &listIds);
-
   //! try to read a cluster zone
   bool readClusterZone(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
   //! try to read a cluster zone
   shared_ptr<Cluster> readClusterZone(RagTime5Zone &zone, int type=-1);
-  //! try to read the root cluster
-  shared_ptr<ClusterRoot> readRootCluster(RagTime5Zone &zone);
-  //! try to read a style cluster: C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles
-  shared_ptr<Cluster> readStyleCluster(RagTime5Zone &zone);
-  //! try to read a layout cluster 4001
-  shared_ptr<ClusterLayout> readLayoutCluster(RagTime5Zone &zone);
 
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
@@ -494,9 +485,9 @@ public:
     }
 
     //! read the first part of a link list (fSz>=32)
-    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[6], libmwaw::DebugStream &f);
+    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f);
     //! read the first part of a fixed size list (fSz>=30)
-    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[6], libmwaw::DebugStream &f);
+    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize, Link &link, long(&values)[5], libmwaw::DebugStream &f);
 
     //! the cluster type
     int m_type;
