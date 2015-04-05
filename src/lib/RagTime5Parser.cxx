@@ -807,71 +807,14 @@ bool RagTime5Parser::readClusterZones()
 
 bool RagTime5Parser::readClusterRootList(RagTime5ZoneManager::ClusterRoot &root, std::set<int> &seens)
 {
-  std::map<int, librevenge::RVNGString> idToNameMap;
-  if (!root.m_listClusterName.empty())
-    readUnicodeStringList(root.m_listClusterName, idToNameMap);
-  std::vector<long> unknList;
-  if (!root.m_listClusterUnkn.empty())
-    readLongList(root.m_listClusterUnkn, unknList);
-  shared_ptr<RagTime5Zone> zone=getDataZone(root.m_listClusterId);
-  if (!zone || zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData" ||
-      zone->m_entry.length()<24 || (zone->m_entry.length()%8)) {
-    MWAW_DEBUG_MSG(("RagTime5Parser::readClusterRootList: the item list seems bad\n"));
-    return false;
-  }
-  MWAWEntry &entry=zone->m_entry;
-  zone->m_isParsed=true;
-  MWAWInputStreamPtr input=zone->getInput();
-  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-  input->setReadInverted(!zone->m_hiLoEndian);
-
-  libmwaw::DebugFile &ascFile=zone->ascii();
-  libmwaw::DebugStream f;
-  ascFile.addPos(entry.end());
-  ascFile.addNote("_");
-
-  std::map<int,int> clusterIdTypeMap;
-  int N=int(entry.length()/8);
-  for (int i=0; i<N; ++i) {
-    long pos=input->tell();
-    f.str("");
-    if (i==0)
-      f << "Entries(ClustList)[" << *zone << "]:";
-    else
-      f << "ClustList-" << i+1 << ":";
-    if (idToNameMap.find(i+1)!=idToNameMap.end())
-      f << idToNameMap.find(i+1)->second.cstr() << ",";
-    std::vector<int> listIds;
-    if (!m_structManager->readDataIdList(input, 1, listIds)) {
-      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-      f << "###";
-      ascFile.addPos(pos);
-      ascFile.addNote(f.str().c_str());
-      continue;
-    }
-    if (listIds[0]==0) {
-      input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-      ascFile.addPos(pos);
-      ascFile.addNote("_");
-      continue;
-    }
-    f << "data" << listIds[0] << "A,";
-    int val=(int) input->readULong(2); // [02468][0124][08][1234abe]
-    if (val) f << "fl=" << std::hex << val << std::dec << ",";
-    clusterIdTypeMap[listIds[0]]=val;
-    val=(int) input->readLong(2); // always 0?
-    if (val) f << "#f1=" << val << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-  input->setReadInverted(false);
-
-  for (std::map<int,int>::const_iterator it=clusterIdTypeMap.begin(); it!=clusterIdTypeMap.end(); ++it) {
-    int cId=it->first;
+  std::vector<int> listChilds;
+  m_zoneManager->readClusterMainList(root, listChilds);
+  for (size_t i=0; i<listChilds.size(); ++i) {
+    int cId=listChilds[i];
     if (cId==0 || seens.find(cId)!=seens.end())
       continue;
     shared_ptr<RagTime5Zone> dZone= getDataZone(cId);
-    if (!dZone || dZone->getKindLastPart(dZone->m_kinds[1].empty())!="Cluster" || !readClusterZone(*dZone, it->second)) {
+    if (!dZone || dZone->getKindLastPart(dZone->m_kinds[1].empty())!="Cluster" || !readClusterZone(*dZone)) {
       MWAW_DEBUG_MSG(("RagTime5Parser::readClusterListRoot: can not find cluster zone %d\n", cId));
       continue;
     }
@@ -1020,7 +963,7 @@ bool RagTime5Parser::readClusterRootData(RagTime5ZoneManager::ClusterRoot &clust
 
 bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
 {
-  shared_ptr<RagTime5ZoneManager::Cluster> cluster=m_zoneManager->readClusterZone(zone, zoneType);
+  shared_ptr<RagTime5ZoneManager::Cluster> cluster=m_zoneManager->readCluster(zone, zoneType);
   if (!cluster)
     return false;
   // check child clusters

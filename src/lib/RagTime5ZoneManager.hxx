@@ -159,6 +159,11 @@ private:
   RagTime5Zone &operator=(RagTime5Zone const &orig);
 };
 
+namespace RagTime5ZoneManagerInternal
+{
+struct State;
+}
+
 //! basic class used to manage RagTime 5/6 zones
 class RagTime5ZoneManager
 {
@@ -172,15 +177,19 @@ public:
 
   struct ClusterParser;
 
+  friend struct ClusterParser;
+
   //! constructor
   RagTime5ZoneManager(RagTime5Parser &parser);
   //! destructor
   ~RagTime5ZoneManager();
 
   //! try to read a cluster zone
-  bool readClusterZone(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
+  bool readCluster(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
   //! try to read a cluster zone
-  shared_ptr<Cluster> readClusterZone(RagTime5Zone &zone, int type=-1);
+  shared_ptr<Cluster> readCluster(RagTime5Zone &zone, int type=-1);
+  //! try to read the cluster root list (in general Data14)
+  bool readClusterMainList(ClusterRoot &root, std::vector<int> &list);
 
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
@@ -188,11 +197,15 @@ public:
   bool readUnknownClusterC(Link const &link);
   //! try to find a cluster zone type ( heuristic when the cluster type is unknown )
   int getClusterZoneType(RagTime5Zone &zone);
+  //! try to return basic information about the header cluster's zone
+  bool getClusterBasicHeaderInfo(RagTime5Zone &zone, long &N, long &fSz, long &debHeaderPos);
 
   // low level
 
   //! try to read a field header, if ok set the endDataPos positions
   bool readFieldHeader(RagTime5Zone &zone, long endPos, std::string const &headerName, long &endDataPos, long expectedLVal=-99999);
+  //! returns "data"+id+"A" ( followed by the cluster type and name if know)
+  std::string getClusterName(int id);
 
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
@@ -433,8 +446,8 @@ public:
   //! virtual class use to parse the cluster data
   struct ClusterParser {
     //! constructor
-    ClusterParser(int type, std::string const &zoneName) :
-      m_type(type), m_hiLoEndian(true), m_name(zoneName), m_dataId(0), m_link()
+    ClusterParser(RagTime5ZoneManager &parser, int type, std::string const &zoneName) :
+      m_parser(parser), m_type(type), m_hiLoEndian(true), m_name(zoneName), m_dataId(0), m_link()
     {
     }
     //! destructor
@@ -488,7 +501,10 @@ public:
     bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
     //! read the first part of a fixed size list (fSz>=30)
     bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
-
+    //! returns "data"+id+"A" ( followed by the cluster type and name if know)
+    std::string getClusterName(int id);
+    //! the main parser
+    RagTime5ZoneManager &m_parser;
     //! the cluster type
     int m_type;
     //! zone endian
@@ -504,6 +520,8 @@ public:
     ClusterParser &operator=(ClusterParser const &orig);
   };
 protected:
+  //! the state
+  shared_ptr<RagTime5ZoneManagerInternal::State> m_state;
   //! the main parser
   RagTime5Parser &m_mainParser;
   //! the structure manager
