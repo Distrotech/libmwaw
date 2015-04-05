@@ -1202,7 +1202,7 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone, RagTime5ZoneManager
   libmwaw::DebugStream f;
 
   f << "Entries(ClustLink)[" << zone << "]:";
-  if (link.m_N*link.m_fieldSize!=zone.m_entry.length() || link.m_fieldSize!=12) {
+  if (link.m_N*link.m_fieldSize>zone.m_entry.length() || link.m_fieldSize!=12) {
     MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLinkList: bad fieldSize/N for zone %d\n", link.m_ids[0]));
     f << "###";
     ascFile.addPos(zone.m_entry.begin());
@@ -1244,6 +1244,10 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone, RagTime5ZoneManager
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos+12, librevenge::RVNG_SEEK_SET);
+  }
+  if (input->tell()!=zone.m_entry.end()) {
+    ascFile.addPos(input->tell());
+    ascFile.addNote("ClustLink:end");
   }
   return true;
 }

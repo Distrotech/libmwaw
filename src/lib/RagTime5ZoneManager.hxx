@@ -485,9 +485,9 @@ public:
     }
 
     //! read the first part of a link list (fSz>=32)
-    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f);
+    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
     //! read the first part of a fixed size list (fSz>=30)
-    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize, Link &link, long(&values)[5], libmwaw::DebugStream &f);
+    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
 
     //! the cluster type
     int m_type;
