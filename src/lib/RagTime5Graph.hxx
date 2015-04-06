@@ -130,14 +130,14 @@ protected:
   bool readColorPatternZone(RagTime5ZoneManager::Cluster &cluster);
 
   //! try to read a graphic zone
-  bool readGraphicZone(RagTime5ZoneManager::Cluster &cluster);
+  bool readGraphicZone(RagTime5ZoneManager::ClusterGraphic &cluster);
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
   //! try to read a graphic
   bool readGraphic(RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
 
   //! try to read a graphic transformations zone
-  bool readGraphicTransformations(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
+  bool readGraphicTransformations(RagTime5ZoneManager::Link const &link);
 
   //
   // low level

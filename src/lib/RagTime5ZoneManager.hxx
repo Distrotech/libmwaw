@@ -171,6 +171,7 @@ public:
   struct Link;
 
   struct Cluster;
+  struct ClusterGraphic;
   struct ClusterLayout;
   struct ClusterRoot;
   struct ClusterScript;
@@ -373,6 +374,18 @@ public:
     std::vector<int> m_clusterIdsList;
   };
 
+  //! the cluster graphic
+  struct ClusterGraphic : public Cluster {
+    //! constructor
+    ClusterGraphic() : Cluster()
+    {
+    }
+    //! destructor
+    virtual ~ClusterGraphic() {}
+    //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10)
+    Link m_clusterLinks[2];
+  };
+
   //! the layout cluster ( 4001 zone)
   struct ClusterLayout : public Cluster {
     //! constructor
@@ -425,6 +438,7 @@ public:
     //! the filename if known
     librevenge::RVNGString m_fileName;
   };
+
   //! the cluster script ( 2/a/4002/400a zone)
   struct ClusterScript : public Cluster {
     //! constructor

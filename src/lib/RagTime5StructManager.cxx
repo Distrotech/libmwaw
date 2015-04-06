@@ -1052,6 +1052,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
   case 0xe2c59:
   case 0x1a473a:
   case 0x1c58b1:
+  case 0x1d5ab5:
   case 0x1dad60:
   case 0x1e1c3b:
   case 0x329eef:

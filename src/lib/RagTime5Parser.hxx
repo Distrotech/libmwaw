@@ -128,6 +128,10 @@ protected:
   //! try to read a cluster link zone
   bool readClusterLinkList(RagTime5Zone &zone,
                            RagTime5ZoneManager::Link const &link);
+  //! try to read a cluster list link zone
+  bool readClusterLinkList(RagTime5ZoneManager::Link const &link,
+                           RagTime5ZoneManager::Link const &nameLink,
+                           std::vector<int> &list, std::string const &name="");
 
   //! try to read a string zone ( zone with id1=21,id2=23:24)
   bool readString(RagTime5Zone &zone, std::string &string);
