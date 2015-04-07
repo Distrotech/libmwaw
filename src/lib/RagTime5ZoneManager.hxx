@@ -171,11 +171,7 @@ public:
   struct Link;
 
   struct Cluster;
-  struct ClusterGraphic;
-  struct ClusterLayout;
   struct ClusterRoot;
-  struct ClusterScript;
-
   struct ClusterParser;
 
   friend struct ClusterParser;
@@ -348,7 +344,7 @@ public:
       // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
       // unknown clusters
-      C_ClusterB, C_ClusterC,
+      C_ClusterA, C_ClusterB, C_ClusterC,
 
       C_Unknown
     };
@@ -452,6 +448,20 @@ public:
     //! the scriptname if known
     librevenge::RVNGString m_scriptName;
   };
+  //! the cluster unknown A data
+  struct ClusterUnknownA : public Cluster {
+    //! constructor
+    ClusterUnknownA() : Cluster(), m_auxilliarLink(), m_clusterLink()
+    {
+    }
+    //! destructor
+    virtual ~ClusterUnknownA() {}
+    //! the first auxilliar data
+    Link m_auxilliarLink;
+    //! cluster links list of size 28
+    Link m_clusterLink;
+  };
+
 
   ////////////////////////////////////////////////////////////
   // parser class

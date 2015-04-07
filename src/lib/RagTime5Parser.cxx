@@ -134,10 +134,74 @@ struct IndexUnicodeParser : public RagTime5StructManager::DataParser {
   std::map<int, librevenge::RVNGString> m_idToStringMap;
 };
 
-//! Internal: the helper to read pipeline cluster index in layout data
-struct LayoutIndexParser : public RagTime5StructManager::DataParser {
+//! Internal: the helper to read a clustList
+struct IntListParser : public RagTime5StructManager::DataParser {
   //! constructor
-  LayoutIndexParser(RagTime5Parser &, std::string const &zoneName) : RagTime5StructManager::DataParser(zoneName), m_idList()
+  IntListParser(int fieldSz, std::string const &zoneName) : RagTime5StructManager::DataParser(zoneName), m_fieldSize(fieldSz), m_dataList()
+  {
+    if (m_fieldSize!=1 && m_fieldSize!=2 && m_fieldSize!=4) {
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::IntListParser: bad field size\n"));
+      m_fieldSize=0;
+    }
+  }
+  //! try to parse a data
+  bool parseData(MWAWInputStreamPtr &input, long endPos, RagTime5Zone &/*zone*/, int, libmwaw::DebugStream &f)
+  {
+    long pos=input->tell();
+    if (m_fieldSize<=0 || (endPos-pos)%m_fieldSize) {
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::IntListParser::parseData: bad data size\n"));
+      return false;
+    }
+    int N=int((endPos-pos)/m_fieldSize);
+    f << "data=[";
+    for (int i=0; i<N; ++i) {
+      int val=(int) input->readLong(m_fieldSize);
+      f << val << ",";
+      m_dataList.push_back(val);
+    }
+    f << "],";
+    return true;
+  }
+
+  //! the field size
+  int m_fieldSize;
+  //! the list of read int
+  std::vector<int> m_dataList;
+
+  //! copy constructor, not implemented
+  IntListParser(IntListParser &orig);
+  //! copy operator, not implemented
+  IntListParser &operator=(IntListParser &orig);
+};
+
+//! Internal: the helper to read a clustList
+struct ClustListParser : public RagTime5StructManager::DataParser {
+  //! constructor
+  ClustListParser(RagTime5ZoneManager &zoneManager, std::string const &zoneName) :
+    RagTime5StructManager::DataParser(zoneName), m_clusterList(), m_zoneManager(zoneManager)
+  {
+  }
+
+  std::string getClusterName(int id) const
+  {
+    return m_zoneManager.getClusterName(id);
+  }
+
+  //! the list of read cluster
+  std::vector<int> m_clusterList;
+private:
+  //! the main zone manager
+  RagTime5ZoneManager &m_zoneManager;
+  //! copy constructor, not implemented
+  ClustListParser(ClustListParser &orig);
+  //! copy operator, not implemented
+  ClustListParser &operator=(ClustListParser &orig);
+};
+
+//! Internal: the helper to read pipeline cluster index in layout data
+struct ClustList4Parser : public ClustListParser {
+  //! constructor
+  ClustList4Parser(RagTime5ZoneManager &zoneManager, std::string const &zoneName) : ClustListParser(zoneManager, zoneName)
   {
   }
   //! try to parse a data
@@ -145,7 +209,7 @@ struct LayoutIndexParser : public RagTime5StructManager::DataParser {
   {
     long pos=input->tell();
     if (endPos-pos<4) {
-      MWAW_DEBUG_MSG(("RagTime5ParserInternal::LayoutIndexParser::parse: bad data size\n"));
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustList4Parser::parse: bad data size\n"));
       return false;
     }
     std::vector<int> listIds;
@@ -153,21 +217,18 @@ struct LayoutIndexParser : public RagTime5StructManager::DataParser {
       f << "##clustersIds";
     }
     else if (listIds[0]) {
-      m_idList.push_back(listIds[0]);
-      f << "data" << listIds[0] << ",";
+      m_clusterList.push_back(listIds[0]);
+      f << getClusterName(listIds[0]) << ",";
     }
     return true;
   }
-
-  //! the data
-  std::vector<int> m_idList;
 };
 
 //! Internal: the helper to read a clustList with sz=10
-struct ClustListParser : public RagTime5StructManager::DataParser {
+struct ClustList10Parser : public ClustListParser {
   //! constructor
-  ClustListParser(RagTime5ZoneManager &zoneManager, std::string const &zoneName) :
-    RagTime5StructManager::DataParser(zoneName), m_clusterList(), m_idToNameMap(), m_zoneManager(zoneManager)
+  ClustList10Parser(RagTime5ZoneManager &zoneManager, std::string const &zoneName) :
+    ClustListParser(zoneManager, zoneName), m_idToNameMap()
   {
   }
   //! try to parse a data
@@ -177,39 +238,82 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
     if (m_idToNameMap.find(n)!=m_idToNameMap.end())
       f << m_idToNameMap.find(n)->second.cstr() << ",";
     if (endPos-pos!=10) {
-      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustListParser::parse: bad data size\n"));
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustList10Parser::parse: bad data size\n"));
       return false;
     }
     std::vector<int> listIds;
     if (!RagTime5StructManager::readDataIdList(input, 1, listIds)) {
-      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustListParser::parse: can not read an cluster id\n"));
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustList10Parser::parse: can not read an cluster id\n"));
       f << "##clusterIds,";
       return false;
     }
     if (listIds[0]) {
       m_clusterList.push_back(listIds[0]);
-      f << m_zoneManager.getClusterName(listIds[0]) << ",";
+      f << getClusterName(listIds[0]) << ",";
     }
-    int val=(int) input->readULong(2); // always c000
-    if (val!=0) f << "f0=" << std::hex << val << std::dec << ",";
-    for (int i=0; i<2; ++i) { // f1=1-19: an index ?, f2=0|2
-      val=(int) input->readULong(2);
-      if (val)
-        f << "f" << i+1 << "=" << val << ",";
-    }
+    unsigned long lVal=input->readULong(4); // c00..small number
+    if ((lVal&0xc0000000)==0xc0000000)
+      f << "f0=" << (lVal&0x3fffffff) << ",";
+    else
+      f << "f0*" << lVal << ",";
+    int val=(int) input->readLong(2); // 0|2
+    if (val) f << "f1=" << val << ",";
     return true;
   }
-  //! the list of read cluster
-  std::vector<int> m_clusterList;
   //! the name
   std::map<int, librevenge::RVNGString> m_idToNameMap;
-  //! the main zone manager
-  RagTime5ZoneManager &m_zoneManager;
 private:
   //! copy constructor, not implemented
-  ClustListParser(ClustListParser &orig);
+  ClustList10Parser(ClustList10Parser &orig);
   //! copy operator, not implemented
-  ClustListParser &operator=(ClustListParser &orig);
+  ClustList10Parser &operator=(ClustList10Parser &orig);
+};
+
+//! Internal: the helper to read a clustList with sz=28
+struct ClustList28Parser : public ClustListParser {
+  //! constructor
+  ClustList28Parser(RagTime5ZoneManager &zoneManager, std::string const &zoneName) : ClustListParser(zoneManager, zoneName)
+  {
+  }
+  //! try to parse a data
+  bool parseData(MWAWInputStreamPtr &input, long endPos, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
+  {
+    long pos=input->tell();
+    if (endPos-pos!=28) {
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustList28Parser::parse: bad data size\n"));
+      return false;
+    }
+    std::vector<int> listIds;
+    if (!RagTime5StructManager::readDataIdList(input, 1, listIds)) {
+      MWAW_DEBUG_MSG(("RagTime5ParserInternal::ClustList28Parser::parse: can not read an cluster id\n"));
+      f << "##clusterIds,";
+      return false;
+    }
+    if (listIds[0]) {
+      m_clusterList.push_back(listIds[0]);
+      // a e,2003,200b, ... cluster
+      f << getClusterName(listIds[0]) << ",";
+    }
+    unsigned long lVal=input->readULong(4); // c00..small number
+    if ((lVal&0xc0000000)==0xc0000000)
+      f << "f0=" << (lVal&0x3fffffff) << ",";
+    else
+      f << "f0*" << lVal << ",";
+    int val=(int) input->readLong(2); // 0|2
+    if (val) f << "f1=" << val << ",";
+    float dim[4];
+    for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
+    // very often (0x0<->1x1), if not, we often have dim[0]+dim[2]~1 and dim[1]+dim[3]~1, some margins?
+    f << "dim=" << Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
+    val=(int) input->readLong(2); // 0|1
+    if (val) f << "f2=" << val << ",";
+    return true;
+  }
+private:
+  //! copy constructor, not implemented
+  ClustList28Parser(ClustList28Parser &orig);
+  //! copy operator, not implemented
+  ClustList28Parser &operator=(ClustList28Parser &orig);
 };
 
 ////////////////////////////////////////
@@ -1013,6 +1117,15 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
     else
       return readClusterScriptData(*clust);
   }
+  else if (cluster->m_type==RagTime5ZoneManager::Cluster::C_ClusterA) {
+    RagTime5ZoneManager::ClusterUnknownA *clust=dynamic_cast<RagTime5ZoneManager::ClusterUnknownA *>(cluster.get());
+    if (!clust) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterZone: can not find the unknowA pointer\n"));
+      return false;
+    }
+    else
+      return readUnknownClusterAData(*clust);
+  }
   else if (cluster->m_type==RagTime5ZoneManager::Cluster::C_ClusterB)
     return readUnknownClusterBData(*cluster);
   else if (cluster->m_type==RagTime5ZoneManager::Cluster::C_ClusterC)
@@ -1144,7 +1257,7 @@ bool RagTime5Parser::readClusterLinkList
 (RagTime5ZoneManager::Link const &link, RagTime5ZoneManager::Link const &nameLink,
  std::vector<int> &list, std::string const &name)
 {
-  RagTime5ParserInternal::ClustListParser parser(*m_zoneManager.get(), !name.empty() ? name : link.getZoneName());
+  RagTime5ParserInternal::ClustList10Parser parser(*m_zoneManager.get(), !name.empty() ? name : link.getZoneName());
   if (!nameLink.empty())
     readUnicodeStringList(nameLink, parser.m_idToNameMap);
   if (!link.empty())
@@ -1528,12 +1641,12 @@ bool RagTime5Parser::readClusterLayoutData(RagTime5ZoneManager::ClusterLayout &c
     readFixedSizeZone(cluster.m_listItemLink, "DataLayoutA");
   if (!cluster.m_pipelineLink.empty() && cluster.m_pipelineLink.m_ids.size()==1) {
     if (cluster.m_pipelineLink.m_fieldSize==4) {
-      RagTime5ParserInternal::LayoutIndexParser parser(*this, "DataLayoutPipeline");
+      RagTime5ParserInternal::ClustList4Parser parser(*m_zoneManager, "DataLayoutPipeline");
       readFixedSizeZone(cluster.m_pipelineLink, parser);
-      for (size_t i=0; i<parser.m_idList.size(); ++i) {
-        shared_ptr<RagTime5Zone> clust=getDataZone(parser.m_idList[i]);
+      for (size_t i=0; i<parser.m_clusterList.size(); ++i) {
+        shared_ptr<RagTime5Zone> clust=getDataZone(parser.m_clusterList[i]);
         if (!clust || !clust->m_entry.valid() || clust->getKindLastPart(clust->m_kinds[1].empty())!="Cluster") {
-          MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLayoutData: can not find a bad cluster pipeline data zone %d\n", parser.m_idList[i]));
+          MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLayoutData: can not find a bad cluster pipeline data zone %d\n", parser.m_clusterList[i]));
         }
       }
     }
@@ -1616,6 +1729,35 @@ bool RagTime5Parser::readClusterScriptData(RagTime5ZoneManager::ClusterScript &c
       MWAW_DEBUG_MSG(("RagTime5ZoneManager::readClusterScriptData: the cluster zone %d seems bad\n", cId));
       continue;
     }
+  }
+  for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
+    RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];
+    if (lnk.m_type==RagTime5ZoneManager::Link::L_List) {
+      readListZone(lnk);
+      continue;
+    }
+    std::stringstream s;
+    s << "DataScript_" << lnk.m_fieldSize;
+    RagTime5StructManager::DataParser defaultParser(s.str());
+    readFixedSizeZone(lnk, defaultParser);
+  }
+
+  return true;
+}
+
+bool RagTime5Parser::readUnknownClusterAData(RagTime5ZoneManager::ClusterUnknownA &cluster)
+{
+  if (!cluster.m_dataLink.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::readUnknownClusterAData: oops do not how to parse the main data\n"));
+  }
+
+  if (!cluster.m_auxilliarLink.empty()) { // list of increasing int sequence....
+    RagTime5ParserInternal::IntListParser parser(2, "ListInt_clustUnknA");
+    readListZone(cluster.m_auxilliarLink, parser);
+  }
+  if (!cluster.m_clusterLink.empty()) {
+    RagTime5ParserInternal::ClustList28Parser parser(*m_zoneManager, "ListClust_clustUnknA");
+    readListZone(cluster.m_clusterLink, parser);
   }
   for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
     RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];

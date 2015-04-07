@@ -162,6 +162,8 @@ protected:
   bool readDocInfoClusterData(RagTime5Zone &zone, MWAWEntry const &entry);
   //! try to read the unknown clusterA data
   bool readClusterScriptData(RagTime5ZoneManager::ClusterScript &cluster);
+  //! try to read the unknown clusterA data
+  bool readUnknownClusterAData(RagTime5ZoneManager::ClusterUnknownA &cluster);
   //! try to read the unknown clusterB data
   bool readUnknownClusterBData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterC data
