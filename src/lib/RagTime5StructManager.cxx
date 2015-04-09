@@ -2468,4 +2468,120 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::TextStyle const
   return o;
 }
 
+////////////////////////////////////////////////////////////
+// zone function
+////////////////////////////////////////////////////////////
+void RagTime5Zone::createAsciiFile()
+{
+  if (m_asciiName.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5Zone::createAsciiFile: can not find the ascii name\n"));
+    return;
+  }
+  if (m_localAsciiFile) {
+    MWAW_DEBUG_MSG(("RagTime5Zone::createAsciiFile: the ascii file already exist\n"));
+  }
+  m_localAsciiFile.reset(new libmwaw::DebugFile(m_input));
+  m_asciiFile = m_localAsciiFile.get();
+  m_asciiFile->open(m_asciiName.c_str());
+}
+
+std::string RagTime5Zone::getZoneName() const
+{
+  switch (m_ids[0]) {
+  case 0:
+    if (m_fileType==F_Data)
+      return "FileHeader";
+    break;
+  case 1: // with g4=1, gd=[1, lastDataZones]
+    if (m_fileType==F_Main)
+      return "ZoneInfo";
+    break;
+  case 3: // with no value or gd=[1,_] (if multiple)
+    if (m_fileType==F_Main)
+      return "Main3A";
+    break;
+  case 4:
+    if (m_fileType==F_Main)
+      return "ZoneLimits,";
+    break;
+  case 5:
+    if (m_fileType==F_Main)
+      return "FileLimits";
+    break;
+  case 6: // gd=[_,_]
+    if (m_fileType==F_Main)
+      return "Main6A";
+    break;
+  case 8: // type=UseCount, gd=[0,num>1], can be multiple
+    if (m_fileType==F_Main)
+      return "UnknCounter8";
+    break;
+  case 10: // type=SingleRef, gd=[1,id], Data id is a list types
+    if (m_fileType==F_Main)
+      return "Types";
+    break;
+  case 11: // type=SingleRef, gd=[1,id]
+    if (m_fileType==F_Main)
+      return "Cluster";
+    break;
+  default:
+    break;
+  }
+  std::stringstream s;
+  switch (m_fileType) {
+  case F_Main:
+    s << "Main" << m_ids[0] << "A";
+    break;
+  case F_Data:
+    s << "Data" << m_ids[0] << "A";
+    break;
+  case F_Empty:
+    s << "unused" << m_ids[0];
+    break;
+  case F_Unknown:
+  default:
+    s << "##zone" << m_subType << ":" << m_ids[0] << "";
+    break;
+  }
+  return s.str();
+}
+
+std::ostream &operator<<(std::ostream &o, RagTime5Zone const &z)
+{
+  o << z.getZoneName();
+  if (z.m_idsFlag[0])
+    o << "[" << z.m_idsFlag[0] << "],";
+  else
+    o << ",";
+  for (int i=1; i<3; ++i) {
+    if (!z.m_kinds[i-1].empty()) {
+      o << z.m_kinds[i-1] << ",";
+      continue;
+    }
+    if (!z.m_ids[i] && !z.m_idsFlag[i]) continue;
+    o << "id" << i << "=" << z.m_ids[i];
+    if (z.m_idsFlag[i]==0)
+      o << "*";
+    else if (z.m_idsFlag[i]!=1)
+      o << ":" << z.m_idsFlag[i] << ",";
+    o << ",";
+  }
+  if (z.m_variableD[0] || z.m_variableD[1])
+    o << "varD=[" << z.m_variableD[0] << "," << z.m_variableD[1] << "],";
+  if (z.m_entry.valid())
+    o << z.m_entry.begin() << "<->" << z.m_entry.end() << ",";
+  else if (!z.m_entriesList.empty()) {
+    o << "ptr=" << std::hex;
+    for (size_t i=0; i< z.m_entriesList.size(); ++i) {
+      o << z.m_entriesList[i].begin() << "<->" << z.m_entriesList[i].end();
+      if (i+1<z.m_entriesList.size())
+        o << "+";
+    }
+    o << std::dec << ",";
+  }
+  if (!z.m_hiLoEndian) o << "loHi[endian],";
+  o << z.m_extra << ",";
+  return o;
+}
+
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
