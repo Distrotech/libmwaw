@@ -648,6 +648,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTime5ClusterManager.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\RagTime5Graph.cxx"
 				>
 			</File>
@@ -661,10 +665,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTime5Text.cxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\RagTime5ZoneManager.cxx"
 				>
 			</File>
 			<File
@@ -1205,6 +1205,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTime5ClusterManager.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\RagTime5Parser.hxx"
 				>
 			</File>
@@ -1214,10 +1218,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTime5Text.hxx"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\lib\RagTime5ZoneManager.hxx"
 				>
 			</File>
 			<File

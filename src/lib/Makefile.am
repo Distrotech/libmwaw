@@ -257,6 +257,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTimeStruct.hxx		\
 	RagTimeText.cxx			\
 	RagTimeText.hxx			\
+	RagTime5ClusterManager.cxx	\
+	RagTime5ClusterManager.hxx	\
 	RagTime5Graph.cxx		\
 	RagTime5Graph.hxx		\
 	RagTime5Parser.cxx		\
@@ -265,8 +267,6 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTime5StructManager.hxx	\
 	RagTime5Text.cxx		\
 	RagTime5Text.hxx		\
-	RagTime5ZoneManager.cxx		\
-	RagTime5ZoneManager.hxx		\
 	SuperPaintParser.cxx		\
 	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\

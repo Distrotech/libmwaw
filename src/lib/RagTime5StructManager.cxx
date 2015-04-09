@@ -37,7 +37,7 @@
 #include "MWAWDebug.hxx"
 #include "MWAWPrinter.hxx"
 
-#include "RagTime5ZoneManager.hxx"
+#include "RagTime5ClusterManager.hxx"
 
 #include "RagTime5StructManager.hxx"
 

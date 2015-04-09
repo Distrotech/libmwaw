@@ -574,6 +574,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\RagTime5ClusterManager.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\RagTime5Graph.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -587,10 +591,6 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\src\lib\RagTime5Text.cxx">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\src\lib\RagTime5ZoneManager.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -755,11 +755,11 @@
     <ClInclude Include="..\..\src\lib\RagTimeSpreadsheet.hxx" />
     <ClInclude Include="..\..\src\lib\RagTimeStruct.hxx" />
     <ClInclude Include="..\..\src\lib\RagTimeText.hxx" />
+    <ClInclude Include="..\..\src\lib\RagTime5ClusterManager.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5Graph.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5Parser.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5StructManager.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5Text.hxx" />
-    <ClInclude Include="..\..\src\lib\RagTime5ZoneManager.hxx" />
     <ClInclude Include="..\..\src\lib\SuperPaintParser.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />
     <ClInclude Include="..\..\src\lib\WingzParser.hxx" />

@@ -49,7 +49,7 @@
 
 #include "RagTime5Parser.hxx"
 #include "RagTime5StructManager.hxx"
-#include "RagTime5ZoneManager.hxx"
+#include "RagTime5ClusterManager.hxx"
 
 #include "RagTime5Text.hxx"
 
@@ -133,7 +133,7 @@ int RagTime5Text::numPages() const
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextStyles(RagTime5ZoneManager::Cluster &cluster)
+bool RagTime5Text::readTextStyles(RagTime5ClusterManager::Cluster &cluster)
 {
   RagTime5TextInternal::FieldParser fieldParser(*this);
   return m_mainParser.readStructZone(cluster, fieldParser, 14);
@@ -142,9 +142,9 @@ bool RagTime5Text::readTextStyles(RagTime5ZoneManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // main zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextZone(RagTime5ZoneManager::Cluster &cluster)
+bool RagTime5Text::readTextZone(RagTime5ClusterManager::Cluster &cluster)
 {
-  RagTime5ZoneManager::Link const &link=cluster.m_dataLink;
+  RagTime5ClusterManager::Link const &link=cluster.m_dataLink;
   if (link.m_ids.size()<2 || !link.m_ids[1]) {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextZone: can not find the data zone\n"));
     return false;
@@ -179,7 +179,7 @@ bool RagTime5Text::readTextZone(RagTime5ZoneManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // link/list definition
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readFieldZones(RagTime5ZoneManager::Cluster &/*cluster*/, RagTime5ZoneManager::Link const &link,
+bool RagTime5Text::readFieldZones(RagTime5ClusterManager::Cluster &/*cluster*/, RagTime5ClusterManager::Link const &link,
                                   bool isDefinition)
 {
   if (link.m_ids.size()<2 || !link.m_ids[1])
@@ -414,7 +414,7 @@ bool RagTime5Text::readFieldPosition(RagTime5Zone &zone, long endPos, int n)
 ////////////////////////////////////////////////////////////
 // link/list definition
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readLinkZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link)
+bool RagTime5Text::readLinkZones(RagTime5ClusterManager::Cluster &cluster, RagTime5ClusterManager::Link const &link)
 {
   if (link.m_ids.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Text::readLinkZones: can not find the first zone id\n"));

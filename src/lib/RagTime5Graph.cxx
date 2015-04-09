@@ -50,7 +50,7 @@
 
 #include "RagTime5Parser.hxx"
 #include "RagTime5StructManager.hxx"
-#include "RagTime5ZoneManager.hxx"
+#include "RagTime5ClusterManager.hxx"
 
 #include "RagTime5Graph.hxx"
 
@@ -206,7 +206,7 @@ int RagTime5Graph::numPages() const
 ////////////////////////////////////////////////////////////
 // main graphic
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicTypes(RagTime5ZoneManager::Link const &link)
+bool RagTime5Graph::readGraphicTypes(RagTime5ClusterManager::Link const &link)
 {
   if (link.empty() || link.m_ids.size()<2) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTypes: call with no zone\n"));
@@ -296,16 +296,16 @@ bool RagTime5Graph::readGraphicTypes(RagTime5ZoneManager::Link const &link)
 ////////////////////////////////////////////////////////////
 // colors
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicColors(RagTime5ZoneManager::Cluster &cluster)
+bool RagTime5Graph::readGraphicColors(RagTime5ClusterManager::Cluster &cluster)
 {
   RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Colors);
   return m_mainParser.readStructZone(cluster, fieldParser, 14);
 }
 
-bool RagTime5Graph::readColorPatternZone(RagTime5ZoneManager::Cluster &cluster)
+bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluster)
 {
   for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
-    RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];
+    RagTime5ClusterManager::Link const &lnk=cluster.m_linksList[i];
     shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(lnk.m_ids[0]);
     if (!data->m_entry.valid()) {
       if (lnk.m_N*lnk.m_fieldSize) {
@@ -386,7 +386,7 @@ bool RagTime5Graph::readColorPatternZone(RagTime5ZoneManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // style
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicStyles(RagTime5ZoneManager::Cluster &cluster)
+bool RagTime5Graph::readGraphicStyles(RagTime5ClusterManager::Cluster &cluster)
 {
   RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Styles);
   return m_mainParser.readStructZone(cluster, fieldParser, 14);
@@ -395,9 +395,9 @@ bool RagTime5Graph::readGraphicStyles(RagTime5ZoneManager::Cluster &cluster)
 ////////////////////////////////////////////////////////////
 // shape
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::ClusterGraphic &cluster)
+bool RagTime5Graph::readGraphicZone(RagTime5ClusterManager::ClusterGraphic &cluster)
 {
-  RagTime5ZoneManager::Link const &link= cluster.m_dataLink;
+  RagTime5ClusterManager::Link const &link= cluster.m_dataLink;
   if (link.m_ids.size()<2 || !link.m_ids[1])
     return false;
   if (link.m_ids.size()>=3 && link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
@@ -406,7 +406,7 @@ bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::ClusterGraphic &cluster
   std::map<int, librevenge::RVNGString> idToNameMap;
   if (!cluster.m_nameLink.empty()) {
     m_mainParser.readUnicodeStringList(cluster.m_nameLink, idToNameMap);
-    cluster.m_nameLink=RagTime5ZoneManager::Link();
+    cluster.m_nameLink=RagTime5ClusterManager::Link();
   }
 
   std::vector<long> decal;
@@ -503,14 +503,14 @@ bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::ClusterGraphic &cluster
   }
   if (!cluster.m_clusterLinks[1].empty()) {
     std::vector<int> list;
-    m_mainParser.readClusterLinkList(cluster.m_clusterLinks[1], RagTime5ZoneManager::Link(), list, "GraphClustLst");
+    m_mainParser.readClusterLinkList(cluster.m_clusterLinks[1], RagTime5ClusterManager::Link(), list, "GraphClustLst");
   }
   // can have some condition formula
   for (int wh=0; wh<2; ++wh) {
-    std::vector<RagTime5ZoneManager::Link> const &list=wh==0 ? cluster.m_conditionFormulaLinks : cluster.m_settingLinks;
+    std::vector<RagTime5ClusterManager::Link> const &list=wh==0 ? cluster.m_conditionFormulaLinks : cluster.m_settingLinks;
     for (size_t i=0; i<list.size(); ++i) {
       if (list[i].empty()) continue;
-      RagTime5ZoneManager::Cluster unknCluster;
+      RagTime5ClusterManager::Cluster unknCluster;
       unknCluster.m_dataLink=list[i];
       RagTime5StructManager::FieldParser defaultParser(wh==0 ? "CondFormula" : "Settings");
       m_mainParser.readStructZone(unknCluster, defaultParser, 0);
@@ -518,15 +518,15 @@ bool RagTime5Graph::readGraphicZone(RagTime5ZoneManager::ClusterGraphic &cluster
   }
 
   for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
-    RagTime5ZoneManager::Link const &lnk=cluster.m_linksList[i];
-    if (lnk.m_type==RagTime5ZoneManager::Link::L_List) {
+    RagTime5ClusterManager::Link const &lnk=cluster.m_linksList[i];
+    if (lnk.m_type==RagTime5ClusterManager::Link::L_List) {
       m_mainParser.readListZone(lnk);
     }
-    else if (lnk.m_type==RagTime5ZoneManager::Link::L_LongList) {
+    else if (lnk.m_type==RagTime5ClusterManager::Link::L_LongList) {
       std::vector<long> list;
       m_mainParser.readLongList(lnk, list);
     }
-    else if (lnk.m_type==RagTime5ZoneManager::Link::L_GraphicTransform)
+    else if (lnk.m_type==RagTime5ClusterManager::Link::L_GraphicTransform)
       readGraphicTransformations(lnk);
     else
       m_mainParser.readFixedSizeZone(lnk, "");
@@ -815,7 +815,7 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
 ////////////////////////////////////////////////////////////
 // transformation
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicTransformations(RagTime5ZoneManager::Link const &link)
+bool RagTime5Graph::readGraphicTransformations(RagTime5ClusterManager::Link const &link)
 {
   if (link.empty() || link.m_ids[0]==0 || link.m_fieldSize<34) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicTransformations: can not find the transformation id\n"));

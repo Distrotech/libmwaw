@@ -49,13 +49,13 @@
 class RagTime5Parser;
 class RagTime5StructManager;
 
-namespace RagTime5ZoneManagerInternal
+namespace RagTime5ClusterManagerInternal
 {
 struct State;
 }
 
 //! basic class used to manage RagTime 5/6 zones
-class RagTime5ZoneManager
+class RagTime5ClusterManager
 {
 public:
   struct Link;
@@ -67,9 +67,9 @@ public:
   friend struct ClusterParser;
 
   //! constructor
-  RagTime5ZoneManager(RagTime5Parser &parser);
+  RagTime5ClusterManager(RagTime5Parser &parser);
   //! destructor
-  ~RagTime5ZoneManager();
+  ~RagTime5ClusterManager();
 
   //! try to read a cluster zone
   bool readCluster(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
@@ -372,7 +372,7 @@ public:
   //! virtual class use to parse the cluster data
   struct ClusterParser {
     //! constructor
-    ClusterParser(RagTime5ZoneManager &parser, int type, std::string const &zoneName) :
+    ClusterParser(RagTime5ClusterManager &parser, int type, std::string const &zoneName) :
       m_parser(parser), m_type(type), m_hiLoEndian(true), m_name(zoneName), m_dataId(0), m_link()
     {
     }
@@ -428,7 +428,7 @@ public:
     //! returns "data"+id+"A" ( followed by the cluster type and name if know)
     std::string getClusterName(int id);
     //! the main parser
-    RagTime5ZoneManager &m_parser;
+    RagTime5ClusterManager &m_parser;
     //! the cluster type
     int m_type;
     //! zone endian
@@ -445,14 +445,14 @@ public:
   };
 protected:
   //! the state
-  shared_ptr<RagTime5ZoneManagerInternal::State> m_state;
+  shared_ptr<RagTime5ClusterManagerInternal::State> m_state;
   //! the main parser
   RagTime5Parser &m_mainParser;
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
 private:
-  RagTime5ZoneManager(RagTime5ZoneManager const &orig);
-  RagTime5ZoneManager operator=(RagTime5ZoneManager const &orig);
+  RagTime5ClusterManager(RagTime5ClusterManager const &orig);
+  RagTime5ClusterManager operator=(RagTime5ClusterManager const &orig);
 };
 
 #endif

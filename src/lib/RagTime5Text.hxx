@@ -51,7 +51,7 @@
 #include "MWAWPosition.hxx"
 
 #include "RagTime5StructManager.hxx"
-#include "RagTime5ZoneManager.hxx"
+#include "RagTime5ClusterManager.hxx"
 
 namespace RagTime5TextInternal
 {
@@ -105,18 +105,18 @@ protected:
   //
 
   //! try to read a main text styles
-  bool readTextStyles(RagTime5ZoneManager::Cluster &cluster);
+  bool readTextStyles(RagTime5ClusterManager::Cluster &cluster);
 
   //! try to read a text zone
-  bool readTextZone(RagTime5ZoneManager::Cluster &cluster);
+  bool readTextZone(RagTime5ClusterManager::Cluster &cluster);
   //! try to read a text unknown zone in data
   bool readTextUnknown(int typeId);
 
   //! try to read a list of link/list definition
-  bool readLinkZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link);
+  bool readLinkZones(RagTime5ClusterManager::Cluster &cluster, RagTime5ClusterManager::Link const &link);
 
   //! try to read a list of field definition
-  bool readFieldZones(RagTime5ZoneManager::Cluster &cluster, RagTime5ZoneManager::Link const &link, bool isDefinition);
+  bool readFieldZones(RagTime5ClusterManager::Cluster &cluster, RagTime5ClusterManager::Link const &link, bool isDefinition);
   //! try to read a field definition
   bool readFieldDefinition(RagTime5Zone &zone, long endPos, int n);
   //! try to read a field position
