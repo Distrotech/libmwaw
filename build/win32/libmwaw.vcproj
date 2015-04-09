@@ -660,6 +660,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTime5Spreadsheet.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\RagTime5StructManager.cxx"
 				>
 			</File>
@@ -1210,6 +1214,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTime5Parser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTime5Spreadsheet.hxx"
 				>
 			</File>
 			<File

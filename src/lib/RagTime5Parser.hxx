@@ -55,6 +55,7 @@ class SubDocument;
 }
 
 class RagTime5Graph;
+class RagTime5Spreadsheet;
 class RagTime5StructManager;
 class RagTime5Text;
 class RagTime5Zone;
@@ -68,6 +69,7 @@ class RagTime5ClusterManager;
 class RagTime5Parser : public MWAWTextParser
 {
   friend class RagTime5Graph;
+  friend class RagTime5Spreadsheet;
   friend class RagTime5Text;
   friend class RagTime5ClusterManager;
   friend struct RagTime5ParserInternal::DocInfoFieldParser;
@@ -93,8 +95,16 @@ protected:
   // interface
   //
 
+  //! returns the cluster manager
+  shared_ptr<RagTime5ClusterManager> getClusterManager();
   //! returns the structure manager
   shared_ptr<RagTime5StructManager> getStructManager();
+
+  //! try to read a graphic cluster (via the graphic manager)
+  bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
+  //! try to read a spreadsheet cluster (via the spreadsheet manager)
+  bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
+
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
@@ -168,8 +178,6 @@ protected:
   bool readUnknownClusterBData(RagTime5ClusterManager::Cluster &cluster);
   //! try to read the unknown clusterC data
   bool readUnknownClusterCData(RagTime5ClusterManager::Cluster &cluster);
-  //! try to read the unknown clusterD data
-  bool readUnknownClusterDData(RagTime5ClusterManager::ClusterUnknownD &cluster);
   //! try to read a list of unknown zone 6 bytes data
   bool readUnknZoneA(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
 
@@ -187,6 +195,9 @@ protected:
   bool readFixedSizeZone(RagTime5ClusterManager::Link const &link, std::string const &name);
   //! try to read a fixed size zone
   bool readFixedSizeZone(RagTime5ClusterManager::Link const &link, RagTime5StructManager::DataParser &parser);
+
+  //! check a cluster list
+  bool checkClusterList(std::vector<int> const &list);
   //! flush unsent zone (debugging function)
   void flushExtra();
 
@@ -199,6 +210,8 @@ protected:
   shared_ptr<RagTime5ParserInternal::State> m_state;
   //! the graph manager
   shared_ptr<RagTime5Graph> m_graphParser;
+  //! the spreadsheet manager
+  shared_ptr<RagTime5Spreadsheet> m_spreadsheetParser;
   //! the text manager
   shared_ptr<RagTime5Text> m_textParser;
   //! the structure manager

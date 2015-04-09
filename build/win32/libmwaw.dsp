@@ -575,6 +575,10 @@ SOURCE=..\..\src\lib\RagTime5Parser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\RagTime5Spreadsheet.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\RagTime5StructManager.cxx
 # End Source File
 # Begin Source File
@@ -1124,6 +1128,10 @@ SOURCE=..\..\src\lib\RagTime5Graph.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTime5Parser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTime5Spreadsheet.hxx
 # End Source File
 # Begin Source File
 

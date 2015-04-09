@@ -74,7 +74,7 @@ public:
   //! try to read a cluster zone
   bool readCluster(RagTime5Zone &zone, ClusterParser &parser, bool warnForUnparsed=true);
   //! try to read a cluster zone
-  shared_ptr<Cluster> readCluster(RagTime5Zone &zone, int type=-1);
+  bool readCluster(RagTime5Zone &zone, shared_ptr<Cluster> &cluster, int type=-1);
   //! try to read the cluster root list (in general Data14)
   bool readClusterMainList(ClusterRoot &root, std::vector<int> &list);
 
@@ -228,13 +228,13 @@ public:
     virtual ~Cluster() {}
     //! the cluster type
     enum Type {
-      C_ColorPattern, C_Fields, C_GraphicData, C_Layout, C_Pipeline,
+      C_ColorPattern, C_Fields, C_Layout, C_Pipeline,
       C_Root, C_Script, C_TextData,
 
       // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
       // unknown clusters
-      C_ClusterA, C_ClusterB, C_ClusterC, C_ClusterD,
+      C_ClusterA, C_ClusterB, C_ClusterC,
 
       C_Unknown
     };
@@ -258,18 +258,6 @@ public:
     std::vector<Link> m_linksList;
     //! the cluster ids
     std::vector<int> m_clusterIdsList;
-  };
-
-  //! the cluster graphic
-  struct ClusterGraphic : public Cluster {
-    //! constructor
-    ClusterGraphic() : Cluster()
-    {
-    }
-    //! destructor
-    virtual ~ClusterGraphic() {}
-    //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10)
-    Link m_clusterLinks[2];
   };
 
   //! the layout cluster ( 4001 zone)
@@ -350,18 +338,6 @@ public:
     //! the first auxilliar data
     Link m_auxilliarLink;
     //! cluster links list of size 28
-    Link m_clusterLink;
-  };
-
-  //! the cluster unknown D data
-  struct ClusterUnknownD : public Cluster {
-    //! constructor
-    ClusterUnknownD() : Cluster(), m_clusterLink()
-    {
-    }
-    //! destructor
-    virtual ~ClusterUnknownD() {}
-    //! cluster links list of size 10
     Link m_clusterLink;
   };
 

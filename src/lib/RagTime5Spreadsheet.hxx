@@ -32,11 +32,11 @@
 */
 
 /*
- * Parser to RagTime 5-6 document ( graphic part )
+ * Parser to RagTime 5-6 document ( spreadsheet part )
  *
  */
-#ifndef RAGTIME5_GRAPH
-#  define RAGTIME5_GRAPH
+#ifndef RAGTIME5_SPREADSHEET
+#  define RAGTIME5_SPREADSHEET
 
 #include <string>
 #include <map>
@@ -53,7 +53,7 @@
 #include "RagTime5StructManager.hxx"
 #include "RagTime5ClusterManager.hxx"
 
-namespace RagTime5GraphInternal
+namespace RagTime5SpreadsheetInternal
 {
 struct State;
 struct FieldParser;
@@ -65,24 +65,21 @@ class RagTime5Parser;
 class RagTime5StructManager;
 class RagTime5Zone;
 
-class MWAWGraphicStyle;
-
-/** \brief the main class to read the graphic part of RagTime 56 file
+/** \brief the main class to read the spreadsheet part of RagTime 56 file
  *
  *
  *
  */
-class RagTime5Graph
+class RagTime5Spreadsheet
 {
-  friend struct RagTime5GraphInternal::FieldParser;
-  friend class RagTime5GraphInternal::SubDocument;
+  friend class RagTime5SpreadsheetInternal::SubDocument;
   friend class RagTime5Parser;
 
 public:
   //! constructor
-  RagTime5Graph(RagTime5Parser &parser);
+  RagTime5Spreadsheet(RagTime5Parser &parser);
   //! destructor
-  virtual ~RagTime5Graph();
+  virtual ~RagTime5Spreadsheet();
 
   /** returns the file version */
   int version() const;
@@ -97,47 +94,16 @@ protected:
 
   // interface with main parser
 
+  //! try to read a spreadsheet cluster
+  bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
 
   //
   // Intermediate level
   //
 
   //
-  // picture
+  // basic
   //
-
-  //! try to read a picture zone
-  bool readPicture(RagTime5Zone &zone);
-  //! try to read a picture list
-  bool readPictureList(RagTime5Zone &zone);
-  //! try to read a picture match zone
-  bool readPictureMatch(RagTime5Zone &zone, bool color);
-
-  //
-  // basic graphic
-  //
-
-  //! try to read a main graphic types
-  bool readGraphicTypes(RagTime5ClusterManager::Link const &link);
-
-  //! try to read a main graphic styles
-  bool readGraphicStyles(RagTime5ClusterManager::Cluster &cluster);
-
-  //! try to read a graphic color zone
-  bool readGraphicColors(RagTime5ClusterManager::Cluster &cluster);
-
-  //! try to read a zone of color and pattern
-  bool readColorPatternZone(RagTime5ClusterManager::Cluster &cluster);
-
-  //! try to read a graphic zone
-  bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
-  //! try to read a graphic unknown zone in data
-  bool readGraphicUnknown(int typeId);
-  //! try to read a graphic
-  bool readGraphic(RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
-
-  //! try to read a graphic transformations zone
-  bool readGraphicTransformations(RagTime5ClusterManager::Link const &link);
 
   //
   // low level
@@ -145,8 +111,8 @@ protected:
 
 
 private:
-  RagTime5Graph(RagTime5Graph const &orig);
-  RagTime5Graph &operator=(RagTime5Graph const &orig);
+  RagTime5Spreadsheet(RagTime5Spreadsheet const &orig);
+  RagTime5Spreadsheet &operator=(RagTime5Spreadsheet const &orig);
 
 protected:
   //
@@ -161,7 +127,7 @@ protected:
   MWAWParserStatePtr m_parserState;
 
   //! the state
-  shared_ptr<RagTime5GraphInternal::State> m_state;
+  shared_ptr<RagTime5SpreadsheetInternal::State> m_state;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
