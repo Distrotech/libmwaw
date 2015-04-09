@@ -168,6 +168,8 @@ protected:
   bool readUnknownClusterBData(RagTime5ZoneManager::Cluster &cluster);
   //! try to read the unknown clusterC data
   bool readUnknownClusterCData(RagTime5ZoneManager::Cluster &cluster);
+  //! try to read the unknown clusterD data
+  bool readUnknownClusterDData(RagTime5ZoneManager::ClusterUnknownD &cluster);
   //! try to read a list of unknown zone 6 bytes data
   bool readUnknZoneA(RagTime5Zone &zone, RagTime5ZoneManager::Link const &link);
 

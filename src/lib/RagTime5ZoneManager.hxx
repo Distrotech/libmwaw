@@ -344,7 +344,7 @@ public:
       // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
       // unknown clusters
-      C_ClusterA, C_ClusterB, C_ClusterC,
+      C_ClusterA, C_ClusterB, C_ClusterC, C_ClusterD,
 
       C_Unknown
     };
@@ -448,6 +448,7 @@ public:
     //! the scriptname if known
     librevenge::RVNGString m_scriptName;
   };
+
   //! the cluster unknown A data
   struct ClusterUnknownA : public Cluster {
     //! constructor
@@ -462,6 +463,17 @@ public:
     Link m_clusterLink;
   };
 
+  //! the cluster unknown D data
+  struct ClusterUnknownD : public Cluster {
+    //! constructor
+    ClusterUnknownD() : Cluster(), m_clusterLink()
+    {
+    }
+    //! destructor
+    virtual ~ClusterUnknownD() {}
+    //! cluster links list of size 10
+    Link m_clusterLink;
+  };
 
   ////////////////////////////////////////////////////////////
   // parser class
@@ -521,10 +533,8 @@ public:
       return (m_hiLoEndian && N==int(0x80000000)) || (!m_hiLoEndian && N==0x8000);
     }
 
-    //! read the first part of a link list (fSz>=32)
-    bool readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
-    //! read the first part of a fixed size list (fSz>=30)
-    bool readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test=false);
+    //! try to read a link header
+    bool readLinkHeader(MWAWInputStreamPtr &input, long fSz, Link &link, long(&values)[5], std::string &message);
     //! returns "data"+id+"A" ( followed by the cluster type and name if know)
     std::string getClusterName(int id);
     //! the main parser

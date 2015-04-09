@@ -481,74 +481,71 @@ std::string RagTime5ZoneManager::ClusterParser::getClusterName(int id)
   return m_parser.getClusterName(id);
 }
 
-bool RagTime5ZoneManager::ClusterParser::readListHeader(MWAWInputStreamPtr &input, int type, Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test)
+bool RagTime5ZoneManager::ClusterParser::readLinkHeader(MWAWInputStreamPtr &input, long fSz, Link &link, long(&values)[5], std::string &msg)
 {
-  link.m_fileType[0]=(long) input->readULong(4);
-  values[0]=(long) input->readULong(4); // sometimes a type
-  if (values[0])
-    f << "type1=" << std::hex << values[0] << std::dec << ",";
-  for (int i=1; i<5; ++i) { // always 0?
-    values[i]=input->readLong(2);
-    if (values[i]) f << "f" << i << "=" << values[i] << ",";
-  }
-  link.m_fileType[1]=(long) input->readULong(2);
-  if (type>=0 && (link.m_fileType[1]&0xFFD7)!=type) {
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readListHeader: find unexpected file type\n"));
-    f << "#fileType=" << std::hex << link.m_fileType[1] << std::dec << ",";
-  }
+  if (fSz<28)
+    return false;
   long pos=input->tell();
-  link.m_type= RagTime5ZoneManager::Link::L_List;
-  if (!RagTime5StructManager::readDataIdList(input, 2, link.m_ids)) {
-    if (test) return false;
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readListHeader: can not read the data id\n"));
-    f << "###noData,";
-    input->seek(pos+8, librevenge::RVNG_SEEK_SET);
-    link=Link();
-    return true;
-  }
-  if (!link.m_ids[1]) {
-    if (test) return false;
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readListHeader: can not read the data id\n"));
-    f << "###noData,";
-  }
-
-  return true;
-}
-
-bool RagTime5ZoneManager::ClusterParser::readFixedSizeListHeader(MWAWInputStreamPtr &input, int type, bool readFieldSize,
-    Link &link, long(&values)[5], libmwaw::DebugStream &f, bool test)
-{
+  std::stringstream s;
   link.m_fileType[0]=(long) input->readULong(4);
-  values[0]=(long) input->readULong(4); // sometimes a type
+  bool shortFixed=link.m_fileType[0]==0x34800||link.m_fileType[0]==0x35800||
+                  link.m_fileType[0]==0x3c052 || link.m_fileType[0]==0x3e800;
+  if (shortFixed) {
+    link.m_type=RagTime5ZoneManager::Link::L_LongList;
+    link.m_fieldSize=4;
+  }
+  else if (fSz<30) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  if (link.m_fileType[0])
+    s << "type1=" << std::hex << link.m_fileType[0] << std::dec << ",";
+  values[0]=(long) input->readULong(4);
   if (values[0])
-    f << "type1=" << std::hex << values[0] << std::dec << ",";
+    s << "f0=" << std::hex << values[0] << std::dec << ",";
   for (int i=1; i<5; ++i) { // always 0?
     values[i]=input->readLong(2);
-    if (values[i]) f << "f" << i << "=" << values[i] << ",";
+    if (values[i]) s << "f" << i << "=" << values[i] << ",";
   }
   link.m_fileType[1]=(long) input->readULong(2);
-  if (type>=0 && (link.m_fileType[1]&0xFFD7)!=type) {
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readFixedSizeListHeader: find unexpected file type\n"));
-    f << "#fileType=" << std::hex << link.m_fileType[1] << std::dec << ",";
+  if (link.m_fileType[1]&7) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
   }
-  if (readFieldSize)
+  bool done=false;
+  if (!shortFixed) {
     link.m_fieldSize=(int) input->readULong(2);
-  long pos=input->tell();
-  if (!RagTime5StructManager::readDataIdList(input, 1, link.m_ids)) {
-    if (test) return false;
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readFixedSizeListHeader: can not read the data id\n"));
-    f << "###noData,";
-    input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-    link=Link();
-    return true;
-  }
-  if (!link.m_ids[0] && readFieldSize) {
-    if (test)
+    if (link.m_fieldSize==0 || link.m_fieldSize==1 || link.m_fieldSize==0x100) {
+      if (fSz<32) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        return false;
+      }
+      input->seek(-2, librevenge::RVNG_SEEK_CUR);
+      if (!RagTime5StructManager::readDataIdList(input, 2, link.m_ids) || !link.m_ids[1]) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        return false;
+      }
+      link.m_fieldSize=0;
+      link.m_type= RagTime5ZoneManager::Link::L_List;
+      done=true;
+    }
+    else if ((link.m_fieldSize%2)!=0 || link.m_fieldSize>=0x100) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
       return false;
-    MWAW_DEBUG_MSG(("RagTime5ZoneManager::ClusterParser::readFixedSizeListHeader: can not read the data id\n"));
-    f << "###noData,";
+    }
   }
+  if (!done && !RagTime5StructManager::readDataIdList(input, 1, link.m_ids)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  if ((link.m_ids[0]==0 && (link.m_fileType[1]&0x20)==0 && link.m_N) ||
+      (link.m_ids[0] && (link.m_fileType[1]&0x20)!=0)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  link.m_fileType[1] &=0xFFDF;
 
+  msg=s.str();
   return true;
 }
 
@@ -655,13 +652,20 @@ struct ColPatCParser : public RagTime5ZoneManager::ClusterParser {
       return false;
     }
 
+    std::string mess;
     RagTime5ZoneManager::Link link;
     link.m_N=N;
     long linkValues[5]; // f0=2b|2d|85|93
-    if (readFixedSizeListHeader(input, 0X40, true, link, linkValues, f)) {
-      f << link << ",";
+    if (readLinkHeader(input,fSz,link,linkValues,mess) && link.m_fieldSize==10) {
+      if (link.m_fileType[1]!=0x40)
+        f << "###fileType1=" << std::hex << link.m_fileType[1] << std::dec << ",";
+      f << link << "," << mess;
       if (!link.empty())
         m_cluster->m_linksList.push_back(link);
+    }
+    else {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::ColPatCParser::parseZone: can not read a link\n"));
+      f << "###link" << link << ",";
     }
     return true;
   }
@@ -762,83 +766,61 @@ struct LayoutCParser : public RagTime5ZoneManager::ClusterParser {
     }
     int val;
     m_link.m_N=N;
+    std::string mess;
     long linkValues[5];
     switch (fSz) {
     case 28:
-      readFixedSizeListHeader(input, 0, false, m_link, linkValues, f);
-      if (m_link.m_fileType[0]==0x35800) {
-        m_what=4;
-        f << "zone[longs],";
-        m_fieldName="zone:longs";
-      }
-      else if (m_link.m_fileType[0]==0x3e800) {
-        m_what=4;
-        f << "list[long0],";
-        m_fieldName="list:longs0";
-      }
-      else {
+    case 30:
+    case 32: {
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
         f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: the field fSz28 type seems bad\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: the field fSz28... type seems bad\n"));
         return true;
       }
-      f << m_link << ",";
-      m_link.m_type=RagTime5ZoneManager::Link::L_LongList;
-      m_link.m_fieldSize=4;
-      return true;
-    case 30: {
-      readFixedSizeListHeader(input, -1, true, m_link, linkValues, f);
+      f << m_link << "," << mess;
       long expectedFileType1=0;
-      if (m_link.m_fileType[0]==0x14b9800) { // 10
+      if (m_link.m_fileType[0]==0x35800) { // fSz=28
+        m_what=4;
+        m_fieldName="zone:longs";
+      }
+      else if (m_link.m_fileType[0]==0x3e800) { // fSz=28
+        m_what=4;
+        m_fieldName="list:longs0";
+      }
+      else if (m_link.m_fileType[0]==0x14b9800) { // fSz=30
         m_linkId=0;
         m_what=3;
         m_fieldName="data0";
         expectedFileType1=0x10;
-      }
-      else if (m_link.m_fileType[0]==0) { // 0
-        m_linkId=1;
-        m_fieldName="pipeline";
-      }
-      else {
-        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: the field fSz30 type seems bad\n"));
-        return true;
-      }
-      if ((m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: fileType1 seems odd[fSz=30]\n"));
-        f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
-      }
-      f << m_fieldName << "," << m_link << ",";
-      return true;
-    }
-    case 32: {
-      readListHeader(input, -1, m_link, linkValues, f);
-      long expectedFileType1=0;
-      if (m_link.m_fileType[0]==0) {
-        expectedFileType1=0x200;
-        m_linkId=3;
-        m_what=4;
-        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
-        m_fieldName="unicodeList";
       }
       else if (m_link.m_fileType[0]==0x47040) {
         m_what=4;
         m_linkId=2;
         m_link.m_name=m_fieldName="settings";
       }
+      else if (m_link.m_fileType[0]==0 && fSz==30) { // fSz=30
+        m_linkId=1;
+        m_fieldName="pipeline";
+      }
+      else if (m_link.m_fileType[0]==0 && fSz==32) {
+        expectedFileType1=0x200;
+        m_linkId=3;
+        m_what=4;
+        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
+        m_fieldName="unicodeList";
+      }
       else {
         f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: the field fSz32 type seems bad\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: the field fSz28... type seems bad\n"));
         return true;
       }
-      if ((m_link.m_fileType[1]&0xFFDF)!=expectedFileType1) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: fileType1 seems odd[fSz=32]\n"));
+      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
         f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
       }
-      f <<  m_fieldName << "," << m_link << ",";
-      return true;
+      break;
     }
     case 36: // follow when it exists the fSz=30 zone, no auxilliar data
-      f << "unicode[def],";
       m_fieldName="unicode[def]";
       for (int i=0; i<2; ++i) { // always 0
         val=(int) input->readLong(2);
@@ -864,9 +846,8 @@ struct LayoutCParser : public RagTime5ZoneManager::ClusterParser {
           f << "_,";
       }
       f << "],";
-      return true;
+      break;
     case 38: // in 1 or 2 exemplar, no auxilliar data
-      f << "settings[Def],";
       m_fieldName="settings[Def]";
       val=(int) input->readULong(4);
       if (val!=0x47040) {
@@ -890,7 +871,6 @@ struct LayoutCParser : public RagTime5ZoneManager::ClusterParser {
       if (val) f << "f5=" << val << ",";
       break;
     case 54: { // can be in multiple exemplar ~ 1 by zone, no auxilliar data
-      f << "data1,";
       m_fieldName="data1";
       for (int i=0; i<2; ++i) { // always 0
         val=(int) input->readLong(2);
@@ -919,13 +899,15 @@ struct LayoutCParser : public RagTime5ZoneManager::ClusterParser {
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
       }
-      return true;
+      break;
     }
     default:
       f << "###fSz=" << fSz << ",";
       MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::LayoutCParser::parseZone: find unexpected file size\n"));
       break;
     }
+    if (!m_fieldName.empty())
+      f << m_fieldName << ",";
     return true;
   }
   //! parse a field
@@ -1518,7 +1500,9 @@ protected:
   {
     f << "header, fl=" << std::hex << flag << std::dec << ",";
     int val;
+    long pos=input->tell();
     long linkValues[5];
+    std::string mess;
     m_link.m_N=N;
     switch (fSz) {
     case 26:  // in general block8 or 9 no auxiallary data
@@ -1541,10 +1525,37 @@ protected:
       }
       break;
     case 28: //expectedN==2 or near 9 or 10...
-      readFixedSizeListHeader(input, 0, false, m_link, linkValues, f);
+    case 30: // field3 and other near 10
+    case 32: {  // expectedN=1|(5|6)| after 8
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        if (fSz==30) {
+          val=(int) input->readLong(4);
+          if (val) f << "N2=" << val << ",";
+          val=(int) input->readULong(4);
+          if (val==0x15e5042) {
+            // first near n=9, second near n=15 with no other data
+            // no auxilliar data expected
+            m_fieldName="unknDataD";
+            for (int i=0; i<4; ++i) { // f0, f3: small number
+              val=(int) input->readULong(4);
+              if (val) f << "f" << i << "=" << val << ",";
+            }
+            break;
+          }
+        }
+        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseZone: the field fSz28... type seems bad\n"));
+        return true;
+      }
+
+      m_what=2;
+      f << m_link << "," << mess;
+      long expectedFileType1=-1, expectedFieldSize=-1;
       if (m_link.m_fileType[0]==0x35800) {
         f << "zone[longs],";
         m_fieldName="zone:longs";
+        m_link.m_name="LongListRoot";
       }
       else if (m_link.m_fileType[0]==0x3e800) {
         if (m_expectedId<2) {
@@ -1556,48 +1567,9 @@ protected:
           m_linkId=5;
         f << "list[long0],";
         m_fieldName="list:longs0";
+        m_link.m_name="LongListRoot";
       }
-      else {
-        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: the field fSz=28 seems bad\n"));
-      }
-      f << m_link << ",";
-      m_link.m_fieldSize=4;
-      m_link.m_type=RagTime5ZoneManager::Link::L_LongList;
-      m_link.m_name="LongListRoot";
-      m_what=2;
-      break;
-    case 30: {
-      input->seek(4, librevenge::RVNG_SEEK_CUR);
-      int typ=(int) input->readULong(4);
-      if (typ==0x15e5042) {
-        // first near n=9, second near n=15 with no other data
-        // no auxilliar data expected
-        input->seek(-8, librevenge::RVNG_SEEK_CUR);
-        val=(int) input->readLong(4);
-        if (val) f << "N2=" << val << ",";
-        input->seek(4, librevenge::RVNG_SEEK_CUR); // seek id
-        m_fieldName="unknDataD";
-        for (int i=0; i<4; ++i) { // f0, f3: small number
-          val=(int) input->readULong(4);
-          if (val) f << "f" << i << "=" << val << ",";
-        }
-        break;
-      }
-      if (typ) {
-        f << "###fType0=" << std::hex << typ << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: the field fSz=30 seems bad\n"));
-        break;
-      }
-      // field3 and other near 10
-      input->seek(-8, librevenge::RVNG_SEEK_CUR);
-      readFixedSizeListHeader(input, -1, true, m_link, linkValues, f);
-      if (m_link.m_ids.empty() || !m_link.m_ids[0]) {
-        f << "#noCluster,";
-        break;
-      }
-      f << m_link << ",";
-      if (m_expectedId<=3) {
+      else if (fSz==30 && m_expectedId<=3  && !linkValues[0]) {
         if (m_expectedId!=3) {
           MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: bad expected N for cluster list id\n"));
           f << "##expectedN=" << m_expectedId << ",";
@@ -1612,53 +1584,56 @@ protected:
         m_link=RagTime5ZoneManager::Link();
         break;
       }
-      if ((m_link.m_fileType[1]&0xFFD7)!=0 || m_link.m_fieldSize!=4) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: find odd definition for cluster id and fSz=1e\n"));
-        f << "##[" << std::hex << m_link.m_fileType[1] << std::dec << ":" << m_link.m_fieldSize << "],";
+      else if (fSz==30 && !linkValues[0]) {
+        expectedFileType1=0;
+        expectedFieldSize=4;
+        m_fieldName="unknDataC";
       }
-      m_fieldName="unknDataC";
-      break;
-    }
-    case 32: // expectedN=1|(5|6)| after 8
-      m_what=2;
-      m_link.m_N=N;
-      readListHeader(input, m_dataId==1 ? 0x200 : -1, m_link, linkValues, f);
-      if (m_dataId==1) {
+      else if (fSz==32 && m_dataId==1) {
         m_fieldName="zone:names";
+        expectedFileType1=0x200;
         m_linkId=0;
         if (linkValues[0]!=0x7d01a) {
           MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: unexpected type for zone[name]\n"));
           f << "##fileType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
         }
-        break;
       }
-      if ((m_link.m_fileType[1]&0xFFD7)==0x8010) {
+      else if (fSz==32 && (m_link.m_fileType[1]&0xFFD7)==0x8010) {
         m_linkId=1;
         m_expectedId=5;
         m_link.m_name=m_fieldName="docInfo";
       }
-      else if ((m_link.m_fileType[1]&0xFFD7)==0xc010) {
+      else if (fSz==32 && (m_link.m_fileType[1]&0xFFD7)==0xc010) {
         m_linkId=2;
         m_expectedId=6;
         m_link.m_name=m_fieldName="unknRootField6";
       }
-      else if (m_link.m_fileType[0]==0x47040 && (m_link.m_fileType[1]&0xFFD7)==0) {
+      else if (fSz==32 && m_link.m_fileType[0]==0x47040 && (m_link.m_fileType[1]&0xFFD7)==0) {
         m_linkId=3;
         m_link.m_name=m_fieldName="settings";
       }
-      else if ((m_link.m_fileType[1]&0xFFD7)==0x10) {
+      else if (fSz==32 && (m_link.m_fileType[1]&0xFFD7)==0x10) {
         m_linkId=4;
         m_link.m_name=m_fieldName="condFormula";
       }
-      else if ((m_link.m_fileType[1]&0xFFD7)==0x310) {
+      else if (fSz==32 && (m_link.m_fileType[1]&0xFFD7)==0x310) {
         // TODO: check what is it: an unicode list ?
         m_link.m_name=m_fieldName="unknDataE";
       }
       else {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: unexpected type1 for zone with fSz=32\n"));
-        f << "##fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
+        f << "###fType0,";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseDataZone: the field fSz=28.. seems bad\n"));
+      }
+      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
+        f << "###fileType1,";
+      }
+      if (expectedFieldSize>0 && m_link.m_fieldSize!=expectedFieldSize) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseZone: fieldSize seems odd[fSz=28...]\n"));
+        f << "###fieldSize,";
       }
       break;
+    }
     case 38:
       m_fieldName="field4";
       val=(int) input->readULong(4);
@@ -2028,25 +2003,18 @@ struct RootChildCParser : public RagTime5ZoneManager::ClusterParser {
     int val;
     m_link.m_N=N;
     long linkValues[5]; // for type=0x30002, f0=3c|60, for fixed size f0=54, other 0
-    if (!isList) {
-      if (readFixedSizeListHeader(input, expectedFileType1, true, m_link, linkValues, f)) {
-        m_link.m_fileType[0]=m_type < 0x30000 ? m_type : m_type-0x30000;
-        f << m_link << ",";
-      }
-      if (fSz==30) return true;
-      for (int i=0; i<2; ++i) { // find 0
-        val=(int) input->readLong(2);
-        if (val) f << "g" << i << "=" << val << ",";
-      }
+    std::string mess;
+    if (!readLinkHeader(input, fSz , m_link, linkValues, mess)) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootChildCParser::parseZone: can not read the link\n"));
+      f << "###link";
       return true;
     }
-
-    if (readListHeader(input, expectedFileType1, m_link, linkValues, f)) {
-      m_link.m_fileType[0]=m_type < 0x30000 ? m_type : m_type-0x30000;
-      f << m_link << ",";
+    m_link.m_fileType[0]=m_type < 0x30000 ? m_type : m_type-0x30000;
+    f << m_link << "," << mess;
+    if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
+      f << "###fileType1,";
     }
-
-    if (fSz==32) return true;
 
     if (m_type==0x20000) {
       std::vector<int> listIds;
@@ -2060,6 +2028,12 @@ struct RootChildCParser : public RagTime5ZoneManager::ClusterParser {
       if ((hasCluster && val!=1) || (!hasCluster && val))
         f << "#hasCluster=" << val << ",";
       for (int i=0; i<2; ++i) { // always 0
+        val=(int) input->readLong(2);
+        if (val) f << "g" << i << "=" << val << ",";
+      }
+    }
+    else if (m_type==0x30000) {
+      for (int i=0; i<2; ++i) { // find 0
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
       }
@@ -2230,7 +2204,16 @@ struct ScriptCParser : public RagTime5ZoneManager::ClusterParser {
 
     m_link.m_N=N;
     long linkValues[5];
-    readListHeader(input, fSz==32 ? 0x600 : 0x10, m_link, linkValues, f);
+    std::string mess;
+    if (!readLinkHeader(input,fSz,m_link,linkValues,mess)) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::ScriptCParser::parseZone: can not read the link\n"));
+      f << "###link,";
+      return true;
+    }
+    if ((m_link.m_fileType[1]&0xFFD7)!=(fSz==32 ? 0x600 : 0x10)) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::RootCParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
+      f << "###fileType1,";
+    }
     if (fSz==32) {
       m_what=2;
       m_fieldName="unicodeList";
@@ -2241,7 +2224,8 @@ struct ScriptCParser : public RagTime5ZoneManager::ClusterParser {
       m_fieldName="scriptLink";
       m_link.m_name="scriptDataA";
     }
-    f << m_link << ",";
+    f << m_link << "," << mess;
+
     if (fSz==32) return true;
 
     for (int i=0; i<2; ++i) { // g0: small number between 38 and 64, g1: 0|-1
@@ -2347,47 +2331,47 @@ struct StyleCParser : public RagTime5ZoneManager::ClusterParser {
         return true;
       }
       m_link.m_N=N;
-      long linkValues[5];
-      if (fSz==28) { // n=2,3 with fSz=28, type=0x3e800, can have no data
-        if (m_dataId!=2 && m_dataId!=3) {
+      if (fSz==28 || fSz==32) { // n=2,3 with fSz=28, type=0x3e800, can have no data
+        if ((fSz==28 && m_dataId!=2 && m_dataId!=3) || (fSz==32 && m_dataId!=4))  {
           MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: dataId seems bad\n"));
           f << "##n=" << m_dataId << ",";
         }
-        readFixedSizeListHeader(input, 0, false, m_link, linkValues, f);
+        long linkValues[5];
+        std::string mess;
+        if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: link seems bad\n"));
+          f << "###link,";
+          return true;
+        }
+        f << m_link << "," << mess;
         if (m_link.m_fileType[0]==0x35800) {
           m_what=2;
-          f << "zone[longs],";
           m_fieldName="zone:longs";
         }
         else if (m_link.m_fileType[0]==0x3e800) {
           m_what=3;
-          f << "list[long0],";
           m_fieldName="list:longs0";
+        }
+        else if (fSz==32) {
+          m_fieldName="unicodeList";
+          m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
+          m_what=4;
         }
         else {
           f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
           MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: the field 2,3 type seems bad\n"));
           return true;
         }
-        f << m_link << ",";
-        m_link.m_fieldSize=4;
-        m_link.m_type=RagTime5ZoneManager::Link::L_LongList;
-        if (m_cluster->m_type!=RagTime5ZoneManager::Cluster::C_FormatStyles && !m_link.m_ids.empty() && m_link.m_ids[0]) {
+        if ((m_link.m_fileType[1]&0xFFD7)!=(fSz==28 ? 0 : 0x200)) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
+          f << "###fileType1,";
+        }
+        if (fSz==28 && m_cluster->m_type!=RagTime5ZoneManager::Cluster::C_FormatStyles && !m_link.m_ids.empty() && m_link.m_ids[0]) {
           f << "###unexpected";
           MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: find link for not format data\n"));
         }
-        return true;
-      }
-      if (fSz==32) {
-        readListHeader(input, 0x200, m_link, linkValues, f);
-        if (m_dataId!=4) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::StyleCParser::parseZone: dataId seems bad\n"));
-          f << "##n=" << m_dataId << ",";
-        }
-        m_fieldName="unicodeList";
-        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
-        f << m_link << ",";
-        m_what=4;
+        if (!m_fieldName.empty())
+          f << m_fieldName << ",";
         return true;
       }
       if (m_dataId!=1) {
@@ -2476,7 +2460,6 @@ struct StyleCParser : public RagTime5ZoneManager::ClusterParser {
       m_link.m_name=m_fieldName="graphStyle";
       m_cluster->m_type=RagTime5ZoneManager::Cluster::C_GraphicStyles;
     }
-
     return true;
   }
   //! parse a field
@@ -2782,17 +2765,53 @@ protected:
   {
     f << "fl=" << std::hex << flag << std::dec << ",";
     long pos=input->tell();
+    long endPos=pos+fSz-6;
     int val;
     long linkValues[5];
+    std::string mess("");
+    m_link.m_N=N;
     switch (fSz) {
     case 28:
     case 29:
+    case 30:
+    case 32:
     case 34:
-      readFixedSizeListHeader(input, fSz==28 ? 0 : 0x50, false, m_link, linkValues, f);
+    case 36: {
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        if (fSz==36) {
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
+          val=(int) input->readLong(4);
+          long type=(int) input->readULong(4);
+          if (type==0x7d01a||(type&0xFFFFFF8F)==0x14e818a) {
+            m_what=2;
+            f << "type=" << std::hex << type << std::dec << ",";
+            if (val) f << "#f0=" << val << ",";
+            for (int i=0; i<2; ++i) { // f1=0|7-11
+              val=(int) input->readLong(4);
+              if (val) f << "f" << i+1 << "=" << val << ",";
+            }
+            val=(int) input->readULong(2);
+            if ((val&0xFFD7)!=0x10) {
+              MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected type1[fSz36]\n"));
+              f << "#fileType1=" << std::hex << val << std::dec << ",";
+            }
+            // increasing sequence
+            for (int i=0; i<3; ++i) { // g0=3-a, g1=g0+1, g2=g1+1
+              val=(int) input->readLong(4);
+              if (val) f << "g" << i << "=" << val << ",";
+            }
+            break;
+          }
+        }
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected link\n"));
+        f << "###link";
+        return true;
+      }
+      long expectedFileType1=0;
       if (m_link.m_fileType[0]==0x34800) {
         m_what=1;
         if (linkValues[0]!=0x14ff840) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected linkValue[0]\n"));
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected linkValue[0]\n"));
           f << "#lValues0,";
         }
         // linkValues[2]=4|5|8
@@ -2809,25 +2828,97 @@ protected:
       else if (m_link.m_fileType[0]==0x3c052) {
         m_what=1;
         if (linkValues[0]!=0x1454877) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected linkValue[0]\n"));
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected linkValue[0]\n"));
           f << "#lValues0,";
         }
         // linkValues[2]=5|8|9
         m_fieldName="zone:longs2";
+        expectedFileType1=0x50;
+      }
+      else if (m_link.m_fileType[0]==0x9f840) {
+        if (m_link.m_fieldSize!=34 && m_link.m_fieldSize!=36) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected fieldSize[fSz28...]\n"));
+          f << "###fielSize,";
+        }
+        expectedFileType1=0x10;
+        if (linkValues[0]!=0x1500040) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected linkValues[fSz28...]\n"));
+          f << "#linkValue0,";
+        }
+        // linkValues[2]=0|5
+        m_link.m_type=RagTime5ZoneManager::Link::L_GraphicTransform;
+        m_what=2;
+        m_fieldName="graphTransform";
+      }
+      else if (m_link.m_fileType[0]==0x33000) {
+        if (m_link.m_fieldSize!=4) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected fieldSize[fSz28...]\n"));
+          f << "###fielSize,";
+        }
+        m_fieldName="listLn2";
+      }
+      else if (fSz==30 && m_link.m_fieldSize==12) {
+        m_what=2;
+        m_linkId=2;
+        m_fieldName="clustLink";
+        m_link.m_type=RagTime5ZoneManager::Link::L_ClusterLink;
+        expectedFileType1=0xd0;
+      }
+      else if (fSz==30 && m_link.m_fileType[0]==0) {
+        if (m_link.m_fieldSize!=8) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected fieldSize[fSz28...]\n"));
+          f << "###fielSize,";
+        }
+        m_fieldName="listLn3";
+      }
+      else if (m_link.m_fileType[0]==0x14ff040) {
+        if (linkValues[0]!=0x14ff040) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: find unexpected linkValues[fSz28...]\n"));
+          f << "#linkValue0,";
+        }
+        m_what=1;
+        m_linkId=1;
+        m_link.m_name=m_fieldName="condFormula";
+        expectedFileType1=0x10;
+      }
+      else if (fSz==32 && (m_link.m_fileType[1]&0xFFD7)==0x200) {
+        m_what=1;
+        m_fieldName="unicodeList";
+        m_linkId=0;
+        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
+        expectedFileType1=0x200;
+      }
+      else if (fSz==36 && m_link.m_fileType[0]==0) {
+        m_what=1;
+        m_link.m_name=m_fieldName="clustLink2";
+        m_linkId=3;
+        expectedFileType1=0x10;
       }
       else {
         f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: the field fSz28 type seems bad\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: the field fSz28 type seems bad\n"));
         return true;
       }
-      f << m_link << ",";
-      m_link.m_type=RagTime5ZoneManager::Link::L_LongList;
-      m_link.m_fieldSize=4;
-      if (fSz==28) break;
+      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseDataZone: fileType1 seems odd[fSz=28...]\n"));
+        f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
+      }
+      f << m_link << "," << mess;
+      m_link.m_fileType[0]=0;
+      int remain=int(endPos-input->tell());
+      if (remain==0) break;
+      if (remain==4) {
+        for (int i=0; i<2; ++i) { // g0=3a-4f, g1=0|-1
+          val=(int) input->readLong(2);
+          if (val)
+            f << "g" << i << "=" << val << ",";
+        }
+        break;
+      }
       val=(int) input->readLong(1);
       if (val!=1) // always 1
         f << "g0=" << val << ",";
-      if (fSz==29) break;
+      if (remain<6) break;
       val=(int) input->readLong(1);
       if (val) // always 0
         f << "g1=" << val << ",";
@@ -2836,140 +2927,6 @@ protected:
         if (val)
           f << "g" << i+2 << "=" << val << ",";
       }
-      break;
-    case 30: {
-      if (!readFixedSizeListHeader(input, -1, true, m_link, linkValues, f))
-        break;
-      m_link.m_N=N;
-      switch (m_link.m_fieldSize) {
-      case 4:
-        if (m_link.m_fileType[0]!=0x33000) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType0[fSz30]\n"));
-          f << "#fileType0,";
-        }
-        if ((m_link.m_fileType[1]&0xFFD7)) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz30]\n"));
-          f << "#fileType1";
-        }
-        m_fieldName="listLn2";
-        break;
-      case 8:
-        if (m_link.m_fileType[0]) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType0[fSz30]\n"));
-          f << "#fileType0,";
-        }
-        if ((m_link.m_fileType[1]&0xFFD7)) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz30]\n"));
-          f << "#fileType1,";
-        }
-        m_fieldName="listLn3";
-        break;
-      case 12:
-        // m_link.m_fileType[0]: between 3f and 61
-        if ((m_link.m_fileType[1]&0xFFD7)!=0xd0) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz30]\n"));
-          f << "#fileType1,";
-        }
-        m_what=2;
-        m_linkId=2;
-        m_fieldName="clustLink";
-        m_link.m_type=RagTime5ZoneManager::Link::L_ClusterLink;
-        break;
-      case 34:
-      case 36:
-        if (m_link.m_fileType[0]!=0x9f840) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType0[fSz30]\n"));
-          f << "#fileType0,";
-        }
-        if ((m_link.m_fileType[1]&0xFFD7)!=0x10) { // 10 or 18
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz30]\n"));
-          f << "#fileType1,";
-        }
-        if (linkValues[0]!=0x1500040) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected linkValues[fSz30]\n"));
-          f << "#linkValue0,";
-        }
-        // linkValues[2]=0|5
-        m_link.m_type=RagTime5ZoneManager::Link::L_GraphicTransform;
-        m_what=2;
-        m_fieldName="graphTransform";
-        break;
-      default:
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fieldSize[fSz30]\n"));
-        f << "##fSz";
-      }
-      f << m_link << ",";
-      m_link.m_fileType[0]=0;
-      break;
-    }
-    case 32:
-      if (!readListHeader(input, -1, m_link, linkValues, f))
-        break;
-      m_what=1;
-      m_link.m_type=RagTime5ZoneManager::Link::L_List;
-      m_link.m_N=N;
-      if ((m_link.m_fileType[1]&0xFFD7)==0x200) {
-        m_fieldName="unicodeList";
-        m_linkId=0;
-        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
-      }
-      else if ((m_link.m_fileType[1]&0xFFD7)==0x10) {
-        if (m_link.m_fileType[0]!=0x14ff040 || linkValues[0]!=0x14ff040) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected linkValues[fSz32]\n"));
-          f << "#linkValue0,";
-        }
-        m_linkId=1;
-        m_link.m_name=m_fieldName="condFormula";
-      }
-      else {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz32]\n"));
-        f << "#fileType1,";
-      }
-      f << m_link;
-      break;
-    case 36: { // either a list zone or a type 7d01a, 14e818a zone?
-      val=(int) input->readLong(4);
-      long type=(int) input->readULong(4);
-      if (type==0x7d01a||(type&0xFFFFFF8F)==0x14e818a) {
-        m_what=2;
-        f << "type=" << std::hex << type << std::dec << ",";
-        if (val) f << "#f0=" << val << ",";
-        for (int i=0; i<2; ++i) { // f1=0|7-11
-          val=(int) input->readLong(4);
-          if (val) f << "f" << i+1 << "=" << val << ",";
-        }
-        val=(int) input->readULong(2);
-        if ((val&0xFFD7)!=0x10) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected type1[fSz36]\n"));
-          f << "#fileType1=" << std::hex << val << std::dec << ",";
-        }
-        // increasing sequence
-        for (int i=0; i<3; ++i) { // g0=3-a, g1=g0+1, g2=g1+1
-          val=(int) input->readLong(4);
-          if (val) f << "g" << i << "=" << val << ",";
-        }
-        break;
-      }
-      if (type) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected type[fSz36]\n"));
-        f << "##type=" << std::hex << type << std::dec << ",";
-        break;
-      }
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      if (!readListHeader(input, 0x10, m_link, linkValues, f))
-        break;
-      m_what=1;
-      m_link.m_type=RagTime5ZoneManager::Link::L_List;
-      m_link.m_N=N;
-      if ((m_link.m_fileType[1]&0xFFD7)==0x10) {
-        m_link.m_name=m_fieldName="clustLink2";
-        m_linkId=3;
-      }
-      else {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::GraphCParser::parseZone: find unexpected fileType1[fSz36]\n"));
-        f << "##fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << type << ",";
-      }
-      f << m_link << ",";
       break;
     }
     case 91:
@@ -3164,8 +3121,8 @@ private:
 //
 struct UnkAParser : public RagTime5ZoneManager::ClusterParser {
   //! constructor
-  UnkAParser(RagTime5ZoneManager &parser, int type, libmwaw::DebugFile &ascii) :
-    ClusterParser(parser, type, "ClustUnkA"), m_cluster(new RagTime5ZoneManager::ClusterUnknownA), m_what(-1), m_linkId(-1), m_fieldName(""), m_asciiFile(ascii)
+  UnkAParser(RagTime5ZoneManager &parser, int type) :
+    ClusterParser(parser, type, "ClustUnkA"), m_cluster(new RagTime5ZoneManager::ClusterUnknownA), m_what(-1), m_linkId(-1), m_fieldName("")
   {
     m_cluster->m_type=RagTime5ZoneManager::Cluster::C_ClusterA;
   }
@@ -3262,85 +3219,68 @@ protected:
   {
     f << "fl=" << std::hex << flag << std::dec << ",";
     long pos=input->tell();
-    long linkValues[5];
+    m_link.m_N=N;
     switch (fSz) {
     case 28:
-      readFixedSizeListHeader(input, 0, false, m_link, linkValues, f);
-      if (m_link.m_fileType[0]==0x35800) {
-        m_what=1;
-        m_fieldName="zone:longs";
-      }
-      else if (m_link.m_fileType[0]==0x3e800) {
-        m_what=1;
-        m_fieldName="list:longs0";
-      }
-      else {
+    case 32:
+    case 36: {
+      long linkValues[5];
+      std::string mess;
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        if (fSz==36 && linkValues[0]==0x17d4842) {
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
+          f << "type=17d4842,";
+          int val=(int) input->readLong(4);
+          if (val) f << "#f0=" << val << ",";
+          input->seek(4, librevenge::RVNG_SEEK_CUR);
+          for (int i=0; i<2; ++i) {
+            val=(int) input->readLong(4);
+            if (val) f << "f" << i+1 << "=" << val << ",";
+          }
+          val=(int) input->readULong(2);
+          if ((val&0xFFD7)!=0x10) {
+            MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: find unexpected type1[fSz36]\n"));
+            f << "#fileType1=" << std::hex << val << std::dec << ",";
+          }
+          // increasing sequence
+          for (int i=0; i<3; ++i) { // g0=4, g1=g0+1, g2=g1+1
+            val=(int) input->readLong(4);
+            if (val) f << "g" << i << "=" << val << ",";
+          }
+          break;
+        }
         f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: the field fSz28 type seems bad\n"));
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: the field fSz28... type seems bad\n"));
         return true;
       }
-      f << m_link << ",";
-      m_link.m_type=RagTime5ZoneManager::Link::L_LongList;
-      break;
-    case 32:
-      if (!readListHeader(input, 0, m_link, linkValues, f))
-        break;
-      if (m_link.m_fileType[0]!=0x80045080) {
-        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: the field fSz32 type seems bad\n"));
-      }
       m_what=1;
-      m_link.m_type=RagTime5ZoneManager::Link::L_List;
-      m_link.m_N=N;
-      m_link.m_name="listInt_clustUnknA";
-      m_fieldName="listInt";
-      m_linkId=0;
-      f << m_link << ",";
-      break;
-    case 36: { // either a list zone or a type 17d4842 or a list
-      int val=(int) input->readLong(4);
-      long type=(int) input->readULong(4);
-      if (type==0x17d4842) {
-        f << "type=" << std::hex << type << std::dec << ",";
-        if (val) f << "#f0=" << val << ",";
-        for (int i=0; i<2; ++i) {
-          val=(int) input->readLong(4);
-          if (val) f << "f" << i+1 << "=" << val << ",";
-        }
-        val=(int) input->readULong(2);
-        if ((val&0xFFD7)!=0x10) {
-          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: find unexpected type1[fSz36]\n"));
-          f << "#fileType1=" << std::hex << val << std::dec << ",";
-        }
-        // increasing sequence
-        for (int i=0; i<3; ++i) { // g0=4, g1=g0+1, g2=g1+1
-          val=(int) input->readLong(4);
-          if (val) f << "g" << i << "=" << val << ",";
-        }
-        break;
+      long expectedFileType1=0;
+      if (m_link.m_fileType[0]==0x35800)
+        m_fieldName="zone:longs";
+      else if (m_link.m_fileType[0]==0x3e800)
+        m_fieldName="list:longs0";
+      else if (m_link.m_fileType[0]==0x80045080) {
+        m_link.m_name="listInt_clustUnknA";
+        m_fieldName="listInt";
+        m_linkId=0;
       }
-      if (type) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: find unexpected type[fSz36]\n"));
-        f << "##type=" << std::hex << type << std::dec << ",";
-        break;
-      }
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      if (!readListHeader(input, 0x10, m_link, linkValues, f))
-        break;
-      m_what=1;
-      m_link.m_type=RagTime5ZoneManager::Link::L_List;
-      m_link.m_N=N;
-      if ((m_link.m_fileType[1]&0xFFD7)==0x10) {
+      else if (fSz==36 && m_link.m_fileType[0]==0) {
+        expectedFileType1=0x10;
         // field of sz=28, dataId + ?
         m_linkId=1;
         m_link.m_name="listClust_clustUnknA";
         m_fieldName="listClust";
       }
       else {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: find unexpected fileType1[fSz36]\n"));
-        f << "##fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << type << ",";
+        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: the field fSz28... type seems bad\n"));
+        return true;
       }
-      f << m_link << ",";
+      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkACParser::parseZone: fileType1 seems odd[fSz=28...]\n"));
+        f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
+      }
+      f << m_link << "," << mess;
       break;
     }
     default:
@@ -3451,13 +3391,305 @@ protected:
   int m_linkId;
   //! the actual field name
   std::string m_fieldName;
-  //! the ascii file
-  libmwaw::DebugFile &m_asciiFile;
 private:
   //! copy constructor (not implemented)
   UnkAParser(UnkAParser const &orig);
   //! copy operator (not implemented)
   UnkAParser &operator=(UnkAParser const &orig);
+};
+
+//
+//! low level: parser of unknown cluster d
+//
+struct UnkDCParser : public RagTime5ZoneManager::ClusterParser {
+  //! constructor
+  UnkDCParser(RagTime5ZoneManager &parser, int type) :
+    ClusterParser(parser, type, "ClustUnkD"), m_cluster(new RagTime5ZoneManager::ClusterUnknownD), m_what(-1), m_linkId(-1), m_fieldName("")
+  {
+    m_cluster->m_type=RagTime5ZoneManager::Cluster::C_ClusterD;
+  }
+  //! return the current cluster
+  shared_ptr<RagTime5ZoneManager::Cluster> getCluster()
+  {
+    return m_cluster;
+  }
+  //! end of a start zone call
+  void endZone()
+  {
+    if (m_link.empty())
+      return;
+    switch (m_linkId) {
+    case 0:
+      if (m_cluster->m_nameLink.empty())
+        m_cluster->m_nameLink=m_link;
+      else {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::endZone: oops the name link is already set\n"));
+        m_cluster->m_linksList.push_back(m_link);
+      }
+      break;
+    case 1:
+      if (m_cluster->m_clusterLink.empty())
+        m_cluster->m_clusterLink=m_link;
+      else {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::endZone: oops the cluster link is already set\n"));
+        m_cluster->m_linksList.push_back(m_link);
+      }
+      break;
+    default:
+      if (m_what==0) {
+        if (m_cluster->m_dataLink.empty())
+          m_cluster->m_dataLink=m_link;
+        else {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::endZone: oops the main link is already set\n"));
+          m_cluster->m_linksList.push_back(m_link);
+        }
+      }
+      else
+        m_cluster->m_linksList.push_back(m_link);
+      break;
+    }
+  }
+  //! parse a zone
+  bool parseZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    m_what=m_linkId=-1;
+    m_fieldName="";
+    if (N==-5)
+      return parseHeaderZone(input,fSz,N,flag,f);
+    if (N<0) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseZone: expected N value\n"));
+      f << "###N=" << N << ",";
+      return true;
+    }
+    return parseDataZone(input, fSz, N, flag, f);
+  }
+  //! parse a field
+  bool parseField(RagTime5StructManager::Field const &field, int /*m*/, libmwaw::DebugStream &f)
+  {
+    if (!m_fieldName.empty())
+      f << m_fieldName << ",";
+    switch (m_what) {
+    case 1: // list link
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
+        f << "pos=[";
+        for (size_t i=0; i<field.m_longList.size(); ++i)
+          f << field.m_longList[i] << ",";
+        f << "],";
+        m_link.m_longList=field.m_longList;
+        break;
+      }
+      if (field.m_type==RagTime5StructManager::Field::T_Unstructured && field.m_fileType==0xce017) {
+        // a small value 2|4|a|1c|40
+        f << "unkn="<<field.m_extra << ",";
+        break;
+      }
+      // only with long2 list and with unk=[10-15]
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xcf042) {
+        f << "unkn=[";
+        for (size_t j=0; j<field.m_longList.size(); ++j) {
+          if (field.m_longList[j]==0)
+            f << "_,";
+          else
+            f << field.m_longList[j] << ",";
+        }
+        break;
+      }
+
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseField: find unexpected list link field\n"));
+      f << "###" << field;
+      break;
+    default:
+      f << field;
+      break;
+    }
+    return true;
+  }
+protected:
+  //! parse a data block
+  bool parseDataZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    // seems to begin by 34,[58]^{0|1},69,71,16,
+    f << "fl=" << std::hex << flag << std::dec << ",";
+    long pos=input->tell();
+    bool ok=true;
+    int val;
+    long linkValues[5];
+    std::string mess;
+    m_link.m_N=N;
+    switch (fSz) {
+    case 28:
+    case 29:
+    case 30:
+    case 32:
+    case 34:
+    case 36: {
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        if (fSz==36) {
+          ok=false;
+          break;
+        }
+        f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseDataZone: the field fSz28... type seems bad\n"));
+        return true;
+      }
+      long expectedFileType1=0;
+      m_what=1;
+      if (m_link.m_fileType[0]==0x35800)
+        m_fieldName="zone:longs";
+      else if (m_link.m_fileType[0]==0x3e800)
+        m_fieldName="list:longs0";
+      else if (m_link.m_fileType[0]==0x3c052) {
+        if (linkValues[0]!=0x1454877) {
+          MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseDataZone: find unexpected linkValue[0]\n"));
+          f << "#lValues0,";
+        }
+        // linkValues[2]=5|8|9
+        expectedFileType1=0x50;
+        m_fieldName="zone:longs2";
+      }
+      else if (fSz==30 && m_link.m_fieldSize==12) { // find link to checkbox, ...
+        expectedFileType1=0xd0;
+        m_fieldName="clustLink";
+        m_link.m_type=RagTime5ZoneManager::Link::L_ClusterLink;
+        m_linkId=1;
+      }
+      else if (fSz==32 && m_link.m_fileType[0]==0) {
+        expectedFileType1=0x200;
+        m_linkId=0;
+        m_link.m_type=RagTime5ZoneManager::Link::L_UnicodeList;
+      }
+      else if (fSz==34 && m_link.m_fileType[0]==0) {
+        expectedFileType1=0x10;
+        m_fieldName="data1_clustUnkD";
+        m_link.m_name="Data1_clustUnkD";
+      }
+      else if (fSz==34 && m_link.m_fieldSize==0xa) {
+        expectedFileType1=-1;
+        m_fieldName="data2";
+      }
+      else if (fSz==34 && m_link.m_fieldSize==0x16) {
+        expectedFileType1=-1;
+        m_fieldName="data3";
+      }
+      else if (fSz==34 && m_link.m_fieldSize==0x18) {
+        expectedFileType1=-1;
+        m_fieldName="data4";
+      }
+      else if (fSz==36 && m_link.m_fileType[0]==0) {
+        m_fieldName="listLink";
+        expectedFileType1=0x10;
+      }
+      else {
+        f << "###fType=" << m_link << ",";
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseDataZone: the field fSz28 type seems bad\n"));
+        return true;
+      }
+      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
+        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseDataZone: fileType1 seems odd[fSz=28...]\n"));
+        f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
+      }
+      m_link.m_fileType[0]=0;
+      f << m_link << "," << mess;
+      if (fSz==29) {
+        val=(int) input->readLong(1);
+        if (val!=1) // always 1
+          f << "g0=" << val << ",";
+      }
+      break;
+    }
+    default:
+      ok=false;
+      break;
+    }
+    if (!m_fieldName.empty())
+      f << m_fieldName << ",";
+    if (ok)
+      return true;
+    f << "unparsed,";
+    if ((fSz==0x22||fSz==0x27||fSz==0x32||fSz==0x34) && N>0) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      if (readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        m_link.m_N=N;
+        m_fieldName="UnknFixZone";
+        f << m_fieldName << "," << m_link << "," << mess;
+        m_link.m_fileType[0]=linkValues[0];
+      }
+      else
+        m_link=RagTime5ZoneManager::Link();
+    }
+
+    return true;
+  }
+  //! parse the header zone
+  bool parseHeaderZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    f << "header, fl=" << std::hex << flag << std::dec << ",";
+    m_fieldName="header";
+    m_what=0;
+    if (N!=-5 || m_dataId!=0 || fSz != 134) {
+      f << "###N=" << N << ",fSz=" << fSz << ",";
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseHeaderZone: find unexpected main field\n"));
+      return true;
+    }
+    int val;
+    for (int i=0; i<2; ++i) { // always 0?
+      val=(int) input->readLong(2);
+      if (val) f << "f" << i+1 << "=" << val << ",";
+    }
+    val=(int) input->readLong(2);
+    f << "id=" << val << ",";
+    val=(int) input->readULong(2);
+    if (m_type>0 && val!=m_type) {
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseHeaderZone: unexpected zone type\n"));
+      f << "##zoneType=" << std::hex << val << std::dec << ",";
+    }
+    for (int i=0; i<9; ++i) { // f1=0|7-b, f3=0|8-b
+      val=(int) input->readULong(2);
+      if (val)
+        f << "f" << i << "=" << val << ",";
+    }
+    for (int i=0; i<2; ++i) { // g0=0|1, g1=0|1
+      val=(int) input->readULong(1);
+      if (val)
+        f << "g" << i << "=" << val << ",";
+    }
+    val=(int) input->readULong(2); // [02][08]0[12c]
+    if (val) f << "fl=" << std::hex << val << std::dec << ",";
+    for (int i=0; i<12; ++i) { // h1=2, h3=0|3, h5=3|4, h7=h5+1, h9=h7+1, h11=h9+1
+      val=(int) input->readULong(2);
+      if (val)
+        f << "h" << i << "=" << val << ",";
+    }
+    std::vector<int> listIds;
+    if (!RagTime5StructManager::readDataIdList(input, 2, listIds)) {
+      f << "##field,";
+      MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnkDCParser::parseHeaderZone: can not read the field definitions\n"));
+    }
+    else if (listIds[0] || listIds[1]) { // fielddef and fieldpos
+      RagTime5ZoneManager::Link fieldLink;
+      fieldLink.m_type=RagTime5ZoneManager::Link::L_ClusterLink;
+      fieldLink.m_ids=listIds;
+      m_cluster->m_fieldClusterLink=fieldLink;
+      f << "fields," << fieldLink << ",";
+    }
+    if (!m_fieldName.empty())
+      f << m_fieldName << ",";
+    return true;
+  }
+
+  //! the current cluster
+  shared_ptr<RagTime5ZoneManager::ClusterUnknownD> m_cluster;
+  //! a index to know which field is parsed :  0: main, 1: list
+  int m_what;
+  //! the link id: 0: unicode, 1: clust link
+  int m_linkId;
+  //! the actual field name
+  std::string m_fieldName;
+private:
+  //! copy constructor (not implemented)
+  UnkDCParser(UnkDCParser const &orig);
+  //! copy operator (not implemented)
+  UnkDCParser &operator=(UnkDCParser const &orig);
 };
 
 //
@@ -3495,9 +3727,6 @@ struct UnknownCParser : public RagTime5ZoneManager::ClusterParser {
       break;
     case 1:
       m_cluster->m_settingLinks.push_back(m_link);
-      break;
-    case 2:
-      m_cluster->m_conditionFormulaLinks.push_back(m_link);
       break;
     default:
       if (m_what==0 || m_what==2) {
@@ -3572,6 +3801,16 @@ struct UnknownCParser : public RagTime5ZoneManager::ClusterParser {
         f << "unkn="<<field.m_extra << ",";
         break;
       }
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xcf042) {
+        f << "unkn=[";
+        for (size_t j=0; j<field.m_longList.size(); ++j) {
+          if (field.m_longList[j]==0)
+            f << "_,";
+          else
+            f << field.m_longList[j] << ",";
+        }
+        break;
+      }
       MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnknownCParser::parseField: find unexpected list link field\n"));
       f << "###" << field;
       break;
@@ -3623,6 +3862,9 @@ protected:
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     bool ok=false;
     int val;
+    m_link.m_N=N;
+    long linkValues[5];
+    std::string mess("");
     switch (fSz) {
     case 28: {
       m_link.m_fileType[0]=(int) input->readULong(4);
@@ -3663,11 +3905,9 @@ protected:
       break;
     }
     case 30: {
-      long linkValues[5];
-      if (!readFixedSizeListHeader(input, -1, true, m_link, linkValues, f))
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
         break;
       ok=true;
-      m_link.m_N=N;
       if (m_link.m_fileType[0]==0x9f840) {
         if (m_link.m_fileType[1]!=0x10) // 10 or 18
           f << "f1=" << m_link.m_fileType[1] << ",";
@@ -3684,14 +3924,13 @@ protected:
         m_fieldName="listLn2";
         m_asciiFile.addDelimiter(pos+16,'|');
       }
-      f << m_link << ",";
+      f << m_link << "," << mess;
       break;
     }
     case 32:
     case 36:
     case 41: {
-      long linkValues[5];
-      if (!readListHeader(input, -1, m_link, linkValues, f, true))
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
         break;
       ok=true;
       m_what=3;
@@ -3713,15 +3952,9 @@ protected:
         m_linkId=1;
         m_link.m_name=m_fieldName="settings";
       }
-      // fSz=41 is the field list
-      // todo 0x80045080 is a list of 2 int
-      // fileType[1]==4030: layout list
-      else if (m_link.m_fileType[1]==0x30 && fSz==32) {
-        m_linkId=2;
-        m_link.m_name=m_fieldName="condFormula";
-      }
       else
         m_fieldName="listLink";
+      f << m_link << "," << mess;
       /* checkme:
          link.m_fileType[1]==20|0 is a list of fields
          link.m_fileType[1]==1010|1038 is a list of sequence of 16 bytes
@@ -3774,11 +4007,10 @@ protected:
     }
     if ((fSz==0x22||fSz==0x27||fSz==0x32||fSz==0x34) && N>0) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      long linkValues[5];
-      if (readFixedSizeListHeader(input, -1, true, m_link, linkValues, f, true) && m_link.m_fieldSize>0) {
+      if (readLinkHeader(input, fSz, m_link, linkValues, mess) && m_link.m_fieldSize>0) {
         m_link.m_N=N;
         m_fieldName="UnknFixZone";
-        f << m_fieldName << "," << m_link << ",";
+        f << m_fieldName << "," << m_link << "," << mess;
         m_link.m_fileType[0]=linkValues[0];
       }
       else
@@ -3826,108 +4058,6 @@ protected:
       for (int i=0; i<15; ++i) { // always 0
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
-      }
-      break;
-    }
-    case 104:
-    case 109: { // f0=0|2|3, f1=0|3
-      m_fieldName="sz104";
-      for (int i=0; i<2; ++i) {
-        val=(int) input->readLong(4);
-        if (val) f << "f" << i << "=" << val << ",";
-      }
-      for (int i=0; i<5; ++i) {
-        val=(int) input->readLong(2);
-        static int const(expected[])= {2, 0, 0x2000, 0, 0x2710};
-        if (val!=expected[i]) f << "f" << i+2 << "=" << val << ",";
-      }
-      val=(int) input->readLong(4);
-      if (val!=0x3f7ff5) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnknownCParser::parseHeaderZone: unexpected type [104|109]\n"));
-        f << "#fieldType=" << std::hex << val << std::dec << ",";
-      }
-      for (int i=0; i<2; ++i) { // always 1,1 ?
-        val=(int) input->readLong(1);
-        if (val!=1) f << "fl" << i << "=" << val << ",";
-      }
-      float dim[4];
-      for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "dim=" << Vec2f(dim[0],dim[1]) << ",sz=" << Vec2f(dim[2],dim[3]) << ",";
-      for (int i=0; i<5; ++i) { // fl2=708|718|f18|...|7d4b, fl3=0|4, f5=800|900|8000,fl6=0|1|a
-        val=(int) input->readULong(2);
-        if (val) f << "fl" << i+2 << "=" << std::hex << val << std::dec << ",";
-      }
-      for (int i=0; i<4; ++i) { // some selection ?
-        val= (int) input->readLong(4);
-        if ((i<2&&val)||(i>=2&&val!=0x7FFFFFFF))
-          f << "g" << i << "=" << val << ",";
-      }
-      for (int i=0; i<6; ++i) { // h2=0|1|3|8
-        val= (int) input->readLong(2);
-        if (val) f << "h" << i << "=" << val << ",";
-      }
-      // find 5b84|171704|171804|172d84, so unsure
-      m_link.m_fileType[0]=input->readLong(4);
-      if (m_link.m_fileType[0])
-        f << "fieldType1=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
-      std::vector<int> listIds;
-      long actPos=input->tell();
-      if (!RagTime5StructManager::readDataIdList(input, 1, listIds)) {
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnknownCParser::parseHeaderZone: can not find the data[104|109]\n"));
-        f << "##noData,";
-        m_link.m_ids.clear();
-        input->seek(actPos+2, librevenge::RVNG_SEEK_SET);
-      }
-      else if (listIds[0]) { // find always with a block of size 0...
-        RagTime5ZoneManager::Link unknLink;
-        unknLink=RagTime5ZoneManager::Link::L_UnknownItem;
-        unknLink.m_name="UnknMain104-109";
-        unknLink.m_ids.push_back(listIds[0]);
-        f << unknLink << ",";
-        m_cluster->m_linksList.push_back(unknLink);
-      }
-      for (int i=0; i<2; ++i) { // always 0
-        val= (int) input->readLong(2);
-        if (val) f << "h" << i+6 << "=" << val << ",";
-      }
-      if (fSz==104) break;
-      int dim2[2];
-      for (int i=0; i<2; ++i) dim2[i]=(int) input->readLong(2);
-      f << "dim2=" << Vec2i(dim2[0], dim2[1]) << ",";
-      val= (int) input->readLong(1); // 0 or 1
-      if (val) f << "h8=" << val << ",";
-      break;
-    }
-    case 134: {
-      for (int i=0; i<9; ++i) { // f1=0|7-b, f3=0|8-b
-        val=(int) input->readULong(2);
-        if (val)
-          f << "f" << i << "=" << val << ",";
-      }
-      for (int i=0; i<2; ++i) { // g0=0|1, g1=0|1
-        val=(int) input->readULong(1);
-        if (val)
-          f << "g" << i << "=" << val << ",";
-      }
-      val=(int) input->readULong(2); // [02][08]0[12c]
-      if (val) f << "fl=" << std::hex << val << std::dec << ",";
-      for (int i=0; i<12; ++i) { // h1=2, h3=0|3, h5=3|4, h7=h5+1, h9=h7+1, h11=h9+1
-        val=(int) input->readULong(2);
-        if (val)
-          f << "h" << i << "=" << val << ",";
-      }
-      std::vector<int> listIds;
-      if (!RagTime5StructManager::readDataIdList(input, 2, listIds)) {
-        f << "##field,";
-        MWAW_DEBUG_MSG(("RagTime5ZoneManagerInternal::UnknownCParser::parseHeaderZone: can not read the field definitions\n"));
-        break;
-      }
-      if (listIds[0] || listIds[1]) { // fielddef and fieldpos
-        RagTime5ZoneManager::Link fieldLink;
-        fieldLink.m_type=RagTime5ZoneManager::Link::L_ClusterLink;
-        fieldLink.m_ids=listIds;
-        m_cluster->m_fieldClusterLink=fieldLink;
-        f << "fields," << fieldLink << ",";
       }
       break;
     }
@@ -4037,7 +4167,7 @@ protected:
   shared_ptr<RagTime5ZoneManager::Cluster> m_cluster;
   //! a index to know which field is parsed :  0: main, 1: linkdef, 2: textZone(store in mainData), 3: list
   int m_what;
-  //! the link id: 0: unicode, 1: setting, 2: condition
+  //! the link id: 0: unicode, 1: setting
   int m_linkId;
   //! the actual field name
   std::string m_fieldName;
@@ -4169,12 +4299,21 @@ shared_ptr<RagTime5ZoneManager::Cluster> RagTime5ZoneManager::readCluster(RagTim
   default: {
     long fSz, N, debHeaderPos;
     getClusterBasicHeaderInfo(zone, N, fSz, debHeaderPos);
-    if (fSz==118)
+    switch (fSz) {
+    case 104:
+    case 109:
+      parser.reset(new RagTime5ZoneManagerInternal::UnkAParser(*this, zoneType));
+      break;
+    case 118:
       parser.reset(new RagTime5ZoneManagerInternal::GraphCParser(*this, zoneType));
-    else if (fSz==104||fSz==109)
-      parser.reset(new RagTime5ZoneManagerInternal::UnkAParser(*this, zoneType, zone.ascii()));
-    else
+      break;
+    case 134:
+      parser.reset(new RagTime5ZoneManagerInternal::UnkDCParser(*this, zoneType));
+      break;
+    default:
       parser.reset(new RagTime5ZoneManagerInternal::UnknownCParser(*this, zoneType, zone.ascii()));
+      break;
+    }
     break;
   }
   }
