@@ -104,7 +104,8 @@ protected:
   bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a spreadsheet cluster (via the spreadsheet manager)
   bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
-
+  //! try to read a text cluster (via the text manager)
+  bool readTextCluster(RagTime5Zone &zone, int zoneType);
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);

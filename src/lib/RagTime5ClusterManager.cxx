@@ -47,16 +47,34 @@
 /** Internal: the structures of a RagTime5ClusterManager */
 namespace RagTime5ClusterManagerInternal
 {
+//! cluster information
+struct ClusterInformation {
+  //! constructor
+  ClusterInformation() : m_type(-1), m_name("")
+  {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, ClusterInformation const &info)
+  {
+    if (info.m_type>=0)
+      o << "typ=" << std::hex << std::hex << info.m_type << std::dec << ",";
+    if (!info.m_name.empty())
+      o << info.m_name.cstr() << ",";
+    return o;
+  }
+  //! the cluster type
+  int m_type;
+  //! the cluster name
+  librevenge::RVNGString m_name;
+};
 //! Internal: the state of a RagTime5ClusterManager
 struct State {
   //! constructor
-  State() : m_idToClusterTypeMap(), m_idToClusterNameMap()
+  State() : m_idToClusterInfoMap()
   {
   }
-  //! map id to cluster type
-  std::map<int, int> m_idToClusterTypeMap;
-  //! map id to cluster name
-  std::map<int, librevenge::RVNGString> m_idToClusterNameMap;
+  //! map id to cluster information map
+  std::map<int, ClusterInformation> m_idToClusterInfoMap;
 };
 }
 
@@ -109,10 +127,8 @@ std::string RagTime5ClusterManager::getClusterName(int id)
   if (!id) return "";
   std::stringstream s;
   s << "data" << id << "A";
-  if (m_state->m_idToClusterTypeMap.find(id)!=m_state->m_idToClusterTypeMap.end())
-    s << ":" << std::hex << m_state->m_idToClusterTypeMap.find(id)->second << std::dec;
-  if (m_state->m_idToClusterNameMap.find(id)!=m_state->m_idToClusterNameMap.end())
-    s << ":" << m_state->m_idToClusterNameMap.find(id)->second.cstr();
+  if (m_state->m_idToClusterInfoMap.find(id)!=m_state->m_idToClusterInfoMap.end())
+    s << "[" << m_state->m_idToClusterInfoMap.find(id)->second << "]";
   return s.str();
 }
 
@@ -174,9 +190,10 @@ bool RagTime5ClusterManager::readClusterMainList(RagTime5ClusterManager::Cluster
     f << "data" << listIds[0] << "A,";
     int val=(int) input->readULong(2); // the type
     if (val) f << "type=" << std::hex << val << std::dec << ",";
-    m_state->m_idToClusterTypeMap[listIds[0]]=val;
-    if (!name.empty())
-      m_state->m_idToClusterNameMap[listIds[0]]=name;
+    RagTime5ClusterManagerInternal::ClusterInformation info;
+    info.m_type=val;
+    info.m_name=name;
+    m_state->m_idToClusterInfoMap[listIds[0]]=info;
     lists.push_back(listIds[0]);
     val=(int) input->readLong(2); // always 0?
     if (val) f << "#f1=" << val << ",";
@@ -249,8 +266,9 @@ bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, RagTime5ClusterMana
   libmwaw::DebugStream f;
   f.str("");
   f << "Entries(" << parser.getZoneName() << ")[" << zone << "]:";
-  if (m_state->m_idToClusterNameMap.find(zone.m_ids[0])!=m_state->m_idToClusterNameMap.end())
-    f << m_state->m_idToClusterNameMap.find(zone.m_ids[0])->second.cstr() << ",";
+  if (m_state->m_idToClusterInfoMap.find(zone.m_ids[0])!=m_state->m_idToClusterInfoMap.end() &&
+      !m_state->m_idToClusterInfoMap.find(zone.m_ids[0])->second.m_name.empty())
+    f << m_state->m_idToClusterInfoMap.find(zone.m_ids[0])->second.m_name.cstr() << ",";
   int val;
   for (int i=0; i<4; ++i) { // f0=f1=0, f2=1, f3=small number
     static int const(expected[])= {0,0,1,0};
@@ -2767,14 +2785,6 @@ struct UnknownCParser : public RagTime5ClusterManager::ClusterParser {
       return;
     switch (m_linkId) {
     case 0:
-      if (m_cluster->m_nameLink.empty())
-        m_cluster->m_nameLink=m_link;
-      else {
-        MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::endZone: oops the name link is already set\n"));
-        m_cluster->m_linksList.push_back(m_link);
-      }
-      break;
-    case 1:
       m_cluster->m_settingLinks.push_back(m_link);
       break;
     default:
@@ -2956,22 +2966,9 @@ protected:
       if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
         break;
       ok=true;
-      if (m_link.m_fileType[0]==0x9f840) {
-        if (m_link.m_fileType[1]!=0x10) // 10 or 18
-          f << "f1=" << m_link.m_fileType[1] << ",";
-        m_link.m_fileType[1]=0;
-        m_link.m_type=RagTime5ClusterManager::Link::L_GraphicTransform;
-        m_fieldName="graphTransform";
-      }
-      else if ((m_link.m_fileType[1]==0xd0||m_link.m_fileType[1]==0xd8) && m_link.m_fieldSize==12) {
-        m_fieldName="clustLink";
-        m_link.m_type=RagTime5ClusterManager::Link::L_ClusterLink;
-      }
-      else {
-        m_link.m_fileType[0]=0;
-        m_fieldName="listLn2";
-        m_asciiFile.addDelimiter(pos+16,'|');
-      }
+      m_link.m_fileType[0]=0;
+      m_fieldName="listLn2";
+      m_asciiFile.addDelimiter(pos+16,'|');
       f << m_link << "," << mess;
       break;
     }
@@ -2984,20 +2981,14 @@ protected:
       m_what=3;
       m_link.m_type=RagTime5ClusterManager::Link::L_List;
       m_link.m_N=N;
-      if ((m_link.m_fileType[1]&0xFFD7)==0x200 || (m_link.m_fileType[1]&0xFFD7)==0x600) {
-        m_fieldName="unicodeList";
-        if (linkValues[0]==0x7d01a) m_fieldName+="[layout]";
-        m_linkId=0;
-        m_link.m_type=RagTime5ClusterManager::Link::L_UnicodeList;
-      }
-      else if (m_link.m_fileType[0]==0x47040) {
+      if (m_link.m_fileType[0]==0x47040) {
         if (m_link.m_fileType[1]==0x20)
           f << "hasNoPos,";
         else if (m_link.m_fileType[1]) {
           MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseDataZone[settings]: find unexpected flags\n"));
           f << "###flags=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
         }
-        m_linkId=1;
+        m_linkId=0;
         m_link.m_name=m_fieldName="settings";
       }
       else
@@ -3109,98 +3100,6 @@ protected:
       }
       break;
     }
-    case 135:
-    case 140:
-    case 143: {
-      m_fieldName="sz135";
-      for (int i=0; i<2; ++i) { // f0=9-5d, f1=0
-        val=(int) input->readLong(4);
-        if (val)
-          f << "f" << i << "=" << val << ",";
-      }
-      val=(int) input->readLong(1); // 0|1
-      if (val)
-        f << "fl=" << val << ",";
-      val=(int) input->readULong(2);
-      if (val) // [08]0[08][049]
-        f << "fl2=" << std::hex << val << std::dec << ",";
-      val=(int) input->readLong(1); // 1|1d
-      if (val!=1)
-        f << "fl3=" << val << ",";
-      val=(int) input->readULong(2); // alway 10
-      if (val!=0x10)
-        f << "f2=" << val << ",";
-      val=(int) input->readLong(4);
-      if (val)
-        f << "f3=" << val << ",";
-      for (int i=0; i<11; ++i) { // g8=40|60
-        val=(int) input->readLong(2);
-        if (val)
-          f << "g" << i << "=" << val << ",";
-      }
-      val=(int) input->readLong(1); // always 1
-      if (val!=1)
-        f << "fl4=" << val << ",";
-      if (fSz==140) {
-        for (int i=0; i<5; ++i) { // unsure find only 0 here
-          val=(int) input->readLong(1);
-          if (val)
-            f << "flA" << i << "=" << val << ",";
-        }
-      }
-
-      for (int i=0; i<2; ++i) { // always 1,2
-        val=(int) input->readLong(4);
-        if (val!=i+1)
-          f << "h" << i << "=" << val << ",";
-      }
-      for (int i=0; i<2; ++i) { // always 0,4
-        val=(int) input->readLong(2);
-        if (val)
-          f << "h" << i+2 << "=" << val << ",";
-      }
-      for (int i=0; i<4; ++i) { // always h4=3, h5=small number, h6=h5+1
-        val=(int) input->readLong(4);
-        if (val)
-          f << "h" << i+4 << "=" << val << ",";
-      }
-      for (int i=0; i<2; ++i) {  // always 1,4
-        val=(int) input->readLong(2);
-        if (val)
-          f << "h" << i+8 << "=" << val << ",";
-      }
-      val=(int) input->readULong(4);
-      if (val!=0x5555)
-        f << "#fileType=" << std::hex << val << std::dec << ",";
-      val=(int) input->readULong(4);
-      if (val!=0x18000)
-        f << "#fileType2=" << std::hex << val << std::dec << ",";
-      for (int i=0; i<5; ++i) { // always 0
-        val=(int) input->readLong(2);
-        if (val)
-          f << "j" << i << "=" << val << ",";
-      }
-      for (int i=0; i<5; ++i) { // j5=0|5, j6=0|5, j7=small number, j8=0|5
-        val=(int) input->readLong(4);
-        if (val)
-          f << "j" << i+5 << "=" << val << ",";
-      }
-      f << "IDS=[";
-      for (int i=0; i<2; ++i) // unsure, junk
-        f << std::hex << input->readULong(4) << std::dec << ",";
-      f << "],";
-      val=(int) input->readULong(2); // c00|cef
-      if (val)
-        f << "fl5=" << std::hex << val << std::dec << ",";
-      if (fSz==135||fSz==140)
-        break;
-      for (int i=0; i<4; ++i) { // always 0
-        val=(int) input->readLong(2);
-        if (val)
-          f << "k" << i << "=" << val << ",";
-      }
-      break;
-    }
     default:
       // ADDME: MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseHeaderZone: find unexpected file size\n"));
       f << "unknMain,##fSz=" << fSz << ",";
@@ -3215,7 +3114,7 @@ protected:
   shared_ptr<RagTime5ClusterManager::Cluster> m_cluster;
   //! a index to know which field is parsed :  0: main, 1: linkdef, 2: textZone(store in mainData), 3: list
   int m_what;
-  //! the link id: 0: unicode, 1: setting
+  //! the link id: 1: setting
   int m_linkId;
   //! the actual field name
   std::string m_fieldName;
@@ -3303,8 +3202,8 @@ int RagTime5ClusterManager::getClusterZoneType(RagTime5Zone &zone)
 
 bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, shared_ptr<RagTime5ClusterManager::Cluster> &cluster, int zoneType)
 {
-  if (zoneType==-1 && m_state->m_idToClusterTypeMap.find(zone.m_ids[0])!=m_state->m_idToClusterTypeMap.end())
-    zoneType=m_state->m_idToClusterTypeMap.find(zone.m_ids[0])->second;
+  if (zoneType==-1 && m_state->m_idToClusterInfoMap.find(zone.m_ids[0])!=m_state->m_idToClusterInfoMap.end())
+    zoneType=m_state->m_idToClusterInfoMap.find(zone.m_ids[0])->second.m_type;
   // something is bad, try to retrieve the correct zone type using heuristic
   if (zoneType==-1)
     zoneType=getClusterZoneType(zone);
@@ -3356,6 +3255,11 @@ bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, shared_ptr<RagTime5
       return m_mainParser.readGraphicCluster(zone, zoneType);
     case 134:
       return m_mainParser.readSpreadsheetCluster(zone, zoneType);
+    case 135:
+    case 140:
+    case 143:
+      // checkme also 208 and 216
+      return m_mainParser.readTextCluster(zone, zoneType);
     default:
       parser.reset(new RagTime5ClusterManagerInternal::UnknownCParser(*this, zoneType, zone.ascii()));
       break;

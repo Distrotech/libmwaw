@@ -376,6 +376,11 @@ bool RagTime5Parser::readSpreadsheetCluster(RagTime5Zone &zone, int zoneType)
   return m_spreadsheetParser->readSpreadsheetCluster(zone, zoneType);
 }
 
+bool RagTime5Parser::readTextCluster(RagTime5Zone &zone, int zoneType)
+{
+  return m_textParser->readTextCluster(zone, zoneType);
+}
+
 shared_ptr<RagTime5Zone> RagTime5Parser::getDataZone(int dataId) const
 {
   if (m_state->m_dataIdZoneMap.find(dataId)==m_state->m_dataIdZoneMap.end())
@@ -1163,6 +1168,7 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
     switch (link.m_type) {
     case RagTime5ClusterManager::Link::L_FieldsList:
     case RagTime5ClusterManager::Link::L_Graphic:
+    case RagTime5ClusterManager::Link::L_LinkDef:
     case RagTime5ClusterManager::Link::L_List:
     case RagTime5ClusterManager::Link::L_LongList:
     case RagTime5ClusterManager::Link::L_Text:
@@ -1191,7 +1197,6 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
       dAscFile.addNote(f.str().c_str());
       break;
     }
-    case RagTime5ClusterManager::Link::L_LinkDef:
     case RagTime5ClusterManager::Link::L_Unknown:
     default:
       readFixedSizeZone(link, "");
