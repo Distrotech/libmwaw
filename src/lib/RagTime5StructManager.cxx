@@ -283,7 +283,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
 {
   libmwaw::DebugStream f;
   long debPos=input->tell();
-  if ((fSz && (fSz<4 || debPos+fSz<endPos)) || (!fSz && debPos+5>endPos)) {
+  if ((fSz>0 && (fSz<4 || debPos+fSz<endPos)) || (fSz<=0 && debPos+5>endPos)) {
     MWAW_DEBUG_MSG(("RagTime5StructManager::readField: the zone seems too short\n"));
     return false;
   }
@@ -295,7 +295,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
   field.m_fileType=type;
   bool complex=(int) input->readULong(1)==0xc0;
   input->seek(-1, librevenge::RVNG_SEEK_CUR);
-  if (fSz==0) {
+  if (fSz<=0) {
     if (!readCompressedLong(input, endPos, fSz) || fSz<=0 || input->tell()+fSz>endPos) {
       MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read the data size\n"));
       input->seek(debPos, librevenge::RVNG_SEEK_SET);
@@ -1310,11 +1310,11 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
     field.m_fieldList.push_back(child);
   }
   if (input->tell()+4<endDataPos) {
+    MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some data\n"));
     ascFile.addDelimiter(input->tell(),'|');
     input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
     return true;
   }
-  MWAW_DEBUG_MSG(("RagTime5StructManager::readField: can not read some data\n"));
   input->seek(endDataPos, librevenge::RVNG_SEEK_SET);
   field.m_extra=f.str();
   return true;

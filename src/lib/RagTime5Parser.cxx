@@ -1231,8 +1231,8 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone, RagTime5ClusterMana
 
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
-
-  f << "Entries(ClustLink)[" << zone << "]:";
+  std::string zoneName=link.m_name.empty() ? "ClustLink" : link.m_name;
+  f << "Entries(" << zoneName << ")[" << zone << "]:";
   if (link.m_N*link.m_fieldSize>zone.m_entry.length() || link.m_fieldSize!=12) {
     MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLinkList: bad fieldSize/N for zone %d\n", link.m_ids[0]));
     f << "###";
@@ -1246,7 +1246,7 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone, RagTime5ClusterMana
   for (int i=0; i<link.m_N; ++i) {
     long pos=input->tell();
     f.str("");
-    f << "ClustLink-" << i << ":";
+    f << zoneName << "-" << i << ":";
     std::vector<int> listIds;
     if (!m_structManager->readDataIdList(input, 1, listIds)) {
       MWAW_DEBUG_MSG(("RagTime5Parser::readClusterLinkList: a link seems bad\n"));
@@ -1277,8 +1277,10 @@ bool RagTime5Parser::readClusterLinkList(RagTime5Zone &zone, RagTime5ClusterMana
     input->seek(pos+12, librevenge::RVNG_SEEK_SET);
   }
   if (input->tell()!=zone.m_entry.end()) {
+    f.str("");
+    f << zoneName << ":end";
     ascFile.addPos(input->tell());
-    ascFile.addNote("ClustLink:end");
+    ascFile.addNote(f.str().c_str());
   }
   return true;
 }

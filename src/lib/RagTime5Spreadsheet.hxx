@@ -101,6 +101,15 @@ protected:
   // Intermediate level
   //
 
+  //! try to read a spreadsheet unknown zone 1
+  bool readUnknownZone1(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
+  //! try to read a spreadsheet unknown zone 2
+  bool readUnknownZone2(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
+  //! try to read a spreadsheet unknown zone 3
+  bool readUnknownZone3(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
+  //! try to read a spreadsheet unknown zone 4
+  bool readUnknownZone4(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
+
   //
   // basic
   //

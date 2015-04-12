@@ -1836,7 +1836,7 @@ struct RootChildCParser : public RagTime5ClusterManager::ClusterParser {
   {
     if ((m_dataId==0 && flag!=0x30) || (m_dataId==1 && flag !=0x30))
       f << "fl=" << std::hex << flag << std::dec << ",";
-    bool ok=false, isList=true;
+    bool ok=false;
     int expectedFileType1=0;
     switch (m_type) {
     case 0x10000:
@@ -1854,7 +1854,6 @@ struct RootChildCParser : public RagTime5ClusterManager::ClusterParser {
     case 0x30000:
       ok=m_dataId==0 && fSz==34;
       expectedFileType1=0x50;
-      isList=false;
       break;
     case 0x30002:
       if (m_dataId==0 && fSz==40) {
@@ -1864,7 +1863,6 @@ struct RootChildCParser : public RagTime5ClusterManager::ClusterParser {
       else if (m_dataId==1 && fSz==30) {
         ok=true;
         expectedFileType1=0x50;
-        isList=false;
       }
       break;
     case 0x30003:
@@ -2604,7 +2602,7 @@ protected:
         m_fieldName="zone:longs";
       else if (m_link.m_fileType[0]==0x3e800)
         m_fieldName="list:longs0";
-      else if (m_link.m_fileType[0]==0x80045080) {
+      else if (m_link.m_fileType[0]==(long) 0x80045080) {
         m_link.m_name="listInt_clustUnknA";
         m_fieldName="listInt";
         m_linkId=0;
