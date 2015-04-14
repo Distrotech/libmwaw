@@ -415,8 +415,8 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
       break;
     }
     field.m_type=Field::T_2Long;
-    field.m_longValue[0]=(long) input->readLong(2);
     field.m_name="2xint";
+    field.m_longValue[0]=(long) input->readLong(2);
     field.m_longValue[1]=(long) input->readLong(2);
     return true;
   case 0x7d01a:

@@ -102,6 +102,8 @@ protected:
 
   //! try to read a graphic cluster (via the graphic manager)
   bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
+  //! try to read a picture cluster (via the graphic manager)
+  bool readPictureCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a spreadsheet cluster (via the spreadsheet manager)
   bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a text cluster (via the text manager)
@@ -132,8 +134,6 @@ protected:
 
   //! try to read the different cluster zones
   bool readClusterZones();
-  //! try to read the cluster root list (in general Data14)
-  bool readClusterRootList(RagTime5ClusterManager::ClusterRoot &root, std::set<int> &seens);
   //! try to read a cluster zone
   bool readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read a cluster link zone
@@ -173,14 +173,10 @@ protected:
   bool readDocInfoClusterData(RagTime5Zone &zone, MWAWEntry const &entry);
   //! try to read the unknown clusterA data
   bool readClusterScriptData(RagTime5ClusterManager::ClusterScript &cluster);
-  //! try to read the unknown clusterA data
-  bool readUnknownClusterAData(RagTime5ClusterManager::ClusterUnknownA &cluster);
   //! try to read the unknown clusterB data
   bool readUnknownClusterBData(RagTime5ClusterManager::Cluster &cluster);
   //! try to read the unknown clusterC data
   bool readUnknownClusterCData(RagTime5ClusterManager::Cluster &cluster);
-  //! try to read a list of unknown zone 6 bytes data
-  bool readUnknZoneA(RagTime5Zone &zone, RagTime5ClusterManager::Link const &link);
 
   //! try to read a structured zone
   bool readStructZone(RagTime5ClusterManager::Cluster &cluster, RagTime5StructManager::FieldParser &parser, int headerSz);

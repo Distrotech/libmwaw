@@ -110,10 +110,10 @@ protected:
   //! try to read a main text styles
   bool readTextStyles(RagTime5ClusterManager::Cluster &cluster);
 
-  //! try to read a text zone
-  bool readTextZone(RagTime5ClusterManager::Cluster &cluster);
-  //! try to read a text unknown zone in data
-  bool readTextUnknown(int typeId);
+  //! try to read a text style position correspondance ?
+  bool readTextUnknown0(int typeId);
+  //! try to read a list of unknown zone 6 bytes data
+  bool readTextUnknown1(int typeId);
 
   //! try to read a list of link/list definition
   bool readLinkZones(RagTime5ClusterManager::Cluster &cluster, RagTime5ClusterManager::Link const &link);

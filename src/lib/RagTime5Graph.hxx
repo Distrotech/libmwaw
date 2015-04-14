@@ -139,6 +139,9 @@ protected:
   //! try to read a graphic transformations zone
   bool readGraphicTransformations(RagTime5ClusterManager::Link const &link);
 
+  //! try to read a picture zone
+  bool readPictureCluster(RagTime5Zone &zone, int zoneType);
+
   //
   // low level
   //

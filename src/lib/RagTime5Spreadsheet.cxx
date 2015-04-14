@@ -763,7 +763,7 @@ protected:
     long pos=input->tell();
     //long endPos=pos+fSz-6;
     int val;
-    long linkValues[5];
+    long linkValues[4];
     std::string mess;
     m_link.m_N=N;
     switch (fSz) {

@@ -76,14 +76,16 @@ public:
   //! try to read a cluster zone
   bool readCluster(RagTime5Zone &zone, shared_ptr<Cluster> &cluster, int type=-1);
   //! try to read the cluster root list (in general Data14)
-  bool readClusterMainList(ClusterRoot &root, std::vector<int> &list);
+  bool readClusterMainList(ClusterRoot &root, std::vector<int> &list, std::vector<int> const &clusterIdList);
 
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
   //! try to read some unknown cluster
   bool readUnknownClusterC(Link const &link);
   //! try to find a cluster zone type ( heuristic when the cluster type is unknown )
-  int getClusterZoneType(RagTime5Zone &zone);
+  int getClusterFileType(RagTime5Zone &zone);
+  //! returns the local zone type
+  int getClusterType(RagTime5Zone &zone, int fileType);
   //! try to return basic information about the header cluster's zone
   bool getClusterBasicHeaderInfo(RagTime5Zone &zone, long &N, long &fSz, long &debHeaderPos);
 
@@ -97,8 +99,7 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_Graphic, L_GraphicTransform,
-                L_Text, L_TextUnknown,
+    enum Type { L_GraphicTransform,
                 L_ClusterLink,
                 L_LinkDef,
                 L_LongList, L_UnicodeList,
@@ -127,8 +128,6 @@ public:
       switch (m_type) {
       case L_ClusterLink:
         return "clustLink";
-      case L_Graphic:
-        return "graphData";
       case L_GraphicTransform:
         return "graphTransform";
       case L_LinkDef:
@@ -141,10 +140,6 @@ public:
           s << "longList" << m_fieldSize;
           return s.str();
         }
-      case L_Text:
-        return "textData";
-      case L_TextUnknown:
-        return "TextUnknown";
       case L_UnicodeList:
         return "unicodeListLink";
       case L_UnknownClusterC:
@@ -229,12 +224,12 @@ public:
     //! the cluster type
     enum Type {
       C_ColorPattern, C_Fields, C_Layout, C_Pipeline,
-      C_Root, C_Script, C_TextData,
+      C_Root, C_Script,
 
       // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
       // unknown clusters
-      C_ClusterA, C_ClusterB, C_ClusterC,
+      C_ClusterB, C_ClusterC,
 
       C_Unknown
     };
@@ -327,20 +322,6 @@ public:
     librevenge::RVNGString m_scriptName;
   };
 
-  //! the cluster unknown A data
-  struct ClusterUnknownA : public Cluster {
-    //! constructor
-    ClusterUnknownA() : Cluster(), m_auxilliarLink(), m_clusterLink()
-    {
-    }
-    //! destructor
-    virtual ~ClusterUnknownA() {}
-    //! the first auxilliar data
-    Link m_auxilliarLink;
-    //! cluster links list of size 28
-    Link m_clusterLink;
-  };
-
   ////////////////////////////////////////////////////////////
   // parser class
   ////////////////////////////////////////////////////////////
@@ -400,7 +381,7 @@ public:
     }
 
     //! try to read a link header
-    bool readLinkHeader(MWAWInputStreamPtr &input, long fSz, Link &link, long(&values)[5], std::string &message);
+    bool readLinkHeader(MWAWInputStreamPtr &input, long fSz, Link &link, long(&values)[4], std::string &message);
     //! returns "data"+id+"A" ( followed by the cluster type and name if know)
     std::string getClusterName(int id);
     //! the main parser
