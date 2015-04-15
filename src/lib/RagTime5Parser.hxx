@@ -100,6 +100,8 @@ protected:
   //! returns the structure manager
   shared_ptr<RagTime5StructManager> getStructManager();
 
+  //! try to read a chart cluster (via the spreadsheet manager)
+  bool readChartCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a graphic cluster (via the graphic manager)
   bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a picture cluster (via the graphic manager)

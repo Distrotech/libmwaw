@@ -76,7 +76,8 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
   bool parseData(MWAWInputStreamPtr &input, long endPos, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
   {
     long pos=input->tell();
-    if (endPos-pos!=28) {
+    long fSz=endPos-pos;
+    if (fSz!=14 && fSz!=28) {
       MWAW_DEBUG_MSG(("RagTime5GraphInternal::ClustListParser::parse: bad data size\n"));
       return false;
     }
@@ -98,6 +99,13 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
       f << "f0=" << (lVal&0x3fffffff) << "[" << (lVal>>30) << "],";
     else
       f << "f0" << lVal << ",";
+    if (fSz==14) {
+      for (int i=0; i<3; ++i) { // always 0
+        int val=(int) input->readLong(2);
+        if (val) f << "f" << i+1 << "=" << val << ",";
+      }
+      return true;
+    }
     int val=(int) input->readLong(2); // 0|2
     if (val) f << "f1=" << val << ",";
     float dim[4];
@@ -1353,7 +1361,7 @@ protected:
     f << "header, fl=" << std::hex << flag << std::dec << ",";
     m_fieldName="header";
     m_what=0;
-    if (N!=-5 || m_dataId!=0 || (fSz!=104 && fSz!=109)) {
+    if (N!=-5 || m_dataId!=0 || (fSz!=64 && fSz!=104 && fSz!=109)) {
       f << "###N=" << N << ",fSz=" << fSz << ",";
       MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseHeaderZone: find unexpected main field\n"));
       return true;
@@ -1373,6 +1381,16 @@ protected:
     for (int i=0; i<2; ++i) {// f0=0|2|3, f1=0|3
       val=(int) input->readLong(4);
       if (val) f << "f" << i << "=" << val << ",";
+    }
+    if (fSz==64) { // movie
+      float dim[2];
+      for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
+      f << "dim=" << Vec2f(dim[0],dim[1]) << ",";
+      for (int i=0; i<15; ++i) { // always 0
+        val=(int) input->readLong(2);
+        if (val) f << "g" << i << "=" << val << ",";
+      }
+      return true;
     }
     for (int i=0; i<5; ++i) {
       val=(int) input->readLong(2);

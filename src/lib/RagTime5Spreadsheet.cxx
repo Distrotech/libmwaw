@@ -1110,6 +1110,314 @@ private:
   //! copy operator (not implemented)
   SpreadsheetCParser &operator=(SpreadsheetCParser const &orig);
 };
+
+//
+//! low level: parser of chart cluster
+//
+struct ChartCParser : public RagTime5ClusterManager::ClusterParser {
+  //! constructor
+  ChartCParser(RagTime5ClusterManager &parser, int type, libmwaw::DebugFile &ascii) :
+    ClusterParser(parser, type, "ClustChart"), m_cluster(new RagTime5ClusterManager::Cluster), m_what(-1), m_linkId(-1), m_fieldName(""), m_asciiFile(ascii)
+  {
+  }
+  //! return the current cluster
+  shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
+  {
+    return m_cluster;
+  }
+  //! return the current cluster
+  shared_ptr<RagTime5ClusterManager::Cluster> getChartCluster()
+  {
+    return m_cluster;
+  }
+  //! end of a start zone call
+  void endZone()
+  {
+    if (m_link.empty())
+      return;
+    switch (m_linkId) {
+    case 0:
+      m_cluster->m_settingLinks.push_back(m_link);
+      break;
+    default:
+      if (m_what==0 || m_what==2) {
+        if (m_cluster->m_dataLink.empty())
+          m_cluster->m_dataLink=m_link;
+        else {
+          MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::endZone: oops the main link is already set\n"));
+          m_cluster->m_linksList.push_back(m_link);
+        }
+      }
+      else
+        m_cluster->m_linksList.push_back(m_link);
+      break;
+    }
+  }
+  //! parse a zone
+  bool parseZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    m_what=m_linkId=-1;
+    m_fieldName="";
+    if (N==-5)
+      return parseHeaderZone(input,fSz,N,flag,f);
+    if (N<0) {
+      MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseZone: expected N value\n"));
+      f << "###N=" << N << ",";
+      return true;
+    }
+    return parseDataZone(input, fSz, N, flag, f);
+  }
+  //! parse a field
+  bool parseField(RagTime5StructManager::Field const &field, int /*m*/, libmwaw::DebugStream &f)
+  {
+    if (!m_fieldName.empty())
+      f << m_fieldName << ",";
+    switch (m_what) {
+    case 1: // list link
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
+        f << "pos=[";
+        for (size_t i=0; i<field.m_longList.size(); ++i)
+          f << field.m_longList[i] << ",";
+        f << "],";
+        m_link.m_longList=field.m_longList;
+        break;
+      }
+      if (field.m_type==RagTime5StructManager::Field::T_Unstructured && field.m_fileType==0xce017) {
+        // a small value 2|4|a|1c|40
+        f << "unkn="<<field.m_extra << ",";
+        break;
+      }
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xcf042) {
+        f << "unkn=[";
+        for (size_t j=0; j<field.m_longList.size(); ++j) {
+          if (field.m_longList[j]==0)
+            f << "_,";
+          else
+            f << field.m_longList[j] << ",";
+        }
+        break;
+      }
+      MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseField: find unexpected list link field\n"));
+      f << "###" << field;
+      break;
+    default:
+      f << field;
+      break;
+    }
+    return true;
+  }
+protected:
+  //! parse a data block
+  bool parseDataZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    /*
+    Find 117,38,36,35,32,34,14,20,18,36,29,36,226,226,28,28,32,28,28,28,116,116,116,29,28,28,29,20,12,22,29,22,29,22,29,226,226,50,50,50,50,50,50,50,50,50,50,50,50,12,12,
+    Find 117,38,36,35,32,34,14,20,18,36,29,36,226,226,28,28,32,28,28,28,116,116,116,29,28,28,29,50,20,12,22,22,29,22,29,22,29,226,226,50,50,50,50,50,50,50,50,50,50,50,12,12,
+    Find 117,38,36,35,32,34,14,20,18,36,29,36,226,226,28,28,32,28,28,28,116,29,28,28,29,12,12,22,29,226,226,50,50,50,12,12,
+    Find 119,38,36,35,32,34,14,20,18,36,29,36,226,226,226,28,28,32,28,28,28,116,116,29,28,28,29,50,12,12,12,22,29,22,29,50,50,50,50,50,50,50,
+    Find 119,38,36,35,32,34,14,20,18,36,29,36,226,226,226,28,28,32,28,28,28,116,29,28,28,29,50,12,12,12,24,29,50,50,50,50,
+    Find 119,38,36,35,32,34,14,20,18,36,29,36,226,226,226,28,28,32,28,28,28,29,28,28,29,12,12,12,
+    Find 119,38,36,35,32,34,14,20,18,36,29,36,226,226,28,28,32,28,28,28,116,116,29,28,28,29,50,12,12,22,29,22,29,226,50,50,50,50,50,50,50,50,50,50,12,
+    Find 119,38,36,35,32,34,14,20,18,36,29,36,226,226,28,28,32,28,28,28,116,29,28,28,29,50,12,12,22,29,226,50,50,50,50,50,12,
+    Find 119,38,36,40,32,34,14,20,18,36,34,226,226,226,28,28,32,28,28,28,116,116,34,28,28,34,50,12,12,12,22,34,22,34,50,50,50,50,50,50,
+    Find 119,38,36,40,32,34,14,20,18,36,34,36,226,226,226,28,28,32,28,28,28,116,116,34,28,28,34,50,12,12,12,22,34,22,34,50,50,50,50,50,50,50,
+    Find 119,38,36,40,32,34,14,20,18,36,34,36,226,226,226,28,28,32,28,28,28,34,28,28,34,12,12,12,
+    Find 74,38,36,35,32,34,14,20,18,36,29,36,226,30,28,28,32,28,28,28,116,29,28,28,29,50,12,18,29,226,226,226,50,50,50,12,12,12,
+    Find 74,38,36,35,32,34,14,20,18,36,29,36,226,30,28,28,32,28,28,28,116,29,28,28,29,50,12,18,29,226,226,226,50,50,50,50,50,50,12,12,12,
+    */
+    f << "fl=" << std::hex << flag << std::dec << ",";
+    long pos=input->tell();
+    m_link.m_N=N;
+    bool ok=false;
+    long linkValues[4];
+    std::string mess("");
+    switch (fSz) {
+    case 30: {
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
+        break;
+      ok=true;
+      m_link.m_fileType[0]=0;
+      m_fieldName="listLn2";
+      m_asciiFile.addDelimiter(pos+16,'|');
+      f << m_link << "," << mess;
+      break;
+    }
+    case 32:
+    case 36:
+    case 41: {
+      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
+        break;
+      ok=true;
+      m_what=1;
+      m_link.m_type=RagTime5ClusterManager::Link::L_List;
+      m_link.m_N=N;
+      if (m_link.m_fileType[0]==0x47040) {
+        if (m_link.m_fileType[1]==0x20)
+          f << "hasNoPos,";
+        else if (m_link.m_fileType[1]) {
+          MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseDataZone[settings]: find unexpected flags\n"));
+          f << "###flags=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
+        }
+        m_linkId=0;
+        m_link.m_name=m_fieldName="settings";
+      }
+      else
+        m_fieldName="listLink";
+      f << m_link << "," << mess;
+      /* checkme:
+         link.m_fileType[1]==20|0 is a list of fields
+         link.m_fileType[1]==1010|1038 is a list of sequence of 16 bytes
+      */
+      m_asciiFile.addDelimiter(pos+14,'|');
+      break;
+    }
+    default:
+      break;
+    }
+    if (ok) {
+      if (!m_fieldName.empty())
+        f << m_fieldName << ",";
+      return true;
+    }
+    if ((fSz==0x22||fSz==0x27||fSz==0x32||fSz==0x34) && N>0) {
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      if (readLinkHeader(input, fSz, m_link, linkValues, mess)) {
+        m_link.m_N=N;
+        m_fieldName="UnknFixZone";
+        f << m_fieldName << "," << m_link << "," << mess;
+        m_link.m_fileType[0]=linkValues[0];
+      }
+      else
+        m_link=RagTime5ClusterManager::Link();
+    }
+
+    return true;
+  }
+  //! parse the header zone
+  bool parseHeaderZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
+  {
+    f << "header, fl=" << std::hex << flag << std::dec << ",";
+    m_fieldName="header";
+    m_what=0;
+    if (N!=-5 || m_dataId!=0 || (fSz!=331 && fSz!=339)) {
+      f << "###N=" << N << ",fSz=" << fSz << ",";
+      MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseHeaderZone: find unexpected main field\n"));
+      return true;
+    }
+    int val;
+    for (int i=0; i<2; ++i) { // always 0?
+      val=(int) input->readLong(2);
+      if (val) f << "f" << i << "=" << val << ",";
+    }
+    val=(int) input->readLong(2);
+    f << "id=" << val << ",";
+    val=(int) input->readULong(2);
+    if (m_type>0 && val!=m_type) {
+      MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseHeaderZone: unexpected zone type\n"));
+      f << "##zoneType=" << std::hex << val << std::dec << ",";
+    }
+    for (int i=0; i<12; ++i) { // f3=0|d, f7=0|1|2|3|7, f8=3|4, f9=2
+      val=(int) input->readLong(2);
+      if (val) f << "f" << i+2 << "=" << val << ",";
+    }
+    val=(int) input->readLong(2); // always 10
+    if (val!=0x10)
+      f << "fl0=" << val << ",";
+    f << "double0=[";
+    for (int i=0; i<6; ++i) { // something like [200,150,200,0,0,500,]
+      double res;
+      bool isNan;
+      long actPos=input->tell();
+      if (!input->readDouble8(res, isNan)) {
+        MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseHeaderZone: can not read a double0\n"));
+        f << "##double" << i << ",";
+        input->seek(actPos+8, librevenge::RVNG_SEEK_SET);
+      }
+      else f << res << ",";
+    }
+    f << "],";
+    val=(int) input->readLong(1); // always f
+    if (val!=0xf)
+      f << "fl1=" << val << ",";
+    f << "double1=[";
+    for (int i=0; i<2; ++i) { // small number between 0 et 2: some angle?
+      double res;
+      bool isNan;
+      long actPos=input->tell();
+      if (!input->readDouble8(res, isNan)) {
+        MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseHeaderZone: can not read a double1\n"));
+        f << "##double" << i << ",";
+        input->seek(actPos+8, librevenge::RVNG_SEEK_SET);
+      }
+      else f << res << ",";
+    }
+    f << "],";
+    float dim[4];
+    for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
+    f << "dim?=" << Vec2f(dim[0],dim[1]) << ",";
+    f << "double2=[";
+    int numData=fSz==331 ? 11 : 12;
+    for (int i=0; i<1+numData; ++i) { // checkme 500+a matrix (without the last line and/or column)
+      double res;
+      bool isNan;
+      long actPos=input->tell();
+      if (!input->readDouble8(res, isNan)) {
+        MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseHeaderZone: can not read a double1\n"));
+        f << "##double" << i << ",";
+        input->seek(actPos+8, librevenge::RVNG_SEEK_SET);
+      }
+      else f << res << ",";
+    }
+    f << "],";
+    for (int i=0; i<12; ++i) {
+      val=(int) input->readLong(4);
+      static int const(expected[])= {2,3,4,5,6,0,7,8,9,10,11,12};
+      if (val!=expected[i])
+        f << "g" << i << "=" << val << ",";
+    }
+    val=(int) input->readULong(2); // [128][8c][045]
+    if (val) f << "fl2=" << std::hex << val << std::dec << ",";
+    for (int i=0; i<3; ++i) { // never seems dim3 so unsure ...
+      for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
+      Box2f bdbox(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+      if (bdbox!=Box2f(Vec2f(0,0),Vec2f(0,0)))
+        f << "dim" << i+1 << "?=" << bdbox << ",";
+    }
+    val=(int) input->readLong(2); // always 0?
+    if (val) f << "h0=" << val << ",";
+    f << "ID?=[";
+    for (int i=0; i<2; ++i) f << std::hex << input->readULong(4) << std::dec << ",";
+    f << "],";
+    val=(int) input->readLong(2); // 1|6|7
+    if (val) f << "h1=" << val << ",";
+    for (int i=0; i<2; ++i) {
+      val=(int) input->readULong(2);
+      if (val) f << "fl" << i+2 << "=" << std::hex << val << std::dec << ",";
+    }
+    for (int i=0; i<4; ++i) { // g4=small number, g5:1
+      val=(int) input->readULong(2);
+      if (val) f << "h" << i+2 << "=" << val << ",";
+    }
+    return true;
+  }
+
+  //! the current cluster
+  shared_ptr<RagTime5ClusterManager::Cluster> m_cluster;
+  //! a index to know which field is parsed :  0: main, 1: list
+  int m_what;
+  //! the link id: 0: setting
+  int m_linkId;
+  //! the actual field name
+  std::string m_fieldName;
+  //! the ascii file
+  libmwaw::DebugFile &m_asciiFile;
+private:
+  //! copy constructor (not implemented)
+  ChartCParser(ChartCParser const &orig);
+  //! copy operator (not implemented)
+  ChartCParser &operator=(ChartCParser const &orig);
+};
+
 }
 
 bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneType)
@@ -1191,7 +1499,7 @@ bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneTyp
       continue;
     }
     std::stringstream s;
-    s << "Data" << lnk.m_fieldSize << "_sheet";
+    s << "Sheet_data" << lnk.m_fieldSize;
     RagTime5StructManager::DataParser defaultParser(lnk.m_name.empty() ? s.str() : lnk.m_name);
     m_mainParser.readFixedSizeZone(lnk, defaultParser);
   }
@@ -1199,4 +1507,52 @@ bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneTyp
   return true;
 }
 
+bool RagTime5Spreadsheet::readChartCluster(RagTime5Zone &zone, int zoneType)
+{
+  shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
+  if (!clusterManager) {
+    MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readChartCluster: oops can not find the cluster manager\n"));
+    return false;
+  }
+  RagTime5SpreadsheetInternal::ChartCParser parser(*clusterManager, zoneType, zone.ascii());
+  if (!clusterManager->readCluster(zone, parser) || !parser.getChartCluster()) {
+    MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readChartCluster: oops can not find the cluster\n"));
+    return false;
+  }
+  shared_ptr<RagTime5ClusterManager::Cluster> cluster=parser.getChartCluster();
+  m_mainParser.checkClusterList(cluster->m_clusterIdsList);
+
+  if (!cluster->m_dataLink.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readChartCluster: oops do not how to parse the main data\n"));
+  }
+  for (int wh=0; wh<2; ++wh) { // can have setting
+    std::vector<RagTime5ClusterManager::Link> const &list=wh==0 ? cluster->m_conditionFormulaLinks : cluster->m_settingLinks;
+    for (size_t i=0; i<list.size(); ++i) {
+      if (list[i].empty()) continue;
+      RagTime5ClusterManager::Cluster unknCluster;
+      unknCluster.m_dataLink=list[i];
+      RagTime5StructManager::FieldParser defaultParser(wh==0 ? "CondFormula" : "Settings");
+      m_mainParser.readStructZone(unknCluster, defaultParser, 0);
+    }
+  }
+
+  if (!cluster->m_nameLink.empty()) {
+    std::map<int, librevenge::RVNGString> idToStringMap;
+    m_mainParser.readUnicodeStringList(cluster->m_nameLink, idToStringMap);
+  }
+
+  for (size_t i=0; i<cluster->m_linksList.size(); ++i) {
+    RagTime5ClusterManager::Link const &lnk=cluster->m_linksList[i];
+    if (lnk.m_type==RagTime5ClusterManager::Link::L_List) {
+      m_mainParser.readListZone(lnk);
+      continue;
+    }
+    std::stringstream s;
+    s << "Chart_data" << lnk.m_fieldSize;
+    RagTime5StructManager::DataParser defaultParser(lnk.m_name.empty() ? s.str() : lnk.m_name);
+    m_mainParser.readFixedSizeZone(lnk, defaultParser);
+  }
+
+  return true;
+}
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

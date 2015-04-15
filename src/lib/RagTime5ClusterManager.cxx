@@ -108,6 +108,9 @@ struct ClusterInformation {
     case 0x40003:
       o << "text,";
       break;
+    case 0x40004:
+      o << "chart,";
+      break;
     default:
       if (info.m_fileType>=0)
         o << "typ=" << std::hex << std::hex << info.m_fileType << std::dec << ",";
@@ -2557,260 +2560,21 @@ protected:
 //
 struct UnknownCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
-  UnknownCParser(RagTime5ClusterManager &parser, int type, libmwaw::DebugFile &ascii) :
-    ClusterParser(parser, type, "ClustUnknown"), m_cluster(new RagTime5ClusterManager::Cluster), m_what(-1), m_linkId(-1), m_fieldName(""), m_asciiFile(ascii)
+  UnknownCParser(RagTime5ClusterManager &parser, int type) :
+    ClusterParser(parser, type, "ClustUnknown"), m_cluster(new RagTime5ClusterManager::Cluster)
   {
     if (type==-1)
       return;
-    std::stringstream s;
-    s << "Clust" << std::hex << type << std::dec << "A";
-    m_name=s.str();
   }
   //! return the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
   {
     return m_cluster;
   }
-  //! end of a start zone call
-  void endZone()
-  {
-    if (m_link.empty())
-      return;
-    switch (m_linkId) {
-    case 0:
-      m_cluster->m_settingLinks.push_back(m_link);
-      break;
-    default:
-      if (m_what==0 || m_what==2) {
-        if (m_cluster->m_dataLink.empty())
-          m_cluster->m_dataLink=m_link;
-        else {
-          MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::endZone: oops the main link is already set\n"));
-          m_cluster->m_linksList.push_back(m_link);
-        }
-      }
-      else
-        m_cluster->m_linksList.push_back(m_link);
-      break;
-    }
-  }
-  //! parse a zone
-  bool parseZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
-  {
-    m_what=m_linkId=-1;
-    m_fieldName="";
-    if (N==-5)
-      return parseHeaderZone(input,fSz,N,flag,f);
-    if (N<0) {
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseZone: expected N value\n"));
-      f << "###N=" << N << ",";
-      return true;
-    }
-    return parseDataZone(input, fSz, N, flag, f);
-  }
-  //! parse a field
-  bool parseField(RagTime5StructManager::Field const &field, int /*m*/, libmwaw::DebugStream &f)
-  {
-    if (!m_fieldName.empty())
-      f << m_fieldName << ",";
-    switch (m_what) {
-    case 1: // linkdef
-      if (field.m_type==RagTime5StructManager::Field::T_FieldList &&
-          (field.m_fileType==0x15f4815 /* v5?*/ || field.m_fileType==0x160f815 /* v6? */)) {
-        f << "decal=[";
-        for (size_t i=0; i<field.m_fieldList.size(); ++i) {
-          RagTime5StructManager::Field const &child=field.m_fieldList[i];
-          if (child.m_type==RagTime5StructManager::Field::T_LongList && child.m_fileType==0xce842) {
-            for (size_t j=0; j<child.m_longList.size(); ++j)
-              f << child.m_longList[j] << ",";
-            m_link.m_longList=child.m_longList;
-            continue;
-          }
-          MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseField: find unexpected decal child[list]\n"));
-          f << "#[" << child << "],";
-        }
-        f << "],";
-        break;
-      }
-      else if (field.m_type==RagTime5StructManager::Field::T_Unstructured && field.m_fileType==0xce017) {
-        f << "unkn0=" << field.m_extra; // always 2: next value ?
-        break;
-      }
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseField: find unexpected child[list]\n"));
-      f << "###" << field;
-      break;
-    case 3: // list link
-      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xce842) {
-        f << "pos=[";
-        for (size_t i=0; i<field.m_longList.size(); ++i)
-          f << field.m_longList[i] << ",";
-        f << "],";
-        m_link.m_longList=field.m_longList;
-        break;
-      }
-      if (field.m_type==RagTime5StructManager::Field::T_Unstructured && field.m_fileType==0xce017) {
-        // a small value 2|4|a|1c|40
-        f << "unkn="<<field.m_extra << ",";
-        break;
-      }
-      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xcf042) {
-        f << "unkn=[";
-        for (size_t j=0; j<field.m_longList.size(); ++j) {
-          if (field.m_longList[j]==0)
-            f << "_,";
-          else
-            f << field.m_longList[j] << ",";
-        }
-        break;
-      }
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseField: find unexpected list link field\n"));
-      f << "###" << field;
-      break;
-    default:
-      f << field;
-      break;
-    }
-    return true;
-  }
 protected:
-  //! parse a data block
-  bool parseDataZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
-  {
-    f << "fl=" << std::hex << flag << std::dec << ",";
-    long pos=input->tell();
-    m_link.m_N=N;
-    bool ok=false;
-    long linkValues[4];
-    std::string mess("");
-    switch (fSz) {
-    case 30: {
-      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
-        break;
-      ok=true;
-      m_link.m_fileType[0]=0;
-      m_fieldName="listLn2";
-      m_asciiFile.addDelimiter(pos+16,'|');
-      f << m_link << "," << mess;
-      break;
-    }
-    case 32:
-    case 36:
-    case 41: {
-      if (!readLinkHeader(input, fSz, m_link, linkValues, mess))
-        break;
-      ok=true;
-      m_what=3;
-      m_link.m_type=RagTime5ClusterManager::Link::L_List;
-      m_link.m_N=N;
-      if (m_link.m_fileType[0]==0x47040) {
-        if (m_link.m_fileType[1]==0x20)
-          f << "hasNoPos,";
-        else if (m_link.m_fileType[1]) {
-          MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseDataZone[settings]: find unexpected flags\n"));
-          f << "###flags=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
-        }
-        m_linkId=0;
-        m_link.m_name=m_fieldName="settings";
-      }
-      else
-        m_fieldName="listLink";
-      f << m_link << "," << mess;
-      /* checkme:
-         link.m_fileType[1]==20|0 is a list of fields
-         link.m_fileType[1]==1010|1038 is a list of sequence of 16 bytes
-      */
-      m_asciiFile.addDelimiter(pos+14,'|');
-      break;
-    }
-    default:
-      break;
-    }
-    if (ok) {
-      if (!m_fieldName.empty())
-        f << m_fieldName << ",";
-      return true;
-    }
-    if ((fSz==0x22||fSz==0x27||fSz==0x32||fSz==0x34) && N>0) {
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-      if (readLinkHeader(input, fSz, m_link, linkValues, mess)) {
-        m_link.m_N=N;
-        m_fieldName="UnknFixZone";
-        f << m_fieldName << "," << m_link << "," << mess;
-        m_link.m_fileType[0]=linkValues[0];
-      }
-      else
-        m_link=RagTime5ClusterManager::Link();
-    }
-
-    return true;
-  }
-  //! parse the header zone
-  bool parseHeaderZone(MWAWInputStreamPtr &input, long fSz, int N, int flag, libmwaw::DebugStream &f)
-  {
-    f << "header, fl=" << std::hex << flag << std::dec << ",";
-    m_fieldName="header";
-    m_what=0;
-    if (N!=-5 || m_dataId!=0 || fSz<12) {
-      f << "###N=" << N << ",fSz=" << fSz << ",";
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseHeaderZone: find unexpected main field\n"));
-      return true;
-    }
-    int val;
-    for (int i=0; i<2; ++i) { // always 0?
-      val=(int) input->readLong(2);
-      if (val) f << "f" << i+1 << "=" << val << ",";
-    }
-    val=(int) input->readLong(2);
-    f << "id=" << val << ",";
-    val=(int) input->readULong(2);
-    if (m_type>0 && val!=m_type) {
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseHeaderZone: unexpected zone type\n"));
-      f << "##zoneType=" << std::hex << val << std::dec << ",";
-    }
-    switch (fSz) {
-    case 64: { // find in zone b ( with a next data field which is a link to a cluster )
-      // probably in relation with zone ClusterScript
-      m_fieldName="sz64";
-      val=(int) input->readLong(4); // find with 2, probably a number
-      if (val) f << "f0=" << val << ",";
-      for (int i=0; i<4; ++i) { // always 0
-        val=(int) input->readLong(2);
-        if (val) f << "f" << i+1 << "=" << val << ",";
-      }
-      float dim[2];
-      for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "dim=" << Vec2f(dim[0],dim[1]) << ",";
-      for (int i=0; i<15; ++i) { // always 0
-        val=(int) input->readLong(2);
-        if (val) f << "g" << i << "=" << val << ",";
-      }
-      break;
-    }
-    default:
-      // ADDME: MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::UnknownCParser::parseHeaderZone: find unexpected file size\n"));
-      f << "unknMain,##fSz=" << fSz << ",";
-      break;
-    }
-    if (!m_fieldName.empty())
-      f << m_fieldName << ",";
-    return true;
-  }
 
   //! the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> m_cluster;
-  //! a index to know which field is parsed :  0: main, 1: linkdef, 2: textZone(store in mainData), 3: list
-  int m_what;
-  //! the link id: 1: setting
-  int m_linkId;
-  //! the actual field name
-  std::string m_fieldName;
-  //! the ascii file
-  libmwaw::DebugFile &m_asciiFile;
-private:
-  //! copy constructor (not implemented)
-  UnknownCParser(UnknownCParser const &orig);
-  //! copy operator (not implemented)
-  UnknownCParser &operator=(UnknownCParser const &orig);
 };
 
 }
@@ -2868,7 +2632,7 @@ int RagTime5ClusterManager::getClusterType(RagTime5Zone &zone, int fileType)
   case 0x30001: // 1th element of child list root, never seen
   case 0x30002: // 2th element of child list root
   case 0x30003: // 3th element of child list root
-  case 0x40000: // unkA cluster
+  case 0x40000: // picture cluster
   case 0x40001: // graphic cluster
   case 0x40002: // spreadsheet cluster
   case 0x40003: // text cluster
@@ -2881,8 +2645,9 @@ int RagTime5ClusterManager::getClusterType(RagTime5Zone &zone, int fileType)
     return -1;
 
   switch (fSz) {
+  case 64: // movie cluster
   case 104:
-  case 109: // unkna cluster
+  case 109: // picture cluster
     return 0x40000;
   case 118: // graphic cluster
     return 0x40001;
@@ -2896,6 +2661,9 @@ int RagTime5ClusterManager::getClusterType(RagTime5Zone &zone, int fileType)
   case 213:
   case 216: // text cluster
     return 0x40003;
+  case 331:
+  case 339: // chart cluster
+    return 0x40004;
   default: // unknown
     break;
   }
@@ -3003,8 +2771,11 @@ bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, shared_ptr<RagTime5
     return m_mainParser.readSpreadsheetCluster(zone, zoneType);
   case 0x40003:
     return m_mainParser.readTextCluster(zone, zoneType);
+  case 0x40004:
+    return m_mainParser.readChartCluster(zone, zoneType);
   default:
-    parser.reset(new RagTime5ClusterManagerInternal::UnknownCParser(*this, zoneType, zone.ascii()));
+    MWAW_DEBUG_MSG(("RagTime5ClusterManager::readCluster: can not find cluster type, use default parser\n"));
+    parser.reset(new RagTime5ClusterManagerInternal::UnknownCParser(*this, zoneType));
     break;
   }
   if (parser) {

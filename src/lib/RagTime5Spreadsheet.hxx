@@ -97,6 +97,9 @@ protected:
   //! try to read a spreadsheet cluster
   bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
 
+  //! try to read a chart cluster
+  bool readChartCluster(RagTime5Zone &zone, int zoneType);
+
   //
   // Intermediate level
   //
