@@ -952,25 +952,9 @@ bool RagTime5Parser::readClusterRootData(RagTime5ClusterManager::ClusterRoot &cl
     case RagTime5ClusterManager::Link::L_UnicodeList:
     case RagTime5ClusterManager::Link::L_UnknownClusterC:
       break;
-    case RagTime5ClusterManager::Link::L_GraphicTransform:
-      MWAW_DEBUG_MSG(("RagTime5Parser::readClusterRootData: find an graph transform link %d\n", link.m_ids[0]));
-      break;
     case RagTime5ClusterManager::Link::L_ClusterLink:
       readClusterLinkList(*data, link);
       break;
-    case RagTime5ClusterManager::Link::L_UnknownItem: {
-      if (!data->m_entry.valid())
-        break;
-      MWAW_DEBUG_MSG(("RagTime5Parser::readClusterRootData: find an unknown link %d\n", link.m_ids[0]));
-      long pos=data->m_entry.begin();
-      data->m_isParsed=true;
-      libmwaw::DebugFile &dAscFile=data->ascii();
-      libmwaw::DebugStream f;
-      f << "Entries(" << link.getZoneName() << ")[" << *data << "]:" << "###";
-      dAscFile.addPos(pos);
-      dAscFile.addNote(f.str().c_str());
-      break;
-    }
     case RagTime5ClusterManager::Link::L_LinkDef:
     case RagTime5ClusterManager::Link::L_Unknown:
     default:
@@ -1118,25 +1102,9 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
     case RagTime5ClusterManager::Link::L_UnicodeList:
     case RagTime5ClusterManager::Link::L_UnknownClusterC:
       break;
-    case RagTime5ClusterManager::Link::L_GraphicTransform:
-      MWAW_DEBUG_MSG(("RagTime5Parser::readClusterZone: find an graph transform link %d\n", link.m_ids[0]));
-      break;
     case RagTime5ClusterManager::Link::L_ClusterLink:
       readClusterLinkList(*data, link);
       break;
-    case RagTime5ClusterManager::Link::L_UnknownItem: {
-      if (!data->m_entry.valid())
-        break;
-      MWAW_DEBUG_MSG(("RagTime5Parser::readClusterZone: find an unknown link %d\n", link.m_ids[0]));
-      long pos=data->m_entry.begin();
-      data->m_isParsed=true;
-      libmwaw::DebugFile &dAscFile=data->ascii();
-      libmwaw::DebugStream f;
-      f << "Entries(" << link.getZoneName() << ")[" << *data << "]:" << "###";
-      dAscFile.addPos(pos);
-      dAscFile.addNote(f.str().c_str());
-      break;
-    }
     case RagTime5ClusterManager::Link::L_Unknown:
     default:
       readFixedSizeZone(link, "");

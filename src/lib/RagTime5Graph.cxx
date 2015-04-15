@@ -1418,7 +1418,6 @@ protected:
     }
     else if (listIds[0]) { // find always with a block of size 0: next file the picture ?...
       RagTime5ClusterManager::Link unknLink;
-      unknLink=RagTime5ClusterManager::Link::L_UnknownItem;
       unknLink.m_name="UnknMain104-109";
       unknLink.m_ids.push_back(listIds[0]);
       f << unknLink << ",";
@@ -1456,11 +1455,13 @@ private:
 //! the shape cluster
 struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterGraphic() : RagTime5ClusterManager::Cluster()
+  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks()
   {
   }
   //! destructor
   virtual ~ClusterGraphic() {}
+  //! the list of  transformation's link
+  std::vector<RagTime5ClusterManager::Link> m_transformationLinks;
   //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10)
   RagTime5ClusterManager::Link m_clusterLinks[2];
 };
@@ -1504,6 +1505,9 @@ struct GraphicCParser : public RagTime5ClusterManager::ClusterParser {
     case 2:
     case 3:
       m_cluster->m_clusterLinks[m_linkId-2]=m_link;
+      break;
+    case 4:
+      m_cluster->m_transformationLinks.push_back(m_link);
       break;
     default:
       if (m_what==0) {
@@ -1734,7 +1738,7 @@ protected:
           f << "#linkValue0,";
         }
         // linkValues[2]=0|5
-        m_link.m_type=RagTime5ClusterManager::Link::L_GraphicTransform;
+        m_linkId=4;
         m_what=2;
         m_fieldName="graphTransform";
       }
@@ -1992,7 +1996,7 @@ protected:
   shared_ptr<ClusterGraphic> m_cluster;
   //! a index to know which field is parsed :  0: graphdata, 1: list, 2: clustLink, graph transform, 3:fSz=91
   int m_what;
-  //! the link id: 0: unicode, 1: condition, 2: clustLink, 3: clustLink[list]
+  //! the link id: 0: unicode, 1: condition, 2: clustLink, 3: clustLink[list], 4: transformation
   int m_linkId;
   //! the actual field name
   std::string m_fieldName;
@@ -2161,6 +2165,8 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       }
     }
   }
+  for (size_t i=0; i<cluster->m_transformationLinks.size(); ++i)
+    readGraphicTransformations(cluster->m_transformationLinks[i]);
   if (!cluster->m_clusterLinks[0].empty()) {
     // change me
     shared_ptr<RagTime5Zone> data=m_mainParser.getDataZone(cluster->m_clusterLinks[0].m_ids[0]);
@@ -2197,8 +2203,6 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       std::vector<long> list;
       m_mainParser.readLongList(lnk, list);
     }
-    else if (lnk.m_type==RagTime5ClusterManager::Link::L_GraphicTransform)
-      readGraphicTransformations(lnk);
     else
       m_mainParser.readFixedSizeZone(lnk, "");
   }

@@ -99,12 +99,11 @@ public:
   //! a link to a small zone (or set of zones) in RagTime 5/6 documents
   struct Link {
     //! the link type
-    enum Type { L_GraphicTransform,
-                L_ClusterLink,
+    enum Type { L_ClusterLink,
                 L_LinkDef,
                 L_LongList, L_UnicodeList,
                 L_FieldsList, L_List,
-                L_UnknownClusterC, L_UnknownItem,
+                L_UnknownClusterC,
                 L_Unknown
               };
     //! constructor
@@ -128,8 +127,6 @@ public:
       switch (m_type) {
       case L_ClusterLink:
         return "clustLink";
-      case L_GraphicTransform:
-        return "graphTransform";
       case L_LinkDef:
         return "linkDef";
       case L_LongList:
@@ -144,10 +141,6 @@ public:
         return "unicodeListLink";
       case L_UnknownClusterC:
         return "unknownClusterC";
-      case L_UnknownItem:
-        if (!m_name.empty())
-          return m_name;
-        return "UnknownItem";
       case L_FieldsList:
         if (!m_name.empty())
           return m_name;
