@@ -163,10 +163,10 @@ libmwaw::DebugFile &ZWrtParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f ZWrtParser::getPageLeftTop() const
+MWAWVec2f ZWrtParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////

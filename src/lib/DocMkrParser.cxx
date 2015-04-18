@@ -464,7 +464,7 @@ bool DocMkrParser::sendPicture(int zId, int lId, double /*lineW*/)
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),box.size(), librevenge::RVNG_POINT);
   MWAWPosition::XPos xpos= (info.m_align==1) ? MWAWPosition::XCenter :
                            (info.m_align==3) ? MWAWPosition::XRight  : MWAWPosition::XLeft;
   pictPos.setRelativePosition(MWAWPosition::Paragraph, xpos);

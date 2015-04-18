@@ -112,7 +112,7 @@ public:
   }
 protected:
   //! computes the minimum and maximum of a list of point
-  static MWAWBox2f getBdBox(int numPt, Vec2f const *pt)
+  static MWAWBox2f getBdBox(int numPt, MWAWVec2f const *pt)
   {
     if (numPt <= 0) {
       return MWAWBox2f();
@@ -129,7 +129,7 @@ protected:
       }
     }
 
-    return MWAWBox2f(Vec2f(minV[0], minV[1]), Vec2f(maxV[0], maxV[1]));
+    return MWAWBox2f(MWAWVec2f(minV[0], minV[1]), MWAWVec2f(maxV[0], maxV[1]));
   }
 
   // a function to extend the bdbox

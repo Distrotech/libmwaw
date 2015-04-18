@@ -815,7 +815,7 @@ bool ClarisWksDatabase::sendDatabase(int zId, MWAWListenerPtr listener)
     return false;
   }
   ClarisWksDatabaseInternal::Database &dbase=*it->second;
-  Vec2i minData, maxData;
+  MWAWVec2i minData, maxData;
   std::vector<int> recordsPos;
   if (!dbase.m_content || !dbase.m_content->getExtrema(minData,maxData) ||
       !dbase.m_content->getRecordList(recordsPos)) {
@@ -876,9 +876,9 @@ bool ClarisWksDatabase::sendDatabase(int zId, MWAWListenerPtr listener)
     for (int c=0; c < numFields; ++c) {
       ;
       ClarisWksDbaseContent::Record rec;
-      if (!dbase.m_content->get(Vec2i(c,recordsPos[r]),rec)) continue;
+      if (!dbase.m_content->get(MWAWVec2i(c,recordsPos[r]),rec)) continue;
       MWAWCell cell;
-      cell.setPosition(Vec2i(c,int(r)));
+      cell.setPosition(MWAWVec2i(c,int(r)));
       cell.setFormat(rec.m_format);
       cell.setHAlignment(rec.m_hAlign);
       // change the reference date from 1/1/1904 to 1/1/1900

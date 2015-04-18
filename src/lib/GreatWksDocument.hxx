@@ -109,13 +109,13 @@ protected:
   // formula function
 
   /** reads a cell */
-  bool readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
+  bool readCellInFormula(MWAWVec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
   /** try to read a string */
   bool readString(long endPos, std::string &res);
   /** try to read a number */
   bool readNumber(long endPos, double &res, bool &isNan);
   //! read to read a formula
-  bool readFormula(Vec2i const &cPos, long endPos,
+  bool readFormula(MWAWVec2i const &cPos, long endPos,
                    std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
 
   //

@@ -465,7 +465,7 @@ bool SuperPaintParser::readShape()
   }
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  MWAWBox2f box(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
+  MWAWBox2f box(MWAWVec2f((float)dim[1],(float)dim[0]),MWAWVec2f((float)dim[3],(float)dim[2]));
   f << "box=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
   int val;
   for (int i=0; i<4; ++i) { // always 0?
@@ -500,7 +500,7 @@ bool SuperPaintParser::readShape()
     style.m_lineWidth=0.5f*float(penSize[0]+penSize[1]);
     MWAWGraphicStyle::Pattern pat[2];
     for (int p=0; p<2; ++p) {
-      pat[p].m_dim=Vec2i(8,8);
+      pat[p].m_dim=MWAWVec2i(8,8);
       pat[p].m_data.resize(8);
       for (size_t i=0; i < 8; i++) pat[p].m_data[i]=(uint8_t) input->readULong(1);
     }
@@ -646,7 +646,7 @@ bool SuperPaintParser::readShape()
   case 0x1a:
     f << "roundRect,";
     m_state->m_shapeList.push_back(SuperPaintParserInternal::Shape(shapeType, box));
-    m_state->m_shapeList.back().m_shape=MWAWGraphicShape::rectangle(box, Vec2f(5,5));
+    m_state->m_shapeList.back().m_shape=MWAWGraphicShape::rectangle(box, MWAWVec2f(5,5));
     break;
   case 0x1b:
   case 0x20:
@@ -671,8 +671,8 @@ bool SuperPaintParser::readShape()
       angle[0]+=360;
       angle[1]+=360;
     }
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
+    MWAWVec2f center = box.center();
+    MWAWVec2f axis = 0.5*MWAWVec2f(box.size());
     // we must compute the real bd box
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
     int limitAngle[2];
@@ -688,10 +688,10 @@ bool SuperPaintParser::readShape()
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    MWAWBox2f realBox(MWAWVec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      MWAWVec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
     m_state->m_shapeList.push_back(SuperPaintParserInternal::Shape(shapeType, realBox));
-    m_state->m_shapeList.back().m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+    m_state->m_shapeList.back().m_shape = MWAWGraphicShape::pie(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
     break;
   }
   case 0x1d:
@@ -796,12 +796,12 @@ bool SuperPaintParser::readShape()
     f << "],";
     int N=(dSz-6)/4;
     f << "N=" << N << ",pts=[";
-    std::vector<Vec2f> vertices((size_t)N);
+    std::vector<MWAWVec2f> vertices((size_t)N);
     for (int i=0; i<N; ++i) {
       int coord[2];
       for (int p=0; p<2; ++p) coord[p]=(int) input->readLong(2);
-      f << Vec2i(coord[1],coord[0]) << ",";
-      vertices[size_t(i)]=Vec2f((float)coord[1],(float)coord[0])-box[0];
+      f << MWAWVec2i(coord[1],coord[0]) << ",";
+      vertices[size_t(i)]=MWAWVec2f((float)coord[1],(float)coord[0])-box[0];
     }
     f << "],";
     ascii().addPos(pos);
@@ -857,8 +857,8 @@ bool SuperPaintParser::sendBitmap()
   if (!m_state->m_bitmap || !m_state->m_bitmap->getBinary(data,type)) return false;
 
   MWAWPageSpan const &page=getPageSpan();
-  MWAWPosition pos(Vec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
-                   Vec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
+  MWAWPosition pos(MWAWVec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
+                   MWAWVec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping = MWAWPosition::WNone;
   listener->insertPicture(pos, data, "image/pict");
@@ -902,7 +902,7 @@ bool SuperPaintParser::readBitmap(bool onlyCheck)
 
   shared_ptr<MWAWPictBitmapIndexed> pict;
   if (!onlyCheck) {
-    pict.reset(new MWAWPictBitmapIndexed(Vec2i(pictDim[3],pictDim[2])));
+    pict.reset(new MWAWPictBitmapIndexed(MWAWVec2i(pictDim[3],pictDim[2])));
     std::vector<MWAWColor> colors(2);
     colors[0]=MWAWColor::white();
     colors[1]=MWAWColor::black();
@@ -1160,8 +1160,8 @@ bool SuperPaintParser::readPrintInfo()
     return false;
   }
   f << info;
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) {
     ascii().addPos(pos);
@@ -1171,14 +1171,14 @@ bool SuperPaintParser::readPrintInfo()
   }
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;

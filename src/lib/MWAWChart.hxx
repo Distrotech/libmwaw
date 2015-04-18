@@ -102,7 +102,7 @@ public:
     //! the automatic position libmwaw::LeftBit|...
     int m_relativePosition;
     //! the position in points
-    Vec2f m_position;
+    MWAWVec2f m_position;
     //! the font
     MWAWFont m_font;
     //! the graphic style
@@ -153,9 +153,9 @@ public:
     //! the content type
     ContentType m_contentType;
     //! the position in the zone
-    Vec2f m_position;
+    MWAWVec2f m_position;
     //! the cell position ( for title and subtitle )
-    Vec2i m_cell;
+    MWAWVec2i m_cell;
     //! the text entry
     MWAWEntry m_textEntry;
     //! the zone format
@@ -165,7 +165,7 @@ public:
   };
 
   //! the constructor
-  MWAWChart(std::string const &sheetName, MWAWFontConverterPtr fontConverter, Vec2f const &dim=Vec2f());
+  MWAWChart(std::string const &sheetName, MWAWFontConverterPtr fontConverter, MWAWVec2f const &dim=MWAWVec2f());
   //! the destructor
   virtual ~MWAWChart();
   //! send the chart to the listener
@@ -181,12 +181,12 @@ public:
   }
 
   //! return the chart dimension
-  Vec2f const &getDimension() const
+  MWAWVec2f const &getDimension() const
   {
     return m_dim;
   }
   //! return the chart dimension
-  void setDimension(Vec2f const &dim)
+  void setDimension(MWAWVec2f const &dim)
   {
     m_dim=dim;
   }
@@ -227,7 +227,7 @@ protected:
   //! the sheet name
   std::string m_sheetName;
   //! the chart dimension in point
-  Vec2f m_dim;
+  MWAWVec2f m_dim;
   //! the chart type (if no series)
   Series::Type m_type;
   //! a flag to know if the data are stacked or not

@@ -157,7 +157,7 @@ public:
   }
 
   //! update a field with the record data
-  void updateWithContent(Vec2i const &pos, MWAWCellContent const &content);
+  void updateWithContent(MWAWVec2i const &pos, MWAWCellContent const &content);
 
   /** the cell content */
   MWAWCellContent m_content;
@@ -197,7 +197,7 @@ std::ostream &operator<<(std::ostream &o, FieldType const &fType)
   return o;
 }
 
-void FieldType::updateWithContent(Vec2i const &pos, MWAWCellContent const &content)
+void FieldType::updateWithContent(MWAWVec2i const &pos, MWAWCellContent const &content)
 {
   setPosition(pos);
   if (m_isSerial) {
@@ -565,8 +565,8 @@ void MsWksDBParser::createDocument(librevenge::RVNGSpreadsheetInterface *documen
   listen->startDocument();
   // time to send page information the graph parser and the text parser
   m_document->getGraphParser()->setPageLeftTop
-  (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
-         72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
+  (MWAWVec2f(72.f*float(getPageSpan().getMarginLeft()),
+             72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
 }
 
 
@@ -874,11 +874,11 @@ bool MsWksDBParser::readFormV2()
 
     // constant size ?
     float normSize[] = { 96.f/72.f, 16.f/72.f };
-    fType.m_bdbox[1] = MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[0]+normSize[0], dim[1]+normSize[1]));
+    fType.m_bdbox[1] = MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[0]+normSize[0], dim[1]+normSize[1]));
 
     float fieldDim = elt < numColSize ? float(colSize[elt])/72.f : normSize[0];
-    fType.m_bdbox[0] = MWAWBox2f(Vec2f(dim[0]+normSize[0],dim[1]),
-                                 Vec2f(dim[0]+normSize[0]+fieldDim, dim[1]+normSize[1]));
+    fType.m_bdbox[0] = MWAWBox2f(MWAWVec2f(dim[0]+normSize[0],dim[1]),
+                                 MWAWVec2f(dim[0]+normSize[0]+fieldDim, dim[1]+normSize[1]));
 
 
     int val = (int) input->readULong(2);
@@ -953,7 +953,7 @@ bool MsWksDBParser::readForms()
   for (int bd = 0; bd < 2; bd++) { // two bdbox
     float dim[4];
     for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(2)/1440.f;
-    forms.m_bdbox[bd] = MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3]));
+    forms.m_bdbox[bd] = MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3]));
   }
   forms.m_extra=f.str();
 
@@ -1012,7 +1012,7 @@ bool MsWksDBParser::readForm()
   float dim[4];
   for (int bd = 0; bd < 2; bd++) { // two bdbox
     for (int i = 0; i < 4; i++) dim[i] = (float)input->readLong(2)/1440.f;
-    form.m_bdbox[bd] = MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3]));
+    form.m_bdbox[bd] = MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3]));
   }
 
   if (vers == 4) {
@@ -1023,7 +1023,7 @@ bool MsWksDBParser::readForm()
 
   // page bdbox
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(2)/72.f;
-  form.m_bdbox[2] = MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3]));
+  form.m_bdbox[2] = MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3]));
 
   int numData = int(endPos-input->tell())/2;
   // g3 = [1,2,3], g4=[0,1,7], g6=[0,2,6], g7=[0,103,104,206]
@@ -1198,7 +1198,7 @@ bool MsWksDBParser::readFormTypes(MsWksDBParserInternal::Form &form)
     float dim[4];
     for (int bd = 0; bd < 2; bd++) { // two bdbox
       for (int i = 0; i < 4; i++) dim[i] = (float)input->readLong(2)/72.f;
-      fType.m_bdbox[bd] = MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3], dim[2]));
+      fType.m_bdbox[bd] = MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3], dim[2]));
     }
 
     // 0, 0 in v3, in v4 : two small number < 6
@@ -2061,7 +2061,7 @@ bool MsWksDBParser::readReportHeader()
   // a bdbox ?
   float dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(2)/72.f;
-  f << "bdbox(title)=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) << ",";
+  f << "bdbox(title)=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) << ",";
 
   f << "unk0=["; // always _, _, 1, _, _, 1
   for (int i = 0; i < 6; i++) {
@@ -2093,7 +2093,7 @@ bool MsWksDBParser::readReportHeader()
   // another bdbox : related to data size
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(2)/1440.f;
   if (dim[0]>0 || dim[1]>0 || dim[2]>0 || dim[3]>0)
-    f << "bdbox2=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) << ",";
+    f << "bdbox2=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) << ",";
 
   f << "unk2=["; // always [_,_,_,_,_,_,_,_] ?
   for (int i = 0; i < 8; i++) {
@@ -2106,7 +2106,7 @@ bool MsWksDBParser::readReportHeader()
   // 3 other bdbox ?
   for (int bd = 0; bd < 3; bd++) {
     for (int i = 0; i < 4; i++) dim[i] = (float)input->readLong(2)/72.f;
-    f << "bdbox" << 3+bd << "=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) << ",";
+    f << "bdbox" << 3+bd << "=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) << ",";
   }
 
   f << "unk3=["; // always [_,_,_,_,_,_,_,_,_, ...]
@@ -2121,11 +2121,11 @@ bool MsWksDBParser::readReportHeader()
   for (int i = 0; i < 2; i++) f << std::hex << input->readULong(2) << std::dec << ",";
   f << "],";
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(2)/1440.f;
-  f << "bdbox6" <<"=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) << ",";
+  f << "bdbox6" <<"=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) << ",";
 
   for (int bd = 0; bd < 3; bd++) {
     for (int i = 0; i < 4; i++) dim[i] = (float)input->readLong(2)/72.f;
-    f << "bdboxII(" << bd << ")=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) << ",";
+    f << "bdboxII(" << bd << ")=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) << ",";
     val = (int) input->readLong(2);
     if (val) {
       switch (bd) {
@@ -2146,7 +2146,7 @@ bool MsWksDBParser::readReportHeader()
   }
   for (int bd = 0; bd < 3; bd++) {
     for (int i = 0; i < 4; i++) dim[i] = (float)input->readLong(2)/72.f;
-    f << "bdboxIII(" << bd << ")=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2], dim[3])) <<",";
+    f << "bdboxIII(" << bd << ")=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2], dim[3])) <<",";
   }
   val = (int) input->readLong(2);
   if (val)  f << "#unkn1=" << val << ",";
@@ -2263,7 +2263,7 @@ bool MsWksDBParser::sendDatabase()
     for (size_t c=0; c<row.size(); ++c) {
       if (c>=numFields) break;
       MsWksDBParserInternal::FieldType field=fields[c];
-      field.updateWithContent(Vec2i(int(c),int(r)), row[c]);
+      field.updateWithContent(MWAWVec2i(int(c),int(r)), row[c]);
       if (field.empty()) continue;
 
       MWAWCellContent const &content=field.m_content;

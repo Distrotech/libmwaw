@@ -81,7 +81,7 @@ protected:
   void createDocument(librevenge::RVNGSpreadsheetInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
 
   //! try to send the main database
   bool sendDatabase();

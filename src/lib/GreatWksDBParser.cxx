@@ -244,7 +244,7 @@ bool Field::updateCell(int row, int numRow, Cell &cell) const
     instr.m_position[0][0]=instr.m_position[1][0]=m_summaryField;
     instr.m_position[0][1]=0;
     instr.m_position[1][1]=numRow-1;
-    instr.m_positionRelative[0]=instr.m_positionRelative[1]=Vec2b(false,false);
+    instr.m_positionRelative[0]=instr.m_positionRelative[1]=MWAWVec2b(false,false);
     formula.push_back(instr);
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
     instr.m_content=")";
@@ -316,7 +316,7 @@ public:
   {
   }
   //! add a cell data in one given position
-  bool addCell(Vec2i const &pos, Cell const &cell)
+  bool addCell(MWAWVec2i const &pos, Cell const &cell)
   {
     if (pos[0]<0 || pos[0]>=int(m_fieldList.size()) || pos[1]<0) {
       MWAW_DEBUG_MSG(("GreatWksDBParserInternal::Database::addCell: the cell position seems bad\n"));
@@ -1228,7 +1228,7 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
       cell.m_content.m_textEntry.setBegin(input->tell());
       cell.m_content.m_textEntry.setLength(sSz);
-      database.addCell(Vec2i(field.m_id, entry.id()), cell);
+      database.addCell(MWAWVec2i(field.m_id, entry.id()), cell);
 
       std::string text("");
       for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
@@ -1247,7 +1247,7 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       }
       // formula will be will later
       cell.m_content.m_contentType=MWAWCellContent::C_FORMULA;
-      database.addCell(Vec2i(field.m_id, entry.id()), cell);
+      database.addCell(MWAWVec2i(field.m_id, entry.id()), cell);
       f << "summary,";
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       break;
@@ -1279,7 +1279,7 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       else {
         cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
         cell.m_content.setValue(value);
-        database.addCell(Vec2i(field.m_id, entry.id()), cell);
+        database.addCell(MWAWVec2i(field.m_id, entry.id()), cell);
         f << value;
       }
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
@@ -1320,7 +1320,7 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       cell.m_content.m_contentType=MWAWCellContent::C_TEXT;
       cell.m_content.m_textEntry.setBegin(input->tell());
       cell.m_content.m_textEntry.setLength(mSz);
-      database.addCell(Vec2i(field.m_id, entry.id()), cell);
+      database.addCell(MWAWVec2i(field.m_id, entry.id()), cell);
       // probably a simple textbox ( see sendSimpleTextbox )
       if (mSz) f << "memo,";
       input->seek(pos+4+mSz, librevenge::RVNG_SEEK_SET);
@@ -1330,7 +1330,7 @@ bool GreatWksDBParser::readRowRecords(MWAWEntry const &entry)
       std::string extra("");
       ok=readFormulaResult(endPos, cell, extra);
       if (ok)
-        database.addCell(Vec2i(field.m_id, entry.id()), cell);
+        database.addCell(MWAWVec2i(field.m_id, entry.id()), cell);
       f << extra;
       break;
     }
@@ -1382,7 +1382,7 @@ bool GreatWksDBParser::readFormula(long endPos, std::vector<MWAWCellContent::For
   libmwaw::DebugStream f;
   f << "Entries(Formula):";
   std::string error("");
-  if (!m_document->readFormula(Vec2i(0,0),endHeader,formula, error))
+  if (!m_document->readFormula(MWAWVec2i(0,0),endHeader,formula, error))
     f << "###";
   f << "[";
   for (size_t l=0; l < formula.size(); ++l)
@@ -1825,7 +1825,7 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
           ++actPos;
         }
         cell.m_content.m_textEntry.setEnd(input->tell()-(findEmptyChar ? 1 : 0));
-        database.addCell(Vec2i(field.m_id, rows[i]), cell);
+        database.addCell(MWAWVec2i(field.m_id, rows[i]), cell);
         f << "\"" << text << "\":" << rows[i] << ",";
       }
       input->seek(pos+12+dSz+5*N, librevenge::RVNG_SEEK_SET);
@@ -1860,7 +1860,7 @@ bool GreatWksDBParser::readFieldRecords(GreatWksDBParserInternal::Field &field)
           cell.setFormat(field.m_format);
           cell.m_content.m_contentType=MWAWCellContent::C_NUMBER;
           cell.m_content.setValue(value);
-          database.addCell(Vec2i(field.m_id, row), cell);
+          database.addCell(MWAWVec2i(field.m_id, row), cell);
           f << value;
         }
         f << ":" << row << ",";
@@ -2156,7 +2156,7 @@ bool GreatWksDBParser::sendDatabase()
       if (cell.isEmpty()) continue;
 
       MWAWCellContent const &content=cell.m_content;
-      cell.setPosition(Vec2i(int(c),r));
+      cell.setPosition(MWAWVec2i(int(c),r));
       listener->openSheetCell(cell, content);
       if (field.m_type==GreatWksDBParserInternal::Field::F_Text && content.m_textEntry.valid()) {
         input->seek(content.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);

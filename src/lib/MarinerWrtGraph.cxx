@@ -70,7 +70,7 @@ struct Pattern {
   //! constructor ( 4 uint16_t by pattern )
   Pattern(uint16_t const *pat, bool uniform) : m_uniform(uniform), m_pattern(), m_percent(1)
   {
-    m_pattern.m_dim=Vec2i(8,8);
+    m_pattern.m_dim=MWAWVec2i(8,8);
     m_pattern.m_colors[0]=MWAWColor::white();
     m_pattern.m_colors[1]=MWAWColor::black();
     for (size_t i=0; i < 4; ++i) {
@@ -183,7 +183,7 @@ struct Token {
   //! the high byte of the field type
   int m_highType;
   //! the dimension
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
   // for footnote
   //! the zone to used type
   int m_refType;
@@ -624,7 +624,7 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: can not find the listener\n"));
     return;
   }
-  Vec2i const &sz=tkn.m_dim;
+  MWAWVec2i const &sz=tkn.m_dim;
   if (sz[0] < 0 || sz[1] < 0 || (sz[0]==0 && sz[1]==0)) {
     MWAW_DEBUG_MSG(("MarinerWrtGraph::sendRule: the rule size seems bad\n"));
     return;
@@ -671,7 +671,7 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
   float totalWidth=0;
   for (size_t l=0; l < listW.size(); ++l) totalWidth += listW[l];
   if (lineH<totalWidth) lineH=totalWidth;
-  MWAWBox2f box(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH));
+  MWAWBox2f box(MWAWVec2f(0,0), MWAWVec2f(sz)+MWAWVec2f(0,lineH));
   MWAWPosition pos(box[0], box[1], librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   MWAWGraphicStyle pStyle;
@@ -679,13 +679,13 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
   if (pat.m_uniform) {
     pStyle.m_lineWidth=listW[0];
     pStyle.m_lineColor=MWAWColor::barycenter(pat.m_percent,col,1.f-pat.m_percent,MWAWColor::white());
-    shape=MWAWGraphicShape::line(Vec2f(0,0), Vec2f(sz));
+    shape=MWAWGraphicShape::line(MWAWVec2f(0,0), MWAWVec2f(sz));
   }
   else {
     pStyle.m_lineWidth=0;
     pat.m_pattern.m_colors[1]=col;
     pStyle.setPattern(pat.m_pattern);
-    shape=MWAWGraphicShape::rectangle(MWAWBox2f(Vec2f(0,0), Vec2f(float(sz[0]),listW[0])));
+    shape=MWAWGraphicShape::rectangle(MWAWBox2f(MWAWVec2f(0,0), MWAWVec2f(float(sz[0]),listW[0])));
   }
 
   if (listW.size()==1) {
@@ -694,12 +694,12 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     return;
   }
   MWAWGraphicEncoder graphicEncoder;
-  MWAWGraphicListener graphicListener(*m_parserState, MWAWBox2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)), &graphicEncoder);
+  MWAWGraphicListener graphicListener(*m_parserState, MWAWBox2f(MWAWVec2f(0,0), MWAWVec2f(sz)+MWAWVec2f(0,lineH)), &graphicEncoder);
   graphicListener.startDocument();
   float actH = (lineH-totalWidth)/2.f;
   for (size_t l=0; l < listW.size(); ++l) {
     if ((l%2)==0) {
-      MWAWPosition linePos(Vec2f(0,actH), Vec2f(sz)+Vec2f(0,listW[l]),librevenge::RVNG_POINT);
+      MWAWPosition linePos(MWAWVec2f(0,actH), MWAWVec2f(sz)+MWAWVec2f(0,listW[l]),librevenge::RVNG_POINT);
       linePos.m_anchorTo=MWAWPosition::Page;
       graphicListener.insertPicture(linePos, shape, pStyle);
     }
@@ -733,12 +733,12 @@ void MarinerWrtGraph::sendPicture(MarinerWrtGraphInternal::Token const &tkn)
 
   m_parserState->m_asciiFile.skipZone(tkn.m_pictData.begin(),tkn.m_pictData.end()-1);
 #endif
-  Vec2i dim(tkn.m_dim);
+  MWAWVec2i dim(tkn.m_dim);
   if (dim[0] <= 0 || dim[1] <= 0) {
     MWAW_DEBUG_MSG(("MarinerWrtGraph::sendPicture: can not find the picture dim\n"));
-    dim = Vec2i(100,100);
+    dim = MWAWVec2i(100,100);
   }
-  MWAWPosition posi(Vec2i(0,0),dim,librevenge::RVNG_POINT);
+  MWAWPosition posi(MWAWVec2i(0,0),dim,librevenge::RVNG_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
   MWAWGraphicStyle style;
   tkn.addPictBorder(style);
@@ -772,7 +772,7 @@ void MarinerWrtGraph::sendPSZone(MarinerWrtGraphInternal::PSZone const &ps, MWAW
 #endif
   MWAWPosition pictPos(pos);
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
-    pictPos.setSize(Vec2f(100,100));
+    pictPos.setSize(MWAWVec2f(100,100));
   if (m_parserState->m_textListener)
     m_parserState->m_textListener->insertPicture(pictPos, data, "image/ps");
   input->seek(actPos, librevenge::RVNG_SEEK_SET);
@@ -841,7 +841,7 @@ bool MarinerWrtGraph::readToken(MarinerWrtEntry const &entry, int zoneId)
       dim[j-3]=(int) dt.value(0);
       if (j!=4)
         dim[++j-3]=(int) dataList[d++].value(0);
-      tkn.m_dim = Vec2i(dim[0],dim[1]);
+      tkn.m_dim = MWAWVec2i(dim[0],dim[1]);
       break;
     case 6:
       if (dt.value(0)) {
@@ -1181,7 +1181,7 @@ void MarinerWrtGraph::flushExtra()
   std::map<int,MarinerWrtGraphInternal::Zone>::const_iterator it = m_state->m_zoneMap.begin();
   std::map<long,MarinerWrtGraphInternal::Token>::const_iterator tIt;
   std::map<long,MarinerWrtGraphInternal::PSZone>::const_iterator psIt;
-  MWAWPosition pictPos(Vec2i(0,0),Vec2i(0,0),librevenge::RVNG_POINT);
+  MWAWPosition pictPos(MWAWVec2i(0,0),MWAWVec2i(0,0),librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   while (it != m_state->m_zoneMap.end()) {

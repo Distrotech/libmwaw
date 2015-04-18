@@ -86,7 +86,7 @@ struct State {
   //! the number of pages (computed)
   int m_numPages;
   //! the number of pages find in the header ( if known )
-  Vec2i m_pages;
+  MWAWVec2i m_pages;
   //! true if the number pages of pages has been verified
   bool m_pagesVerified;
   int m_headerId /** the header zone if known */,
@@ -190,7 +190,7 @@ ClarisWksDocument::~ClarisWksDocument()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2i ClarisWksDocument::getDocumentPages()
+MWAWVec2i ClarisWksDocument::getDocumentPages()
 {
   if (!m_state->m_pagesVerified && m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW) {
     int numHPages=m_state->m_pages[0];
@@ -281,10 +281,10 @@ double ClarisWksDocument::getTextHeight() const
   return m_parserState->m_pageSpan.getPageLength()-m_state->m_headerHeight/72.0-m_state->m_footerHeight/72.0;
 }
 
-Vec2f ClarisWksDocument::getPageLeftTop() const
+MWAWVec2f ClarisWksDocument::getPageLeftTop() const
 {
-  return Vec2f(float(m_parserState->m_pageSpan.getMarginLeft()),
-               float(m_parserState->m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(m_parserState->m_pageSpan.getMarginLeft()),
+                   float(m_parserState->m_pageSpan.getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -955,7 +955,7 @@ bool ClarisWksDocument::readDocInfo()
     pages[i]=(int) input->readLong(2);
   if (pages[1]>=1 && pages[1] < 1000 &&
       (pages[0]==1 || (pages[0]>1 && pages[0]<100 && m_parserState->m_kind == MWAWDocument::MWAW_K_DRAW)))
-    m_state->m_pages=Vec2i(pages[0],pages[1]);
+    m_state->m_pages=MWAWVec2i(pages[0],pages[1]);
   // in database field, pages[1] can be very big, this number seems related to the number of record ?
   else if (m_parserState->m_kind != MWAWDocument::MWAW_K_DATABASE || pages[0]!=1) {
     MWAW_DEBUG_MSG(("ClarisWksDocument::readDocInfo: the number of pages seems bad\n"));
@@ -1078,9 +1078,9 @@ bool ClarisWksDocument::readDocHeader()
       margin[0] >= 0 && margin[1] >= 0 && margin[2] >= 0 && margin[3] >= 0 &&
       dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
 
-    Vec2i paperSize(dim[1],dim[0]);
-    Vec2i lTopMargin(margin[1], margin[0]);
-    Vec2i rBotMargin(margin[3], margin[2]);
+    MWAWVec2i paperSize(dim[1],dim[0]);
+    MWAWVec2i lTopMargin(margin[1], margin[0]);
+    MWAWVec2i rBotMargin(margin[3], margin[2]);
 
     m_parser->getPageSpan().setMarginTop(lTopMargin.y()/72.0);
     m_parser->getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
@@ -2159,21 +2159,21 @@ bool ClarisWksDocument::readPrintInfo()
   }
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   if (!m_state->m_pageSpanSet) {
     // define margin from print info
-    Vec2i lTopMargin= -1 * info.paper().pos(0);
-    Vec2i rBotMargin=info.paper().size() - info.page().size();
+    MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+    MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
     // move margin left | top
     int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
     int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-    lTopMargin -= Vec2i(decalX, decalY);
-    rBotMargin += Vec2i(decalX, decalY);
+    lTopMargin -= MWAWVec2i(decalX, decalY);
+    rBotMargin += MWAWVec2i(decalX, decalY);
 
     m_parser->getPageSpan().setMarginTop(lTopMargin.y()/72.0);
     m_parser->getPageSpan().setMarginBottom(rBotMargin.y()/72.0);
@@ -2345,7 +2345,7 @@ bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, 
 }
 
 // try to read a list of cell's zone
-bool ClarisWksDocument::readStructCellZone(char const *zoneName, bool hasEntete, std::vector<Vec2i> &res)
+bool ClarisWksDocument::readStructCellZone(char const *zoneName, bool hasEntete, std::vector<MWAWVec2i> &res)
 {
   if (!m_parserState) {
     MWAW_DEBUG_MSG(("ClarisWksDocument::readStructCellZone: can not find the parser state\n"));
@@ -2407,7 +2407,7 @@ bool ClarisWksDocument::readStructCellZone(char const *zoneName, bool hasEntete,
     int dim[2];
     for (int j = 0; j < 2; j++) dim[j]= (int) input->readLong(2);
     // checkme: do we need to invert the coordinate
-    Vec2i cell(dim[0],dim[1]);
+    MWAWVec2i cell(dim[0],dim[1]);
     res.push_back(cell);
     f << cell << ",";
   }
@@ -2541,7 +2541,7 @@ void ClarisWksDocument::updateChildPositions()
     MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the number of accross pages is not set\n"));
     numHorizontalPages=1;
   }
-  Vec2f pageDim(72.0f*(float)m_parser->getPageWidth(), 72.0f*(float)getTextHeight()), graphPageDim;
+  MWAWVec2f pageDim(72.0f*(float)m_parser->getPageWidth(), 72.0f*(float)getTextHeight()), graphPageDim;
   if (isDraw && m_graphParser->getPageDimension(graphPageDim)) {
     if (graphPageDim[0]>pageDim[0] || graphPageDim[1]>pageDim[1]) {
       MWAW_DEBUG_MSG(("ClarisWksDocument::updateChildPositions: the dimension given by the graph parser seems bad\n"));

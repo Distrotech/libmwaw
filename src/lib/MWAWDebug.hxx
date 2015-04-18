@@ -104,7 +104,7 @@ public:
   //! skips the file zone defined by beginPos-endPos
   void skipZone(long beginPos, long endPos)
   {
-    if (m_on) m_skipZones.push_back(Vec2<long>(beginPos, endPos));
+    if (m_on) m_skipZones.push_back(MWAWVec2<long>(beginPos, endPos));
   }
 
 protected:
@@ -160,7 +160,7 @@ protected:
   //! list of notes
   std::vector<NotePos> m_notes;
   //! list of skipZone
-  std::vector<Vec2<long> > m_skipZones;
+  std::vector<MWAWVec2<long> > m_skipZones;
 };
 }
 #  else

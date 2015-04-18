@@ -91,11 +91,11 @@ public:
   //! returns the document number of page
   int numPages() const;
   //! returns the number of expected pages ( accross pages x down page)
-  Vec2i getDocumentPages();
+  MWAWVec2i getDocumentPages();
   //! returns the page height, ie. paper size less margin (in inches) less header/footer size
   double getTextHeight() const;
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
   /** updates the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
   /** updates the page span list (and returns a master page)*/
@@ -221,7 +221,7 @@ public:
       where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
   bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
   /** try to read a structured zone list of cells */
-  bool readStructCellZone(char const *zoneName, bool hasEntete, std::vector<Vec2i> &res);
+  bool readStructCellZone(char const *zoneName, bool hasEntete, std::vector<MWAWVec2i> &res);
   /* read a list of string zone */
   bool readStringList(char const *zoneName, bool hasEntete, std::vector<std::string> &res);
 

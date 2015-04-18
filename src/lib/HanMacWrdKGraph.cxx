@@ -78,8 +78,8 @@ struct Frame {
   //! return the frame bdbox
   MWAWBox2f getBdBox() const
   {
-    Vec2f minPt(m_pos[0][0], m_pos[0][1]);
-    Vec2f maxPt(m_pos[1][0], m_pos[1][1]);
+    MWAWVec2f minPt(m_pos[0][0], m_pos[0][1]);
+    MWAWVec2f maxPt(m_pos[1][0], m_pos[1][1]);
     for (int c=0; c<2; ++c) {
       if (m_pos.size()[c]>=0) continue;
       minPt[c]=m_pos[1][c];
@@ -110,7 +110,7 @@ struct Frame {
   //! the border type
   int m_borderType;
   //! the border default size (before using width), 0 means Top, other unknown
-  Vec2f m_borders[4];
+  MWAWVec2f m_borders[4];
   //! true if the frame is a child of a group
   bool m_inGroup;
   //! true if we have send the data
@@ -342,9 +342,9 @@ struct PictureFrame : public Frame {
   //! a type
   int m_pictureType;
   //! a dim?
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
   //! the border dim?
-  Vec2f m_borderDim;
+  MWAWVec2f m_borderDim;
   //! some unknown int
   int m_values[7];
 };
@@ -602,7 +602,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
-    m_dim=Vec2i(8,8);
+    m_dim=MWAWVec2i(8,8);
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
@@ -989,13 +989,13 @@ bool HanMacWrdKGraph::readFrames(shared_ptr<HanMacWrdKZone> zone)
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(input->readLong(4))/65536.f;
-  graph.m_pos = MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+  graph.m_pos = MWAWBox2f(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3]));
 
   for (int i = 0; i < 4; ++i) { // border size, 0=Top, other unknown
     float bd[2];
     for (int j = 0; j < 2; ++j)
       bd[j] = float(input->readLong(4))/65536.f;
-    graph.m_borders[i] = Vec2f(bd[0],bd[1]);
+    graph.m_borders[i] = MWAWVec2f(bd[0],bd[1]);
   }
   MWAWGraphicStyle &style = graph.m_style;
   style.m_lineWidth = float(input->readLong(4))/65536.f;
@@ -1221,7 +1221,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
         textbox.m_parsed=true;
         MWAWSubDocumentPtr subdoc
         (new HanMacWrdKGraphInternal::SubDocument(*this, input, HanMacWrdKGraphInternal::SubDocument::Text, textbox.m_textFileId));
-        MWAWBox2f box(Vec2f(0,0),pos.size());
+        MWAWBox2f box(MWAWVec2f(0,0),pos.size());
         MWAWGraphicEncoder graphicEncoder;
         MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
         graphicListener.startDocument();
@@ -1248,7 +1248,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
 
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
@@ -1276,12 +1276,12 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
         (pos.m_anchorTo!=MWAWPosition::Frame && table.hasExtraLines())) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
-      pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
+      pos.setSize(MWAWVec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc);
       return true;
     }
@@ -1294,7 +1294,7 @@ bool HanMacWrdKGraph::sendFrame(HanMacWrdKGraphInternal::Frame const &frame, MWA
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) && !canCreateGraphic(group)) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdKGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdKGraphInternal::SubDocument::Group, frame.m_fileId));
@@ -1315,14 +1315,14 @@ bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
-  Vec2f pictSz = pos.size();
+  MWAWVec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
-  MWAWPosition pictPos(Vec2f(0,0), pictSz, librevenge::RVNG_POINT);
+  MWAWPosition pictPos(MWAWVec2f(0,0), pictSz, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
-  MWAWBox2f box=MWAWBox2f(Vec2f(0,0),pictSz);
-  MWAWPosition shapePos(Vec2f(0,0),pictSz, librevenge::RVNG_POINT);
+  MWAWBox2f box=MWAWBox2f(MWAWVec2f(0,0),pictSz);
+  MWAWPosition shapePos(MWAWVec2f(0,0),pictSz, librevenge::RVNG_POINT);
   shapePos.m_anchorTo=MWAWPosition::Page;
   MWAWGraphicEncoder graphicEncoder;
   MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
@@ -1330,7 +1330,7 @@ bool HanMacWrdKGraph::sendEmptyPicture(MWAWPosition pos)
   MWAWGraphicStyle defStyle;
   graphicListener.insertPicture(shapePos, MWAWGraphicShape::rectangle(box), defStyle);
   graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(box[0],box[1]), defStyle);
-  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(MWAWVec2f(0,pictSz[1]), MWAWVec2f(pictSz[0],0)), defStyle);
   graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
@@ -1352,7 +1352,7 @@ bool HanMacWrdKGraph::sendPictureFrame(HanMacWrdKGraphInternal::PictureFrame con
 bool HanMacWrdKGraph::sendTextBox(HanMacWrdKGraphInternal::TextBox const &textbox, MWAWPosition pos)
 {
   if (!m_parserState->m_textListener) return true;
-  Vec2f textboxSz = textbox.getBdBox().size();
+  MWAWVec2f textboxSz = textbox.getBdBox().size();
   if (textbox.m_type==10) {
     if (textbox.m_dim[0] > textboxSz[0]) textboxSz[0]=textbox.m_dim[0];
     if (textbox.m_dim[1] > textboxSz[1]) textboxSz[1]=textbox.m_dim[1];
@@ -1378,7 +1378,7 @@ bool HanMacWrdKGraph::sendShapeGraph(HanMacWrdKGraphInternal::ShapeGraph const &
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0)
     pos.setSize(pict.getBdBox().size());
   pos.setOrigin(pos.origin());
-  pos.setSize(pos.size()+Vec2f(4,4));
+  pos.setSize(pos.size()+MWAWVec2f(4,4));
   m_parserState->m_textListener->insertPicture(pos,pict.m_shape,pict.getStyle());
   return true;
 }
@@ -1450,7 +1450,7 @@ shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> HanMacWrdKGraph::readShapeGraph(
     for (int pt = 0; pt < 2; ++pt) {
       for (int i = 0; i < 2; ++i)
         coord[i] = float(input->readLong(4))/65536.f;
-      Vec2f vertex=Vec2f(coord[1],coord[0]);
+      MWAWVec2f vertex=MWAWVec2f(coord[1],coord[0]);
       shape.m_vertices.push_back(vertex);
     }
     break;
@@ -1524,10 +1524,10 @@ shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> HanMacWrdKGraph::readShapeGraph(
                       bdbox.size()[1]/(maxVal[1]>minVal[1]?maxVal[1]-minVal[1]:0.f)
                      };
     float delta[2]= {bdbox[0][0]-minVal[0] *factor[0],bdbox[0][1]-minVal[1] *factor[1]};
-    shape.m_formBox=MWAWBox2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
-                              Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
+    shape.m_formBox=MWAWBox2f(MWAWVec2f(delta[0]-factor[0],delta[1]-factor[1]),
+                              MWAWVec2f(delta[0]+factor[0],delta[1]+factor[1]));
     shape.m_type=MWAWGraphicShape::Pie;
-    shape.m_arcAngles=Vec2f(angles[0],angles[1]);
+    shape.m_arcAngles=MWAWVec2f(angles[0],angles[1]);
     for (int i = 0; i < 12; ++i) { // always 0
       val = input->readLong(2);
       if (val) f << "f" << i+1 << "=" << val << ",";
@@ -1551,12 +1551,12 @@ shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> HanMacWrdKGraph::readShapeGraph(
       if (val) f << "g" << i << "=" << val << ",";
     }
     shape.m_type=MWAWGraphicShape::Polygon;
-    Vec2f minPt(0,0);
+    MWAWVec2f minPt(0,0);
     for (int i = 0; i < numPt; ++i) {
       float dim[2];
       for (int c=0; c < 2; ++c)
         dim[c] = float(input->readLong(4))/65536.f;
-      Vec2f vertex=Vec2f(dim[1], dim[0])+bdbox[0];
+      MWAWVec2f vertex=MWAWVec2f(dim[1], dim[0])+bdbox[0];
       shape.m_vertices.push_back(vertex);
     }
     break;
@@ -1646,13 +1646,13 @@ shared_ptr<HanMacWrdKGraphInternal::PictureFrame> HanMacWrdKGraph::readPictureFr
   float bDim[2];
   for (int i = 0; i < 2; ++i)
     bDim[i] = float(input->readLong(4))/65536.f;
-  picture->m_borderDim = Vec2f(bDim[0], bDim[1]);
+  picture->m_borderDim = MWAWVec2f(bDim[0], bDim[1]);
   for (int i = 5; i < 7; ++i) // always 0
     picture->m_values[i] = (int) input->readLong(2);
   int dim[2]; //0,0 or 3e,3c
   for (int i = 0; i < 2; ++i)
     dim[i] = (int) input->readLong(2);
-  picture->m_dim  = Vec2i(dim[0], dim[1]);
+  picture->m_dim  = MWAWVec2i(dim[0], dim[1]);
   picture->m_fileId = (long) input->readULong(4);
 
   f << "FrameDef(pictureData):";
@@ -1804,12 +1804,12 @@ shared_ptr<HanMacWrdKGraphInternal::Table> HanMacWrdKGraph::readTable(shared_ptr
     int posi[2];
     for (int j = 0; j < 2; ++j)
       posi[j] = (int) input->readLong(2);
-    cell->setPosition(Vec2i(posi[1],posi[0]));
+    cell->setPosition(MWAWVec2i(posi[1],posi[0]));
     int span[2];
     for (int j = 0; j < 2; ++j)
       span[j] = (int) input->readLong(2);
     if (span[0]>=1 && span[1]>=1)
-      cell->setNumSpannedCells(Vec2i(span[1], span[0]));
+      cell->setNumSpannedCells(MWAWVec2i(span[1], span[0]));
     else {
       MWAW_DEBUG_MSG(("HanMacWrdKGraph::readTable: can not read cell span\n"));
       f << "##span=" << span[1] << "x" << span[0] << ",";
@@ -1817,7 +1817,7 @@ shared_ptr<HanMacWrdKGraphInternal::Table> HanMacWrdKGraph::readTable(shared_ptr
     float dim[2];
     for (int j = 0; j < 2; ++j)
       dim[j] = float(input->readLong(4))/65536.f;
-    cell->setBdSize(Vec2f(dim[0], dim[1]));
+    cell->setBdSize(MWAWVec2f(dim[0], dim[1]));
 
     int color = (int) input->readULong(2);
     MWAWColor backCol = MWAWColor::white();
@@ -2241,7 +2241,7 @@ void HanMacWrdKGraph::flushExtra()
     HanMacWrdKGraphInternal::Frame const &frame = *fIt->second;
     if (frame.m_parsed || frame.m_type==3)
       continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0),MWAWVec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }
@@ -2251,7 +2251,7 @@ void HanMacWrdKGraph::flushExtra()
     HanMacWrdKGraphInternal::Picture const &picture = *pIt->second;
     if (picture.m_parsed)
       continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(100,100),librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0),MWAWVec2f(100,100),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendPicture(picture, pos);
   }

@@ -70,7 +70,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
-    m_dim=Vec2i(8,8);
+    m_dim=MWAWVec2i(8,8);
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
@@ -125,7 +125,7 @@ struct Zone {
   //! returns the bounding box
   MWAWBox2f getBoundingBox() const
   {
-    Vec2f minPt=m_dimension[0], maxPt=m_dimension[1];
+    MWAWVec2f minPt=m_dimension[0], maxPt=m_dimension[1];
     for (int i=0; i<2; ++i) {
       if (m_dimension[0][i]<=m_dimension[1][i])
         continue;
@@ -854,7 +854,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     case 1:
       if (val&4) f << "round,";
       if (val&2) {
-        style.m_shadowOffset=Vec2f(5,5);
+        style.m_shadowOffset=MWAWVec2f(5,5);
         style.setShadowColor(MWAWColor(128,128,128));
       }
       val&=0xF9;
@@ -879,7 +879,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     else
       dim[i]=(float) input->readLong(2);
   }
-  zone.m_dimension=MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  zone.m_dimension=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
 
   int numZones=m_state->m_numDataZone;
   val=(int) input->readLong(2); // 0, find also 6 for a line ?
@@ -1005,8 +1005,8 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       if (val&4) {
         f << "mirrorX,";
         float tmp=zone.m_dimension[1][1];
-        zone.m_dimension.setMax(Vec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
-        zone.m_dimension.setMin(Vec2f(zone.m_dimension[0][0], tmp));
+        zone.m_dimension.setMax(MWAWVec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
+        zone.m_dimension.setMin(MWAWVec2f(zone.m_dimension[0][0], tmp));
       }
       val &=0xE3;
       if (val) f << "flA4=" << std::hex << val << std::dec << ",";
@@ -1017,11 +1017,11 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
       for (int i=0; i<2; ++i) unkn[i]=(int) input->readULong(2);
       if (unkn[0]==0xc000 && unkn[1]==0) {
         f << "vertical,";
-        zone.m_dimension.setMax(Vec2f(zone.m_dimension[0][0], zone.m_dimension[1][1]));
+        zone.m_dimension.setMax(MWAWVec2f(zone.m_dimension[0][0], zone.m_dimension[1][1]));
       }
       else if (unkn[0]==0 && unkn[1]==0x4000) {
         f << "horizontal,";
-        zone.m_dimension.setMax(Vec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
+        zone.m_dimension.setMax(MWAWVec2f(zone.m_dimension[1][0], zone.m_dimension[0][1]));
       }
     }
     else {
@@ -1204,7 +1204,7 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
 
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readULong(4))/65536.f;
-  pict.m_dim=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  pict.m_dim=MWAWBox2f(MWAWVec2f(dim[1],dim[0]),MWAWVec2f(dim[3],dim[2]));
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     float dim2[2];
@@ -1311,7 +1311,7 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   pict.m_headerPos=entry.begin();
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readULong(2);
-  pict.m_dim=MWAWBox2f(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
+  pict.m_dim=MWAWBox2f(MWAWVec2f((float)dim[1],(float)dim[0]),MWAWVec2f((float)dim[3],(float)dim[2]));
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     int dim2[2];
@@ -1527,20 +1527,20 @@ bool RagTimeParser::readPrintInfo(MWAWEntry &entry, bool inRSRCFork)
   }
   f << info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -2493,7 +2493,7 @@ bool RagTimeParser::sendBitmap(RagTimeParserInternal::Picture const &pict, MWAWP
     return false;
   }
   ascii().skipZone(input->tell(), pict.m_pos.end()-1);
-  MWAWPictBitmapBW bitmap(Vec2i(dim[1],dim[0]));
+  MWAWPictBitmapBW bitmap(MWAWVec2i(dim[1],dim[0]));
   for (int r=0; r<dim[0]; ++r) {
     long pos=input->tell();
     unsigned long numReads;
@@ -2529,8 +2529,8 @@ bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
     MWAW_DEBUG_MSG(("RagTimeParser::sendBasicPicture: find unexpected type for zone %d\n", zId));
     return false;
   }
-  MWAWGraphicShape shape= MWAWGraphicShape::line(Vec2f(zone.m_dimension[0][0],zone.m_dimension[0][1])-position.origin(),
-                          Vec2f(zone.m_dimension[1][0],zone.m_dimension[1][1])-position.origin());
+  MWAWGraphicShape shape= MWAWGraphicShape::line(MWAWVec2f(zone.m_dimension[0][0],zone.m_dimension[0][1])-position.origin(),
+                          MWAWVec2f(zone.m_dimension[1][0],zone.m_dimension[1][1])-position.origin());
   MWAWGraphicStyle style(zone.m_style);
   if (zone.m_arrowFlags&1) style.m_arrows[0]=true;
   if (zone.m_arrowFlags&2) style.m_arrows[1]=true;
@@ -2598,7 +2598,7 @@ bool RagTimeParser::send(int zId)
       border.m_color=style.m_lineColor;
       style.setBorders(0xf, border);
     }
-    pos.setSize(Vec2f((float)box.size()[0],(float)-box.size()[1]));
+    pos.setSize(MWAWVec2f((float)box.size()[0],(float)-box.size()[1]));
     if (zone.m_rotation) {
       static bool first=true;
       if (first) {
@@ -2633,7 +2633,7 @@ void RagTimeParser::flushExtra()
       MWAW_DEBUG_MSG(("RagTimeParser::flushExtra: find some unsent picture zone\n"));
       first=false;
     }
-    MWAWPosition pos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0), MWAWVec2f(200,200), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Char;
     sendPicture(pIt->first, pos);
     listener->insertEOL();
@@ -2647,7 +2647,7 @@ void RagTimeParser::flushExtra()
       MWAW_DEBUG_MSG(("RagTimeParser::flushExtra: find some unsent line zone\n"));
       first=false;
     }
-    MWAWPosition pos(Vec2f(0,0), Vec2f(50,50), librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0), MWAWVec2f(50,50), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Char;
     sendBasicPicture(zIt->first, pos);
     listener->insertEOL();

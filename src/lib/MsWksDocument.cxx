@@ -407,7 +407,7 @@ void MsWksDocument::sendOLE(int id, MWAWPosition const &pictPos, MWAWGraphicStyl
   m_parserState->getMainListener()->insertPicture(pictPos, data, type, style);
 }
 
-void MsWksDocument::sendRBIL(int id, Vec2i const &sz)
+void MsWksDocument::sendRBIL(int id, MWAWVec2i const &sz)
 {
   MsWksGraph::SendData sendData;
   sendData.m_type = MsWksGraph::SendData::RBIL;
@@ -677,8 +677,8 @@ bool MsWksDocument::readPrintInfo()
   if (!input->checkPosition(pos+0x78+8) || !info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
@@ -696,7 +696,7 @@ bool MsWksDocument::readPrintInfo()
 
   // fixme: compute the real page length here...
   // define margin from print info
-  Vec2i lTopMargin(margin[0],margin[1]), rBotMargin(margin[2],margin[3]);
+  MWAWVec2i lTopMargin(margin[0],margin[1]), rBotMargin(margin[2],margin[3]);
   lTopMargin += paperSize - pageSize;
 
   int leftMargin = lTopMargin.x();
@@ -885,7 +885,7 @@ bool MsWksDocument::readGroupHeaderFooter(bool header, int check)
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
 
-  MWAWBox2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  MWAWBox2i box(MWAWVec2i(dim[1], dim[0]), MWAWVec2i(dim[3], dim[2]));
   if (box.size().x() < -2000 || box.size().y() < -2000 ||
       box.size().x() > 2000 || box.size().y() > 2000 ||
       box.min().x() < -200 || box.min().y() < -200) return false;
@@ -1216,11 +1216,11 @@ bool MsWksDocument::readCellInFormula(MWAWCellContent::FormulaInstruction &instr
       }
       return false;
     }
-    instr.m_position[0]=Vec2i(pos[1],pos[0]-1);
-    instr.m_positionRelative[0]=Vec2b(!absolute[1],!absolute[0]);
+    instr.m_position[0]=MWAWVec2i(pos[1],pos[0]-1);
+    instr.m_positionRelative[0]=MWAWVec2b(!absolute[1],!absolute[0]);
   }
   else
-    instr.m_position[0]=Vec2i((int) input->readULong(1),0);
+    instr.m_position[0]=MWAWVec2i((int) input->readULong(1),0);
   return ok;
 }
 

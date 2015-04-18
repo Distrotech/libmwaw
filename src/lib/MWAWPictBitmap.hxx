@@ -56,7 +56,7 @@ template <class T> class MWAWPictBitmapContainer
 {
 public:
   //! constructor given size
-  MWAWPictBitmapContainer(Vec2i const &sz) : m_size(sz), m_data(0L)
+  MWAWPictBitmapContainer(MWAWVec2i const &sz) : m_size(sz), m_data(0L)
   {
     if (m_size[0]*m_size[1] == 0) return;
     m_data = new T[size_t(m_size[0]*m_size[1])];
@@ -88,7 +88,7 @@ public:
     return 0;
   }
   //! return the array size
-  Vec2i const &size() const
+  MWAWVec2i const &size() const
   {
     return m_size;
   }
@@ -155,7 +155,7 @@ private:
   MWAWPictBitmapContainer &operator=(MWAWPictBitmapContainer const &orig);
 protected:
   //! the size
-  Vec2i m_size;
+  MWAWVec2i m_size;
   //! the m_data placed by row ie. d_00, d_10, ... , d_{X-1}0, ..
   T *m_data;
 };
@@ -165,7 +165,7 @@ class MWAWPictBitmapContainerBool : public MWAWPictBitmapContainer<bool>
 {
 public:
   //! constructor
-  MWAWPictBitmapContainerBool(Vec2i const &sz) : MWAWPictBitmapContainer<bool>(sz) {}
+  MWAWPictBitmapContainerBool(MWAWVec2i const &sz) : MWAWPictBitmapContainer<bool>(sz) {}
 
   //! a comparison operator
   int cmp(MWAWPictBitmapContainerBool const &orig) const
@@ -249,9 +249,9 @@ protected:
   virtual bool createFileData(librevenge::RVNGBinaryData &result) const = 0;
 
   //! protected constructor: use check to construct a picture
-  MWAWPictBitmap(Vec2i const &sz)
+  MWAWPictBitmap(MWAWVec2i const &sz)
   {
-    setBdBox(MWAWBox2f(Vec2f(0,0), sz));
+    setBdBox(MWAWBox2f(MWAWVec2f(0,0), sz));
   }
 };
 
@@ -283,10 +283,10 @@ public:
   }
 
   //! the constructor
-  MWAWPictBitmapBW(Vec2i const &sz) : MWAWPictBitmap(sz), m_data(sz) { }
+  MWAWPictBitmapBW(MWAWVec2i const &sz) : MWAWPictBitmap(sz), m_data(sz) { }
 
   //! the picture size
-  Vec2i const &size() const
+  MWAWVec2i const &size() const
   {
     return m_data.size();
   }
@@ -375,10 +375,10 @@ public:
   }
 
   //! the constructor
-  MWAWPictBitmapIndexed(Vec2i const &sz) : MWAWPictBitmap(sz), m_data(sz), m_colors() { }
+  MWAWPictBitmapIndexed(MWAWVec2i const &sz) : MWAWPictBitmap(sz), m_data(sz), m_colors() { }
 
   //! the picture size
-  Vec2i const &size() const
+  MWAWVec2i const &size() const
   {
     return m_data.size();
   }
@@ -474,10 +474,10 @@ public:
   }
 
   //! the constructor
-  MWAWPictBitmapColor(Vec2i const &sz, bool useAlphaChannel=false) : MWAWPictBitmap(sz), m_data(sz), m_hasAlpha(useAlphaChannel) { }
+  MWAWPictBitmapColor(MWAWVec2i const &sz, bool useAlphaChannel=false) : MWAWPictBitmap(sz), m_data(sz), m_hasAlpha(useAlphaChannel) { }
 
   //! the picture size
-  Vec2i const &size() const
+  MWAWVec2i const &size() const
   {
     return m_data.size();
   }

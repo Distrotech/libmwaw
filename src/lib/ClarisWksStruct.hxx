@@ -86,8 +86,8 @@ struct DSET {
   //! return the zone bdbox
   MWAWBox2f getBdBox() const
   {
-    Vec2f minPt(m_box[0][0], m_box[0][1]);
-    Vec2f maxPt(m_box[1][0], m_box[1][1]);
+    MWAWVec2f minPt(m_box[0][0], m_box[0][1]);
+    MWAWVec2f maxPt(m_box[1][0], m_box[1][1]);
     for (int c=0; c<2; ++c) {
       if (m_box.size()[c]>=0) continue;
       minPt[c]=m_box[1][c];
@@ -115,7 +115,7 @@ struct DSET {
   //! virtual function to remove a child from a list
   virtual void removeChild(int cId);
   //! try to update the child page and bounding box
-  void updateChildPositions(Vec2f const &pageDim, float formLength, int numHorizontalPages=1);
+  void updateChildPositions(MWAWVec2f const &pageDim, float formLength, int numHorizontalPages=1);
   //! find forbidden page break
   void findForbiddenPagesBreaking(float pageDim, float formDim, int dim, std::set<int> &forbiddenPageBreak) const;
   //! returns the child box (ie. the union of the childs box)
@@ -143,7 +143,7 @@ struct DSET {
   //! the bounding box (if known)
   MWAWBox2f m_box;
   //! the page dimension (if know)
-  Vec2f m_pageDimension;
+  MWAWVec2f m_pageDimension;
 
   //! the zone identificator
   int m_id;
@@ -180,8 +180,8 @@ struct DSET {
     //! return the zone bdbox
     MWAWBox2f getBdBox() const
     {
-      Vec2f minPt(m_box[0][0], m_box[0][1]);
-      Vec2f maxPt(m_box[1][0], m_box[1][1]);
+      MWAWVec2f minPt(m_box[0][0], m_box[0][1]);
+      MWAWVec2f maxPt(m_box[1][0], m_box[1][1]);
       for (int c=0; c<2; ++c) {
         if (m_box.size()[c]>=0) continue;
         minPt[c]=m_box[1][c];

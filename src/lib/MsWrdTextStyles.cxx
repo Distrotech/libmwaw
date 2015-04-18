@@ -622,7 +622,7 @@ bool MsWrdTextStyles::readPLCList(MsWrdEntry &entry)
     }
     else {
       long actPos = input->tell();
-      Vec2<long> fLimit(textPos[(size_t)i], textPos[(size_t)i+1]);
+      MWAWVec2<long> fLimit(textPos[(size_t)i], textPos[(size_t)i+1]);
       readPLC(plc, entry.id(), fLimit);
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
     }
@@ -637,7 +637,7 @@ bool MsWrdTextStyles::readPLCList(MsWrdEntry &entry)
   return true;
 }
 
-bool MsWrdTextStyles::readPLC(MsWrdEntry &entry, int type, Vec2<long> const &fLimit)
+bool MsWrdTextStyles::readPLC(MsWrdEntry &entry, int type, MWAWVec2<long> const &fLimit)
 {
   int const vers = version();
   int const expectedSize = (vers <= 3) ? 0x80 : 0x200;
@@ -781,7 +781,7 @@ bool MsWrdTextStyles::readPLC(MsWrdEntry &entry, int type, Vec2<long> const &fLi
   if (filePos[(size_t)N] != fLimit[1]) {
     MsWrdEntry nextEntry(entry);
     nextEntry.setBegin(entry.begin()+expectedSize);
-    Vec2<long> newLimit(filePos[(size_t)N], fLimit[1]);
+    MWAWVec2<long> newLimit(filePos[(size_t)N], fLimit[1]);
     readPLC(nextEntry,type,newLimit);
   }
   return true;

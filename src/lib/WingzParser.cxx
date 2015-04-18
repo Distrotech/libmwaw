@@ -77,7 +77,7 @@ struct Style {
 //! Internal: the cell of a WingzParser
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1)
+  Cell(MWAWVec2i pos=MWAWVec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1)
   {
     setPosition(pos);
   }
@@ -136,16 +136,16 @@ struct Spreadsheet {
   std::string m_name;
 protected:
   /** returns the last Right Bottom cell position */
-  Vec2i getRightBottomPosition() const
+  MWAWVec2i getRightBottomPosition() const
   {
     int maxX = 0, maxY = 0;
     size_t numCell = m_cells.size();
     for (size_t i = 0; i < numCell; i++) {
-      Vec2i const &p = m_cells[i].position();
+      MWAWVec2i const &p = m_cells[i].position();
       if (p[0] > maxX) maxX = p[0];
       if (p[1] > maxY) maxY = p[1];
     }
-    return Vec2i(maxX, maxY);
+    return MWAWVec2i(maxX, maxY);
   }
 };
 
@@ -157,7 +157,7 @@ void Spreadsheet::update(Cell &cell) const
   // first, we need to update the relative position
   std::vector<MWAWCellContent::FormulaInstruction> formula=
     m_formulaMap.find(cell.m_formula)->second;
-  Vec2i cPos=cell.position();
+  MWAWVec2i cPos=cell.position();
   for (size_t i=0; i< formula.size(); ++i) {
     MWAWCellContent::FormulaInstruction &instr=formula[i];
     int numToCheck=0;
@@ -759,7 +759,7 @@ bool WingzParser::readSpreadsheetCellList()
   ascii().addNote(f.str().c_str());
 
   while (!input->isEnd()) {
-    Vec2i cellPos(firstCol++, row);
+    MWAWVec2i cellPos(firstCol++, row);
     pos=input->tell();
     if (pos>=endPos) break;
     type=(int) input->readULong(1);
@@ -1031,8 +1031,8 @@ bool WingzParser::readSpreadsheetCellName()
     int cell[2];
     for (int i=0; i<2; ++i) cell[i]=(int) input->readLong(2);
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
-    instr.m_position[0]=Vec2i(cell[1],cell[0]);
-    instr.m_positionRelative[0]=Vec2b(false,false);
+    instr.m_position[0]=MWAWVec2i(cell[1],cell[0]);
+    instr.m_positionRelative[0]=MWAWVec2b(false,false);
     f << "cell=" << instr.m_position[0] << ",";
   }
   else { // a cell list
@@ -1043,9 +1043,9 @@ bool WingzParser::readSpreadsheetCellName()
     int cell[4];
     for (int i=0; i<4; ++i) cell[i]=(int) input->readLong(2);
     instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
-    instr.m_position[0]=Vec2i(cell[2], cell[0]);
-    instr.m_position[1]=Vec2i(cell[3], cell[1]);
-    instr.m_positionRelative[0]=instr.m_positionRelative[1]=Vec2b(false,false);
+    instr.m_position[0]=MWAWVec2i(cell[2], cell[0]);
+    instr.m_position[1]=MWAWVec2i(cell[3], cell[1]);
+    instr.m_positionRelative[0]=instr.m_positionRelative[1]=MWAWVec2b(false,false);
     f << "cell=" << instr.m_position[0] << "<->" << instr.m_position[1] << ",";
   }
   val=(int) input->readLong(1);
@@ -1359,8 +1359,8 @@ bool WingzParser::readFormula()
       int cPos[2];
       for (int i=0; i<2; ++i) cPos[i]=(int) input->readLong(2);
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
-      instr.m_position[0]=Vec2i(cPos[1], cPos[0]);
-      instr.m_positionRelative[0]=Vec2b((wh&1)==0, (wh&2)==0);
+      instr.m_position[0]=MWAWVec2i(cPos[1], cPos[0]);
+      instr.m_positionRelative[0]=MWAWVec2b((wh&1)==0, (wh&2)==0);
       break;
     }
     case 8: {
@@ -1373,10 +1373,10 @@ bool WingzParser::readFormula()
       int cPos[4];
       for (int i=0; i<4; ++i) cPos[i]=(int) input->readLong(2);
       instr.m_type=MWAWCellContent::FormulaInstruction::F_CellList;
-      instr.m_position[0]=Vec2i(cPos[2], cPos[0]);
-      instr.m_position[1]=Vec2i(cPos[3], cPos[1]);
-      instr.m_positionRelative[0]=Vec2b((typ&2)==0, (typ&1)==0);
-      instr.m_positionRelative[1]=Vec2b((typ&8)==0, (typ&4)==0);
+      instr.m_position[0]=MWAWVec2i(cPos[2], cPos[0]);
+      instr.m_position[1]=MWAWVec2i(cPos[3], cPos[1]);
+      instr.m_positionRelative[0]=MWAWVec2b((typ&2)==0, (typ&1)==0);
+      instr.m_positionRelative[1]=MWAWVec2b((typ&8)==0, (typ&4)==0);
       break;
     }
     case 0x9:
@@ -2598,20 +2598,20 @@ bool WingzParser::readPrintInfo()
   if (!ok) return false;
   f << info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;

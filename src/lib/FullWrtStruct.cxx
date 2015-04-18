@@ -173,7 +173,7 @@ bool Border::read(shared_ptr<FullWrtStruct::Entry> zone, int fSz)
   }
   int val = (int) input->readLong(1);
   if (val)
-    m_shadowDepl=Vec2i(val,val);
+    m_shadowDepl=MWAWVec2i(val,val);
   val = (int) input->readLong(1);
   if (val) f << "frame[rectCorner]=" << val << ",";
   m_type[0] = (int) input->readLong(1);

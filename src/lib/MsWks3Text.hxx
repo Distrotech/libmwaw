@@ -128,7 +128,7 @@ protected:
 
   /** sends the zone data to the listener. You can set limit to send
       a subzone data ( like note ) */
-  void send(MsWks3TextInternal::TextZone &zone, Vec2i limit=Vec2i(-1,-1));
+  void send(MsWks3TextInternal::TextZone &zone, MWAWVec2i limit=MWAWVec2i(-1,-1));
 
   //! tries to read a font
   bool readFont(MsWks3TextInternal::Font &font, long endPos);

@@ -134,16 +134,16 @@ public:
   std::string m_name;
 protected:
   /** returns the last Right Bottom cell position */
-  Vec2i getRightBottomPosition() const
+  MWAWVec2i getRightBottomPosition() const
   {
     int maxX = 0, maxY = 0;
     size_t numCell = m_cells.size();
     for (size_t i = 0; i < numCell; i++) {
-      Vec2i const &p = m_cells[i].position();
+      MWAWVec2i const &p = m_cells[i].position();
       if (p[0] > maxX) maxX = p[0];
       if (p[1] > maxY) maxY = p[1];
     }
-    return Vec2i(maxX, maxY);
+    return MWAWVec2i(maxX, maxY);
   }
 };
 
@@ -850,7 +850,7 @@ bool GreatWksSSParser::readCell(GreatWksSSParserInternal::Cell &cell)
   int cPos[2];
   for (int i=0; i<2; ++i)
     cPos[i]=(int) input->readLong(2);
-  Vec2i cellPos(cPos[0]-1,cPos[1]-1);
+  MWAWVec2i cellPos(cPos[0]-1,cPos[1]-1);
   cell.setPosition(cellPos);
   f << "cell=" << cellPos << ",";
   cell.m_style=(int) input->readLong(2);
@@ -1217,7 +1217,7 @@ bool GreatWksSSParser::readStyles()
     else {
       f << "pattern[id]=" << patId << ",";
       MWAWGraphicStyle::Pattern pattern;
-      pattern.m_dim=Vec2i(8,8);
+      pattern.m_dim=MWAWVec2i(8,8);
       pattern.m_data.resize(8);
       for (size_t j=0; j < 8; ++j)
         pattern.m_data[j]=(unsigned char) input->readULong(1);

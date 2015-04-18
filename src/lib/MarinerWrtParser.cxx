@@ -87,7 +87,7 @@ struct Zone {
   //! height of the zone
   long m_height;
   //! right/bottom position
-  Vec2l m_RBpos;
+  MWAWVec2l m_RBpos;
   //! the zone total position
   MWAWBox2l m_dim;
   //! the page dimension (?)
@@ -259,10 +259,10 @@ void MarinerWrtParser::init()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f MarinerWrtParser::getPageLeftTop() const
+MWAWVec2f MarinerWrtParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 MWAWSection MarinerWrtParser::getSection(int zId) const
@@ -769,7 +769,7 @@ bool MarinerWrtParser::readZoneHeader(MarinerWrtEntry const &entry, int actId, b
       dim[j-28] = (int) data.value(0);
       while (j<31)
         dim[++j-28] = (int) dataList[d++].value(0);
-      zone.m_dim = MWAWBox2l(Vec2l(dim[1],dim[0]), Vec2l(dim[3],dim[2]));
+      zone.m_dim = MWAWBox2l(MWAWVec2l(dim[1],dim[0]), MWAWVec2l(dim[3],dim[2]));
       break;
     case 32:
     case 33:
@@ -869,7 +869,7 @@ bool MarinerWrtParser::readZoneDim(MarinerWrtEntry const &entry, int zoneId)
         dim[j] = (int) data.value(0);
     }
     // checkme
-    MWAWBox2i dimension(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    MWAWBox2i dimension(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
     f << "pos=" << dimension << ",";
     bool dimOk=dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3];
     if (i==0 && dimOk) {
@@ -1294,21 +1294,21 @@ bool MarinerWrtParser::readPrintInfo(MarinerWrtEntry const &entry)
 
   libmwaw::DebugStream f;
   f << "PrintInfo:"<< info;
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   if (!m_pageMarginsSpanSet) {
     // define margin from print info
-    Vec2i lTopMargin= -1 * info.paper().pos(0);
-    Vec2i rBotMargin=info.paper().size() - info.page().size();
+    MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+    MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
     // move margin left | top
     int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
     int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-    lTopMargin -= Vec2i(decalX, decalY);
-    rBotMargin += Vec2i(decalX, decalY);
+    lTopMargin -= MWAWVec2i(decalX, decalY);
+    rBotMargin += MWAWVec2i(decalX, decalY);
 
     // decrease right | bottom
     int rightMarg = rBotMargin.x() -50;

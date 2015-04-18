@@ -553,7 +553,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
       o << "],";
     }
     if (st.m_gradientBorder>0) o << "border=" << st.m_gradientBorder*100 << "%,";
-    if (st.m_gradientPercentCenter != Vec2f(0.5f,0.5f)) o << "center=" << st.m_gradientPercentCenter << ",";
+    if (st.m_gradientPercentCenter != MWAWVec2f(0.5f,0.5f)) o << "center=" << st.m_gradientPercentCenter << ",";
     if (st.m_gradientRadius<1) o << "radius=" << st.m_gradientRadius << ",";
     o << "],";
   }

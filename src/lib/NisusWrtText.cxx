@@ -535,7 +535,7 @@ void NisusWrtText::computePositions()
   m_state->m_zones[NisusWrtStruct::Z_Main].m_entry.setId(NisusWrtStruct::Z_Main);
   // compute the header/footer pages
   int actPage = 1;
-  Vec2i headerId(-1,-1), footerId(-1,-1);
+  MWAWVec2i headerId(-1,-1), footerId(-1,-1);
   m_state->m_headersId.resize(size_t(nPages), -1);
   m_state->m_footersId.resize(size_t(nPages), -1);
   for (size_t i = 0; i < m_state->m_hfList.size(); i++) {
@@ -554,7 +554,7 @@ void NisusWrtText::computePositions()
       m_state->m_footersId[size_t(p)-1] = (p%2) ? footerId[0] : footerId[1];
     }
     actPage = hf.m_page = page;
-    Vec2i &wh = hf.m_type == MWAWHeaderFooter::HEADER ? headerId : footerId;
+    MWAWVec2i &wh = hf.m_type == MWAWHeaderFooter::HEADER ? headerId : footerId;
     switch (hf.m_occurrence) {
     case MWAWHeaderFooter::ODD:
       wh[0] = int(i);
@@ -902,7 +902,7 @@ bool NisusWrtText::readFonts(MWAWEntry const &entry)
       for (int st = 0; st < 2; st++) {
         for (int j = 0; j < 4; j++)
           dim[j] = (int) input->readLong(2);
-        font.m_pictureDim[st]=MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+        font.m_pictureDim[st]=MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2]));
       }
     }
 
@@ -1403,7 +1403,7 @@ bool NisusWrtText::readPICD(MWAWEntry const &entry, NisusWrtStruct::ZoneType zon
     int dim[4];
     for (int j = 0; j < 4; j++)
       dim[j] = (int) input->readLong(2);
-    pict.m_position = MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    pict.m_position = MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
     pict.m_id = (int) input->readULong(2);
     zone.m_pictureParaList.push_back(pict);
 

@@ -523,7 +523,7 @@ bool GreatWksGraph::readPatterns(MWAWEntry const &entry)
     f.str("");
     f << "Pattern-" << i << ":";
     MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     pat.m_data.resize(8);
     for (size_t j=0; j < 8; ++j)
       pat.m_data[j]=(unsigned char) input->readLong(1);
@@ -855,7 +855,7 @@ bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
   float dim[2];
   for (int i=0; i <2; ++i)
     dim[i]=float(input->readLong(4))/65536.f;
-  if (dim[0]<dim[1] || dim[0]>dim[1]) f << "lineWidth[real]=" << Vec2f(dim[1],dim[0]) << ",";
+  if (dim[0]<dim[1] || dim[0]>dim[1]) f << "lineWidth[real]=" << MWAWVec2f(dim[1],dim[0]) << ",";
   style.m_lineWidth=(dim[1]+dim[0])/2.f;
   if (vers==1) {
     for (int i=0; i < 2; ++i) { // two flags 0|1
@@ -871,7 +871,7 @@ bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
     }
     MWAWGraphicStyle::Pattern patterns[2];
     for (int i=0; i < 2; ++i) {
-      patterns[i].m_dim=Vec2i(8,8);
+      patterns[i].m_dim=MWAWVec2i(8,8);
       patterns[i].m_data.resize(8);
       for (size_t j=0; j < 8; ++j)
         patterns[i].m_data[j]=(unsigned char) input->readULong(1);
@@ -916,7 +916,7 @@ bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
       style.m_surfaceOpacity=val ? 1.0 : 0.0;
     if (val>1)
       f << "pat" << i << "=" << val << ",";
-    patterns[i].m_dim=Vec2i(8,8);
+    patterns[i].m_dim=MWAWVec2i(8,8);
     patterns[i].m_data.resize(8);
     for (size_t j=0; j < 8; ++j)
       patterns[i].m_data[j]=(unsigned char) input->readULong(1);
@@ -1006,14 +1006,14 @@ bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
       break;
     case 9:
       if (gradType!=3) style.m_gradientType = MWAWGraphicStyle::G_None;
-      style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+      style.m_gradientPercentCenter=MWAWVec2f(.5f,.5f);
       style.m_gradientStopList[0]=MWAWGraphicStyle::GradientStop(0.0, MWAWColor::black());
       style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, MWAWColor::white());
       style.m_gradientType=MWAWGraphicStyle::G_Square;
       break;
     case 10:
       if (gradType!=3) style.m_gradientType = MWAWGraphicStyle::G_None;
-      style.m_gradientPercentCenter=Vec2f(.5f,.5f);
+      style.m_gradientPercentCenter=MWAWVec2f(.5f,.5f);
       style.m_gradientType=MWAWGraphicStyle::G_Square;
       break;
     case 11:
@@ -1468,7 +1468,7 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return res;
   }
-  zone.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  zone.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]),MWAWVec2f(dim[3],dim[2]));
   zone.m_styleId=(int) input->readULong(2);
   zone.m_parent=(int) input->readULong(2);
   zone.m_order=(int) input->readULong(2);
@@ -1509,7 +1509,7 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
     float points[4];
     for (int i=0; i<4; ++i)
       points[i]=float(input->readLong(4))/65536;
-    graph->m_shape=MWAWGraphicShape::line(Vec2f(points[1],points[0]), Vec2f(points[3],points[2]));
+    graph->m_shape=MWAWGraphicShape::line(MWAWVec2f(points[1],points[0]), MWAWVec2f(points[3],points[2]));
     break;
   }
   case 4: {
@@ -1591,13 +1591,13 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
                           (zone.m_box[1][1]-zone.m_box[0][1])/(maxVal[1]-minVal[1])
                         };
       float constant[2]= { zone.m_box[0][0]-minVal[0] *scaling[0], zone.m_box[0][1]-minVal[1] *scaling[1]};
-      circleBox=MWAWBox2f(Vec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
-                          Vec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
+      circleBox=MWAWBox2f(MWAWVec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
+                          MWAWVec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
     }
     if (type==1)
-      graph->m_shape = MWAWGraphicShape::pie(zone.m_box, circleBox, Vec2f(float(angle[0]), float(angle[1])));
+      graph->m_shape = MWAWGraphicShape::pie(zone.m_box, circleBox, MWAWVec2f(float(angle[0]), float(angle[1])));
     else
-      graph->m_shape = MWAWGraphicShape::arc(zone.m_box, circleBox, Vec2f(float(angle[0]), float(angle[1])));
+      graph->m_shape = MWAWGraphicShape::arc(zone.m_box, circleBox, MWAWVec2f(float(angle[0]), float(angle[1])));
     break;
   }
   case 3: // rect: no data
@@ -1696,11 +1696,11 @@ bool GreatWksGraph::readFrameExtraData(GreatWksGraphInternal::Frame &frame, int 
     f << "pt=[";
     GreatWksGraphInternal::FrameShape &graph=static_cast<GreatWksGraphInternal::FrameShape &>(frame);
     float pt[2];
-    std::vector<Vec2f> vertices;
+    std::vector<MWAWVec2f> vertices;
     for (int p=0; p<nPt; ++p) {
       pt[0]=float(input->readLong(4))/65536.f;
       pt[1]=float(input->readLong(4))/65536.f;
-      vertices.push_back(Vec2f(pt[1],pt[0]));
+      vertices.push_back(MWAWVec2f(pt[1],pt[0]));
       f << pt[1] << "x" << pt[0] << ",";
     }
     f << "],";
@@ -1807,17 +1807,17 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   MWAWGraphicStyle style;
   if (text.m_styleId>=1 && text.m_styleId <= int(zone.m_styleList.size()))
     style = zone.m_styleList[size_t(text.m_styleId-1)];
-  Vec2f fSz=pos.size();
+  MWAWVec2f fSz=pos.size();
   // increase slightly x and set y to atleast
-  Vec2f newSz(fSz[0]+3,fSz[1]);
+  MWAWVec2f newSz(fSz[0]+3,fSz[1]);
   if (listener->getType()==MWAWListener::Graphic)
     return sendTextboxAsGraphic(MWAWBox2f(pos.origin(),pos.origin()+newSz), text, style, listener);
 
   MWAWPosition finalPos(pos);
-  finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
+  finalPos.setSize(MWAWVec2f(newSz[0],-newSz[1]));
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
       m_document.canSendTextboxAsGraphic(text.m_entry)) {
-    MWAWBox2f box(Vec2f(0,0),newSz);
+    MWAWBox2f box(MWAWVec2f(0,0),newSz);
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener
     (new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
@@ -1850,8 +1850,8 @@ bool GreatWksGraph::sendTextboxAsGraphic(MWAWBox2f const &box, GreatWksGraphInte
   }
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
 
-  Vec2f fSz=box.size();
-  MWAWBox2f textBox=MWAWBox2f(box[0],box[0]+Vec2f(fSz[0],-fSz[1]));
+  MWAWVec2f fSz=box.size();
+  MWAWBox2f textBox=MWAWBox2f(box[0],box[0]+MWAWVec2f(fSz[0],-fSz[1]));
   /* rotation are multiple of 90, so we can use the inverse rotation to find
      the original box */
   if (text.m_rotate)
@@ -1982,7 +1982,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
       sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone,listener);
       break;
     case GreatWksGraphInternal::Frame::T_TEXT:
-      sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+Vec2f(3,0)),
+      sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+MWAWVec2f(3,0)),
                            static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style, listener);
       break;
     case GreatWksGraphInternal::Frame::T_DBFIELD:
@@ -2080,7 +2080,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_TEXT:
-          sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+Vec2f(3,0)),
+          sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+MWAWVec2f(3,0)),
                                static_cast<GreatWksGraphInternal::FrameText const &>(*child), style, graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_DBFIELD:
@@ -2136,8 +2136,8 @@ bool GreatWksGraph::sendShape(GreatWksGraphInternal::FrameShape const &graph, Gr
     style = zone.m_styleList[size_t(graph.m_styleId-1)];
   graph.updateStyle(style);
   MWAWPosition finalPos(pos);
-  finalPos.setOrigin(pos.origin()-Vec2f(2,2));
-  finalPos.setSize(pos.size()+Vec2f(4,4));
+  finalPos.setOrigin(pos.origin()-MWAWVec2f(2,2));
+  finalPos.setSize(pos.size()+MWAWVec2f(4,4));
   listener->insertPicture(finalPos,graph.m_shape, style);
   return true;
 }
@@ -2152,9 +2152,9 @@ bool GreatWksGraph::sendFrame(shared_ptr<GreatWksGraphInternal::Frame> frame, Gr
   frame->m_parsed=true;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos=input->tell();
-  Vec2f LTPos(0,0);
+  MWAWVec2f LTPos(0,0);
   if (m_parserState->m_kind==MWAWDocument::MWAW_K_DRAW)
-    LTPos=72.0*Vec2f(float(m_mainParser->getPageSpan().getMarginLeft()), float(m_mainParser->getPageSpan().getMarginTop()));
+    LTPos=72.0*MWAWVec2f(float(m_mainParser->getPageSpan().getMarginLeft()), float(m_mainParser->getPageSpan().getMarginTop()));
   MWAWPosition fPos(frame->m_box[0]+LTPos,frame->m_box.size(),librevenge::RVNG_POINT);
   fPos.setRelativePosition(MWAWPosition::Page);
   fPos.setPage(frame->m_page<0 ? 1: frame->m_page);

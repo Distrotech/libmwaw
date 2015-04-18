@@ -1325,14 +1325,14 @@ bool MoreText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       float dim[4];
       for (int i=0; i < 4; ++i)
         dim[i] = float(input->readLong(2));
-      MWAWBox2f bdbox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f bdbox(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
       f << "bdbox=" << bdbox << ",";
       if (sz>22) {
         shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)sz-22));
         librevenge::RVNGBinaryData data;
         std::string type;
         if (pict && pict->getBinary(data,type)) {
-          MWAWPosition pictPos(Vec2f(0,0), bdbox.size(), librevenge::RVNG_POINT);
+          MWAWPosition pictPos(MWAWVec2f(0,0), bdbox.size(), librevenge::RVNG_POINT);
           pictPos.m_anchorTo = MWAWPosition::Char;
           listener->insertPicture(pictPos, data, type);
         }

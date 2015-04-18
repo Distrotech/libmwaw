@@ -109,7 +109,7 @@ struct State {
     return m_inNote || m_isTextBoxOpened || m_isTableCellOpened;
   }
   //! the origin position
-  Vec2f m_origin;
+  MWAWVec2f m_origin;
   //! a buffer to stored the text
   librevenge::RVNGString m_textBuffer;
 
@@ -891,7 +891,7 @@ bool MWAWGraphicListener::insertHeader(MWAWSubDocumentPtr subDocument, libreveng
     return false;
   }
   // we do not have any header interface, so mimick it by creating a textbox
-  MWAWPosition pos(Vec2f(20,20), Vec2f(-20,-10), librevenge::RVNG_POINT); // fixme
+  MWAWPosition pos(MWAWVec2f(20,20), MWAWVec2f(-20,-10), librevenge::RVNG_POINT); // fixme
   pos.m_anchorTo=MWAWPosition::Page;
   if (!openFrame(pos))
     return false;
@@ -915,7 +915,7 @@ bool MWAWGraphicListener::insertFooter(MWAWSubDocumentPtr subDocument, libreveng
 
   // we do not have any header interface, so mimick it by creating a textbox
   MWAWPageSpan page(getPageSpan()); // fixme
-  MWAWPosition pos(Vec2f(20,72.f*float(page.getFormLength())-40.f), Vec2f(-20,-10), librevenge::RVNG_POINT);
+  MWAWPosition pos(MWAWVec2f(20,72.f*float(page.getFormLength())-40.f), MWAWVec2f(-20,-10), librevenge::RVNG_POINT);
   pos.m_anchorTo=MWAWPosition::Page;
   if (!openFrame(pos))
     return false;
@@ -1077,10 +1077,10 @@ void MWAWGraphicListener::insertPicture
   if (rotate<0||rotate>0) {
     list.insert("librevenge:rotate", rotate);
     float pointFactor =1.f/pos.getInvUnitScale(librevenge::RVNG_POINT);
-    Vec2f size=pointFactor*pos.size();
+    MWAWVec2f size=pointFactor*pos.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
-    Vec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
+    MWAWVec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
     list.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
     list.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
@@ -1113,10 +1113,10 @@ void MWAWGraphicListener::insertTextBox
   if (style.m_flip[0]&&style.m_flip[1]) rotate += 180.f;
   if (rotate<0||rotate>0) {
     propList.insert("librevenge:rotate", rotate);
-    Vec2f size=pointFactor*pos.size();
+    MWAWVec2f size=pointFactor*pos.size();
     if (size[0]<0) size[0]=-size[0];
     if (size[1]<0) size[1]=-size[1];
-    Vec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
+    MWAWVec2f center=pointFactor*pos.origin()-m_ps->m_origin+0.5f*size;
     propList.insert("librevenge:rotate-cx",center[0], librevenge::RVNG_POINT);
     propList.insert("librevenge:rotate-cy",center[1], librevenge::RVNG_POINT);
   }
@@ -1171,7 +1171,7 @@ void MWAWGraphicListener::openTable(MWAWTable const &table)
   if (!m_ps->m_isFrameOpened) {
     if (m_ps->m_isTextBoxOpened) {
       MWAW_DEBUG_MSG(("MWAWGraphicListener::openTable: must not be called inside a textbox\n"));
-      MWAWPosition pos(m_ps->m_origin, Vec2f(400,100), librevenge::RVNG_POINT);
+      MWAWPosition pos(m_ps->m_origin, MWAWVec2f(400,100), librevenge::RVNG_POINT);
       pos.m_anchorTo=MWAWPosition::Page;
       openTable(pos, table, MWAWGraphicStyle::emptyStyle());
       return;
@@ -1251,7 +1251,7 @@ void MWAWGraphicListener::closeTableRow()
   m_documentInterface->closeTableRow();
 }
 
-void MWAWGraphicListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
+void MWAWGraphicListener::addEmptyTableCell(MWAWVec2i const &pos, MWAWVec2i span)
 {
   if (!m_ps->m_isTableRowOpened) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));
@@ -1419,9 +1419,9 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
   float pointFactor = pos.getInvUnitScale(librevenge::RVNG_POINT);
   float inchFactor=pos.getInvUnitScale(librevenge::RVNG_INCH);
   // first compute the origin ( in given unit and in point)
-  Vec2f origin = pos.origin()-pointFactor*m_ps->m_origin;
-  Vec2f originPt = (1.f/pointFactor)*pos.origin()-m_ps->m_origin;
-  Vec2f size = pos.size();
+  MWAWVec2f origin = pos.origin()-pointFactor*m_ps->m_origin;
+  MWAWVec2f originPt = (1.f/pointFactor)*pos.origin()-m_ps->m_origin;
+  MWAWVec2f size = pos.size();
   // checkme: do we still need to do that ?
   if (style.hasGradient(true)) {
     if (style.m_rotate<0 || style.m_rotate>0) {
@@ -1459,8 +1459,8 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
     list.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
     list.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
   }
-  Vec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
-  Vec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
+  MWAWVec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
+  MWAWVec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
   if (TLClip[0] > 0 || TLClip[1] > 0 || RBClip[0] > 0 || RBClip[1] > 0) {
     // in ODF1.2 we need to separate the value with ,
     std::stringstream s;
@@ -1575,7 +1575,7 @@ void MWAWGraphicListener::_handleFrameParameters(librevenge::RVNGPropertyList &l
 ///////////////////
 // subdocument
 ///////////////////
-void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
+void MWAWGraphicListener::handleSubDocument(MWAWVec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
 {
   if (!m_ds->m_isDocumentStarted) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::handleSubDocument: the graphic is not started\n"));
@@ -1583,7 +1583,7 @@ void MWAWGraphicListener::handleSubDocument(Vec2f const &orig, MWAWSubDocumentPt
   }
   if (!m_ds->m_isPageSpanOpened)
     _openPageSpan();
-  Vec2f actOrigin=m_ps->m_origin;
+  MWAWVec2f actOrigin=m_ps->m_origin;
   _pushParsingState();
   m_ps->m_origin=actOrigin-orig;
   _startSubDocument();

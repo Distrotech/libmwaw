@@ -854,7 +854,7 @@ struct LayoutCParser : public RagTime5ClusterManager::ClusterParser {
       }
       float dim[2];
       for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "sz=" << Vec2f(dim[0],dim[1]) << ",";
+      f << "sz=" << MWAWVec2f(dim[0],dim[1]) << ",";
 
       std::vector<int> listIds;
       long actPos=input->tell();
@@ -982,8 +982,8 @@ protected:
     }
     float dim[2];
     for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    m_cluster->m_zoneDimensions.push_back(Vec2f(dim[0],dim[1]));
-    f << "sz=" << Vec2f(dim[0],dim[1]) << ",";
+    m_cluster->m_zoneDimensions.push_back(MWAWVec2f(dim[0],dim[1]));
+    f << "sz=" << MWAWVec2f(dim[0],dim[1]) << ",";
     std::vector<int> listIds;
     long actPos=input->tell();
     if (!RagTime5StructManager::readDataIdList(input, 1, listIds)) {
@@ -1125,18 +1125,18 @@ protected:
     }
     float dim[4];
     for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    Vec2f frameSize(dim[0],dim[1]);
+    MWAWVec2f frameSize(dim[0],dim[1]);
     f << "sz=" << frameSize << ",";
     for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    if (Vec2f(dim[0],dim[1])!=frameSize)
-      f << "sz2=" << Vec2f(dim[0],dim[1]) << ",";
+    if (MWAWVec2f(dim[0],dim[1])!=frameSize)
+      f << "sz2=" << MWAWVec2f(dim[0],dim[1]) << ",";
     for (int i=0; i<10; ++i) { // find g3=0|1|69, g8=0|5|8, g9=g11=g12=1, g10=small number(but not a data id)
       val=(int) input->readLong(2);
       if (val)
         f << "g" << i+3 << "=" << val << ",";
     }
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+    f << "dim=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
     for (int i=0; i<4; ++i) { // h3=0|1|3|6
       val=(int) input->readLong(2);
       if (val)

@@ -271,7 +271,7 @@ struct ParagraphInfo {
   //! the type
   Variable<int> m_type;
   //! the zone dimension
-  Variable<Vec2f> m_dim;
+  Variable<MWAWVec2f> m_dim;
   //! the number of lines
   Variable<int> m_numLines;
   /** the errors */

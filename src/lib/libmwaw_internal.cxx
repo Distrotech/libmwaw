@@ -363,14 +363,14 @@ namespace libmwaw
 {
 MWAWBox2f rotateBoxFromCenter(MWAWBox2f const &box, float angle)
 {
-  Vec2f center=box.center();
+  MWAWVec2f center=box.center();
   float angl=float(M_PI/180.)*angle;
-  Vec2f minPt, maxPt;
+  MWAWVec2f minPt, maxPt;
   for (int p=0; p<4; ++p) {
-    Vec2f pt(box[p<2?0:1][0],box[(p%2)?0:1][1]);
+    MWAWVec2f pt(box[p<2?0:1][0],box[(p%2)?0:1][1]);
     pt -= center;
-    pt = center + Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
-                        std::sin(angl)*pt[0]+std::cos(angl)*pt[1]);
+    pt = center + MWAWVec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
+                            std::sin(angl)*pt[0]+std::cos(angl)*pt[1]);
     if (p==0) {
       minPt=maxPt=pt;
       continue;

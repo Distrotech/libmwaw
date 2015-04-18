@@ -181,8 +181,8 @@ bool MacPaintParser::sendBitmap()
   if (!m_state->m_bitmap || !m_state->m_bitmap->getBinary(data,type)) return false;
 
   MWAWPageSpan const &page=getPageSpan();
-  MWAWPosition pos(Vec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
-                   Vec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
+  MWAWPosition pos(MWAWVec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
+                   MWAWVec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping = MWAWPosition::WNone;
   listener->insertPicture(pos, data, "image/pict");
@@ -199,7 +199,7 @@ bool MacPaintParser::readBitmap(bool onlyCheck)
   // a bitmap is composed of 720 rows of (72x8bytes)
   shared_ptr<MWAWPictBitmapIndexed> pict;
   if (!onlyCheck) {
-    pict.reset(new MWAWPictBitmapIndexed(Vec2f(576,720)));
+    pict.reset(new MWAWPictBitmapIndexed(MWAWVec2f(576,720)));
     std::vector<MWAWColor> colors(2);
     colors[0]=MWAWColor::white();
     colors[1]=MWAWColor::black();

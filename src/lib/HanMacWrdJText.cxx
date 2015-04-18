@@ -1060,7 +1060,7 @@ bool HanMacWrdJText::readTextZone(MWAWEntry const &entry, int actZone)
 
   // first read the char properties list
   std::vector<HanMacWrdJTextInternal::PLC> cPLCList;
-  std::vector<Vec2i> cPLCPosList; // 0:line, 1:char
+  std::vector<MWAWVec2i> cPLCPosList; // 0:line, 1:char
 
   f.str("");
   f << entry.name() << "-char:";
@@ -1085,7 +1085,7 @@ bool HanMacWrdJText::readTextZone(MWAWEntry const &entry, int actZone)
     for (int j = 0; j < header.m_n; j++) {
       pos = input->tell();
       f.str("");
-      Vec2i cPos;
+      MWAWVec2i cPos;
       cPos[0] = (int) input->readLong(2);
       cPos[1] = (int) input->readLong(2);
       HanMacWrdJTextInternal::PLC plc;

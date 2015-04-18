@@ -257,7 +257,7 @@ struct Line {
   //! the line type
   Type m_type;
   //! the caracter position
-  Vec2l m_cPos;
+  MWAWVec2l m_cPos;
 };
 
 ////////////////////////////////////////
@@ -2075,7 +2075,7 @@ bool MsWrdText::sendTable(MsWrdTextInternal::Table const &table)
         else if (!table.m_backgroundColor.isWhite())
           cell.setBackgroundColor(table.m_backgroundColor);
       }
-      cell.setPosition(Vec2i((int)c,(int)r));
+      cell.setPosition(MWAWVec2i((int)c,(int)r));
 
       listener->openTableCell(cell);
 

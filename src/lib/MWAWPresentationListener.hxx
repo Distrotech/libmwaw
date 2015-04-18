@@ -84,11 +84,11 @@ public:
   bool isDocumentStarted() const;
 
   /** function called to add a subdocument and modify the origin*/
-  void handleSubDocument(Vec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
+  void handleSubDocument(MWAWVec2f const &orig, MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType);
   /** function called to add a subdocument */
   void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType)
   {
-    handleSubDocument(Vec2f(0,0), subDocument, subDocumentType);
+    handleSubDocument(MWAWVec2f(0,0), subDocument, subDocumentType);
   }
   /** returns try if a subdocument is open  */
   bool isSubDocumentOpened(libmwaw::SubDocumentType &subdocType) const;
@@ -215,7 +215,7 @@ public:
   /** close a cell */
   void closeTableCell();
   /** add empty cell */
-  void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
+  void addEmptyTableCell(MWAWVec2i const &pos, MWAWVec2i span=MWAWVec2i(1,1));
 
   // ------- section ---------------
 

@@ -166,7 +166,7 @@ struct TextZone {
   //! the zone id -> hard break
   std::map<int, bool> m_pagesPosition;
   //! the note id -> zone limit
-  std::map<int, Vec2i> m_footnoteMap;
+  std::map<int, MWAWVec2i> m_footnoteMap;
   //! a string used to store v1-2 files header/footer
   std::string m_text;
   //! flag to know if the zone is send or not
@@ -400,7 +400,7 @@ void MsWks3Text::updateNotes(MsWks3TextInternal::TextZone &zone, int firstNote)
   MsWks3TextInternal::Font font;
   int noteId = -1;
   long lastIndentPos = -1;
-  Vec2i notePos;
+  MWAWVec2i notePos;
 
   for (int n = firstNote; n < numLineZones; n++) {
     MsWks3TextInternal::LineZone const &z = zone.m_zonesList[(size_t) n];
@@ -853,7 +853,7 @@ std::string MsWks3Text::readHeaderFooterString(bool header)
 // Low level
 //
 ////////////////////////////////////////////////////////////
-void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
+void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, MWAWVec2i limit)
 {
   int numZones = int(zone.m_zonesList.size());
   // set the default font
@@ -865,12 +865,12 @@ void MsWks3Text::send(MsWks3TextInternal::TextZone &zone, Vec2i limit)
     return;
   }
   bool isMain = false;
-  Vec2i notePos(-1,-1);
+  MWAWVec2i notePos(-1,-1);
   if (limit[0] < 0) {
-    limit = Vec2i(0,numZones);
+    limit = MWAWVec2i(0,numZones);
     isMain = zone.isMain();
     // find the notes in the text zones
-    std::map<int, Vec2i>::const_iterator noteIt;
+    std::map<int, MWAWVec2i>::const_iterator noteIt;
     for (noteIt=zone.m_footnoteMap.begin(); noteIt != zone.m_footnoteMap.end(); ++noteIt) {
       if (notePos[0]==-1) {
         notePos = noteIt->second;
@@ -913,7 +913,7 @@ void MsWks3Text::sendNote(int zoneId, int noteId)
     return;
   }
   MsWks3TextInternal::TextZone &zone=m_state->m_zones[(size_t)zoneId];
-  std::map<int, Vec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
+  std::map<int, MWAWVec2i>::const_iterator noteIt = zone.m_footnoteMap.find(noteId);
   if (noteIt==zone.m_footnoteMap.end()) {
     MWAW_DEBUG_MSG(("MsWks3Text::sendNote: unknown note %d-%d\n", zoneId, noteId));
     if (listener) listener->insertChar(' ');

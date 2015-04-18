@@ -406,7 +406,7 @@ std::vector<NisusWrtGraphInternal::RSSOEntry> NisusWrtGraph::findRSSOEntry(MWAWI
     NisusWrtGraphInternal::RSSOEntry rsso;
     rsso.m_id = (int) input->readLong(2);
     if (input->isEnd()) break;
-    rsso.m_position=MWAWBox2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+    rsso.m_position=MWAWBox2f(MWAWVec2f(dim[1], dim[0]), MWAWVec2f(dim[3], dim[2]));
     if (rsso.m_id > 0)
       listRSSO.push_back(rsso);
     else if (version() > 3) {
@@ -461,7 +461,7 @@ bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPo
                                  MWAWPosition::XLeft, MWAWPosition::YTop);
     framePos.m_wrapping =  MWAWPosition::WBackground;
     pictPos.setRelativePosition(MWAWPosition::Frame);
-    pictPos.setOrigin(Vec2f(0,0));
+    pictPos.setOrigin(MWAWVec2f(0,0));
     MWAWSubDocumentPtr subdoc
     (new NisusWrtGraphInternal::SubDocument(*this, m_mainParser->rsrcInput(), pictId, pictPos));
     listener->insertTextBox(framePos, subdoc);
@@ -470,7 +470,7 @@ bool NisusWrtGraph::sendPicture(int pictId, bool inPictRsrc, MWAWPosition pictPo
   // first the picture
   listener->insertPicture(pictPos, data, "image/pict");
   // then the author possible picture
-  pictPos.setClippingPosition(Vec2f(), Vec2f());
+  pictPos.setClippingPosition(MWAWVec2f(), MWAWVec2f());
   for (size_t i=0; i < listRSSO.size(); i++) {
     NisusWrtGraphInternal::RSSOEntry const &rssoEntry = listRSSO[i];
     MWAWPosition rssoPos(pictPos);
@@ -488,7 +488,7 @@ bool NisusWrtGraph::sendPageGraphics()
     MWAW_DEBUG_MSG(("NisusWrtGraph::sendPageGraphics: can not find the listener\n"));
     return true;
   }
-  Vec2f LT = 72.f*m_mainParser->getPageLeftTop();
+  MWAWVec2f LT = 72.f*m_mainParser->getPageLeftTop();
   for (int i = 0; i < m_state->m_maxPageGraphic; i++) {
     if (m_state->m_idPictMap.find(20000+i)==m_state->m_idPictMap.end())
       continue;
@@ -522,7 +522,7 @@ void NisusWrtGraph::flushExtra()
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: picture unparsed: %d\n", entry.id()));
-    MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
+    MWAWPosition pictPos(MWAWVec2f(0,0), MWAWVec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), true, pictPos);
   }
@@ -531,7 +531,7 @@ void NisusWrtGraph::flushExtra()
     MWAWEntry &entry = it->second;
     if (entry.isParsed()) continue;
     MWAW_DEBUG_MSG(("NisusWrtGraph::sendPicture: rsso picture unparsed: %d\n", entry.id()));
-    MWAWPosition pictPos(Vec2f(0,0), Vec2f(1.,1.));
+    MWAWPosition pictPos(MWAWVec2f(0,0), MWAWVec2f(1.,1.));
     pictPos.setRelativePosition(MWAWPosition::Char);
     sendPicture(entry.id(), false, pictPos);
   }

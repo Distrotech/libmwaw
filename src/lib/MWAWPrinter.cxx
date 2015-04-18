@@ -51,7 +51,7 @@ namespace libmwaw
 //
 // PrinterRect : a rectangle
 //
-bool PrinterRect::read(MWAWInputStreamPtr input, Vec2i const &res)
+bool PrinterRect::read(MWAWInputStreamPtr input, MWAWVec2i const &res)
 {
   for (int st = 0; st < 2; st++) {
     int y = int(input->readLong(2));
@@ -77,7 +77,7 @@ struct PrinterRectResolution {
     return m_rect;
   }
   //! resolution
-  Vec2i const &resolution() const
+  MWAWVec2i const &resolution() const
   {
     return m_resolution;
   }
@@ -103,7 +103,7 @@ protected:
   //! returns the main rectangle
   PrinterRect m_rect;
   //! returns the resolution
-  Vec2i m_resolution;
+  MWAWVec2i m_resolution;
   //! a field which is reserved
   int m_iDev;
 };

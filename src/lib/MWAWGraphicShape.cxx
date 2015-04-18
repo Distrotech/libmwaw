@@ -89,7 +89,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicShape::PathData const &path
   return o;
 }
 
-void MWAWGraphicShape::PathData::translate(Vec2f const &decal)
+void MWAWGraphicShape::PathData::translate(MWAWVec2f const &decal)
 {
   if (m_type=='Z')
     return;
@@ -102,41 +102,41 @@ void MWAWGraphicShape::PathData::translate(Vec2f const &decal)
   m_x2 += decal;
 }
 
-void MWAWGraphicShape::PathData::scale(Vec2f const &scaling)
+void MWAWGraphicShape::PathData::scale(MWAWVec2f const &scaling)
 {
   if (m_type=='Z')
     return;
-  m_x = Vec2f(m_x[0]*scaling[0], m_x[1]*scaling[1]);
+  m_x = MWAWVec2f(m_x[0]*scaling[0], m_x[1]*scaling[1]);
   if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T' || m_type=='A')
     return;
-  m_x1 = Vec2f(m_x1[0]*scaling[0], m_x1[1]*scaling[1]);
+  m_x1 = MWAWVec2f(m_x1[0]*scaling[0], m_x1[1]*scaling[1]);
   if (m_type=='Q' || m_type=='S')
     return;
-  m_x2 = Vec2f(m_x2[0]*scaling[0], m_x2[1]*scaling[1]);
+  m_x2 = MWAWVec2f(m_x2[0]*scaling[0], m_x2[1]*scaling[1]);
 }
 
-void MWAWGraphicShape::PathData::rotate(float angle, Vec2f const &decal)
+void MWAWGraphicShape::PathData::rotate(float angle, MWAWVec2f const &decal)
 {
   if (m_type=='Z')
     return;
   float angl=angle*float(M_PI/180.);
-  m_x = Vec2f(std::cos(angl)*m_x[0]-std::sin(angl)*m_x[1],
-              std::sin(angl)*m_x[0]+std::cos(angl)*m_x[1])+decal;
+  m_x = MWAWVec2f(std::cos(angl)*m_x[0]-std::sin(angl)*m_x[1],
+                  std::sin(angl)*m_x[0]+std::cos(angl)*m_x[1])+decal;
   if (m_type=='A') {
     m_rotate += angle;
     return;
   }
   if (m_type=='H' || m_type=='V' || m_type=='M' || m_type=='L' || m_type=='T')
     return;
-  m_x1 = Vec2f(std::cos(angl)*m_x1[0]-std::sin(angl)*m_x1[1],
-               std::sin(angl)*m_x1[0]+std::cos(angl)*m_x1[1])+decal;
+  m_x1 = MWAWVec2f(std::cos(angl)*m_x1[0]-std::sin(angl)*m_x1[1],
+                   std::sin(angl)*m_x1[0]+std::cos(angl)*m_x1[1])+decal;
   if (m_type=='Q' || m_type=='S')
     return;
-  m_x2 = Vec2f(std::cos(angl)*m_x2[0]-std::sin(angl)*m_x2[1],
-               std::sin(angl)*m_x2[0]+std::cos(angl)*m_x2[1])+decal;
+  m_x2 = MWAWVec2f(std::cos(angl)*m_x2[0]-std::sin(angl)*m_x2[1],
+                   std::sin(angl)*m_x2[0]+std::cos(angl)*m_x2[1])+decal;
 }
 
-bool MWAWGraphicShape::PathData::get(librevenge::RVNGPropertyList &list, Vec2f const &orig) const
+bool MWAWGraphicShape::PathData::get(librevenge::RVNGPropertyList &list, MWAWVec2f const &orig) const
 {
   list.clear();
   std::string type("");
@@ -201,14 +201,14 @@ int MWAWGraphicShape::PathData::cmp(MWAWGraphicShape::PathData const &a) const
 ////////////////////////////////////////////////////////////
 // MWAWGraphicShape
 ////////////////////////////////////////////////////////////
-MWAWGraphicShape MWAWGraphicShape::line(Vec2f const &orig, Vec2f const &dest)
+MWAWGraphicShape MWAWGraphicShape::line(MWAWVec2f const &orig, MWAWVec2f const &dest)
 {
   MWAWGraphicShape res;
   res.m_type = MWAWGraphicShape::Line;
   res.m_vertices.resize(2);
   res.m_vertices[0]=orig;
   res.m_vertices[1]=dest;
-  Vec2f minPt(orig), maxPt(orig);
+  MWAWVec2f minPt(orig), maxPt(orig);
   for (int c=0; c<2; ++c) {
     if (orig[c] < dest[c])
       maxPt[c]=dest[c];
@@ -234,7 +234,7 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh)
     o << "rect,";
     if (sh.m_formBox!=sh.m_bdBox)
       o << "box[rect]=" << sh.m_formBox << ",";
-    if (sh.m_cornerWidth!=Vec2f(0,0))
+    if (sh.m_cornerWidth!=MWAWVec2f(0,0))
       o << "corners=" << sh.m_cornerWidth << ",";
     break;
   case MWAWGraphicShape::Circle:
@@ -298,7 +298,7 @@ MWAWBox2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO
 {
   MWAWBox2f bdBox=m_bdBox;
   if (moveToO)
-    bdBox=MWAWBox2f(Vec2f(0,0),m_bdBox.size());
+    bdBox=MWAWBox2f(MWAWVec2f(0,0),m_bdBox.size());
   if (style.hasLine())
     bdBox.extend(style.m_lineWidth/2.f);
   if (m_type==Line) {
@@ -309,9 +309,9 @@ MWAWBox2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO
   return bdBox;
 }
 
-void MWAWGraphicShape::translate(Vec2f const &decal)
+void MWAWGraphicShape::translate(MWAWVec2f const &decal)
 {
-  if (decal==Vec2f(0,0))
+  if (decal==MWAWVec2f(0,0))
     return;
   m_bdBox=MWAWBox2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
   m_formBox=MWAWBox2f(m_formBox.min()+decal, m_formBox.max()+decal);
@@ -321,32 +321,32 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
     m_path[pt].translate(decal);
 }
 
-void MWAWGraphicShape::scale(Vec2f const &scaling)
+void MWAWGraphicShape::scale(MWAWVec2f const &scaling)
 {
-  m_bdBox=MWAWBox2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
-                    Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
-  m_formBox=MWAWBox2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
-                      Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
+  m_bdBox=MWAWBox2f(MWAWVec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
+                    MWAWVec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
+  m_formBox=MWAWBox2f(MWAWVec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
+                      MWAWVec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
   for (size_t pt=0; pt<m_vertices.size(); ++pt)
-    m_vertices[pt]=Vec2f(scaling[0]*m_vertices[pt][0],
-                         scaling[1]*m_vertices[pt][1]);
+    m_vertices[pt]=MWAWVec2f(scaling[0]*m_vertices[pt][0],
+                             scaling[1]*m_vertices[pt][1]);
   for (size_t pt=0; pt<m_path.size(); ++pt)
     m_path[pt].scale(scaling);
 }
 
-MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) const
+MWAWGraphicShape MWAWGraphicShape::rotate(float angle, MWAWVec2f const &center) const
 {
   while (angle >= 360) angle -= 360;
   while (angle <= -360) angle += 360;
   if (angle >= -1e-3 && angle <= 1e-3) return *this;
   float angl=angle*float(M_PI/180.);
-  Vec2f decal=center-Vec2f(std::cos(angl)*center[0]-std::sin(angl)*center[1],
-                           std::sin(angl)*center[0]+std::cos(angl)*center[1]);
+  MWAWVec2f decal=center-MWAWVec2f(std::cos(angl)*center[0]-std::sin(angl)*center[1],
+                                   std::sin(angl)*center[0]+std::cos(angl)*center[1]);
   MWAWBox2f fBox;
   for (int i=0; i < 4; ++i) {
-    Vec2f pt=Vec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
-    pt = Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
-               std::sin(angl)*pt[0]+std::cos(angl)*pt[1])+decal;
+    MWAWVec2f pt=MWAWVec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
+    pt = MWAWVec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
+                   std::sin(angl)*pt[0]+std::cos(angl)*pt[1])+decal;
     if (i==0) fBox=MWAWBox2f(pt,pt);
     else fBox=fBox.getUnion(MWAWBox2f(pt,pt));
   }
@@ -357,12 +357,12 @@ MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) cons
   return res;
 }
 
-MWAWGraphicShape::Command MWAWGraphicShape::addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const
+MWAWGraphicShape::Command MWAWGraphicShape::addTo(MWAWVec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const
 {
-  Vec2f pt;
+  MWAWVec2f pt;
   librevenge::RVNGPropertyList list;
   librevenge::RVNGPropertyListVector vect;
-  Vec2f decal=orig-m_bdBox[0];
+  MWAWVec2f decal=orig-m_bdBox[0];
   switch (m_type) {
   case Line:
     if (m_vertices.size()!=2) break;
@@ -398,8 +398,8 @@ MWAWGraphicShape::Command MWAWGraphicShape::addTo(Vec2f const &orig, bool asSurf
     return C_Ellipse;
   case Arc:
   case Pie: {
-    Vec2f center=0.5*(m_formBox[0]+m_formBox[1])+decal;
-    Vec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
+    MWAWVec2f center=0.5*(m_formBox[0]+m_formBox[1])+decal;
+    MWAWVec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
     float angl0=m_arcAngles[0];
     float angl1=m_arcAngles[1];
     if (rad[1]<0) {
@@ -426,7 +426,7 @@ MWAWGraphicShape::Command MWAWGraphicShape::addTo(Vec2f const &orig, bool asSurf
       vect.append(list);
     }
     list.clear();
-    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    pt=center+MWAWVec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
     list.insert("librevenge:path-action", addCenter ? "L" : "M");
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
@@ -434,7 +434,7 @@ MWAWGraphicShape::Command MWAWGraphicShape::addTo(Vec2f const &orig, bool asSurf
 
     list.clear();
     angl=angl1*float(M_PI/180.);
-    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    pt=center+MWAWVec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
     list.insert("librevenge:path-action", "A");
     list.insert("librevenge:large-arc", !(angl1-angl0<180.f));
     list.insert("librevenge:sweep", false);
@@ -506,33 +506,33 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
   case Rectangle:
     if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
       MWAWBox2f box=m_formBox;
-      Vec2f c=m_cornerWidth;
-      res.push_back(PathData('M',Vec2f(box[1][0]-c[0],box[0][1])));
-      PathData data('A',Vec2f(box[1][0],box[0][1]+c[1]));
+      MWAWVec2f c=m_cornerWidth;
+      res.push_back(PathData('M',MWAWVec2f(box[1][0]-c[0],box[0][1])));
+      PathData data('A',MWAWVec2f(box[1][0],box[0][1]+c[1]));
       data.m_r=c;
       data.m_sweep=true;
       res.push_back(data);
-      res.push_back(PathData('L',Vec2f(box[1][0],box[1][1]-c[1])));
-      data.m_x=Vec2f(box[1][0]-c[0],box[1][1]);
+      res.push_back(PathData('L',MWAWVec2f(box[1][0],box[1][1]-c[1])));
+      data.m_x=MWAWVec2f(box[1][0]-c[0],box[1][1]);
       res.push_back(data);
-      res.push_back(PathData('L',Vec2f(box[0][0]+c[0],box[1][1])));
-      data.m_x=Vec2f(box[0][0],box[1][1]-c[1]);
+      res.push_back(PathData('L',MWAWVec2f(box[0][0]+c[0],box[1][1])));
+      data.m_x=MWAWVec2f(box[0][0],box[1][1]-c[1]);
       res.push_back(data);
-      res.push_back(PathData('L',Vec2f(box[0][0],box[0][1]+c[1])));
-      data.m_x=Vec2f(box[0][0]+c[0],box[0][1]);
+      res.push_back(PathData('L',MWAWVec2f(box[0][0],box[0][1]+c[1])));
+      data.m_x=MWAWVec2f(box[0][0]+c[0],box[0][1]);
       res.push_back(data);
       res.push_back(PathData('Z'));
       break;
     }
     res.push_back(PathData('M',m_formBox[0]));
-    res.push_back(PathData('L',Vec2f(m_formBox[0][0],m_formBox[1][1])));
+    res.push_back(PathData('L',MWAWVec2f(m_formBox[0][0],m_formBox[1][1])));
     res.push_back(PathData('L',m_formBox[1]));
-    res.push_back(PathData('L',Vec2f(m_formBox[1][0],m_formBox[0][1])));
+    res.push_back(PathData('L',MWAWVec2f(m_formBox[1][0],m_formBox[0][1])));
     res.push_back(PathData('Z'));
     break;
   case Circle: {
-    Vec2f pt0 = Vec2f(m_formBox[0][0],0.5f*(m_formBox[0][1]+m_formBox[1][1]));
-    Vec2f pt1 = Vec2f(m_formBox[1][0],pt0[1]);
+    MWAWVec2f pt0 = MWAWVec2f(m_formBox[0][0],0.5f*(m_formBox[0][1]+m_formBox[1][1]));
+    MWAWVec2f pt1 = MWAWVec2f(m_formBox[1][0],pt0[1]);
     res.push_back(PathData('M',pt0));
     PathData data('A',pt1);
     data.m_r=0.5*(m_formBox[1]-m_formBox[0]);
@@ -544,8 +544,8 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
   }
   case Arc:
   case Pie: {
-    Vec2f center=0.5*(m_formBox[0]+m_formBox[1]);
-    Vec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
+    MWAWVec2f center=0.5*(m_formBox[0]+m_formBox[1]);
+    MWAWVec2f rad=0.5*(m_formBox[1]-m_formBox[0]);
     float angl0=m_arcAngles[0];
     float angl1=m_arcAngles[1];
     if (rad[1]<0) {
@@ -566,10 +566,10 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
     bool addCenter=m_type==Pie;
     if (addCenter)
       res.push_back(PathData('M', center));
-    Vec2f pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    MWAWVec2f pt=center+MWAWVec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
     res.push_back(PathData(addCenter ? 'L' : 'M', pt));
     angl=angl1*float(M_PI/180.);
-    pt=center+Vec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
+    pt=center+MWAWVec2f(std::cos(angl)*rad[0],-std::sin(angl)*rad[1]);
     PathData data('A',pt);
     data.m_largeAngle=(angl1-angl0>=180.f);
     data.m_r=rad;

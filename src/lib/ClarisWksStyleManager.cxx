@@ -60,7 +60,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
-    m_dim=Vec2i(8,8);
+    m_dim=MWAWVec2i(8,8);
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
@@ -125,7 +125,7 @@ struct Gradient {
       o << gr.m_colors[c] << ",";
     }
     o << "],";
-    if (gr.m_box!=MWAWBox2i(Vec2i(0,0),Vec2i(0,0)))
+    if (gr.m_box!=MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(0,0)))
       o << "center=" << gr.m_box << ",";
     return o;
   }
@@ -151,7 +151,7 @@ bool Gradient::update(MWAWGraphicStyle &style) const
     style.m_gradientType=m_type==1 ? MWAWGraphicStyle::G_Radial : MWAWGraphicStyle::G_Rectangular;
     for (int c=0; c < m_numColors; ++c)
       style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
-    style.m_gradientPercentCenter=Vec2f(float(m_box.center()[1])/100.f, float(m_box.center()[0])/100.f);
+    style.m_gradientPercentCenter=MWAWVec2f(float(m_box.center()[1])/100.f, float(m_box.center()[0])/100.f);
     return true;
   }
   style.m_gradientAngle=float(m_angle+90);
@@ -344,15 +344,15 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad5
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(79,80),Vec2i(79,80));
+  grad.m_box=MWAWBox2i(MWAWVec2i(79,80),MWAWVec2i(79,80));
   m_gradientList.push_back(grad);
   // grad6
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(81,20),Vec2i(81,20));
+  grad.m_box=MWAWBox2i(MWAWVec2i(81,20),MWAWVec2i(81,20));
   m_gradientList.push_back(grad);
   // grad7
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(50,50),Vec2i(50,50));
+  grad.m_box=MWAWBox2i(MWAWVec2i(50,50),MWAWVec2i(50,50));
   m_gradientList.push_back(grad);
   // grad8
   grad=Gradient(0,2,90,1);
@@ -371,19 +371,19 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad13
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(22,77),Vec2i(23,77));
+  grad.m_box=MWAWBox2i(MWAWVec2i(22,77),MWAWVec2i(23,77));
   m_gradientList.push_back(grad);
   // grad14
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(22,22),Vec2i(22,22));
+  grad.m_box=MWAWBox2i(MWAWVec2i(22,22),MWAWVec2i(22,22));
   m_gradientList.push_back(grad);
   // grad15
   grad=Gradient(1,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(51,50),Vec2i(51,50));
+  grad.m_box=MWAWBox2i(MWAWVec2i(51,50),MWAWVec2i(51,50));
   m_gradientList.push_back(grad);
   // grad16
   grad=Gradient(2,3,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(79,15),Vec2i(86,22));
+  grad.m_box=MWAWBox2i(MWAWVec2i(79,15),MWAWVec2i(86,22));
   grad.m_colors[1]=MWAWColor(0xaa0000);
   grad.m_colors[2]=MWAWColor(0xcc3300);
   m_gradientList.push_back(grad);
@@ -402,7 +402,7 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad19
   grad=Gradient(1,4,332,0);
-  grad.m_box=MWAWBox2i(Vec2i(77,71),Vec2i(77,71));
+  grad.m_box=MWAWBox2i(MWAWVec2i(77,71),MWAWVec2i(77,71));
   grad.m_colors[0]=MWAWColor(0xffff00);
   grad.m_colors[1]=MWAWColor(0xff3300);
   grad.m_colors[2]=MWAWColor(0x9900cc);
@@ -425,7 +425,7 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad23
   grad=Gradient(2,4,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(41,40),Vec2i(62,62));
+  grad.m_box=MWAWBox2i(MWAWVec2i(41,40),MWAWVec2i(62,62));
   grad.m_colors[0]=MWAWColor(0xffffff);
   grad.m_colors[1]=MWAWColor(0xccffff);
   grad.m_colors[2]=MWAWColor(0x99ffff);
@@ -468,13 +468,13 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad30
   grad=Gradient(2,2,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(0,88),Vec2i(12,100));
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,88),MWAWVec2i(12,100));
   grad.m_colors[0]=MWAWColor(0xff6600);
   grad.m_colors[1]=MWAWColor(0xffff00);
   m_gradientList.push_back(grad);
   // grad31
   grad=Gradient(2,4,0,0);
-  grad.m_box=MWAWBox2i(Vec2i(99,52),Vec2i(100,54));
+  grad.m_box=MWAWBox2i(MWAWVec2i(99,52),MWAWVec2i(100,54));
   grad.m_colors[0]=MWAWColor(0xffffff);
   grad.m_colors[1]=MWAWColor(0xffffcc);
   grad.m_colors[2]=MWAWColor(0xffff66);
@@ -524,7 +524,7 @@ void State::setDefaultWallPaperList(int version)
     219,233,224,207,222,219,203,226,226,208,238,238,222
   };
   data=librevenge::RVNGBinaryData(wall0,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[0]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[0]));
 
   static unsigned char wall1[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,67,80,149,62,66,138,64,70,147,60,71,131,67,68,150,53,68,125,69,
@@ -554,7 +554,7 @@ void State::setDefaultWallPaperList(int version)
     134,60,67,141,65,70,133,67,71,137,58,58,135
   };
   data=librevenge::RVNGBinaryData(wall1,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[1]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[1]));
 
   static unsigned char wall2[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,214,214,214,216,216,216,215,215,215,223,223,223,220,220,220,217,217,217,214,
@@ -584,7 +584,7 @@ void State::setDefaultWallPaperList(int version)
     213,220,220,220,224,224,224,215,215,215,204,204,204
   };
   data=librevenge::RVNGBinaryData(wall2,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[2]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[2]));
 
   static unsigned char wall3[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,255,255,153,255,255,153,255,254,152,255,255,154,242,242,150,216,216,149,217,
@@ -686,7 +686,7 @@ void State::setDefaultWallPaperList(int version)
     153,255,255,153,255,255,153,255,255,153,255,255,153
   };
   data=librevenge::RVNGBinaryData(wall3,3085);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[3]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(32,32),data,mime,defCol[3]));
   static unsigned char wall4[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,189,16,230,207,20,255,213,16,255,209,20,255,207,16,255,207,14,255,207,
     14,255,214,20,255,212,16,255,215,14,255,207,18,255,208,14,255,207,16,255,209,20,255,177,23,221,151,6,183,158,11,209,
@@ -715,7 +715,7 @@ void State::setDefaultWallPaperList(int version)
     153,119,3,153,124,1,153,128,0,153,121,10,155
   };
   data=librevenge::RVNGBinaryData(wall4,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[4]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[4]));
 
   static unsigned char wall5[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,194,194,181,244,245,220,195,194,180,208,206,189,192,189,177,199,198,179,209,
@@ -745,7 +745,7 @@ void State::setDefaultWallPaperList(int version)
     190,186,193,177,227,223,190,236,225,205,231,221,195
   };
   data=librevenge::RVNGBinaryData(wall5,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[5]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[5]));
 
   static unsigned char wall6[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,164,114,35,175,126,42,211,147,51,200,149,48,146,110,40,196,144,48,225,
@@ -775,7 +775,7 @@ void State::setDefaultWallPaperList(int version)
     29,128,93,27,219,164,55,168,131,49,113,82,25
   };
   data=librevenge::RVNGBinaryData(wall6,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[6]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[6]));
 
   static unsigned char wall7[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,61,61,61,53,53,53,61,61,61,59,59,59,51,51,51,61,61,61,63,
@@ -805,7 +805,7 @@ void State::setDefaultWallPaperList(int version)
     57,62,62,62,63,63,63,55,55,55,52,52,52
   };
   data=librevenge::RVNGBinaryData(wall7,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[7]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[7]));
 
   static unsigned char wall8[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,
@@ -835,7 +835,7 @@ void State::setDefaultWallPaperList(int version)
     238,238,238,238,238,238,238,238,238,238,238,238,238
   };
   data=librevenge::RVNGBinaryData(wall8,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[8]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[8]));
 
   static unsigned char wall9[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,205,135,154,165,109,132,147,116,109,143,115,116,129,117,117,121,127,126,159,
@@ -937,7 +937,7 @@ void State::setDefaultWallPaperList(int version)
     216,215,211,213,193,186,185,202,157,161,206,149,152
   };
   data=librevenge::RVNGBinaryData(wall9,3085);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[9]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(32,32),data,mime,defCol[9]));
   static unsigned char wall10[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,128,131,223,119,126,219,114,128,203,129,135,223,102,114,199,116,128,209,108,
     119,201,99,107,182,103,118,200,111,125,202,120,132,217,114,128,206,123,136,205,110,129,206,110,122,200,118,121,204,116,128,204,
@@ -966,7 +966,7 @@ void State::setDefaultWallPaperList(int version)
     204,111,116,199,103,105,185,125,135,219,131,143,222
   };
   data=librevenge::RVNGBinaryData(wall10,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[10]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[10]));
 
   static unsigned char wall11[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,200,105,51,194,113,50,205,117,59,202,122,53,204,120,61,205,116,57,195,
@@ -996,7 +996,7 @@ void State::setDefaultWallPaperList(int version)
     61,202,116,56,201,116,56,204,126,63,204,114,60
   };
   data=librevenge::RVNGBinaryData(wall11,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[11]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[11]));
 
   static unsigned char wall12[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,171,76,63,193,89,73,198,94,75,154,70,58,173,84,67,193,90,72,204,
@@ -1026,7 +1026,7 @@ void State::setDefaultWallPaperList(int version)
     71,175,87,67,161,82,60,195,96,74,179,79,64
   };
   data=librevenge::RVNGBinaryData(wall12,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[12]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[12]));
 
   static unsigned char wall13[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,204,255,153,204,255,153,204,255,153,204,255,153,204,255,153,204,255,153,204,
@@ -1056,7 +1056,7 @@ void State::setDefaultWallPaperList(int version)
     142,207,253,155,204,255,153,204,255,153,204,255,153
   };
   data=librevenge::RVNGBinaryData(wall13,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[13]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[13]));
 
   static unsigned char wall14[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,89,55,81,116,93,202,152,158,144,102,124,146,83,106,199,144,112,107,50,
@@ -1158,7 +1158,7 @@ void State::setDefaultWallPaperList(int version)
     183,69,46,24,118,78,87,88,58,46,61,59,45
   };
   data=librevenge::RVNGBinaryData(wall14,3085);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[14]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(32,32),data,mime,defCol[14]));
   static unsigned char wall15[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,202,182,208,223,200,218,222,195,220,229,195,223,226,199,226,220,199,220,208,
     177,208,212,194,212,220,191,211,240,215,235,201,172,200,209,184,207,219,197,219,227,204,229,217,188,215,240,213,222,209,183,206,
@@ -1187,7 +1187,7 @@ void State::setDefaultWallPaperList(int version)
     211,207,181,207,216,187,210,223,201,215,208,193,208
   };
   data=librevenge::RVNGBinaryData(wall15,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[15]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[15]));
 
   static unsigned char wall16[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,214,214,211,225,225,216,218,218,215,221,224,218,231,224,221,229,229,227,226,
@@ -1217,7 +1217,7 @@ void State::setDefaultWallPaperList(int version)
     237,223,220,220,225,216,213,206,206,202,196,196,196
   };
   data=librevenge::RVNGBinaryData(wall16,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[16]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[16]));
 
   static unsigned char wall17[781]= {
     80,54,10,49,54,32,49,54,10,50,53,53,10,80,99,182,88,88,184,73,86,155,82,87,174,62,65,125,61,69,128,55,
@@ -1247,7 +1247,7 @@ void State::setDefaultWallPaperList(int version)
     132,66,76,159,54,59,115,45,59,111,69,80,167
   };
   data=librevenge::RVNGBinaryData(wall17,781);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(16,16),data,mime,defCol[17]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(16,16),data,mime,defCol[17]));
 
   static unsigned char wall18[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,238,236,236,238,
@@ -1349,7 +1349,7 @@ void State::setDefaultWallPaperList(int version)
     238,238,238,238,238,238,238,238,238,238,238,238,238
   };
   data=librevenge::RVNGBinaryData(wall18,3085);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[18]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(32,32),data,mime,defCol[18]));
   static unsigned char wall19[3085]= {
     80,54,10,51,50,32,51,50,10,50,53,53,10,0,1,76,0,0,31,0,0,0,0,0,1,1,1,0,0,4,0,22,
     0,0,77,0,0,104,0,0,87,1,0,49,0,0,7,20,0,1,87,0,0,50,2,6,21,0,16,0,48,1,0,174,
@@ -1450,7 +1450,7 @@ void State::setDefaultWallPaperList(int version)
     124,0,0,118,0,0,119,0,0,95,0,0,81
   };
   data=librevenge::RVNGBinaryData(wall19,3085);
-  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(Vec2i(32,32),data,mime,defCol[19]));
+  m_wallpaperList.push_back(MWAWGraphicStyle::Pattern(MWAWVec2i(32,32),data,mime,defCol[19]));
 
 }
 
@@ -1849,7 +1849,7 @@ bool ClarisWksStyleManager::readGradientList(long endPos)
     grad.m_decal=float(input->readLong(4))/65536.f;
     int dim[4];
     for (int j=0; j<4; ++j) dim[j]=(int)input->readLong(2);
-    grad.m_box=MWAWBox2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3]));
+    grad.m_box=MWAWBox2i(MWAWVec2i(dim[0],dim[1]),MWAWVec2i(dim[2],dim[3]));
     f << grad;
     if (!grad.ok()) {
       f << "##";

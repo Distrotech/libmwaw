@@ -746,20 +746,20 @@ bool MacWrtProParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -1315,7 +1315,7 @@ bool MacWrtProParser::readTextTokens(shared_ptr<MacWrtProParserInternal::Zone> z
       f << "sz=" << std::hex << sz << std::dec << ",";
       int dim[4];
       for (int j = 0; j < 4; j++) dim[j] = (int) input->readLong(2);
-      token.m_box = MWAWBox2f(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+      token.m_box = MWAWBox2f(MWAWVec2f(float(dim[1]),float(dim[0])), MWAWVec2f(float(dim[3]),float(dim[2])));
       f << "dim=[" << dim[1] << "x" << dim[0] << "-"
         << dim[3] << "x" << dim[2] << ",";
       for (int j = 0; j < 4; j++) dim[j] = (int) input->readLong(2);
@@ -1550,7 +1550,7 @@ bool MacWrtProParser::sendText(shared_ptr<MacWrtProParserInternal::TextZone> zon
         break; // footnote content, ok
       case 4:
         if (vers==0) {
-          MWAWPosition pictPos(Vec2i(0,0), zone->m_tokens[(size_t)data.m_id].m_box.size(), librevenge::RVNG_POINT);
+          MWAWPosition pictPos(MWAWVec2i(0,0), zone->m_tokens[(size_t)data.m_id].m_box.size(), librevenge::RVNG_POINT);
           pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
           sendPictureZone(zone->m_tokens[(size_t)data.m_id].m_blockId, pictPos);
         }
@@ -1711,7 +1711,7 @@ bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone
   if (!pict) { // ok, we can not do anything except sending the data...
     MWAW_DEBUG_MSG(("MacWrtProParser::parseDataZone: no sure this is a picture\n"));
     if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0)
-      pictPos=MWAWPosition(Vec2f(0,0),Vec2f(100.,100.), librevenge::RVNG_POINT);
+      pictPos=MWAWPosition(MWAWVec2f(0,0),MWAWVec2f(100.,100.), librevenge::RVNG_POINT);
     if (getTextListener()) {
       librevenge::RVNGBinaryData data;
       input->seek(4, librevenge::RVNG_SEEK_SET);
@@ -1722,7 +1722,7 @@ bool MacWrtProParser::sendPicture(shared_ptr<MacWrtProParserInternal::Zone> zone
   }
 
   if (pictPos.size().x() <= 0 || pictPos.size().y() <= 0) {
-    pictPos.setOrigin(Vec2f(0,0));
+    pictPos.setOrigin(MWAWVec2f(0,0));
     pictPos.setSize(pict->getBdBox().size());
     pictPos.setUnit(librevenge::RVNG_POINT);
   }

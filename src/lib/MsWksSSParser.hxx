@@ -107,7 +107,7 @@ protected:
   //!reads the end of the header
   bool readEndHeader();
   //!reads a cell content data
-  bool readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell);
+  bool readCell(int sz, MWAWVec2i const &cellPos, MsWksSSParserInternal::Cell &cell);
 
 protected:
   //

@@ -262,8 +262,8 @@ MWAWTextListenerPtr MsWks4Zone::createListener(librevenge::RVNGTextInterface *in
   pagesH.resize(size_t(m_state->m_numPages), int(72.*getTextHeight()));
   m_document->getGraphParser()->computePositions(-1, linesH, pagesH);
   m_document->getGraphParser()->setPageLeftTop
-  (Vec2f(72.f*float(m_parserState->m_pageSpan.getMarginLeft()),
-         72.f*float(m_parserState->m_pageSpan.getMarginTop())+float(m_state->m_headerHeight)));
+  (MWAWVec2f(72.f*float(m_parserState->m_pageSpan.getMarginLeft()),
+             72.f*float(m_parserState->m_pageSpan.getMarginTop())+float(m_state->m_headerHeight)));
 
   return res;
 }
@@ -630,9 +630,9 @@ bool MsWks4Zone::readPRNT(MWAWInputStreamPtr input, MWAWEntry const &entry, MWAW
     return false;
   }
   else {
-    Vec2i paperSize = info.paper().size();
-    Vec2i pageSize = info.page().size();
-    Vec2i margin = paperSize - pageSize;
+    MWAWVec2i paperSize = info.paper().size();
+    MWAWVec2i pageSize = info.page().size();
+    MWAWVec2i margin = paperSize - pageSize;
     margin.set(margin.x()/2, margin.y()/2);
 
     page.setMarginTop(margin.y()/72.0);
@@ -938,7 +938,7 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
     if (endPos > endPage) break;
 
     MsWks4ZoneInternal::Frame frame;
-    Vec2f fOrig, fSiz;
+    MWAWVec2f fOrig, fSiz;
     while (input->tell() < endPos) {
       int val = (int) input->readULong(1);
       long pos = input->tell();

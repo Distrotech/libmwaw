@@ -65,7 +65,7 @@ struct Bitmap {
   //! the number of color bytes (1: means black/white, 8: means color)
   int m_colorBytes;
   //! the bitmap dimension
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
   //! the color list
   std::vector<MWAWColor> m_colorList;
 };
@@ -135,10 +135,10 @@ libmwaw::DebugFile &BeagleWksBMParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f BeagleWksBMParser::getPageLeftTop() const
+MWAWVec2f BeagleWksBMParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -549,7 +549,7 @@ bool BeagleWksBMParser::readPrefColorMap()
   }
   int dim[2];
   for (int i=0; i<2; ++i) dim[i]=(int) input->readLong(2);
-  bitmap.m_dim=Vec2i(dim[1], dim[0]);
+  bitmap.m_dim=MWAWVec2i(dim[1], dim[0]);
   f << "dim=" << bitmap.m_dim << ",";
   bitmap.m_colorBytes=(int) input->readLong(2);
   switch (bitmap.m_colorBytes) {
@@ -659,20 +659,20 @@ bool BeagleWksBMParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -715,8 +715,8 @@ bool BeagleWksBMParser::sendBitmap()
   if (!m_state->m_pict || !m_state->m_pict->getBinary(data,type)) return false;
 
   MWAWPageSpan const &page=getPageSpan();
-  MWAWPosition pos(Vec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
-                   Vec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
+  MWAWPosition pos(MWAWVec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
+                   MWAWVec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
   pos.setRelativePosition(MWAWPosition::Page);
   pos.m_wrapping = MWAWPosition::WNone;
   listener->insertPicture(pos, data, "image/pict");
@@ -734,7 +734,7 @@ bool BeagleWksBMParser::sendPageFrames()
 
 bool BeagleWksBMParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
-  MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
+  MWAWPosition fPos(MWAWVec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
 
   fPos.setPagePos(frame.m_page > 0 ? frame.m_page : 1, frame.m_origin);
   fPos.setRelativePosition(MWAWPosition::Page);

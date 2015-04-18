@@ -76,7 +76,7 @@ protected:
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
 
   //! adds a new page
   void newPage(int number);

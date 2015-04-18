@@ -92,7 +92,7 @@ struct Border {
   //! the shadow color
   MWAWColor m_shadowColor;
   //! the shadow depl ( if shadow)
-  Vec2i m_shadowDepl;
+  MWAWVec2i m_shadowDepl;
   //! the colors line + ?
   MWAWColor m_color[2];
   //! the flags

@@ -261,7 +261,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
       continue;
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    std::vector<Vec2i> res;
+    std::vector<MWAWVec2i> res;
     ok = m_document.readStructCellZone("SpreadsheetListCell", false, res);
     if (ok) continue;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -450,13 +450,13 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
     return false;
   }
   ClarisWksSpreadsheetInternal::Spreadsheet &sheet=*it->second;
-  Vec2i minData, maxData;
+  MWAWVec2i minData, maxData;
   if (!sheet.m_content || !sheet.m_content->getExtrema(minData,maxData)) {
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheet: can not find content\n"));
     return false;
   }
   if (m_parserState->m_kind==MWAWDocument::MWAW_K_SPREADSHEET && zId==1)
-    minData=Vec2i(0,0);
+    minData=MWAWVec2i(0,0);
   std::vector<float> colSize((size_t)(maxData[0]-minData[0]+1),72);
   for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
     if (c>=0 && c < int(sheet.m_colWidths.size()))
@@ -464,7 +464,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
   }
   sheetListener->openSheet(colSize, librevenge::RVNG_POINT);
   MWAWInputStreamPtr &input= m_parserState->m_input;
-  bool recomputeCellPosition=(minData!=Vec2i(0,0));
+  bool recomputeCellPosition=(minData!=MWAWVec2i(0,0));
   for (int r=minData[1], fR=0; r <= maxData[1]; ++r, ++fR) {
     if (sheet.m_rowHeightMap.find(r)!=sheet.m_rowHeightMap.end())
       sheetListener->openSheetRow((float)sheet.m_rowHeightMap.find(r)->second, librevenge::RVNG_POINT);
@@ -472,9 +472,9 @@ bool ClarisWksSpreadsheet::sendSpreadsheet(int zId, MWAWListenerPtr listener)
       sheetListener->openSheetRow((float)14, librevenge::RVNG_POINT);
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       ClarisWksDbaseContent::Record rec;
-      if (!sheet.m_content->get(Vec2i(c,r),rec)) continue;
+      if (!sheet.m_content->get(MWAWVec2i(c,r),rec)) continue;
       MWAWCell cell;
-      cell.setPosition(Vec2i(fC,fR));
+      cell.setPosition(MWAWVec2i(fC,fR));
       cell.setFormat(rec.m_format);
       cell.setHAlignment(rec.m_hAlign);
       cell.setFont(rec.m_font);
@@ -532,7 +532,7 @@ bool ClarisWksSpreadsheet::sendSpreadsheetAsTable(int zId, MWAWListenerPtr liste
     return false;
   }
   ClarisWksSpreadsheetInternal::Spreadsheet &sheet=*it->second;
-  Vec2i minData, maxData;
+  MWAWVec2i minData, maxData;
   if (!sheet.m_content || !sheet.m_content->getExtrema(minData,maxData)) {
     MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::sendSpreadsheetAsTable: can not find content\n"));
     return false;
@@ -552,10 +552,10 @@ bool ClarisWksSpreadsheet::sendSpreadsheetAsTable(int zId, MWAWListenerPtr liste
       listener->openTableRow((float)14, librevenge::RVNG_POINT);
     for (int c=minData[0], fC=0; c <= maxData[0]; ++c, ++fC) {
       MWAWCell cell;
-      cell.setPosition(Vec2i(fC,fR));
+      cell.setPosition(MWAWVec2i(fC,fR));
       cell.setVAlignment(MWAWCell::VALIGN_BOTTOM); // always ?
       listener->openTableCell(cell);
-      sheet.m_content->send(Vec2i(c, r));
+      sheet.m_content->send(MWAWVec2i(c, r));
       listener->closeTableCell();
     }
     listener->closeTableRow();

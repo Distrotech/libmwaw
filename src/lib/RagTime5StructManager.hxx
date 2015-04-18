@@ -345,7 +345,7 @@ public:
     bool isDefault() const
     {
       return m_parentId<0 && m_width<0 && m_dash.empty() && !m_pattern &&
-             m_gradient==0 && m_gradientRotation<=0 && m_gradientRotation>=0 && m_gradientCenter!=Vec2f(0.5f, 0.5f) &&
+             m_gradient==0 && m_gradientRotation<=0 && m_gradientRotation>=0 && m_gradientCenter!=MWAWVec2f(0.5f, 0.5f) &&
              m_position==2 && m_cap==1 && m_mitter==1 &&
              m_colors[0].isBlack() && m_colors[1].isWhite() && m_colorsAlpha[0]>=1 && m_colorsAlpha[1]>=1 &&
              m_limitPercent>=1 && m_limitPercent<=1 && !m_hidden && m_extra.empty();
@@ -371,7 +371,7 @@ public:
     //! the gradient rotation(checkme)
     float m_gradientRotation;
     //! the rotation center(checkme)
-    Vec2f m_gradientCenter;
+    MWAWVec2f m_gradientCenter;
     //! the line position inside=1/normal/outside/round
     int m_position;
     //! the line caps ( normal=1, round, square)

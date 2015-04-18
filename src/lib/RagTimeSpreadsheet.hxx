@@ -111,9 +111,9 @@ protected:
   //! try to read a spreadsheet cells content
   bool readSpreadsheetCellContent(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
   //! try to read a spreadsheet cells dimension
-  bool readSpreadsheetCellDimension(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
+  bool readSpreadsheetCellDimension(MWAWVec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet);
   //! try to read a spreadsheet cell's format
-  bool readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell);
+  bool readSpreadsheetCellFormat(MWAWVec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell);
 
   //! try to read a list of position
   bool readPositionsList(MWAWEntry const &entry, std::vector<long> &posList, long &lastDataPos);
@@ -139,13 +139,13 @@ protected:
   //! try to read a cell :v2
   bool readSpreadsheetCellV2(RagTimeSpreadsheetInternal::Cell &cell, long endPos);
   //! try to read a formula
-  bool readFormulaV2(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
+  bool readFormulaV2(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
   //! try to read a formula: v3...
-  bool readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
+  bool readFormula(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra);
   //! try to read a cell in a formula
-  bool readCellInFormulaV2(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
+  bool readCellInFormulaV2(MWAWVec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
   //! try to read a cell in a formula
-  bool readCellInFormula(Vec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
+  bool readCellInFormula(MWAWVec2i const &pos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra);
   //! send a spreadsheet to a listener
   bool send(RagTimeSpreadsheetInternal::Spreadsheet &sheet, MWAWSpreadsheetListenerPtr listener);
 

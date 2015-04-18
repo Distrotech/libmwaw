@@ -795,7 +795,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
       int dim[2];
       for (int j = 0; j < 2; j++)
         dim[j] = (int) input->readLong(2);
-      child.m_box = MWAWBox2i(Vec2i(0,0), Vec2i(dim[0], dim[1]));
+      child.m_box = MWAWBox2i(MWAWVec2i(0,0), MWAWVec2i(dim[0], dim[1]));
       textZone->m_childs.push_back(child);
       plc.m_id = i;
       textZone->m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(child.m_posC, plc));
@@ -1709,7 +1709,7 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
               // fixme
               MWAWPosition tPos;
               if (token.m_descent != 0) {
-                tPos=MWAWPosition(Vec2f(0,float(token.m_descent)), Vec2f(), librevenge::RVNG_POINT);
+                tPos=MWAWPosition(MWAWVec2f(0,float(token.m_descent)), MWAWVec2f(), librevenge::RVNG_POINT);
                 tPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
               }
               m_document.sendZone(token.m_zoneId, MWAWListenerPtr(), tPos);

@@ -536,16 +536,16 @@ protected:
 };
 
 /* ---------- vec2/box2f ------------- */
-/*! \class Vec2
+/*! \class MWAWVec2
  *   \brief small class which defines a vector with 2 elements
  */
-template <class T> class Vec2
+template <class T> class MWAWVec2
 {
 public:
   //! constructor
-  Vec2(T xx=0,T yy=0) : m_x(xx), m_y(yy) { }
+  MWAWVec2(T xx=0,T yy=0) : m_x(xx), m_y(yy) { }
   //! generic copy constructor
-  template <class U> Vec2(Vec2<U> const &p) : m_x(T(p.x())), m_y(T(p.y())) {}
+  template <class U> MWAWVec2(MWAWVec2<U> const &p) : m_x(T(p.x())), m_y(T(p.y())) {}
 
   //! first element
   T x() const
@@ -595,14 +595,14 @@ public:
   }
 
   //! operator+=
-  Vec2<T> &operator+=(Vec2<T> const &p)
+  MWAWVec2<T> &operator+=(MWAWVec2<T> const &p)
   {
     m_x += p.m_x;
     m_y += p.m_y;
     return *this;
   }
   //! operator-=
-  Vec2<T> &operator-=(Vec2<T> const &p)
+  MWAWVec2<T> &operator-=(MWAWVec2<T> const &p)
   {
     m_x -= p.m_x;
     m_y -= p.m_y;
@@ -610,7 +610,7 @@ public:
   }
   //! generic operator*=
   template <class U>
-  Vec2<T> &operator*=(U scale)
+  MWAWVec2<T> &operator*=(U scale)
   {
     m_x = T(m_x*scale);
     m_y = T(m_y*scale);
@@ -618,42 +618,42 @@ public:
   }
 
   //! operator+
-  friend Vec2<T> operator+(Vec2<T> const &p1, Vec2<T> const &p2)
+  friend MWAWVec2<T> operator+(MWAWVec2<T> const &p1, MWAWVec2<T> const &p2)
   {
-    Vec2<T> p(p1);
+    MWAWVec2<T> p(p1);
     return p+=p2;
   }
   //! operator-
-  friend Vec2<T> operator-(Vec2<T> const &p1, Vec2<T> const &p2)
+  friend MWAWVec2<T> operator-(MWAWVec2<T> const &p1, MWAWVec2<T> const &p2)
   {
-    Vec2<T> p(p1);
+    MWAWVec2<T> p(p1);
     return p-=p2;
   }
   //! generic operator*
   template <class U>
-  friend Vec2<T> operator*(U scale, Vec2<T> const &p1)
+  friend MWAWVec2<T> operator*(U scale, MWAWVec2<T> const &p1)
   {
-    Vec2<T> p(p1);
+    MWAWVec2<T> p(p1);
     return p *= scale;
   }
 
   //! comparison==
-  bool operator==(Vec2<T> const &p) const
+  bool operator==(MWAWVec2<T> const &p) const
   {
     return cmpY(p) == 0;
   }
   //! comparison!=
-  bool operator!=(Vec2<T> const &p) const
+  bool operator!=(MWAWVec2<T> const &p) const
   {
     return cmpY(p) != 0;
   }
   //! comparison<: sort by y
-  bool operator<(Vec2<T> const &p) const
+  bool operator<(MWAWVec2<T> const &p) const
   {
     return cmpY(p) < 0;
   }
   //! a comparison function: which first compares x then y
-  int cmp(Vec2<T> const &p) const
+  int cmp(MWAWVec2<T> const &p) const
   {
     if (m_x < p.m_x) return -1;
     if (m_x > p.m_x) return 1;
@@ -662,7 +662,7 @@ public:
     return 0;
   }
   //! a comparison function: which first compares y then x
-  int cmpY(Vec2<T> const &p) const
+  int cmpY(MWAWVec2<T> const &p) const
   {
     if (m_y < p.m_y) return -1;
     if (m_y > p.m_y) return 1;
@@ -672,7 +672,7 @@ public:
   }
 
   //! operator<<: prints data in form "XxY"
-  friend std::ostream &operator<< (std::ostream &o, Vec2<T> const &f)
+  friend std::ostream &operator<< (std::ostream &o, MWAWVec2<T> const &f)
   {
     o << f.m_x << "x" << f.m_y;
     return o;
@@ -683,58 +683,58 @@ public:
    */
   struct PosSizeLtX {
     //! comparaison function
-    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const
+    bool operator()(MWAWVec2<T> const &s1, MWAWVec2<T> const &s2) const
     {
       return s1.cmp(s2) < 0;
     }
   };
   /*! \typedef MapX
-   *  \brief map of Vec2
+   *  \brief map of MWAWVec2
    */
-  typedef std::map<Vec2<T>, T,struct PosSizeLtX> MapX;
+  typedef std::map<MWAWVec2<T>, T,struct PosSizeLtX> MapX;
 
   /*! \struct PosSizeLtY
    * \brief internal struct used to create sorted map, sorted by Y
    */
   struct PosSizeLtY {
     //! comparaison function
-    bool operator()(Vec2<T> const &s1, Vec2<T> const &s2) const
+    bool operator()(MWAWVec2<T> const &s1, MWAWVec2<T> const &s2) const
     {
       return s1.cmpY(s2) < 0;
     }
   };
   /*! \typedef MapY
-   *  \brief map of Vec2
+   *  \brief map of MWAWVec2
    */
-  typedef std::map<Vec2<T>, T,struct PosSizeLtY> MapY;
+  typedef std::map<MWAWVec2<T>, T,struct PosSizeLtY> MapY;
 protected:
   T m_x/*! \brief first element */, m_y/*! \brief second element */;
 };
 
-/*! \brief Vec2 of bool */
-typedef Vec2<bool> Vec2b;
-/*! \brief Vec2 of int */
-typedef Vec2<int> Vec2i;
-/*! \brief Vec2 of long */
-typedef Vec2<long> Vec2l;
-/*! \brief Vec2 of float */
-typedef Vec2<float> Vec2f;
+/*! \brief MWAWVec2 of bool */
+typedef MWAWVec2<bool> MWAWVec2b;
+/*! \brief MWAWVec2 of int */
+typedef MWAWVec2<int> MWAWVec2i;
+/*! \brief MWAWVec2 of long */
+typedef MWAWVec2<long> MWAWVec2l;
+/*! \brief MWAWVec2 of float */
+typedef MWAWVec2<float> MWAWVec2f;
 
-/*! \class Vec3
+/*! \class MWAWVec3
  *   \brief small class which defines a vector with 3 elements
  */
-template <class T> class Vec3
+template <class T> class MWAWVec3
 {
 public:
   //! constructor
-  Vec3(T xx=0,T yy=0,T zz=0)
+  MWAWVec3(T xx=0,T yy=0,T zz=0)
   {
     m_val[0] = xx;
     m_val[1] = yy;
     m_val[2] = zz;
   }
   //! generic copy constructor
-  template <class U> Vec3(Vec3<U> const &p)
+  template <class U> MWAWVec3(MWAWVec3<U> const &p)
   {
     for (int c = 0; c < 3; c++) m_val[c] = T(p[c]);
   }
@@ -799,62 +799,62 @@ public:
   }
 
   //! operator+=
-  Vec3<T> &operator+=(Vec3<T> const &p)
+  MWAWVec3<T> &operator+=(MWAWVec3<T> const &p)
   {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]+p.m_val[c]);
     return *this;
   }
   //! operator-=
-  Vec3<T> &operator-=(Vec3<T> const &p)
+  MWAWVec3<T> &operator-=(MWAWVec3<T> const &p)
   {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]-p.m_val[c]);
     return *this;
   }
   //! generic operator*=
   template <class U>
-  Vec3<T> &operator*=(U scale)
+  MWAWVec3<T> &operator*=(U scale)
   {
     for (int c = 0; c < 3; c++) m_val[c] = T(m_val[c]*scale);
     return *this;
   }
 
   //! operator+
-  friend Vec3<T> operator+(Vec3<T> const &p1, Vec3<T> const &p2)
+  friend MWAWVec3<T> operator+(MWAWVec3<T> const &p1, MWAWVec3<T> const &p2)
   {
-    Vec3<T> p(p1);
+    MWAWVec3<T> p(p1);
     return p+=p2;
   }
   //! operator-
-  friend Vec3<T> operator-(Vec3<T> const &p1, Vec3<T> const &p2)
+  friend MWAWVec3<T> operator-(MWAWVec3<T> const &p1, MWAWVec3<T> const &p2)
   {
-    Vec3<T> p(p1);
+    MWAWVec3<T> p(p1);
     return p-=p2;
   }
   //! generic operator*
   template <class U>
-  friend Vec3<T> operator*(U scale, Vec3<T> const &p1)
+  friend MWAWVec3<T> operator*(U scale, MWAWVec3<T> const &p1)
   {
-    Vec3<T> p(p1);
+    MWAWVec3<T> p(p1);
     return p *= scale;
   }
 
   //! comparison==
-  bool operator==(Vec3<T> const &p) const
+  bool operator==(MWAWVec3<T> const &p) const
   {
     return cmp(p) == 0;
   }
   //! comparison!=
-  bool operator!=(Vec3<T> const &p) const
+  bool operator!=(MWAWVec3<T> const &p) const
   {
     return cmp(p) != 0;
   }
   //! comparison<: which first compares x values, then y values then z values.
-  bool operator<(Vec3<T> const &p) const
+  bool operator<(MWAWVec3<T> const &p) const
   {
     return cmp(p) < 0;
   }
   //! a comparison function: which first compares x values, then y values then z values.
-  int cmp(Vec3<T> const &p) const
+  int cmp(MWAWVec3<T> const &p) const
   {
     for (int c = 0; c < 3; c++) {
       T diff  = m_val[c]-p.m_val[c];
@@ -864,7 +864,7 @@ public:
   }
 
   //! operator<<: prints data in form "XxYxZ"
-  friend std::ostream &operator<< (std::ostream &o, Vec3<T> const &f)
+  friend std::ostream &operator<< (std::ostream &o, MWAWVec3<T> const &f)
   {
     o << f.m_val[0] << "x" << f.m_val[1] << "x" << f.m_val[2];
     return o;
@@ -875,27 +875,27 @@ public:
    */
   struct PosSizeLt {
     //! comparaison function
-    bool operator()(Vec3<T> const &s1, Vec3<T> const &s2) const
+    bool operator()(MWAWVec3<T> const &s1, MWAWVec3<T> const &s2) const
     {
       return s1.cmp(s2) < 0;
     }
   };
   /*! \typedef Map
-   *  \brief map of Vec3
+   *  \brief map of MWAWVec3
    */
-  typedef std::map<Vec3<T>, T,struct PosSizeLt> Map;
+  typedef std::map<MWAWVec3<T>, T,struct PosSizeLt> Map;
 
 protected:
   //! the values
   T m_val[3];
 };
 
-/*! \brief Vec3 of unsigned char */
-typedef Vec3<unsigned char> Vec3uc;
-/*! \brief Vec3 of int */
-typedef Vec3<int> Vec3i;
-/*! \brief Vec3 of float */
-typedef Vec3<float> Vec3f;
+/*! \brief MWAWVec3 of unsigned char */
+typedef MWAWVec3<unsigned char> MWAWVec3uc;
+/*! \brief MWAWVec3 of int */
+typedef MWAWVec3<int> MWAWVec3i;
+/*! \brief MWAWVec3 of float */
+typedef MWAWVec3<float> MWAWVec3f;
 
 /*! \class MWAWBox2
  *   \brief small class which defines a 2D Box
@@ -904,7 +904,7 @@ template <class T> class MWAWBox2
 {
 public:
   //! constructor
-  MWAWBox2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
+  MWAWBox2(MWAWVec2<T> minPt=MWAWVec2<T>(), MWAWVec2<T> maxPt=MWAWVec2<T>())
   {
     m_pt[0] = minPt;
     m_pt[1] = maxPt;
@@ -916,75 +916,75 @@ public:
   }
 
   //! the minimum 2D point (in x and in y)
-  Vec2<T> const &min() const
+  MWAWVec2<T> const &min() const
   {
     return m_pt[0];
   }
   //! the maximum 2D point (in x and in y)
-  Vec2<T> const &max() const
+  MWAWVec2<T> const &max() const
   {
     return m_pt[1];
   }
   //! the minimum 2D point (in x and in y)
-  Vec2<T> &min()
+  MWAWVec2<T> &min()
   {
     return m_pt[0];
   }
   //! the maximum 2D point (in x and in y)
-  Vec2<T> &max()
+  MWAWVec2<T> &max()
   {
     return m_pt[1];
   }
   /*! \brief the two extremum points which defined the box
    * \param c 0 means the minimum and 1 the maximum
    */
-  Vec2<T> const &operator[](int c) const
+  MWAWVec2<T> const &operator[](int c) const
   {
     if (c<0 || c>1) throw libmwaw::GenericException();
     return m_pt[c];
   }
   //! the box size
-  Vec2<T> size() const
+  MWAWVec2<T> size() const
   {
     return m_pt[1]-m_pt[0];
   }
   //! the box center
-  Vec2<T> center() const
+  MWAWVec2<T> center() const
   {
     return 0.5*(m_pt[0]+m_pt[1]);
   }
 
   //! resets the data to minimum \a x and maximum \a y
-  void set(Vec2<T> const &x, Vec2<T> const &y)
+  void set(MWAWVec2<T> const &x, MWAWVec2<T> const &y)
   {
     m_pt[0] = x;
     m_pt[1] = y;
   }
   //! resets the minimum point
-  void setMin(Vec2<T> const &x)
+  void setMin(MWAWVec2<T> const &x)
   {
     m_pt[0] = x;
   }
   //! resets the maximum point
-  void setMax(Vec2<T> const &y)
+  void setMax(MWAWVec2<T> const &y)
   {
     m_pt[1] = y;
   }
 
   //!  resize the box keeping the minimum
-  void resizeFromMin(Vec2<T> const &sz)
+  void resizeFromMin(MWAWVec2<T> const &sz)
   {
     m_pt[1] = m_pt[0]+sz;
   }
   //!  resize the box keeping the maximum
-  void resizeFromMax(Vec2<T> const &sz)
+  void resizeFromMax(MWAWVec2<T> const &sz)
   {
     m_pt[0] = m_pt[1]-sz;
   }
   //!  resize the box keeping the center
-  void resizeFromCenter(Vec2<T> const &sz)
+  void resizeFromCenter(MWAWVec2<T> const &sz)
   {
-    Vec2<T> centerPt = 0.5*(m_pt[0]+m_pt[1]);
+    MWAWVec2<T> centerPt = 0.5*(m_pt[0]+m_pt[1]);
     m_pt[0] = centerPt - 0.5*sz;
     m_pt[1] = centerPt + (sz - 0.5*sz);
   }
@@ -999,28 +999,28 @@ public:
   //! extends the bdbox by (\a val, \a val) keeping the center
   void extend(T val)
   {
-    m_pt[0] -= Vec2<T>(val/2,val/2);
-    m_pt[1] += Vec2<T>(val-(val/2),val-(val/2));
+    m_pt[0] -= MWAWVec2<T>(val/2,val/2);
+    m_pt[1] += MWAWVec2<T>(val-(val/2),val-(val/2));
   }
 
   //! returns the union between this and box
   MWAWBox2<T> getUnion(MWAWBox2<T> const &box) const
   {
     MWAWBox2<T> res;
-    res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
-                        m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
-    res.m_pt[1]=Vec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
-                        m_pt[1][1]>box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+    res.m_pt[0]=MWAWVec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+                            m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+    res.m_pt[1]=MWAWVec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+                            m_pt[1][1]>box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
     return res;
   }
   //! returns the intersection between this and box
   MWAWBox2<T> getIntersection(MWAWBox2<T> const &box) const
   {
     MWAWBox2<T> res;
-    res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
-                        m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
-    res.m_pt[1]=Vec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
-                        m_pt[1][1]<box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
+    res.m_pt[0]=MWAWVec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
+                            m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
+    res.m_pt[1]=MWAWVec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
+                            m_pt[1][1]<box.m_pt[1][1]?m_pt[1][1] : box.m_pt[1][1]);
     return res;
   }
   //! comparison operator==
@@ -1073,7 +1073,7 @@ public:
 
 protected:
   //! the two extremities
-  Vec2<T> m_pt[2];
+  MWAWVec2<T> m_pt[2];
 };
 
 /*! \brief MWAWBox2 of int */

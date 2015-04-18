@@ -81,7 +81,7 @@ protected:
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
   //! returns the columns information
   void getColumnInfo(int &numColumns, float &colSep) const;
   //! returns the footnote information

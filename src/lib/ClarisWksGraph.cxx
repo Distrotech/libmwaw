@@ -69,7 +69,7 @@ namespace ClarisWksGraphInternal
 {
 //! Internal: the structure used to a point of a ClarisWksGraph
 struct CurvePoint {
-  CurvePoint(Vec2f point=Vec2f()) : m_pos(point), m_type(1)
+  CurvePoint(MWAWVec2f point=MWAWVec2f()) : m_pos(point), m_type(1)
   {
     for (int i = 0; i < 2; i++) m_controlPoints[i] = point;
   }
@@ -99,9 +99,9 @@ struct CurvePoint {
     return o;
   }
   //! the main position
-  Vec2f m_pos;
+  MWAWVec2f m_pos;
   //! the control point: previous, next
-  Vec2f m_controlPoints[2];
+  MWAWVec2f m_controlPoints[2];
   //! the point type
   int m_type;
 };
@@ -203,8 +203,8 @@ struct Zone {
   //! return the zone bdbox
   MWAWBox2f getBdBox() const
   {
-    Vec2f minPt(m_box[0][0], m_box[0][1]);
-    Vec2f maxPt(m_box[1][0], m_box[1][1]);
+    MWAWVec2f minPt(m_box[0][0], m_box[0][1]);
+    MWAWVec2f maxPt(m_box[1][0], m_box[1][1]);
     for (int c=0; c<2; ++c) {
       if (m_box.size()[c]>=0) continue;
       minPt[c]=m_box[1][c];
@@ -393,7 +393,7 @@ struct Bitmap : public ClarisWksStruct::DSET {
   //! the number of bite by pixel
   int m_numBytesPerPixel;
   //! the bitmap size
-  Vec2i m_bitmapSize;
+  MWAWVec2i m_bitmapSize;
   //! the bitmap row size in the file ( with potential alignment)
   int m_bitmapRowSize;
   //! the bitmap entry
@@ -664,7 +664,7 @@ struct State {
   //! the number of pages
   int m_numPages;
   //! the page dimension if known (in point)
-  Vec2f m_pageDimensions;
+  MWAWVec2f m_pageDimensions;
   //! the master group id ( in a draw file )
   int m_masterId;
   //! a map zoneId -> group
@@ -784,7 +784,7 @@ int ClarisWksGraph::numPages() const
   return nPages;
 }
 
-bool ClarisWksGraph::getPageDimension(Vec2f &dim) const
+bool ClarisWksGraph::getPageDimension(MWAWVec2f &dim) const
 {
   dim=m_state->m_pageDimensions;
   return dim[0]>0 && dim[1]>0;
@@ -950,7 +950,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
       dim[j] = (int) input->readLong(2);
     f << "sz=" << dim[1] << "x" << dim[0] << ",";
     if (dim[0] > 0 && dim[1] > 0) {
-      bitmap->m_bitmapSize = Vec2i(dim[1]+2, dim[0]+2);
+      bitmap->m_bitmapSize = MWAWVec2i(dim[1]+2, dim[0]+2);
       sizeSet = true;
     }
     ascFile.addDelimiter(input->tell(),']');
@@ -988,7 +988,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
     for (int j = 0; j < 2; j++)
       dim[j] = (int) input->readLong(2);
     if (i == N-1 && !sizeSet)
-      bitmap->m_bitmapSize = Vec2i(dim[0]+2, dim[1]+2);
+      bitmap->m_bitmapSize = MWAWVec2i(dim[0]+2, dim[1]+2);
 
     f << "dim?=" << dim[0] << "x" << dim[1] << ",";
     for (int j = 3; j < 6; j++) {
@@ -1041,7 +1041,7 @@ void ClarisWksGraph::findMasterPage() const
     return;
   // search for the master block
   int masterBlockId=-1;
-  Vec2f pageDim(0,0);
+  MWAWVec2f pageDim(0,0);
   for (size_t i=0; i<mainGroup->m_zones.size(); ++i) {
     if (!mainGroup->m_zones[i] || mainGroup->m_zones[i]->getType()!=ClarisWksGraphInternal::Zone::T_Zone ||
         (mainGroup->m_zones[i]->m_zoneType&0xF)!=0xa)
@@ -1202,7 +1202,7 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     dim[j] = float(input->readLong(4))/256.f;
     if (dim[j] < -100) f << "##dim?,";
   }
-  zone.m_box = MWAWBox2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+  zone.m_box = MWAWBox2f(MWAWVec2f(dim[1], dim[0]), MWAWVec2f(dim[3], dim[2]));
   style.m_lineWidth = (float) input->readLong(1);
   val = (int) input->readULong(1);
   if (val) f << "f1=" << val << ",";
@@ -1556,16 +1556,16 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
   if (remainBytes < 0)
     return false;
 
-  Vec2f pictSz=zone.getBdBox().size();
-  MWAWBox2i box(Vec2f(0,0), pictSz);
+  MWAWVec2f pictSz=zone.getBdBox().size();
+  MWAWBox2i box(MWAWVec2f(0,0), pictSz);
   MWAWGraphicShape &shape=zone.m_shape;
   shape.m_bdBox=shape.m_formBox=box;
   libmwaw::DebugStream f;
   switch (zone.getSubType()) {
   case ClarisWksGraphInternal::Zone::T_Line: {
     int yDeb=(zone.m_zoneType&1)?1:0;
-    shape = MWAWGraphicShape::line(Vec2f(zone.m_box[0][0],zone.m_box[yDeb][1]),
-                                   Vec2f(zone.m_box[1][0],zone.m_box[1-yDeb][1]));
+    shape = MWAWGraphicShape::line(MWAWVec2f(zone.m_box[0][0],zone.m_box[yDeb][1]),
+                                   MWAWVec2f(zone.m_box[1][0],zone.m_box[1-yDeb][1]));
     break;
   }
   case ClarisWksGraphInternal::Zone::T_Rect:
@@ -1607,8 +1607,8 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
         angle[1]+=360;
       }
     }
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
+    MWAWVec2f center = box.center();
+    MWAWVec2f axis = 0.5*MWAWVec2f(box.size());
     // we must compute the real bd box
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
     int limitAngle[2];
@@ -1624,10 +1624,10 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
-    zone.m_box=MWAWBox2f(Vec2f(zone.m_box[0])+realBox[0],Vec2f(zone.m_box[0])+realBox[1]);
-    shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+    MWAWBox2f realBox(MWAWVec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      MWAWVec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    zone.m_box=MWAWBox2f(MWAWVec2f(zone.m_box[0])+realBox[0],MWAWVec2f(zone.m_box[0])+realBox[1]);
+    shape = MWAWGraphicShape::pie(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
     break;
   }
   case ClarisWksGraphInternal::Zone::T_RectOval: {
@@ -1672,7 +1672,7 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
     zone.m_rotate=(int) input->readLong(2);
     if (zone.m_rotate) {
       shape=shape.rotate(float(-zone.m_rotate), shape.m_bdBox.center());
-      Vec2f orig=zone.m_box[0]+shape.m_bdBox[0];
+      MWAWVec2f orig=zone.m_box[0]+shape.m_bdBox[0];
       shape.translate(-1.f*shape.m_bdBox[0]);
       zone.m_box=MWAWBox2f(orig, orig+shape.m_bdBox.size());
     }
@@ -1841,7 +1841,7 @@ bool ClarisWksGraph::readGroupUnknown(ClarisWksGraphInternal::Group &group, int 
   values32.push_back((int32_t) input->readLong(4));
   m_document.checkOrdering(values16, values32);
 
-  Vec2i dim((int)values32[0],(int)values32[1]);
+  MWAWVec2i dim((int)values32[0],(int)values32[1]);
   if (id < 0)
     group.m_pageDimension=dim;
   if (dim[0] || dim[1]) f << "dim=" << dim << ",";
@@ -1915,13 +1915,13 @@ bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zo
     float position[2];
     for (int j = 0; j < 2; j++)
       position[j] = float(input->readLong(4))/256.f;
-    ClarisWksGraphInternal::CurvePoint point(Vec2f(position[1], position[0]));
+    ClarisWksGraphInternal::CurvePoint point(MWAWVec2f(position[1], position[0]));
     if (fSz >= 26) {
       for (int cPt = 0; cPt < 2; cPt++) {
         float ctrlPos[2];
         for (int j = 0; j < 2; j++)
           ctrlPos[j] = float(input->readLong(4))/256.f;
-        point.m_controlPoints[cPt] = Vec2f(ctrlPos[1], ctrlPos[0]);
+        point.m_controlPoints[cPt] = MWAWVec2f(ctrlPos[1], ctrlPos[0]);
       }
       int fl = (int) input->readULong(2);
       point.m_type = (fl>>14);
@@ -1947,7 +1947,7 @@ bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zo
     return true;
   }
   shape.m_type = MWAWGraphicShape::Path;
-  Vec2f prevPoint, pt1;
+  MWAWVec2f prevPoint, pt1;
   bool hasPrevPoint = false;
   for (size_t i = 0; i < size_t(N); ++i) {
     ClarisWksGraphInternal::CurvePoint const &pt = vertices[i];
@@ -2485,7 +2485,7 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
 ////////////////////////////////////////////////////////////
 // send data to the listener
 ////////////////////////////////////////////////////////////
-bool ClarisWksGraph::sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, Vec2f const &leftTop)
+bool ClarisWksGraph::sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, MWAWVec2f const &leftTop)
 {
   if (!listener) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: can not find the listener!!!\n"));
@@ -2556,7 +2556,7 @@ bool ClarisWksGraph::sendPageChild(ClarisWksGraphInternal::Group &group)
     return false;
   }
   updateGroup(group);
-  Vec2f leftTop=72.0f*m_document.getPageLeftTop();
+  MWAWVec2f leftTop=72.0f*m_document.getPageLeftTop();
 
   for (size_t g = 0; g < group.m_zonesToSend.size(); g++) {
     shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zonesToSend[g];
@@ -2588,7 +2588,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   updateGroup(group);
   bool isSlide=group.isSlide() || group.m_position == ClarisWksStruct::DSET::P_GraphicMaster;
   bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main || isSlide;
-  Vec2f leftTop(0,0);
+  MWAWVec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup)
     leftTop = 72.0f*m_document.getPageLeftTop();
@@ -2652,11 +2652,11 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
       pos.setRelativePosition(suggestedAnchor);
       if (suggestedAnchor == MWAWPosition::Page) {
         int pg = group.m_page > 0 ? group.m_page : 1;
-        Vec2f orig = pos.origin()+leftTop;
+        MWAWVec2f orig = pos.origin()+leftTop;
         pos.setPagePos(pg, orig);
       }
       else if (suggestedAnchor == MWAWPosition::Char)
-        pos.setOrigin(Vec2f(0,0));
+        pos.setOrigin(MWAWVec2f(0,0));
     }
     listener->insertPicture(pos, data, type);
     return true;
@@ -2682,7 +2682,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zonesToSend[g];
     if (!child) continue;
     if (position.m_anchorTo==MWAWPosition::Unknown && suggestedAnchor == MWAWPosition::Page) {
-      Vec2f RB = Vec2f(child->m_box[1])+leftTop;
+      MWAWVec2f RB = MWAWVec2f(child->m_box[1])+leftTop;
       if (RB[1] >= textHeight || listener->isSectionOpened()) {
         listJobs[1].push_back(child);
         continue;
@@ -2749,15 +2749,15 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         pos.setRelativePosition(suggestedAnchor);
         if (suggestedAnchor == MWAWPosition::Page) {
           int pg = page > 0 ? page : 1;
-          Vec2f orig = pos.origin()+leftTop;
+          MWAWVec2f orig = pos.origin()+leftTop;
           pos.setPagePos(pg, orig);
         }
         else if (st==1 || suggestedAnchor == MWAWPosition::Char)
-          pos.setOrigin(Vec2f(0,0));
+          pos.setOrigin(MWAWVec2f(0,0));
       }
       else if (isSlide && pos.m_anchorTo==MWAWPosition::Page) {
         int pg = page > 0 ? page : 1;
-        Vec2f orig = pos.origin()+leftTop;
+        MWAWVec2f orig = pos.origin()+leftTop;
         pos.setPagePos(pg, orig);
       }
       // groupList can not be empty
@@ -2823,7 +2823,7 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
     return sendBitmap(zId, MWAWListenerPtr(), pos);
   if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) &&
       (dset && dset->m_fileType==1) && m_document.canSendZoneAsGraphic(zId)) {
-    MWAWBox2f box=MWAWBox2f(Vec2f(0,0), childZone.m_box.size());
+    MWAWBox2f box=MWAWBox2f(MWAWVec2f(0,0), childZone.m_box.size());
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
     graphicListener.startDocument();
@@ -2862,8 +2862,8 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
       style.setBorders(15, border);
       // extend the frame to add border
       float extend = float(cStyle.m_lineWidth*0.85);
-      pos.setOrigin(pos.origin()-Vec2f(extend,extend));
-      pos.setSize(pos.size()+2.0*Vec2f(extend,extend));
+      pos.setOrigin(pos.origin()-MWAWVec2f(extend,extend));
+      pos.setSize(pos.size()+2.0*MWAWVec2f(extend,extend));
     }
   }
   else
@@ -2884,12 +2884,12 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
       doc.reset(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId, childPos));
     }
     if (!isLinked && dset && dset->m_fileType==1 && pos.size()[1]>0) // use min-height for text
-      pos.setSize(Vec2f(pos.size()[0],-pos.size()[1]));
+      pos.setSize(MWAWVec2f(pos.size()[0],-pos.size()[1]));
     listener->insertTextBox(pos, doc, style);
     return true;
   }
   if (dset && dset->m_fileType==2) { // spreadsheet
-    MWAWBox2f box=MWAWBox2f(Vec2f(0,0), childZone.m_box.size());
+    MWAWBox2f box=MWAWBox2f(MWAWVec2f(0,0), childZone.m_box.size());
     MWAWSpreadsheetEncoder spreadsheetEncoder;
     MWAWSpreadsheetListener *spreadsheetListener=new MWAWSpreadsheetListener(*m_parserState, box, &spreadsheetEncoder);
     MWAWListenerPtr sheetListener(spreadsheetListener);
@@ -2930,8 +2930,8 @@ bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosi
   MWAWGraphicStyle pStyle(pict.m_style);
   if (pict.m_shape.m_type!=MWAWGraphicShape::Line)
     pStyle.m_arrows[0]=pStyle.m_arrows[1]=false;
-  pos.setOrigin(pos.origin()-Vec2f(2,2));
-  pos.setSize(pos.size()+Vec2f(4,4));
+  pos.setOrigin(pos.origin()-MWAWVec2f(2,2));
+  pos.setSize(pos.size()+MWAWVec2f(4,4));
   listener->insertPicture(pos, pict.m_shape, pStyle);
   return true;
 }
@@ -3047,11 +3047,11 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWList
   if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
     pos.m_anchorTo=MWAWPosition::Char;
     if (m_parserState->m_kind==MWAWDocument::MWAW_K_PAINT)// fixme
-      pos.setSize(Vec2f(0.9f*float(m_mainParser->getPageWidth()),
-                        0.9f*float(m_mainParser->getPageLength())));
+      pos.setSize(MWAWVec2f(0.9f*float(m_mainParser->getPageWidth()),
+                            0.9f*float(m_mainParser->getPageLength())));
     else {
       MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not find bitmap size\n"));
-      pos.setSize(Vec2f(70,70));
+      pos.setSize(MWAWVec2f(70,70));
     }
   }
   if (pos.m_anchorTo==MWAWPosition::Unknown) {
@@ -3073,7 +3073,7 @@ bool ClarisWksGraph::sendPicture(ClarisWksGraphInternal::ZonePict &pict, MWAWPos
     if (!entry.valid())
       continue;
     if (!posOk) {
-      Vec2f sz=pict.m_box.size();
+      MWAWVec2f sz=pict.m_box.size();
       // recheck that all is ok now
       if (sz[0]<0) sz[0]=0;
       if (sz[1]<0) sz[1]=0;
@@ -3217,7 +3217,7 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
   shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
   group->m_parsed=true;
   if (listener && (listener->getType()==MWAWListener::Graphic || listener->getType()==MWAWListener::Presentation)) {
-    Vec2f leftTop(0,0);
+    MWAWVec2f leftTop(0,0);
     if (group->isSlide())
       leftTop = 72.0f*m_document.getPageLeftTop();
     return sendGroupChild(group->m_zonesToSend, listener, leftTop);
@@ -3246,7 +3246,7 @@ void ClarisWksGraph::flushExtra()
       first=false;
     }
     listener->insertEOL();
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0),MWAWVec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendGroup(iter->first, MWAWListenerPtr(), pos);
   }

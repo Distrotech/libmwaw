@@ -129,7 +129,7 @@ protected:
   //
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
   //! try to return a border corresponding to an id
   bool getBorder(int bId, FullWrtStruct::Border &border) const;
 

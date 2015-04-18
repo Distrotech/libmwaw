@@ -271,7 +271,7 @@ struct WindowsInfo {
 
   bool getColumnLimitsFor(int line, std::vector<int> &listPos);
 
-  Vec2i m_pageDim;
+  MWAWVec2i m_pageDim;
   int m_headerY, m_footerY;
   std::vector<PageInfo> m_pages;
   std::vector<ColumnInfo> m_columns;
@@ -879,7 +879,7 @@ bool WriterPlsParser::readWindowsInfo(int zone)
   info.m_footerY = (int) input->readLong(2);
   info.m_headerY = (int) input->readLong(2);
   int height = (int) input->readLong(2);
-  info.m_pageDim = Vec2i(width, height);
+  info.m_pageDim = MWAWVec2i(width, height);
   f << "page=" << info.m_pageDim << ",";
   if (info.m_headerY)
     f << "header[height]=" << info.m_headerY << ",";
@@ -1022,7 +1022,7 @@ bool WriterPlsParser::readWindowsZone(int zone)
 ////////////////////////////////////////////////////////////
 // send the windows zone info
 ////////////////////////////////////////////////////////////
-bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
+bool WriterPlsParser::sendWindow(int zone, MWAWVec2i limits)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
@@ -1098,7 +1098,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
       case 1: {
         MWAWSection section;
         bool canCreateSection = sendAll && zone == 0 && actCol == numCols;
-        if (findSection(zone, Vec2i(i, endParag), section)) {
+        if (findSection(zone, MWAWVec2i(i, endParag), section)) {
           if (!canCreateSection) {
             if (section.numColumns()>1) {
               MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: find a section in auxilliary zone\n"));
@@ -1129,9 +1129,9 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
             for (size_t j = 0; j < pInfo.m_linesHeight.size(); j++) {
               int numData = pInfo.m_linesHeight[j];
               MWAWCell cell;
-              cell.setPosition(Vec2i(int(j), 0));
+              cell.setPosition(MWAWVec2i(int(j), 0));
               listener->openTableCell(cell);
-              sendWindow(zone, Vec2i(i+1, i+1+numData));
+              sendWindow(zone, MWAWVec2i(i+1, i+1+numData));
               i += numData;
               listener->closeTableCell();
             }
@@ -1166,7 +1166,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
  *
  * Note: complex because we need to read the file in order to find the limit
  */
-bool WriterPlsParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
+bool WriterPlsParser::findSection(int zone, MWAWVec2i limits, MWAWSection &sec)
 {
   if (zone<0 || zone>=3) {
     MWAW_DEBUG_MSG(("WriterPlsParser::findSection:the zone seems bad\n"));
@@ -1681,17 +1681,17 @@ bool WriterPlsParser::readGraphic(WriterPlsParserInternal::ParagraphInfo const &
     return false;
   }
 
-  Vec2f actualSize(0,0), naturalSize(actualSize);
+  MWAWVec2f actualSize(0,0), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) {
     if (actualSize.x() <= 0 || actualSize.y() <= 0) actualSize = box.size();
     naturalSize = box.size();
   }
   else {
     MWAW_DEBUG_MSG(("WriterPlsParser::readGraphic: can not find the picture size\n"));
-    actualSize = Vec2f(100,100);
+    actualSize = MWAWVec2f(100,100);
   }
 
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),actualSize, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
   f << pictPos;
@@ -1964,20 +1964,20 @@ bool WriterPlsParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;

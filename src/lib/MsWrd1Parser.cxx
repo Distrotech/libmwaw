@@ -188,7 +188,7 @@ struct State {
   //! the zones limits
   int m_fileZonesLimit[7];
   //! the list of text zones
-  std::vector<Vec2l> m_textZonesList;
+  std::vector<MWAWVec2l> m_textZonesList;
   //! the list of main text zones
   std::vector<int> m_mainTextZonesList;
   //! the list of fonts
@@ -198,7 +198,7 @@ struct State {
   //! a flag to know if we send endnote or footnote
   bool m_endNote;
   //! the footnote positions ( list of beginPod, endPos)
-  std::vector<Vec2l> m_footnotesList;
+  std::vector<MWAWVec2l> m_footnotesList;
   //! the text correspondance zone ( filepos, plc )
   std::multimap<long, PLC> m_plcMap;
 
@@ -463,7 +463,7 @@ bool MsWrd1Parser::createZones()
       ascii().addNote(f.str().c_str());
       break;
     }
-    Vec2i limit(m_state->m_fileZonesLimit[z],m_state->m_fileZonesLimit[z+1]);
+    MWAWVec2i limit(m_state->m_fileZonesLimit[z],m_state->m_fileZonesLimit[z+1]);
     bool done = false;
     switch (z) {
     case 0:
@@ -515,7 +515,7 @@ bool MsWrd1Parser::prepareTextZones()
   }
   if (endMain < 0x80) {
     MWAW_DEBUG_MSG(("MsWrd1Parser::sendText: oops problem computing the limit of the main section"));
-    m_state->m_textZonesList.push_back(Vec2l(0x80, m_state->m_eot));
+    m_state->m_textZonesList.push_back(MWAWVec2l(0x80, m_state->m_eot));
     m_state->m_mainTextZonesList.push_back(0);
     return false;
   }
@@ -524,7 +524,7 @@ bool MsWrd1Parser::prepareTextZones()
   long pos = 0x80, prevMainPos=pos;
   int actPage = 1;
   int actType = 0;
-  Vec2i headerId(-1,-1), footerId(-1,-1);
+  MWAWVec2i headerId(-1,-1), footerId(-1,-1);
   int firstHeaderId=-1, firstFooterId=-1;
   while (pos < endMain) {
     int newType = 0;
@@ -558,7 +558,7 @@ bool MsWrd1Parser::prepareTextZones()
     }
 
     int id = int(m_state->m_textZonesList.size());
-    m_state->m_textZonesList.push_back(Vec2l(prevMainPos, pos));
+    m_state->m_textZonesList.push_back(MWAWVec2l(prevMainPos, pos));
     prevMainPos=pos;
     if (actType==0) {
       m_state->m_mainTextZonesList.push_back(id);
@@ -797,7 +797,7 @@ bool MsWrd1Parser::readParagraph(long fPos, MsWrd1ParserInternal::Paragraph &par
 }
 
 /* read the page break separation */
-bool MsWrd1Parser::readPageBreak(Vec2i limits)
+bool MsWrd1Parser::readPageBreak(MWAWVec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
@@ -842,7 +842,7 @@ bool MsWrd1Parser::readPageBreak(Vec2i limits)
 }
 
 /* read the footnote zone */
-bool MsWrd1Parser::readFootnoteCorrespondance(Vec2i limits)
+bool MsWrd1Parser::readFootnoteCorrespondance(MWAWVec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
@@ -888,7 +888,7 @@ bool MsWrd1Parser::readFootnoteCorrespondance(Vec2i limits)
   m_state->m_footnotesList.resize(footnoteMap.size(),0);
   std::map<long, int>::iterator fIt=footnoteMap.begin();
   for (fIt=footnoteMap.begin(); fIt!=footnoteMap.end();) {
-    Vec2l fPos;
+    MWAWVec2l fPos;
     fPos[0] = fIt->first;
     int id = fIt++->second;
     fPos[1] = fIt==footnoteMap.end() ? m_state->m_eot : fIt->first;
@@ -904,7 +904,7 @@ bool MsWrd1Parser::readFootnoteCorrespondance(Vec2i limits)
 }
 
 /* read the zone4: a list of main zone ( headers, footers ) ? */
-bool MsWrd1Parser::readZones(Vec2i limits)
+bool MsWrd1Parser::readZones(MWAWVec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {
@@ -951,7 +951,7 @@ bool MsWrd1Parser::readZones(Vec2i limits)
 }
 
 /* read the document information */
-bool MsWrd1Parser::readDocInfo(Vec2i limits)
+bool MsWrd1Parser::readDocInfo(MWAWVec2i limits)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] != limits[0]+1 || !input->checkPosition(limits[1]*0x80)) {
@@ -1090,7 +1090,7 @@ bool MsWrd1Parser::readDocInfo(Vec2i limits)
 }
 
 // read a plc zone (char or paragraph properties )
-bool MsWrd1Parser::readPLC(Vec2i limits, int wh)
+bool MsWrd1Parser::readPLC(MWAWVec2i limits, int wh)
 {
   MWAWInputStreamPtr input = getInput();
   if (limits[1] <= limits[0] || !input->checkPosition(limits[1]*0x80)) {

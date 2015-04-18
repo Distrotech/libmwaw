@@ -100,7 +100,7 @@ public:
       m_colors[1]=MWAWColor::white();
     }
     //!  constructor from a binary data
-    Pattern(Vec2i dim, librevenge::RVNGBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
+    Pattern(MWAWVec2i dim, librevenge::RVNGBinaryData const &picture, std::string const &mime, MWAWColor const &avColor) :
       m_dim(dim), m_data(), m_picture(picture), m_pictureMime(mime), m_pictureAverageColor(avColor)
     {
       m_colors[0]=MWAWColor::black();
@@ -172,7 +172,7 @@ public:
       return o;
     }
     //! the dimension width x height
-    Vec2i m_dim;
+    MWAWVec2i m_dim;
 
     //! the two indexed colors
     MWAWColor m_colors[2];
@@ -328,7 +328,7 @@ public:
   //! true if the shadow has some color
   float m_shadowOpacity;
   //! the shadow offset
-  Vec2f m_shadowOffset;
+  MWAWVec2f m_shadowOffset;
 
   //! the pattern if it exists
   Pattern m_pattern;
@@ -342,7 +342,7 @@ public:
   //! the gradient border opacity
   float m_gradientBorder;
   //! the gradient center
-  Vec2f m_gradientPercentCenter;
+  MWAWVec2f m_gradientPercentCenter;
   //! the gradient radius
   float m_gradientRadius;
 

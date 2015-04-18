@@ -113,7 +113,7 @@ struct Field {
   //! the field type
   MWAWField::Type m_type;
   //! the field position: x position in point, y position in line (-1: means no field )
-  Vec2i m_pos;
+  MWAWVec2i m_pos;
   //! extra data
   std::string m_extra;
 };
@@ -936,8 +936,8 @@ bool MindWrtParser::readGraphic(MindWrtParserInternal::LineInfo const &line)
 
   int dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (int) input->readLong(2);
-  MWAWBox2f box(Vec2f((float)dim[1],(float)dim[0]),
-                Vec2f((float)dim[3],(float)dim[2]));
+  MWAWBox2f box(MWAWVec2f((float)dim[1],(float)dim[0]),
+                MWAWVec2f((float)dim[3],(float)dim[2]));
   f << "Entries(graphic): bdBox=" << box << ",";
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, sz-8));
@@ -948,7 +948,7 @@ bool MindWrtParser::readGraphic(MindWrtParserInternal::LineInfo const &line)
   librevenge::RVNGBinaryData data;
   std::string type;
   if (getTextListener() && pict->getBinary(data,type)) {
-    MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
+    MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),box.size(), librevenge::RVNG_POINT);
     pictPos.setRelativePosition(MWAWPosition::Char);
     getTextListener()->insertPicture(pictPos,data, type);
   }
@@ -1069,7 +1069,7 @@ void MindWrtParser::sendHeaderFooter(bool header)
   if (fieldList.size()) {
     /** field are separated from the main text
         -> we need to use an intermediate frame */
-    MWAWPosition fPos(Vec2f(0,0), Vec2f(float(getPageWidth()),0), librevenge::RVNG_INCH);
+    MWAWPosition fPos(MWAWVec2f(0,0), MWAWVec2f(float(getPageWidth()),0), librevenge::RVNG_INCH);
     fPos.m_anchorTo = MWAWPosition::Paragraph;
     fPos.m_wrapping =  MWAWPosition::WBackground;
     shared_ptr<MindWrtParserInternal::SubDocument> subDoc
@@ -1949,7 +1949,7 @@ bool MindWrtParser::readHeadingFields(MWAWEntry &entry)
     int dim[2];
     for (int j=0; j < 2; j++)
       dim[j] = (int) input->readLong(j==0 ? 2:4);
-    field.m_pos=Vec2i(dim[1], dim[0]);
+    field.m_pos=MWAWVec2i(dim[1], dim[0]);
     static int const(expectedVal[3])= {3,12,0};
     for (int j=0; j < 3; j++) {
       val = input->readLong(2);
@@ -1998,20 +1998,20 @@ bool MindWrtParser::readPrintInfo(MWAWEntry &entry)
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;

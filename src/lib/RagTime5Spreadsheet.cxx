@@ -111,8 +111,8 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
     for (int i=0; i<3; ++i) {
       float dim[4];
       for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-      MWAWBox2f box(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
-      if (box!=MWAWBox2f(Vec2f(0,0),Vec2f(0,0)))
+      MWAWBox2f box(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
+      if (box!=MWAWBox2f(MWAWVec2f(0,0),MWAWVec2f(0,0)))
         f << "dim" << i << "=" << box << ",";
     }
     return true;
@@ -1863,7 +1863,7 @@ protected:
       }
       float dim[2];
       for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "dim=" << Vec2f(dim[0], dim[1]) << ",";
+      f << "dim=" << MWAWVec2f(dim[0], dim[1]) << ",";
       for (int i=0; i<5; ++i) { // f3=1, f4=0|400, f5=0-f
         val=(int) input->readLong(2);
         if (val)
@@ -1931,8 +1931,8 @@ protected:
       f << "],";
       int lDim[4];
       for (int i=0; i<4; ++i) lDim[i]=(int) input->readLong(4);
-      MWAWBox2i box(Vec2i(lDim[0],lDim[1]),Vec2i(lDim[1],lDim[2]));
-      if (box!=MWAWBox2i(Vec2i(0,0),Vec2i(0,0)))
+      MWAWBox2i box(MWAWVec2i(lDim[0],lDim[1]),MWAWVec2i(lDim[1],lDim[2]));
+      if (box!=MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(0,0)))
         f << "dim1=" << box << ",";
       for (int i=0; i<3; ++i) { // g0=1-5, g1=1-14, g2=13|19|fa
         val=(int) input->readULong(2);
@@ -2020,7 +2020,7 @@ protected:
     f << "],";
     float dim[4];
     for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    f << "dim?=" << Vec2f(dim[0],dim[1]) << ",";
+    f << "dim?=" << MWAWVec2f(dim[0],dim[1]) << ",";
     f << "double2=[";
     int numData=fSz==331 ? 11 : 12;
     for (int i=0; i<1+numData; ++i) { // checkme 500+a matrix (without the last line and/or column)
@@ -2045,8 +2045,8 @@ protected:
     if (val) f << "fl2=" << std::hex << val << std::dec << ",";
     for (int i=0; i<3; ++i) { // never seems dim3 so unsure ...
       for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-      MWAWBox2f bdbox(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
-      if (bdbox!=MWAWBox2f(Vec2f(0,0),Vec2f(0,0)))
+      MWAWBox2f bdbox(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3]));
+      if (bdbox!=MWAWBox2f(MWAWVec2f(0,0),MWAWVec2f(0,0)))
         f << "dim" << i+1 << "?=" << bdbox << ",";
     }
     val=(int) input->readLong(2); // always 0?

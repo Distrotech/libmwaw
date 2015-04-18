@@ -257,7 +257,7 @@ public:
     //! destructor
     virtual ~ClusterLayout() {}
     //! list of zone's dimensions
-    std::vector<Vec2f> m_zoneDimensions;
+    std::vector<MWAWVec2f> m_zoneDimensions;
     //! link to a pipeline cluster list
     Link m_pipelineLink;
     //! link to  a zone of fieldSize 8(unknown)

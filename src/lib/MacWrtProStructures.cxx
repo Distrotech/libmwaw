@@ -202,7 +202,7 @@ struct Block {
   {
     MWAWPosition res;
     if (m_attachment) {
-      res = MWAWPosition(Vec2i(0,0), m_box.size(), librevenge::RVNG_POINT);
+      res = MWAWPosition(MWAWVec2i(0,0), m_box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, getRelativeYPos());
     }
     else {
@@ -357,7 +357,7 @@ struct Cell : public MWAWCell {
   Cell(MacWrtProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0)
   {
     if (!block) return;
-    setBdBox(MWAWBox2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1)));
+    setBdBox(MWAWBox2f(block->m_box.min(), block->m_box.max()-MWAWVec2f(1,1)));
     setBackgroundColor(block->m_surfaceColor);
     m_blockId = block->m_id;
     for (int b=0; b<4; ++b) {
@@ -1948,7 +1948,7 @@ shared_ptr<MacWrtProStructuresInternal::Block>  MacWrtProStructures::readBlockV2
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(m_input->readLong(2));
-  res->m_box = MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  res->m_box = MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
   for (int i = 0; i < 4; ++i) { // 8000*4 ?
     val = (long) m_input->readULong(i==3 ? 1 : 2);
     if (val != 0x8000) f << "g" << i+1 << "=" << std::hex << val << std::dec << ",";
@@ -2013,7 +2013,7 @@ shared_ptr<MacWrtProStructuresInternal::Block> MacWrtProStructures::readBlock()
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(m_input->readLong(4))/65536.f;
-  block->m_box = MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  block->m_box = MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
 
   static int const(wh[4])= { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
   for (int i = 0; i < 4; ++i)
@@ -2111,7 +2111,7 @@ shared_ptr<MacWrtProStructuresInternal::Block> MacWrtProStructures::readBlock()
       if (isNote && val) {
         // ok, reset the box only if it is bigger
         if (dim2[3]-dim2[1]>dim[3]-dim[1] && dim2[2]-dim2[0]>dim[2]-dim[0])
-          block->m_box=MWAWBox2f(Vec2f(dim2[1],dim2[0]),Vec2f(dim2[3],dim2[2]));
+          block->m_box=MWAWBox2f(MWAWVec2f(dim2[1],dim2[0]),MWAWVec2f(dim2[3],dim2[2]));
       }
     }
     if (isNote) {

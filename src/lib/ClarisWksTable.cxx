@@ -66,7 +66,7 @@ struct Border {
   friend std::ostream &operator<<(std::ostream &o, Border const &bord)
   {
     for (int i = 0; i < 2; i++) {
-      Vec2f pos = bord.m_position[i];
+      MWAWVec2f pos = bord.m_position[i];
       pos=1./256.*pos;
       o << pos;
       if (i == 0) o << "<->";
@@ -78,7 +78,7 @@ struct Border {
   }
 
   /** the origin and the end of edge position : unit librevenge::RVNG_POINT/256 */
-  Vec2i m_position[2];
+  MWAWVec2i m_position[2];
   /// the style id
   int m_styleId;
   /// a flag to know if the border is already sent
@@ -519,8 +519,8 @@ bool ClarisWksTable::readTableBorders(ClarisWksTableInternal::Table &table)
     f << "TableBorders-" << i << ":";
     int posi[4];
     for (int j = 0; j < 4; j++) posi[j] = (int) input->readLong(4);
-    border.m_position[0] = Vec2i(posi[1], posi[0]);
-    border.m_position[1] = Vec2i(posi[3], posi[2]);
+    border.m_position[0] = MWAWVec2i(posi[1], posi[0]);
+    border.m_position[1] = MWAWVec2i(posi[3], posi[2]);
     border.m_styleId = (int) input->readULong(2);
     table.m_bordersList.push_back(border);
     f << border;
@@ -596,8 +596,8 @@ bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
     shared_ptr<ClarisWksTableInternal::TableCell> cell(new ClarisWksTableInternal::TableCell());
     float posi[6];
     for (int j = 0; j < 6; j++) posi[j] = float(input->readLong(4))/256.f;
-    cell->setBdBox(MWAWBox2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2])));
-    cell->setBdSize(Vec2f(float(posi[5]), float(posi[4])));
+    cell->setBdBox(MWAWBox2f(MWAWVec2f(posi[1], posi[0]), MWAWVec2f(posi[3], posi[2])));
+    cell->setBdSize(MWAWVec2f(float(posi[5]), float(posi[4])));
     cell->m_zoneId = (int) input->readULong(4);
     val = (int) input->readLong(2);
     if (val) // find one time a number here, another id?...

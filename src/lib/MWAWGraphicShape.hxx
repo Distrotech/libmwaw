@@ -52,18 +52,18 @@ public:
   //! a simple path component
   struct PathData {
     //! constructor
-    PathData(char type, Vec2f const &x=Vec2f(), Vec2f const &x1=Vec2f(), Vec2f const &x2=Vec2f()):
+    PathData(char type, MWAWVec2f const &x=MWAWVec2f(), MWAWVec2f const &x1=MWAWVec2f(), MWAWVec2f const &x2=MWAWVec2f()):
       m_type(type), m_x(x), m_x1(x1), m_x2(x2), m_r(), m_rotate(0), m_largeAngle(false), m_sweep(false)
     {
     }
     //! translate all the coordinate by delta
-    void translate(Vec2f const &delta);
+    void translate(MWAWVec2f const &delta);
     //! scale all the coordinate by a factor
-    void scale(Vec2f const &factor);
+    void scale(MWAWVec2f const &factor);
     //! rotate all the coordinate by angle (origin rotation) then translate coordinate
-    void rotate(float angle, Vec2f const &delta);
+    void rotate(float angle, MWAWVec2f const &delta);
     //! update the property list to correspond to a command
-    bool get(librevenge::RVNGPropertyList &pList, Vec2f const &orig) const;
+    bool get(librevenge::RVNGPropertyList &pList, MWAWVec2f const &orig) const;
     //! a print operator
     friend std::ostream &operator<<(std::ostream &o, PathData const &path);
     //! comparison function
@@ -71,13 +71,13 @@ public:
     //! the type: M, L, ...
     char m_type;
     //! the main x value
-    Vec2f m_x;
+    MWAWVec2f m_x;
     //! x1 value
-    Vec2f m_x1;
+    MWAWVec2f m_x1;
     //! x2 value
-    Vec2f m_x2;
+    MWAWVec2f m_x2;
     //! the radius ( A command)
-    Vec2f m_r;
+    MWAWVec2f m_r;
     //! the rotate ( A command)
     float m_rotate;
     //! large angle ( A command)
@@ -94,9 +94,9 @@ public:
   //! virtual destructor
   virtual ~MWAWGraphicShape() { }
   //! static constructor to create a line
-  static MWAWGraphicShape line(Vec2f const &orign, Vec2f const &dest);
+  static MWAWGraphicShape line(MWAWVec2f const &orign, MWAWVec2f const &dest);
   //! static constructor to create a rectangle
-  static MWAWGraphicShape rectangle(MWAWBox2f const &box, Vec2f const &corners=Vec2f(0,0))
+  static MWAWGraphicShape rectangle(MWAWBox2f const &box, MWAWVec2f const &corners=MWAWVec2f(0,0))
   {
     MWAWGraphicShape res;
     res.m_type=Rectangle;
@@ -113,7 +113,7 @@ public:
     return res;
   }
   //! static constructor to create a arc
-  static MWAWGraphicShape arc(MWAWBox2f const &box, MWAWBox2f const &circleBox, Vec2f const &angles)
+  static MWAWGraphicShape arc(MWAWBox2f const &box, MWAWBox2f const &circleBox, MWAWVec2f const &angles)
   {
     MWAWGraphicShape res;
     res.m_type=Arc;
@@ -123,7 +123,7 @@ public:
     return res;
   }
   //! static constructor to create a pie
-  static MWAWGraphicShape pie(MWAWBox2f const &box, MWAWBox2f const &circleBox, Vec2f const &angles)
+  static MWAWGraphicShape pie(MWAWBox2f const &box, MWAWBox2f const &circleBox, MWAWVec2f const &angles)
   {
     MWAWGraphicShape res;
     res.m_type=Pie;
@@ -150,13 +150,13 @@ public:
   }
 
   //! translate all the coordinate by delta
-  void translate(Vec2f const &delta);
+  void translate(MWAWVec2f const &delta);
   //! rescale all the coordinate
-  void scale(Vec2f const &factor);
+  void scale(MWAWVec2f const &factor);
   /** return a new shape corresponding to a rotation from center.
 
    \note the final bdbox is not tight */
-  MWAWGraphicShape rotate(float angle, Vec2f const &center) const;
+  MWAWGraphicShape rotate(float angle, MWAWVec2f const &center) const;
   //! returns the type corresponding to a shape
   Type getType() const
   {
@@ -170,7 +170,7 @@ public:
   //! returns the bdbox corresponding to a style
   MWAWBox2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
   //! updates the propList to send to an interface
-  Command addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const;
+  Command addTo(MWAWVec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const;
   //! a print operator
   friend std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh);
   /** compare two shapes */
@@ -186,11 +186,11 @@ public:
   //! the internal shape bdbox ( used for arc, circle to store the circle bdbox )
   MWAWBox2f m_formBox;
   //! the rectangle round corner
-  Vec2f m_cornerWidth;
+  MWAWVec2f m_cornerWidth;
   //! the start and end value which defines an arc
-  Vec2f m_arcAngles;
+  MWAWVec2f m_arcAngles;
   //! the list of vertices for lines or polygons
-  std::vector<Vec2f> m_vertices;
+  std::vector<MWAWVec2f> m_vertices;
   //! the list of path component
   std::vector<PathData> m_path;
   //! extra data

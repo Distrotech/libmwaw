@@ -663,7 +663,7 @@ bool MacDrawProParser::readLayersInfo()
         float dim[4];
         for (int l=0; l<4; ++l) dim[l]=float(input->readLong(4))/65536.f;
         if (dim[0]>0||dim[1]>0||dim[2]>0||dim[3]>0)
-          f << "dim" << k << "=" << MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
+          f << "dim" << k << "=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3])) << ",";
       }
       ascii().addPos(pos);
       ascii().addNote(f.str().c_str());
@@ -1102,8 +1102,8 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
     m_state->m_libraryList.push_back(library);
   }
 
-  Vec2f pageSize(float(72*getPageSpan().getFormWidth()), float(72*getPageSpan().getFormLength()));
-  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
+  MWAWVec2f pageSize(float(72*getPageSpan().getFormWidth()), float(72*getPageSpan().getFormLength()));
+  MWAWVec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
   MWAWBox2f docBox;
   bool docBoxSet=false;
   int numLibraryWithGroup=0;
@@ -1151,7 +1151,7 @@ bool MacDrawProParser::computeLayersAndLibrariesBoundingBox()
       MWAW_DEBUG_MSG(("MacDrawProParser::computeLayersAndLibrariesBoundingBox: can not compute the bdbox of the library %d\n", int(i)));
     }
     // convert it to a multiple of page size
-    Vec2f libRB=library.m_box[1];
+    MWAWVec2f libRB=library.m_box[1];
     for (int c=0; c<2; ++c) {
       if (pageSize[c]<=0) continue;
       if (libRB[c]<=0)
@@ -1206,7 +1206,7 @@ int MacDrawProParser::readObject()
   shape.m_nextId=shape.m_id+1; // default value
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-  shape.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  shape.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]),MWAWVec2f(dim[3],dim[2]));
   f << shape.m_box << ",";
   int flags=(int) input->readULong(1);
   shape.m_flags=flags;
@@ -1639,7 +1639,7 @@ bool MacDrawProParser::readRotationInObjectData(MacDrawProParserInternal::Shape 
   f << "angl[rot]=" << shape.m_style.m_rotate << ",";
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-  MWAWBox2f rect(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  MWAWBox2f rect(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
   f << "prevDim[rot]=" << rect << ",";
   f << "unkn[rot]=[";
   for (int i=0; i<2; ++i)  // another points ?
@@ -1663,8 +1663,8 @@ bool MacDrawProParser::updateGeometryShape(MacDrawProParserInternal::Shape &shap
     int flipX=shape.m_style.m_flip[0] ? 1 : 0;
     int flipY=shape.m_style.m_flip[1] ? 1 : 0;
     shape.m_shape=MWAWGraphicShape::line
-                  (Vec2f(shape.m_box[1-flipX][0],shape.m_box[1-flipY][1]),
-                   Vec2f(shape.m_box[flipX][0],shape.m_box[flipY][1]));
+                  (MWAWVec2f(shape.m_box[1-flipX][0],shape.m_box[1-flipY][1]),
+                   MWAWVec2f(shape.m_box[flipX][0],shape.m_box[flipY][1]));
     break;
   }
   case 3: // rect
@@ -1672,7 +1672,7 @@ bool MacDrawProParser::updateGeometryShape(MacDrawProParserInternal::Shape &shap
     float cWidth=0;
     if (shape.m_fileType==4)
       cWidth=cornerWidth>0 ? cornerWidth : 25;
-    shape.m_shape=MWAWGraphicShape::rectangle(shape.m_box, Vec2f(cWidth,cWidth));
+    shape.m_shape=MWAWGraphicShape::rectangle(shape.m_box, MWAWVec2f(cWidth,cWidth));
     break;
   }
   case 5: // circle
@@ -1965,7 +1965,7 @@ bool  MacDrawProParser::readTextPro(MacDrawProParserInternal::Shape &shape, MWAW
     float dim[2];
     for (int j=0; j<2; ++j) dim[j]=float(input->readLong(4))/65536.f;
     if (dim[0]>0 || dim[0]<0 || dim[1]>0 || dim[1]<0)
-      f << "dim?=" << Vec2f(dim[0],dim[1]) << ",";
+      f << "dim?=" << MWAWVec2f(dim[0],dim[1]) << ",";
     val=(int) input->readULong(2);
     if (val) f << "f5=" << val << ",";
     f << "y=" << float(input->readLong(4))/65536.f << ",";
@@ -2069,7 +2069,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    shape.m_labelBox=MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    shape.m_labelBox=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     f << "dim=" << shape.m_labelBox << ",";
     val=(int) input->readLong(2); // 0 or 4
     if (val) f<< "f0=" << val << ",";
@@ -2100,7 +2100,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     for (int i=0; i<16; ++i) {
       float pt[2];
       for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
-      f << Vec2f(pt[1],pt[0]) << ",";
+      f << MWAWVec2f(pt[1],pt[0]) << ",";
     }
     f << "],";
     break;
@@ -2117,7 +2117,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     for (int i=0; i<8; ++i) {
       float pt[2];
       for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
-      f << Vec2f(pt[1],pt[0]) << ",";
+      f << MWAWVec2f(pt[1],pt[0]) << ",";
     }
     f << "],";
     break;
@@ -2165,20 +2165,20 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
                           (box[1][1]-box[0][1])/(maxVal[1]-minVal[1])
                         };
       float constant[2]= { box[0][0]-minVal[0] *scaling[0], box[0][1]-minVal[1] *scaling[1]};
-      circleBox=MWAWBox2f(Vec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
-                          Vec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
+      circleBox=MWAWBox2f(MWAWVec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
+                          MWAWVec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
     }
     if (shape.m_style.hasSurface())
-      shape.m_shape = MWAWGraphicShape::pie(box, circleBox, Vec2f(float(angle[0]),float(angle[1])));
+      shape.m_shape = MWAWGraphicShape::pie(box, circleBox, MWAWVec2f(float(angle[0]),float(angle[1])));
     else
-      shape.m_shape = MWAWGraphicShape::arc(box, circleBox, Vec2f(float(angle[0]),float(angle[1])));
+      shape.m_shape = MWAWGraphicShape::arc(box, circleBox, MWAWVec2f(float(angle[0]),float(angle[1])));
 
     int N=int(remain/8)-1;
     f << "N=" << N << ",pts?=["; // a smooth polygon
     for (int i=0; i<N; ++i) {
       float pt[2];
       for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
-      f << Vec2f(pt[1],pt[0]) << ",";
+      f << MWAWVec2f(pt[1],pt[0]) << ",";
     }
     f << "],";
     break;
@@ -2194,12 +2194,12 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
       shape.m_shape.m_bdBox=shape.m_box;
       int N=int(remain/8);
       f << "N=" << N << ",pts=[";
-      std::vector<Vec2f> listVertices;
-      Vec2f origin=shape.m_box[0];
+      std::vector<MWAWVec2f> listVertices;
+      MWAWVec2f origin=shape.m_box[0];
       for (int i=0; i<N; ++i) {
         float pt[2];
         for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
-        Vec2f point(pt[1],pt[0]);
+        MWAWVec2f point(pt[1],pt[0]);
         listVertices.push_back(point+origin);
         f << point << ",";
       }
@@ -2212,7 +2212,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
       shape.m_shape.m_type=MWAWGraphicShape::Path;
       shape.m_shape.m_path.push_back(MWAWGraphicShape::PathData('M', listVertices[0]));
       for (size_t i=1; i+1<listVertices.size(); ++i) {
-        Vec2f dir=listVertices[i+1]-listVertices[i-1];
+        MWAWVec2f dir=listVertices[i+1]-listVertices[i-1];
         shape.m_shape.m_path.push_back(MWAWGraphicShape::PathData('S', listVertices[i], listVertices[i]-0.1f*dir));
       }
       if (listVertices.size()>1)
@@ -2230,9 +2230,9 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     f << "N=" << N << ",";
 
     f << "pts=[";
-    Vec2f origin=shape.m_box[0], prevPoint;
+    MWAWVec2f origin=shape.m_box[0], prevPoint;
     bool hasPrevPoint=false, isSpline=false;
-    std::vector<Vec2f> listVertices;
+    std::vector<MWAWVec2f> listVertices;
     std::vector<MWAWGraphicShape::PathData> path;
     for (int i=0; i<N; ++i) {
       long pos=input->tell();
@@ -2247,11 +2247,11 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
         f << "###type=" << type << ",";
         break;
       }
-      Vec2f points[3];
+      MWAWVec2f points[3];
       for (int j=0; j<nCoord; ++j) {
         float pPos[2];
         for (int k=0; k<2; ++k) pPos[k]=float(input->readLong(4))/65536;
-        points[j]=Vec2f(pPos[1],pPos[0]);
+        points[j]=MWAWVec2f(pPos[1],pPos[0]);
         f << points[j] << (j==nCoord-1 ? "," : ":");
         points[j]+=origin;
       }
@@ -2259,7 +2259,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
         listVertices.push_back(points[0]);
       else
         isSpline=true;
-      Vec2f pt=nCoord==1 ? points[0] : points[1];
+      MWAWVec2f pt=nCoord==1 ? points[0] : points[1];
       char pType = hasPrevPoint ? 'C' : i==0 ? 'M' : nCoord==1 ? 'L' : 'S';
       path.push_back(MWAWGraphicShape::PathData(pType, pt, hasPrevPoint ? prevPoint : points[0], points[0]));
       hasPrevPoint=nCoord==3;
@@ -2329,7 +2329,7 @@ bool MacDrawProParser::readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEn
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
   MWAWBox2i &bitmapBox=shape.m_bitmapDim;
-  bitmapBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  bitmapBox=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
   f << "dim=" << bitmapBox << ",";
   f << "id?=" << std::hex << input->readULong(4) << std::dec << ",";
   shape.m_numBytesByRow=(int) input->readULong(2);
@@ -2341,7 +2341,7 @@ bool MacDrawProParser::readBitmap(MacDrawProParserInternal::Shape &shape, MWAWEn
   f << "rowSize=" << shape.m_numBytesByRow << ",";
   MWAWBox2i &fileBox=shape.m_bitmapFileDim;
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  fileBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  fileBox=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
   if (bitmapBox!=fileBox)
     f << "bitmap[dimInFile]="<< fileBox << ",";
   ascii().addPos(entry.begin());
@@ -2650,8 +2650,8 @@ bool MacDrawProParser::readPrintInfo()
     return false;
   }
   f << info;
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) {
     ascii().addPos(pos);
@@ -2661,14 +2661,14 @@ bool MacDrawProParser::readPrintInfo()
   }
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;
@@ -2754,7 +2754,7 @@ bool MacDrawProParser::sendPage(int page)
 bool MacDrawProParser::send(MacDrawProParserInternal::Library const &library)
 {
   int numLayers=(int) m_state->m_layerList.size();
-  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
+  MWAWVec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
   for (size_t i=0; i<library.m_layerList.size(); ++i) {
     int id=library.m_layerList[i];
     if (id<0 || id>=numLayers) continue;
@@ -2791,7 +2791,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Layer const &layer)
   bool openLayer=false;
   if (!layer.m_name.empty())
     openLayer=listener->openLayer(layer.m_name);
-  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
+  MWAWVec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginTop()));
   for (int i=layer.m_firstShape; i<maxShape; ++i) {
     MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[size_t(i)];
     send(shape, leftTop);
@@ -2803,7 +2803,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Layer const &layer)
   return true;
 }
 
-bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape, Vec2f const &orig)
+bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape, MWAWVec2f const &orig)
 {
   MWAWGraphicListenerPtr listener=getGraphicListener();
   if (!listener) {
@@ -2865,7 +2865,7 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape, Vec2f 
     style.setBorders(libmwaw::TopBit, border);
 
     style.setSurfaceColor(MWAWColor(0xff,0xff,0));
-    style.m_shadowOffset=Vec2i(3,3);
+    style.m_shadowOffset=MWAWVec2i(3,3);
     style.setShadowColor(MWAWColor(0x80,0x80,0x80));
 
     shared_ptr<MWAWSubDocument> doc(new MacDrawProParserInternal::SubDocument(*this, getInput(), shape.m_id));
@@ -2894,7 +2894,7 @@ bool MacDrawProParser::sendBitmap(MacDrawProParserInternal::Shape const &shape, 
   if (!shape.m_bitmapEntry.valid()) return false;
   int const numBytesByRow=shape.m_numBytesByRow;
   int const numPixelByBytes=shape.m_bitmapIsColor ? 1 : 8;
-  Vec2i pictDim=shape.m_bitmapDim.size();
+  MWAWVec2i pictDim=shape.m_bitmapDim.size();
   if (shape.m_type!=MacDrawProParserInternal::Shape::Bitmap || numBytesByRow<=0 ||
       pictDim[0]<0 || pictDim[1]<0 ||
       numBytesByRow*shape.m_bitmapFileDim.size()[1]<shape.m_bitmapEntry.length() ||
@@ -3140,7 +3140,7 @@ bool MacDrawProParser::sendLabel(MWAWEntry const &entry)
 
 void MacDrawProParser::flushExtra()
 {
-  Vec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginRight()));
+  MWAWVec2f leftTop(72.f*float(getPageSpan().getMarginLeft()),72.f*float(getPageSpan().getMarginRight()));
   for (size_t i=0; i<m_state->m_shapeList.size(); ++i) {
     MacDrawProParserInternal::Shape const &shape=m_state->m_shapeList[i];
     if (shape.m_isSent || shape.m_type==MacDrawProParserInternal::Shape::GroupEnd)

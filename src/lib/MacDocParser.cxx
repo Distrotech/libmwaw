@@ -432,7 +432,7 @@ bool MacDocParser::readIndex(MWAWEntry const &entry)
     int dim[4];
     for (int i=0; i<4; ++i)
       dim[i]=(int) input->readLong(2);
-    index.m_box=MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+    index.m_box=MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2]));
     val=(int) input->readLong(2);
     if (val) f << "#f1=" << val << ",";
     index.m_numChild=(int) input->readLong(2);
@@ -585,7 +585,7 @@ bool MacDocParser::sendPicture(MWAWEntry const &entry)
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),box.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   if (thePict) {
     librevenge::RVNGBinaryData fData;

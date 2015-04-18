@@ -306,8 +306,8 @@ struct Frame {
   //! return the frame bdbox
   MWAWBox2f getBdBox() const
   {
-    Vec2f minPt(m_pos[0][0], m_pos[0][1]);
-    Vec2f maxPt(m_pos[1][0], m_pos[1][1]);
+    MWAWVec2f minPt(m_pos[0][0], m_pos[0][1]);
+    MWAWVec2f maxPt(m_pos[1][0], m_pos[1][1]);
     for (int c=0; c<2; ++c) {
       if (m_pos.size()[c]>=0) continue;
       minPt[c]=m_pos[1][c];
@@ -435,7 +435,7 @@ public:
   //! the first char pos
   long m_cPos;
   //! the auxilliary dim
-  Vec2f m_dim;
+  MWAWVec2f m_dim;
 };
 
 ////////////////////////////////////////
@@ -484,9 +484,9 @@ public:
   //! the picture id
   long m_zId;
   //! the picture size
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
   //! the scale
-  Vec2f m_scale;
+  MWAWVec2f m_scale;
 };
 
 ////////////////////////////////////////
@@ -655,7 +655,7 @@ struct Pattern : public MWAWGraphicStyle::Pattern {
     if (!pat) return;
     m_colors[0]=MWAWColor::white();
     m_colors[1]=MWAWColor::black();
-    m_dim=Vec2i(8,8);
+    m_dim=MWAWVec2i(8,8);
     m_data.resize(8);
     for (size_t i=0; i < 4; ++i) {
       uint16_t val=pat[i];
@@ -1297,7 +1297,7 @@ shared_ptr<HanMacWrdJGraphInternal::Frame> HanMacWrdJGraph::readFrame(int id)
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(input->readLong(4))/65536.f;
-  graph.m_pos = MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+  graph.m_pos = MWAWBox2f(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3]));
   graph.m_id = (int) input->readLong(2); // check me
   val = (int) input->readLong(2);
   if (val) f << "f1=" << val << ",";
@@ -1491,13 +1491,13 @@ bool HanMacWrdJGraph::readGraphData(MWAWEntry const &entry, int actZone)
   long headerEnd=pos+4+mainHeader.m_length;
   f << mainHeader;
 
-  std::vector<Vec2f> lVertices(size_t(mainHeader.m_n));
+  std::vector<MWAWVec2f> lVertices(size_t(mainHeader.m_n));
   f << "listPt=[";
   for (int i = 0; i < mainHeader.m_n; ++i) {
     float point[2];
     for (int j = 0; j < 2; j++)
       point[j] = float(input->readLong(4))/65536.f;
-    Vec2f pt(point[1], point[0]);
+    MWAWVec2f pt(point[1], point[0]);
     lVertices[size_t(i)]=pt;
     f << pt << ",";
   }
@@ -1680,7 +1680,7 @@ bool HanMacWrdJGraph::readTable(MWAWEntry const &entry, int actZone)
       pos = input->tell();
       f.str("");
       shared_ptr<HanMacWrdJGraphInternal::TableCell> cell(new HanMacWrdJGraphInternal::TableCell(textId));
-      cell->setPosition(Vec2i(j,i));
+      cell->setPosition(MWAWVec2i(j,i));
       cell->m_cPos = (long) input->readULong(4);
       cell->m_zId = (long) input->readULong(4);
       cell->m_flags = (int) input->readULong(2);
@@ -1708,7 +1708,7 @@ bool HanMacWrdJGraph::readTable(MWAWEntry const &entry, int actZone)
         dim[k]=(int)input->readULong(1);
       if (cell->m_flags & 0x1000) {
         if (dim[1]>=j&&dim[0]>=i)
-          cell->setNumSpannedCells(Vec2i(dim[1]+1-j,dim[0]+1-i));
+          cell->setNumSpannedCells(MWAWVec2i(dim[1]+1-j,dim[0]+1-i));
         else {
           static bool first = true;
           if (first) {
@@ -1945,7 +1945,7 @@ bool HanMacWrdJGraph::sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &
   }
 
   pos.setOrigin(pos.origin());
-  pos.setSize(pos.size()+Vec2f(4,4));
+  pos.setSize(pos.size()+MWAWVec2f(4,4));
   m_parserState->m_textListener->insertPicture(pos,pict.m_shape,style);
   return true;
 }
@@ -1993,14 +1993,14 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
 {
   if (!m_parserState->m_textListener)
     return true;
-  Vec2f pictSz = pos.size();
+  MWAWVec2f pictSz = pos.size();
   shared_ptr<MWAWPict> pict;
-  MWAWPosition pictPos(Vec2f(0,0), pictSz, librevenge::RVNG_POINT);
+  MWAWPosition pictPos(MWAWVec2f(0,0), pictSz, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
-  MWAWBox2f box=MWAWBox2f(Vec2f(0,0),pictSz);
-  MWAWPosition shapePos(Vec2f(0,0),pictSz, librevenge::RVNG_POINT);
+  MWAWBox2f box=MWAWBox2f(MWAWVec2f(0,0),pictSz);
+  MWAWPosition shapePos(MWAWVec2f(0,0),pictSz, librevenge::RVNG_POINT);
   shapePos.m_anchorTo=MWAWPosition::Page;
   MWAWGraphicEncoder graphicEncoder;
   MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
@@ -2008,7 +2008,7 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
   MWAWGraphicStyle defStyle;
   graphicListener.insertPicture(shapePos, MWAWGraphicShape::rectangle(box), defStyle);
   graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(box[0],box[1]), defStyle);
-  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(Vec2f(0,pictSz[1]), Vec2f(pictSz[0],0)), defStyle);
+  graphicListener.insertPicture(shapePos, MWAWGraphicShape::line(MWAWVec2f(0,pictSz[1]), MWAWVec2f(pictSz[0],0)), defStyle);
   graphicListener.endDocument();
   librevenge::RVNGBinaryData data;
   std::string type;
@@ -2021,7 +2021,7 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
 bool HanMacWrdJGraph::sendComment(HanMacWrdJGraphInternal::CommentFrame const &comment, MWAWPosition pos, librevenge::RVNGPropertyList extras)
 {
   if (!m_parserState->m_textListener) return true;
-  Vec2f commentSz = comment.getBdBox().size();
+  MWAWVec2f commentSz = comment.getBdBox().size();
   if (comment.m_dim[0] > commentSz[0]) commentSz[0]=comment.m_dim[0];
   if (comment.m_dim[1] > commentSz[1]) commentSz[1]=comment.m_dim[1];
   pos.setSize(commentSz);
@@ -2130,7 +2130,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_zId,0)) {
         MWAWSubDocumentPtr subdoc
         (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-        MWAWBox2f box(Vec2f(0,0),pos.size());
+        MWAWBox2f box(MWAWVec2f(0,0),pos.size());
         MWAWGraphicEncoder graphicEncoder;
         MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
         graphicListener.startDocument();
@@ -2157,7 +2157,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       frame.m_parsed = true;
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
@@ -2191,12 +2191,12 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
         (pos.m_anchorTo!=MWAWPosition::Frame && table.hasExtraLines())) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
 
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
        (*this, input, framePos, HanMacWrdJGraphInternal::SubDocument::FrameInFrame, frame.m_fileId));
-      pos.setSize(Vec2f(-0.01f,-0.01f)); // autosize
+      pos.setSize(MWAWVec2f(-0.01f,-0.01f)); // autosize
       listener->insertTextBox(pos, subdoc);
       return true;
     }
@@ -2212,7 +2212,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
     if ((pos.m_anchorTo==MWAWPosition::Char || pos.m_anchorTo==MWAWPosition::CharBaseLine) && !canCreateGraphic(group)) {
       MWAWPosition framePos(pos);
       framePos.m_anchorTo = MWAWPosition::Frame;
-      framePos.setOrigin(Vec2f(0,0));
+      framePos.setOrigin(MWAWVec2f(0,0));
       pos.setSize(group.getBdBox().size());
       MWAWSubDocumentPtr subdoc
       (new HanMacWrdJGraphInternal::SubDocument
@@ -2265,7 +2265,7 @@ shared_ptr<HanMacWrdJGraphInternal::CommentFrame> HanMacWrdJGraph::readCommentDa
   float dim[2];
   for (int i = 0; i < 2; ++i)
     dim[i] = float(input->readLong(4))/65536.f;
-  comment->m_dim=Vec2f(dim[1],dim[0]);
+  comment->m_dim=MWAWVec2f(dim[1],dim[0]);
   for (int i=0; i < 2; ++i) {
     val = input->readLong(2);
     if (val)
@@ -2307,7 +2307,7 @@ shared_ptr<HanMacWrdJGraphInternal::PictureFrame> HanMacWrdJGraph::readPictureDa
   float fDim[2]; // a small size, typically 1x1
   for (int i = 0; i < 2; ++i)
     fDim[i] = float(input->readLong(4))/65536.f;
-  picture->m_scale = Vec2f(fDim[0], fDim[1]);
+  picture->m_scale = MWAWVec2f(fDim[0], fDim[1]);
   picture->m_zId = (long) input->readULong(4);
   for (int i = 0; i < 2; ++i) { // f2=0, f3=0|-1 : maybe front/back color?
     val = input->readLong(4);
@@ -2317,7 +2317,7 @@ shared_ptr<HanMacWrdJGraphInternal::PictureFrame> HanMacWrdJGraph::readPictureDa
   int dim[2];
   for (int i = 0; i < 2; ++i)
     dim[i] = int(input->readLong(2));
-  picture->m_dim=Vec2i(dim[0],dim[1]); // checkme: xy
+  picture->m_dim=MWAWVec2i(dim[0],dim[1]); // checkme: xy
   for (int i = 0; i < 6; ++i) { // g2=8400
     val = (long) input->readULong(2);
     if (val)
@@ -2511,7 +2511,7 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
     for (int pt = 0; pt < 2; ++pt) {
       for (int i = 0; i < 2; ++i)
         coord[i] = float(input->readLong(4))/65536.f;
-      shape.m_vertices.push_back(Vec2f(coord[1],coord[0]));
+      shape.m_vertices.push_back(MWAWVec2f(coord[1],coord[0]));
     }
   }
   else {
@@ -2553,10 +2553,10 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
                         bdbox.size()[1]/(maxVal[1]>minVal[1]?maxVal[1]-minVal[1]:0.f)
                        };
       float delta[2]= {bdbox[0][0]-minVal[0] *factor[0],bdbox[0][1]-minVal[1] *factor[1]};
-      shape.m_formBox=MWAWBox2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
-                                Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
+      shape.m_formBox=MWAWBox2f(MWAWVec2f(delta[0]-factor[0],delta[1]-factor[1]),
+                                MWAWVec2f(delta[0]+factor[0],delta[1]+factor[1]));
       shape.m_type=MWAWGraphicShape::Pie;
-      shape.m_arcAngles=Vec2f(angles[0],angles[1]);
+      shape.m_arcAngles=MWAWVec2f(angles[0],angles[1]);
       break;
     }
     case 6:
@@ -2975,7 +2975,7 @@ void HanMacWrdJGraph::flushExtra()
     if (!frame.valid() || frame.m_parsed)
       continue;
     if (frame.m_type <= 3 || frame.m_type == 12) continue;
-    MWAWPosition pos(Vec2f(0,0),Vec2f(0,0),librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0),MWAWVec2f(0,0),librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Char);
     sendFrame(frame, pos);
   }

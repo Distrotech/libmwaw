@@ -136,8 +136,8 @@ void ClarisWksBMParser::parse(librevenge::RVNGDrawingInterface *docInterface)
       createDocument(docInterface);
 
       MWAWPageSpan const &page=getPageSpan();
-      MWAWPosition pos(Vec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
-                       Vec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
+      MWAWPosition pos(MWAWVec2f((float)page.getMarginLeft(),(float)page.getMarginRight()),
+                       MWAWVec2f((float)page.getPageWidth(),(float)page.getPageLength()), librevenge::RVNG_INCH);
       pos.setRelativePosition(MWAWPosition::Page);
       pos.m_wrapping = MWAWPosition::WNone;
       m_document->sendZone(1, getGraphicListener(), pos);

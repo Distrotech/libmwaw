@@ -62,7 +62,7 @@ namespace BeagleWksSSParserInternal
 //! Internal: the cell of a BeagleWksSSParser
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1), m_isEmpty(false)
+  Cell(MWAWVec2i pos=MWAWVec2i(0,0)) : MWAWCell(), m_content(), m_formula(-1), m_isEmpty(false)
   {
     setPosition(pos);
   }
@@ -81,7 +81,7 @@ struct Spreadsheet {
   {
   }
   //! try to associate a formula to a cell
-  bool addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula);
+  bool addFormula(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula);
   //! convert the m_widthCols, m_heightRows in a vector of of point size
   static std::vector<float> convertInPoint(std::vector<int> const &list,
       float defSize)
@@ -117,7 +117,7 @@ struct Spreadsheet {
   int m_lastReadRow;
 };
 
-bool Spreadsheet::addFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula)
+bool Spreadsheet::addFormula(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> const &formula)
 {
   for (size_t c=0; c < m_cells.size(); ++c) {
     if (m_cells[c].position()!=cellPos)
@@ -307,10 +307,10 @@ libmwaw::DebugFile &BeagleWksSSParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f BeagleWksSSParser::getPageLeftTop() const
+MWAWVec2f BeagleWksSSParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -546,20 +546,20 @@ bool BeagleWksSSParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -675,9 +675,9 @@ bool BeagleWksSSParser::readChart()
           row=row*10+int(name[cPos++]-'0');
         }
         if (c==0)
-          serieRange.setMin(Vec2i(col-1,row-1));
+          serieRange.setMin(MWAWVec2i(col-1,row-1));
         else {
-          serieRange.setMax(Vec2i(col-1,row-1));
+          serieRange.setMax(MWAWVec2i(col-1,row-1));
           findRange=true;
           break;
         }
@@ -857,8 +857,8 @@ bool BeagleWksSSParser::readChart()
     chart->setDataType(serieType, true);
     for (int r=serieRange[0][1]; r<serieRange[1][1]; ++r) {
       MWAWChart::Series series;
-      series.m_range=MWAWBox2i(Vec2i(serieRange[0][0], r),
-                               Vec2i(serieRange[1][0], r));
+      series.m_range=MWAWBox2i(MWAWVec2i(serieRange[0][0], r),
+                               MWAWVec2i(serieRange[1][0], r));
       series.m_type=serieType;
       unsigned char gray=(unsigned char)((r%4)*30);
       series.m_style.m_lineWidth=1;
@@ -953,7 +953,7 @@ bool BeagleWksSSParser::readRowSheet(BeagleWksSSParserInternal::Spreadsheet &she
   for (int i=0; i < N; ++i) {
     pos=input->tell();
     if (pos==endPos) break;
-    BeagleWksSSParserInternal::Cell cell(Vec2i(i, row));
+    BeagleWksSSParserInternal::Cell cell(MWAWVec2i(i, row));
     if (!readCellSheet(cell))
       return false;
     sheet.m_cells.push_back(cell);
@@ -1344,8 +1344,8 @@ bool BeagleWksSSParser::readFormula(BeagleWksSSParserInternal::Spreadsheet &shee
     }
     std::vector<MWAWCellContent::FormulaInstruction> formula;
     std::string error("");
-    if (m_structureManager->readFormula(pos+6+dataSz, Vec2i(col,row), formula, error))
-      sheet.addFormula(Vec2i(col,row), formula);
+    if (m_structureManager->readFormula(pos+6+dataSz, MWAWVec2i(col,row), formula, error))
+      sheet.addFormula(MWAWVec2i(col,row), formula);
     else
       f << "###";
     for (size_t l=0; l < formula.size(); ++l)
@@ -1373,7 +1373,7 @@ bool BeagleWksSSParser::sendPageFrames()
 
 bool BeagleWksSSParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
-  MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
+  MWAWPosition fPos(MWAWVec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
 
   fPos.setPagePos(frame.m_page > 0 ? frame.m_page : 1, frame.m_origin);
   fPos.setRelativePosition(MWAWPosition::Page);
@@ -1467,9 +1467,9 @@ bool BeagleWksSSParser::sendSpreadsheet()
     if (!m_state->m_chartList[i]) continue;
     BeagleWksSSParserInternal::Chart &chart=*(m_state->m_chartList[i]);
     // chart have no position, so we create one
-    chart.setDimension(Vec2i(200,200));
-    MWAWPosition fPos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
-    fPos.setPagePos(1, Vec2f(float(i)*200,200));
+    chart.setDimension(MWAWVec2i(200,200));
+    MWAWPosition fPos(MWAWVec2f(0,0), MWAWVec2f(200,200), librevenge::RVNG_POINT);
+    fPos.setPagePos(1, MWAWVec2f(float(i)*200,200));
     fPos.setRelativePosition(MWAWPosition::Page);
     listener->insertChart(fPos, chart);
   }

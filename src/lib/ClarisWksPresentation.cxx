@@ -529,7 +529,7 @@ bool ClarisWksPresentation::sendZone(int number)
       continue;
     shared_ptr<MWAWSubDocument> doc(new ClarisWksPresentationInternal::SubDocument(*this, m_parserState->m_input, listTextChild[0]));
     // fixme
-    MWAWPosition pos(Vec2f(0,400), Vec2f(600,200), librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,400), MWAWVec2f(600,200), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Page;
     listener->insertSlideNote(pos, doc);
   }

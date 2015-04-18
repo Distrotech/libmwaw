@@ -115,7 +115,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 ////////////////////////////////////////////////////////////
 // MWAWChart
 ////////////////////////////////////////////////////////////
-MWAWChart::MWAWChart(std::string const &sheetName, MWAWFontConverterPtr fontConverter, Vec2f const &dim) :
+MWAWChart::MWAWChart(std::string const &sheetName, MWAWFontConverterPtr fontConverter, MWAWVec2f const &dim) :
   m_sheetName(sheetName), m_dim(dim), m_type(MWAWChart::Series::S_Bar), m_dataStacked(false), m_legend(), m_seriesList(), m_textZoneMap(), m_fontConverter(fontConverter)
 {
   for (int i=0; i<3; ++i) m_axis[i]=Axis();
@@ -329,7 +329,7 @@ void MWAWChart::sendChart(MWAWSpreadsheetListenerPtr &listener, librevenge::RVNG
 // Axis
 ////////////////////////////////////////////////////////////
 MWAWChart::Axis::Axis() : m_type(MWAWChart::Axis::A_None), m_showGrid(true), m_showLabel(true),
-  m_labelRange(Vec2f(0,0), Vec2f(-1,-1)), m_style()
+  m_labelRange(MWAWVec2f(0,0), MWAWVec2f(-1,-1)), m_style()
 {
   m_style.m_lineWidth=0;
 }

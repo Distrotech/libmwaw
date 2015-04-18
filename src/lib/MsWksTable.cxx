@@ -90,7 +90,7 @@ struct Table {
   struct Cell {
     Cell() : m_pos(-1,-1), m_font(), m_text("") {}
     //! the cell position
-    Vec2i m_pos;
+    MWAWVec2i m_pos;
     //! the font
     MWAWFont m_font;
     //! the text
@@ -107,7 +107,7 @@ struct Table {
     m_font(), m_cellsList() { }
 
   //! try to find a cell
-  Cell const *getCell(Vec2i const &pos) const
+  Cell const *getCell(MWAWVec2i const &pos) const
   {
     for (size_t i = 0; i < m_cellsList.size(); i++) {
       if (m_cellsList[i].m_pos == pos)
@@ -208,7 +208,7 @@ bool MsWksTable::sendTable(int zoneId)
 
     for (size_t col = 0; col < nCols; col++) {
       MWAWCell cell;
-      Vec2i cellPosition(Vec2i((int)col,(int)row));
+      MWAWVec2i cellPosition(MWAWVec2i((int)col,(int)row));
       cell.setPosition(cellPosition);
       cell.setBorders(borderPos, border);
       int internWhat=0;
@@ -301,7 +301,7 @@ bool MsWksTable::readTable(int numCol, int numRow, int zoneId, MsWksGraph::Style
     MsWksTableInternal::Table::Cell cell;
     int y = (int) input->readLong(2);
     int x = (int) input->readLong(2);
-    cell.m_pos = Vec2i(x,y);
+    cell.m_pos = MWAWVec2i(x,y);
     if (x < 0 || y < 0 ||
         x >= table.m_numCols || y >= table.m_numRows) return false;
 
@@ -414,7 +414,7 @@ bool MsWksTable::sendChart(int chartId)
     MWAW_DEBUG_MSG(("MsWksTable::sendChart: oops can not find chart bdbox %d[%d]\n", chartId, chart.m_zoneId));
     return false;
   }
-  MWAWPosition pictPos(Vec2f(0,0), chartPos.size(),librevenge::RVNG_POINT);
+  MWAWPosition pictPos(MWAWVec2f(0,0), chartPos.size(),librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Frame, MWAWPosition::XLeft, MWAWPosition::YTop);
   if (chart.m_backgroundEntry.valid()) {
     long actPos = input->tell();

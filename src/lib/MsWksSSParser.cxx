@@ -121,16 +121,16 @@ public:
   std::string m_name;
 protected:
   /** returns the last Right Bottom cell position */
-  Vec2i getRightBottomPosition() const
+  MWAWVec2i getRightBottomPosition() const
   {
     int maxX = 0, maxY = 0;
     size_t numCell = m_cells.size();
     for (size_t i = 0; i < numCell; i++) {
-      Vec2i const &p = m_cells[i].position();
+      MWAWVec2i const &p = m_cells[i].position();
       if (p[0] > maxX) maxX = p[0];
       if (p[1] > maxY) maxY = p[1];
     }
-    return Vec2i(maxX, maxY);
+    return MWAWVec2i(maxX, maxY);
   }
 };
 
@@ -351,8 +351,8 @@ void MsWksSSParser::createDocument(librevenge::RVNGSpreadsheetInterface *documen
   listen->startDocument();
   // time to send page information the graph parser and the text parser
   m_document->getGraphParser()->setPageLeftTop
-  (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
-         72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
+  (MWAWVec2f(72.f*float(getPageSpan().getMarginLeft()),
+             72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
 }
 
 
@@ -643,7 +643,7 @@ bool MsWksSSParser::readSSheetZone()
   input->seek(sheetDebPos+m_document->getLengthOfFileHeader3(), librevenge::RVNG_SEEK_SET);
 
   // part E
-  Vec2i cellPos(0,0);
+  MWAWVec2i cellPos(0,0);
   while (1) {
     if (cellPos[1] == N[1]) break;
 
@@ -836,7 +836,7 @@ bool MsWksSSParser::readSSheetZone()
   return true;
 }
 
-bool MsWksSSParser::readCell(int sz, Vec2i const &cellPos, MsWksSSParserInternal::Cell &cell)
+bool MsWksSSParser::readCell(int sz, MWAWVec2i const &cellPos, MsWksSSParserInternal::Cell &cell)
 {
   int const vers=version();
   cell = MsWksSSParserInternal::Cell();

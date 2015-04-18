@@ -1112,7 +1112,7 @@ protected:
       }
       float dim[4];
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "dim?=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+      f << "dim?=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
       for (int i=0; i<2; ++i) { // g1=2|3
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
@@ -1382,10 +1382,10 @@ protected:
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    MWAWBox2f box(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
+    MWAWBox2f box(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
     f << "box=" << box << ",";
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    MWAWBox2f box2(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
+    MWAWBox2f box2(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
     if (box!=box2)
       f << "boxA=" << box2 << ",";
     for (int i=0; i<7; ++i) { // g1=0|2, g3=9|7

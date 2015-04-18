@@ -597,7 +597,7 @@ struct Paragraph : public MWAWParagraph {
   //! the before/after spacing ( negative in point, positive in percent)
   double m_befAftSpacings[2];
   //! the zone dimension
-  Vec2f m_dim;
+  MWAWVec2f m_dim;
   //! the actual border
   FullWrtStruct::Border m_border;
   //! a flag to know if this is a table
@@ -1222,7 +1222,7 @@ bool FullWrtText::sendTable(shared_ptr<FullWrtTextInternal::Zone> zone, FullWrtT
   }
   for (size_t col = 0; col < numCols; col++) {
     MWAWCell cell;
-    Vec2i cellPosition(Vec2i((int)0,(int)col));
+    MWAWVec2i cellPosition(MWAWVec2i((int)0,(int)col));
     cell.setPosition(cellPosition);
     if (ruler.m_tableBorderId) {
       cell.setBorders(0xf, outBorder);
@@ -1697,7 +1697,7 @@ bool FullWrtText::readTextData(FullWrtStruct::EntryPtr zone)
     dim[i]=(int)input->readLong(2);
   if (dimUnk != dim[2]) f << "dimUnk=" << dimUnk << ",";
 
-  text->m_box=MWAWBox2f(Vec2f(float(dim[0]),float(dim[1])),Vec2f(float(dim[2]),float(dim[3])));
+  text->m_box=MWAWBox2f(MWAWVec2f(float(dim[0]),float(dim[1])),MWAWVec2f(float(dim[2]),float(dim[3])));
   text->m_pages[1] = (int)input->readLong(2);
   if (text->m_pages[1] == 16000) text->m_pages[1] = 0;
   text->m_pages[0] = (int)input->readLong(2);
@@ -1822,7 +1822,7 @@ bool FullWrtText::readTextData(FullWrtStruct::EntryPtr zone)
         col.m_column = i;
         col.m_beginPos = (int)input->readLong(2);
         for (int j = 0; j < 4; j++) dim[j] = (int)input->readLong(2);
-        col.m_box = MWAWBox2i(Vec2i(dim[0],dim[2]), Vec2i(dim[1], dim[3]));
+        col.m_box = MWAWBox2i(MWAWVec2i(dim[0],dim[2]), MWAWVec2i(dim[1], dim[3]));
         f << col;
         page.m_columns.push_back(col);
 
@@ -2088,7 +2088,7 @@ bool FullWrtText::readParagraphTabs(FullWrtStruct::EntryPtr zone, int id)
   float dim[2];
   for (int i = 0; i < 2; i++) // dim0: height?, dim1:width
     dim[i] = (float)(input->readULong(2))/72.f;
-  para.m_dim=Vec2f(dim[1],dim[0]);
+  para.m_dim=MWAWVec2f(dim[1],dim[0]);
   double margins[3];
   char const *(margNames[]) = { "left", "right", "first" };
   for (int i = 0; i < 3; i++) {

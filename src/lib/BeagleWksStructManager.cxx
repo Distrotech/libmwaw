@@ -210,14 +210,14 @@ bool BeagleWksStructManager::readFrame(MWAWEntry const &entry)
     float orig[2];
     for (int j=0; j<2; ++j)
       orig[j]=float(input->readLong(4))/65536.f;
-    frame.m_origin=Vec2f(orig[1],orig[0]);
+    frame.m_origin=MWAWVec2f(orig[1],orig[0]);
     f << "PTR1=" << std::hex << input->readULong(4) << std::dec << ",";
 
     frame.m_page=(int) input->readLong(2);
     float dim[2];
     for (int j=0; j<2; ++j)
       dim[j]=float(input->readLong(2));
-    frame.m_dim=Vec2f(dim[1],dim[0]);
+    frame.m_dim=MWAWVec2f(dim[1],dim[0]);
     f << "dim=" << dim[1] << "x" << dim[0] << ",";
     for (int j=0; j<4; ++j) { // f1=0|05b1 other 0
       val=(int) input->readLong(2);
@@ -623,7 +623,7 @@ bool BeagleWksStructManager::readPicture(int pId, librevenge::RVNGBinaryData &pi
 ////////////////////////////////////////////////////////////
 // formula data
 ////////////////////////////////////////////////////////////
-bool BeagleWksStructManager::readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr)
+bool BeagleWksStructManager::readCellInFormula(MWAWVec2i actPos, MWAWCellContent::FormulaInstruction &instr)
 {
   instr=MWAWCellContent::FormulaInstruction();
   instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
@@ -650,8 +650,8 @@ bool BeagleWksStructManager::readCellInFormula(Vec2i actPos, MWAWCellContent::Fo
     }
     return false;
   }
-  instr.m_position[0]=Vec2i(pos[0],pos[1]);
-  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  instr.m_position[0]=MWAWVec2i(pos[0],pos[1]);
+  instr.m_positionRelative[0]=MWAWVec2b(!absolute[0],!absolute[1]);
   return ok;
 }
 
@@ -701,7 +701,7 @@ static Functions const s_listFunctions[] = {
 };
 }
 
-bool BeagleWksStructManager::readFormula(long endPos, Vec2i const &position,
+bool BeagleWksStructManager::readFormula(long endPos, MWAWVec2i const &position,
     std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
 {
   MWAWInputStreamPtr input=getInput();

@@ -264,10 +264,10 @@ libmwaw::DebugFile &BeagleWksDRParser::rsrcAscii()
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f BeagleWksDRParser::getPageLeftTop() const
+MWAWVec2f BeagleWksDRParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -673,7 +673,7 @@ bool BeagleWksDRParser::readPatterns()
     val=(int) input->readLong(2); // always 0?
     if (val) f << "f0=" << val << ",";
     MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     pat.m_data.resize(8);
     for (size_t j=0; j<8; ++j) pat.m_data[j]=(unsigned char) input->readULong(1);
     m_state->m_patternList[size_t(i)]=pat;
@@ -770,7 +770,7 @@ bool BeagleWksDRParser::readShapePositions()
     f << "f0=" << val << ",";
     float dim[4];
     for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-    shape.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+    shape.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]),MWAWVec2f(dim[3],dim[2]));
     f << "pos=" << shape.m_box << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -839,15 +839,15 @@ bool BeagleWksDRParser::readShapeDefinitions()
         break;
       default:
       case 0:
-        shape.m_shape = MWAWGraphicShape::line(Vec2f(shape.m_box[1][0],shape.m_box[0][1]), Vec2f(shape.m_box[0][0],shape.m_box[1][1]));
+        shape.m_shape = MWAWGraphicShape::line(MWAWVec2f(shape.m_box[1][0],shape.m_box[0][1]), MWAWVec2f(shape.m_box[0][0],shape.m_box[1][1]));
         break;
       case 3:
-        shape.m_shape = MWAWGraphicShape::line(Vec2f(shape.m_box[0][0],shape.m_box[1][1]), Vec2f(shape.m_box[1][0],shape.m_box[0][1]));
+        shape.m_shape = MWAWGraphicShape::line(MWAWVec2f(shape.m_box[0][0],shape.m_box[1][1]), MWAWVec2f(shape.m_box[1][0],shape.m_box[0][1]));
         break;
       }
       break;
     case 4:
-      shape.m_shape = MWAWGraphicShape::rectangle(shape.m_box, Vec2f(25,25));
+      shape.m_shape = MWAWGraphicShape::rectangle(shape.m_box, MWAWVec2f(25,25));
       break;
     case 6:
     case 10:
@@ -891,12 +891,12 @@ bool BeagleWksDRParser::readShapeDatas()
       if (dataSize!=2+N*8) break;
       f << "pts=[";
       ok=true;
-      std::vector<Vec2f> &vertices=shape.m_shape.m_vertices;
+      std::vector<MWAWVec2f> &vertices=shape.m_shape.m_vertices;
       vertices.resize(size_t(N));
       for (int pt=0; pt<N; ++pt) {
         float position[2];
         for (int j=0; j<2; ++j) position[j]=float(input->readLong(4))/65536.f;
-        Vec2f point(position[1],position[0]);
+        MWAWVec2f point(position[1],position[0]);
         vertices[size_t(pt)]=point;
         f << point << ",";
       }
@@ -1020,7 +1020,7 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
   bool defaultDim=dim[0]==25 && dim[1]==25;
   switch (shape.m_type) {
   case 4:
-    shape.m_shape.m_cornerWidth=Vec2f(float(dim[1]), float(dim[0]));
+    shape.m_shape.m_cornerWidth=MWAWVec2f(float(dim[1]), float(dim[0]));
     if (!defaultDim) f << "corner=" << dim[1] << "x" << dim[0] << ",";
     break;
   case 5: {
@@ -1045,8 +1045,8 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
       }
     }
     MWAWBox2f box=shape.m_box;
-    Vec2f center = box.center();
-    Vec2f axis = 0.5*Vec2f(box.size());
+    MWAWVec2f center = box.center();
+    MWAWVec2f axis = 0.5*MWAWVec2f(box.size());
     // we must compute the real bd box
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
     int limitAngle[2];
@@ -1062,10 +1062,10 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    MWAWBox2f realBox(MWAWVec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      MWAWVec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
     shape.m_box=realBox;
-    shape.m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+    shape.m_shape = MWAWGraphicShape::pie(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
     break;
   }
   default:
@@ -1187,20 +1187,20 @@ bool BeagleWksDRParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -1355,7 +1355,7 @@ bool BeagleWksDRParser::sendPageFrames()
 
 bool BeagleWksDRParser::sendFrame(BeagleWksStructManager::Frame const &frame)
 {
-  MWAWPosition fPos(Vec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
+  MWAWPosition fPos(MWAWVec2f(0,0), frame.m_dim, librevenge::RVNG_POINT);
 
   fPos.setPagePos(frame.m_page > 0 ? frame.m_page : 1, frame.m_origin);
   fPos.setRelativePosition(MWAWPosition::Page);

@@ -1102,7 +1102,7 @@ void MWAWSpreadsheetListener::insertPicture
   librevenge::RVNGPropertyList list;
   style.addTo(list, shape.getType()==MWAWGraphicShape::Line);
 
-  Vec2f decal = factor*pos.origin();
+  MWAWVec2f decal = factor*pos.origin();
   switch (shape.addTo(decal, style.hasSurface(), shapePList)) {
   case MWAWGraphicShape::C_Ellipse:
     m_documentInterface->defineGraphicStyle(list);
@@ -1236,7 +1236,7 @@ void MWAWSpreadsheetListener::closeFrame()
 void MWAWSpreadsheetListener::_handleFrameParameters
 (librevenge::RVNGPropertyList &propList, MWAWPosition const &pos)
 {
-  Vec2f origin = pos.origin();
+  MWAWVec2f origin = pos.origin();
   librevenge::RVNGUnit unit = pos.unit();
   float inchFactor=pos.getInvUnitScale(librevenge::RVNG_INCH);
   float pointFactor = pos.getInvUnitScale(librevenge::RVNG_POINT);
@@ -1255,8 +1255,8 @@ void MWAWSpreadsheetListener::_handleFrameParameters
     propList.insert("librevenge:naturalWidth", pos.naturalSize().x(), pos.unit());
     propList.insert("librevenge:naturalHeight", pos.naturalSize().y(), pos.unit());
   }
-  Vec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
-  Vec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
+  MWAWVec2f TLClip = (1.f/pointFactor)*pos.leftTopClipping();
+  MWAWVec2f RBClip = (1.f/pointFactor)*pos.rightBottomClipping();
   if (TLClip[0] > 0 || TLClip[1] > 0 || RBClip[0] > 0 || RBClip[1] > 0) {
     // in ODF1.2 we need to separate the value with ,
     std::stringstream s;
@@ -1858,7 +1858,7 @@ void MWAWSpreadsheetListener::closeTableRow()
   m_documentInterface->closeTableRow();
 }
 
-void MWAWSpreadsheetListener::addEmptyTableCell(Vec2i const &pos, Vec2i span)
+void MWAWSpreadsheetListener::addEmptyTableCell(MWAWVec2i const &pos, MWAWVec2i span)
 {
   if (!m_ps->m_isTableRowOpened) {
     MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::addEmptyTableCell: called with m_isTableRowOpened=false\n"));

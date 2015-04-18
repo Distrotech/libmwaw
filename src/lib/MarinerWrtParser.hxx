@@ -152,7 +152,7 @@ protected:
   bool readZone(int &actZone, bool onlyTest=false);
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
   //! returns the section information corresponding to a zone
   MWAWSection getSection(int zoneId) const;
 

@@ -118,7 +118,7 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
     // very often (0x0<->1x1), if not, we often have dim[0]+dim[2]~1 and dim[1]+dim[3]~1, some margins?
-    f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
+    f << "dim=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3])) << ",";
     val=(int) input->readLong(2); // 0|1
     if (val) f << "f2=" << val << ",";
     return true;
@@ -500,7 +500,7 @@ bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluste
         MWAWGraphicStyle::Pattern pat;
         pat.m_colors[0]=MWAWColor::white();
         pat.m_colors[1]=MWAWColor::black();
-        pat.m_dim=Vec2i(8,8);
+        pat.m_dim=MWAWVec2i(8,8);
         pat.m_data.resize(8);
         for (size_t k=0; k < 8; ++k)
           pat.m_data[k]=(unsigned char)input->readULong(1);
@@ -634,7 +634,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     f << "surf[id]=GS" << val << ",";
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-  f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+  f << "dim=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
   long dataPos=input->tell();
   if (fl&0xFF) {
     val=(int) input->readLong(2);
@@ -658,7 +658,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
       f << "###";
       ok=false;
     }
-    f << "dim2=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+    f << "dim2=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
   }
   switch (type) {
   case RagTime5GraphInternal::Shape::S_Rect:
@@ -698,7 +698,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
         f << "###";
         ok=false;
       }
-      f << "dim2=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+      f << "dim2=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
     }
     for (int i=0; i<2; ++i) { // h2=0|1
       val=(int) input->readLong(2);
@@ -1411,7 +1411,7 @@ protected:
     if (fSz==64) { // movie
       float dim[2];
       for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      f << "dim=" << Vec2f(dim[0],dim[1]) << ",";
+      f << "dim=" << MWAWVec2f(dim[0],dim[1]) << ",";
       for (int i=0; i<15; ++i) { // always 0
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
@@ -1434,7 +1434,7 @@ protected:
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    f << "dim=" << Vec2f(dim[0],dim[1]) << ",sz=" << Vec2f(dim[2],dim[3]) << ",";
+    f << "dim=" << MWAWVec2f(dim[0],dim[1]) << ",sz=" << MWAWVec2f(dim[2],dim[3]) << ",";
     for (int i=0; i<5; ++i) { // fl2=708|718|f18|...|7d4b, fl3=0|4, f5=800|900|8000,fl6=0|1|a
       val=(int) input->readULong(2);
       if (val) f << "fl" << i+2 << "=" << std::hex << val << std::dec << ",";
@@ -1474,7 +1474,7 @@ protected:
     if (fSz==109) {
       int dim2[2];
       for (int i=0; i<2; ++i) dim2[i]=(int) input->readLong(2);
-      f << "dim2=" << Vec2i(dim2[0], dim2[1]) << ",";
+      f << "dim2=" << MWAWVec2i(dim2[0], dim2[1]) << ",";
       val= (int) input->readLong(1); // 0 or 1
       if (val) f << "h8=" << val << ",";
     }
@@ -2011,7 +2011,7 @@ protected:
         if (val) f << "g7=" << val << ",";
         float dim[2];
         for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-        f << "dim=" << Vec2f(dim[0], dim[1]) << ",";
+        f << "dim=" << MWAWVec2f(dim[0], dim[1]) << ",";
         for (int i=0; i<4; ++i) { // always 0
           val=(int) input->readLong(2);
           if (val) f << "h" << i << "=" << val << ",";

@@ -93,7 +93,7 @@ public:
   int numPages() const;
 
   //! returns the page dimension if known (in point)
-  bool getPageDimension(Vec2f &dim) const;
+  bool getPageDimension(MWAWVec2f &dim) const;
 
   //! compute the pages position
   void computePositions() const;
@@ -144,7 +144,7 @@ protected:
   //! send a group
   bool sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position);
   //! send a child group as graphic or as presentation
-  bool sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, Vec2f const &leftTop);
+  bool sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, MWAWVec2f const &leftTop);
   //! send a group child
   bool sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> zone, MWAWPosition position);
   //! send the child element corresponding to some page

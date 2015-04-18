@@ -208,7 +208,7 @@ struct ComplexBlock {
 //! Internal: a cell of a RagTimeSpreadsheet
 struct Cell : public MWAWCell {
   //! constructor
-  Cell(Vec2i pos=Vec2i(0,0)) : MWAWCell(), m_content(), m_textEntry(), m_rotation(0)
+  Cell(MWAWVec2i pos=MWAWVec2i(0,0)) : MWAWCell(), m_content(), m_textEntry(), m_rotation(0)
   {
     setPosition(pos);
   }
@@ -271,7 +271,7 @@ void CellExtra::update(Cell &cell) const
 //! Internal: a spreadsheet's zone of a RagTimeSpreadsheet
 struct Spreadsheet {
   //! a map a cell sorted by row
-  typedef std::map<Vec2i,Cell,Vec2i::PosSizeLtY> Map;
+  typedef std::map<MWAWVec2i,Cell,MWAWVec2i::PosSizeLtY> Map;
   //! constructor
   Spreadsheet() : m_rows(0), m_columns(0), m_widthDefault(72), m_widthCols(), m_heightDefault(12), m_heightRows(),
     m_cellsBegin(0), m_cellsMap(), m_rowPositionsList(), m_name("Sheet0"), m_isSent(false)
@@ -298,9 +298,9 @@ struct Spreadsheet {
     return res;
   }
   /** returns the spreadsheet dimension */
-  Vec2i getRightBottomPosition() const
+  MWAWVec2i getRightBottomPosition() const
   {
-    Vec2i res(0,0);
+    MWAWVec2i res(0,0);
     for (Map::const_iterator it=m_cellsMap.begin(); it!=m_cellsMap.end(); ++it) {
       Cell const &cell=it->second;
       if (cell.position()[0] >= res[0])
@@ -1288,7 +1288,7 @@ bool RagTimeSpreadsheet::readSpreadsheet(MWAWEntry &entry)
   return true;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet)
+bool RagTimeSpreadsheet::readSpreadsheetCellDimension(MWAWVec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Spreadsheet &sheet)
 {
   if (cellPos[0] && cellPos[1]) {
     MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellDimension: expect cellPos[0] or cellPos[1] = 0\n"));
@@ -1356,7 +1356,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellDimension(Vec2i const &cellPos, long
 
 bool RagTimeSpreadsheet::readSpreadsheetCellContent(RagTimeSpreadsheetInternal::Cell &cell, long endPos)
 {
-  Vec2i const &cellPos=cell.position();
+  MWAWVec2i const &cellPos=cell.position();
   if (cellPos[0]<0 || cellPos[1]<0) {
     MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetCellContent: expect cellPos[0] and cellPos[1] >= 0\n"));
     return false;
@@ -1484,7 +1484,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellContent(RagTimeSpreadsheetInternal::
   return ok;
 }
 
-bool RagTimeSpreadsheet::readSpreadsheetCellFormat(Vec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell)
+bool RagTimeSpreadsheet::readSpreadsheetCellFormat(MWAWVec2i const &cellPos, long endPos, RagTimeSpreadsheetInternal::Cell &cell)
 {
   MWAWInputStreamPtr input = m_parserState->m_input;
   long pos=input->tell();
@@ -1773,17 +1773,17 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
       if (!posList[i] || posList[i]>=zEndPos) continue;
 
       input->seek(posList[i], librevenge::RVNG_SEEK_SET);
-      Vec2i cellPos(col,row);
+      MWAWVec2i cellPos(col,row);
       bool ok=true;
       RagTimeSpreadsheetInternal::Cell emptyCell;
       RagTimeSpreadsheetInternal::Cell *cell = 0;
       if (col>0 && row>0 && entry.id()<=2) {
-        if (sheet.m_cellsMap.find(cellPos-Vec2i(1,1))==sheet.m_cellsMap.end())
-          sheet.m_cellsMap[cellPos-Vec2i(1,1)]=RagTimeSpreadsheetInternal::Cell();
-        cell=&sheet.m_cellsMap.find(cellPos-Vec2i(1,1))->second;
+        if (sheet.m_cellsMap.find(cellPos-MWAWVec2i(1,1))==sheet.m_cellsMap.end())
+          sheet.m_cellsMap[cellPos-MWAWVec2i(1,1)]=RagTimeSpreadsheetInternal::Cell();
+        cell=&sheet.m_cellsMap.find(cellPos-MWAWVec2i(1,1))->second;
       }
       if (!cell) cell=&emptyCell;
-      cell->setPosition(cellPos-Vec2i(1,1));
+      cell->setPosition(cellPos-MWAWVec2i(1,1));
       switch (entry.id()) {
       case 0:
         if (cellPos[0]<=0 || cellPos[1]<=0)
@@ -1801,7 +1801,7 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
         std::vector<MWAWCellContent::FormulaInstruction> formula;
         int val=(int) input->readULong(1);
         if (val) f << "f0=" << std::hex << val << std::dec << ",";
-        ok=readFormula(cellPos-Vec2i(1,1), formula, zEndPos, extra);
+        ok=readFormula(cellPos-MWAWVec2i(1,1), formula, zEndPos, extra);
         if (ok && entry.id()==2) {
           MWAWCellContent &content=cell->m_content;
           content.m_formula=formula;
@@ -1944,7 +1944,7 @@ bool RagTimeSpreadsheet::readSpreadsheetCellsV2(MWAWEntry &entry, RagTimeSpreads
       pos=input->tell();
       if (pos+2>rEndPos) break;
       int col=int(input->readULong(1))-1;
-      Vec2i cellPos(col,int(row));
+      MWAWVec2i cellPos(col,int(row));
       int dSz=(int) input->readULong(1);
       long zEndPos=pos+6+dSz;
       RagTimeSpreadsheetInternal::Cell cell;
@@ -2507,7 +2507,7 @@ bool RagTimeSpreadsheet::send(int zId, MWAWPosition const &pos)
     return false;
   }
   RagTimeSpreadsheetInternal::Spreadsheet &sheet=*m_state->m_idSpreadsheetMap.find(zId)->second;
-  MWAWBox2f box=MWAWBox2f(Vec2f(0,0), pos.size());
+  MWAWBox2f box=MWAWBox2f(MWAWVec2f(0,0), pos.size());
   MWAWSpreadsheetEncoder spreadsheetEncoder;
   MWAWSpreadsheetListenerPtr spreadsheetListener(new MWAWSpreadsheetListener(*m_parserState, box, &spreadsheetEncoder));
   spreadsheetListener->startDocument();
@@ -2537,7 +2537,7 @@ void RagTimeSpreadsheet::flushExtra()
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::flushExtra: find some unsend zone\n"));
       first=false;
     }
-    MWAWPosition pos(Vec2f(0,0), Vec2f(200,200), librevenge::RVNG_POINT);
+    MWAWPosition pos(MWAWVec2f(0,0), MWAWVec2f(200,200), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Char;
     send(it->first, pos);
     listener->insertEOL();
@@ -2547,7 +2547,7 @@ void RagTimeSpreadsheet::flushExtra()
 ////////////////////////////////////////////////////////////
 // formula
 ////////////////////////////////////////////////////////////
-bool RagTimeSpreadsheet::readCellInFormula(Vec2i const &cellPos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra)
+bool RagTimeSpreadsheet::readCellInFormula(MWAWVec2i const &cellPos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra)
 {
   bool isList=canBeList;
   MWAWInputStreamPtr input=m_parserState->m_input;
@@ -2756,7 +2756,7 @@ bool RagTimeSpreadsheet::readCellInFormula(Vec2i const &cellPos, bool canBeList,
   return true;
 }
 
-bool RagTimeSpreadsheet::readCellInFormulaV2(Vec2i const &cellPos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra)
+bool RagTimeSpreadsheet::readCellInFormulaV2(MWAWVec2i const &cellPos, bool canBeList, MWAWCellContent::FormulaInstruction &instr, long endPos, std::string &extra)
 {
   MWAWInputStreamPtr input=m_parserState->m_input;
   libmwaw::DebugStream f;
@@ -2878,7 +2878,7 @@ bool RagTimeSpreadsheet::readCellInFormulaV2(Vec2i const &cellPos, bool canBeLis
   return ok;
 }
 
-bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
+bool RagTimeSpreadsheet::readFormula(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
 {
   formula.resize(0);
 
@@ -3067,7 +3067,7 @@ bool RagTimeSpreadsheet::readFormula(Vec2i const &cellPos, std::vector<MWAWCellC
   return true;
 }
 
-bool RagTimeSpreadsheet::readFormulaV2(Vec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
+bool RagTimeSpreadsheet::readFormulaV2(MWAWVec2i const &cellPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, long endPos, std::string &extra)
 {
   formula.resize(0);
 

@@ -128,16 +128,16 @@ struct Zone {
   MWAWBox2f getLocalBox(bool extendWithBord=true) const
   {
     float x = m_box.size().x(), y=m_box.size().y();
-    Vec2f min = m_box.min();
+    MWAWVec2f min = m_box.min();
     if (x < 0) {
-      min+=Vec2f(x,0);
+      min+=MWAWVec2f(x,0);
       x *= -1.0f;
     }
     if (y < 0) {
-      min+=Vec2f(0,y);
+      min+=MWAWVec2f(0,y);
       y *= -1.0f;
     }
-    MWAWBox2f res(min, min+Vec2f(x,y));
+    MWAWBox2f res(min, min+MWAWVec2f(x,y));
     if (!extendWithBord) return res;
     float bExtra = needExtraBorderWidth();
     if (bExtra > 0) res.extend(2.0f*bExtra);
@@ -155,7 +155,7 @@ struct Zone {
         res.m_wrapping = MWAWPosition::WBackground;
     }
     else if (rel!=MWAWPosition::Page) {
-      res = MWAWPosition(Vec2f(0,0), box.size(), librevenge::RVNG_POINT);
+      res = MWAWPosition(MWAWVec2f(0,0), box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(MWAWPosition::Char,
                               MWAWPosition::XLeft, MWAWPosition::YTop);
     }
@@ -190,7 +190,7 @@ struct Zone {
   //! the local position
   MWAWBox2f m_decal;
   //! the final local position
-  Vec2f m_finalDecal;
+  MWAWVec2f m_finalDecal;
   //! local bdbox
   MWAWBox2f m_box;
   //! the line position(v1)
@@ -487,7 +487,7 @@ bool DataBitmap::getPictureData
   int szCol = int(m_dataSize/m_numRows);
   long pos = m_dataPos;
 
-  MWAWPictBitmapIndexed *btmap = new MWAWPictBitmapIndexed(Vec2i(m_numCols, m_numRows));
+  MWAWPictBitmapIndexed *btmap = new MWAWPictBitmapIndexed(MWAWVec2i(m_numCols, m_numRows));
   if (!btmap) return false;
   btmap->setColors(palette);
   shared_ptr<MWAWPict> pict(btmap);
@@ -607,7 +607,7 @@ struct OLEZone : public Zone {
   //! the ole id
   int m_oleId;
   //! the dimension
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
 };
 
 ////////////////////////////////////////
@@ -674,7 +674,7 @@ struct Patterns {
       MWAW_DEBUG_MSG(("MsWksGraphInternal::Patterns::get: can not find pattern %d\n", id));
       return false;
     }
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     unsigned char const *ptr=&m_valuesList[8*size_t(id)];
     pat.m_data.resize(8);
     for (size_t i=0; i < 8; i++)
@@ -712,7 +712,7 @@ struct State {
   //! the version
   int m_version;
   //! the page left top position in points
-  Vec2f m_leftTopPos;
+  MWAWVec2f m_leftTopPos;
   //! the list of zone
   std::vector<shared_ptr<Zone> > m_zonesList;
   //! the RBIL zone id->list id
@@ -935,7 +935,7 @@ MsWksGraph::MsWksGraph(MsWksDocument &document) :
 MsWksGraph::~MsWksGraph()
 { }
 
-void MsWksGraph::setPageLeftTop(Vec2f const &leftTop)
+void MsWksGraph::setPageLeftTop(MWAWVec2f const &leftTop)
 {
   m_state->m_leftTopPos=leftTop;
 }
@@ -1161,14 +1161,14 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
   float offset[4];
   for (int i = 0; i < 4; i++)
     offset[i] = (float) input->readLong(2);
-  pict.m_decal = MWAWBox2f(Vec2f(offset[0],offset[1]), Vec2f(offset[3],offset[2]));
-  pict.m_finalDecal = Vec2f(float(offset[0]+offset[3]), float(offset[1]+offset[2]));
+  pict.m_decal = MWAWBox2f(MWAWVec2f(offset[0],offset[1]), MWAWVec2f(offset[3],offset[2]));
+  pict.m_finalDecal = MWAWVec2f(float(offset[0]+offset[3]), float(offset[1]+offset[2]));
 
   // the two point which allows to create the form ( in general the bdbox)
   float dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = float(input->readLong(4))/65536.f;
-  pict.m_box=MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+  pict.m_box=MWAWBox2f(MWAWVec2f(dim[0],dim[1]),MWAWVec2f(dim[2],dim[3]));
 
   int flags = (int) input->readLong(1);
   // 2: rotations, 1:lock ?, 0: nothing, other ?
@@ -1269,19 +1269,19 @@ bool MsWksGraph::readGradient(MsWksGraph::Style &style)
     style.m_gradientStopList[1]=MWAWGraphicStyle::GradientStop(1.0, style.m_baseLineColor);
     switch (subType) {
     case 9:
-      style.m_gradientPercentCenter=Vec2f(0.25f,0.25f);
+      style.m_gradientPercentCenter=MWAWVec2f(0.25f,0.25f);
       break;
     case 10:
-      style.m_gradientPercentCenter=Vec2f(0.25f,0.75f);
+      style.m_gradientPercentCenter=MWAWVec2f(0.25f,0.75f);
       break;
     case 11:
-      style.m_gradientPercentCenter=Vec2f(0.75f,0.75f);
+      style.m_gradientPercentCenter=MWAWVec2f(0.75f,0.75f);
       break;
     case 12:
-      style.m_gradientPercentCenter=Vec2f(1.f,1.f);
+      style.m_gradientPercentCenter=MWAWVec2f(1.f,1.f);
       break;
     case 13:
-      style.m_gradientPercentCenter=Vec2f(0.f,0.f);
+      style.m_gradientPercentCenter=MWAWVec2f(0.f,0.f);
       break;
     default:
       f << "#subType=" << subType << ",";
@@ -1423,7 +1423,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
       float dim[4];
       for (int i = 0; i < 4; i++)
         dim[i] = float(input->readLong(4))/65536.f;
-      MWAWBox2f box(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+      MWAWBox2f box(MWAWVec2f(dim[1], dim[0]), MWAWVec2f(dim[3], dim[2]));
       f << "bdbox2=" << box << ",";
       break;
     }
@@ -1465,7 +1465,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
         sz = bdbox.size().x()/2.f;
       if (bdbox.size().y() > 0 && bdbox.size().y() < 2*sz)
         sz = bdbox.size().y()/2.f;
-      form->m_shape.m_cornerWidth=Vec2f(sz,sz);
+      form->m_shape.m_cornerWidth=MWAWVec2f(sz,sz);
     }
     break;
   }
@@ -1478,8 +1478,8 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     float dim[4]; // real Bdbox
     for (int i = 0; i < 4; i++)
       dim[i] = (float) input->readLong(2);
-    MWAWBox2f realBox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
-    form->m_shape=MWAWGraphicShape::arc(realBox,pict.m_box,Vec2f(450.f-angl2,450.f-angle));
+    MWAWBox2f realBox(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
+    form->m_shape=MWAWGraphicShape::arc(realBox,pict.m_box,MWAWVec2f(450.f-angl2,450.f-angle));
     form->m_box = realBox;
     break;
   }
@@ -1496,11 +1496,11 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     if (!input->checkPosition(input->tell()+8*numPt))
       return -1;
     f << std::hex << "ptr2=" << ptr << std::dec << ",";
-    std::vector<Vec2f> vertices;
+    std::vector<MWAWVec2f> vertices;
     for (int i = 0; i < numPt; i++) {
       float x = float(input->readLong(4))/65336.f;
       float y = float(input->readLong(4))/65336.f;
-      vertices.push_back(Vec2f(x,y));
+      vertices.push_back(MWAWVec2f(x,y));
     }
     if (!smooth || numPt <= 2) {
       form->m_shape=MWAWGraphicShape::polygon(pict.m_box);
@@ -1510,7 +1510,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     form->m_shape=MWAWGraphicShape::path(pict.m_box);
     form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('M', vertices[0]));
 
-    Vec2f middle=0.5f*(vertices[1]+vertices[0]);
+    MWAWVec2f middle=0.5f*(vertices[1]+vertices[0]);
     form->m_shape.m_path.push_back(MWAWGraphicShape::PathData('L', middle));
     for (size_t pt=1; pt+1 < size_t(numPt); ++pt) {
       middle=0.5f*(vertices[pt+1]+vertices[pt]);
@@ -1608,7 +1608,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     int dim[2];
     for (int i = 0; i < 2; i++)
       dim[i] = (int) input->readLong(4);
-    ole->m_dim = Vec2i(dim[0], dim[1]);
+    ole->m_dim = MWAWVec2i(dim[0], dim[1]);
     val = (int) input->readULong(2); // always 0x4f4d ?
     f << "g0=" << std::hex << val << std::dec << ",";
     ole->m_oleId=(int) input->readULong(4);
@@ -1850,7 +1850,7 @@ void MsWksGraph::computePositions(int zoneId, std::vector<int> &linesH, std::vec
       }
       else
         h = linesH[(size_t) zone->m_line];
-      zone->m_finalDecal = Vec2f(0, float(h));
+      zone->m_finalDecal = MWAWVec2f(0, float(h));
     }
     if (zone->m_page < 0 && (isSpreadsheet || zone->m_page != -2)) {
       float h = zone->m_finalDecal.y();
@@ -1903,9 +1903,9 @@ int MsWksGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
   int dim[4]; // pictbox
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
-  pict->m_box = MWAWBox2f(Vec2f(float(dim[1]), float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+  pict->m_box = MWAWBox2f(MWAWVec2f(float(dim[1]), float(dim[0])), MWAWVec2f(float(dim[3]),float(dim[2])));
 
-  Vec2i pictMin = pict->m_box.min(), pictSize = pict->m_box.size();
+  MWAWVec2i pictMin = pict->m_box.min(), pictSize = pict->m_box.size();
   if (pictSize.x() < 0 || pictSize.y() < 0) return -1;
 
   if (pictSize.x() > 3000 || pictSize.y() > 3000 ||
@@ -2204,7 +2204,7 @@ void MsWksGraph::sendGroup(int id, MWAWPosition const &pos)
       return;
     }
     MWAWPosition childPos(pos);
-    childPos.setSize(Vec2f(0,0));
+    childPos.setSize(MWAWVec2f(0,0));
     sendGroupChild(id, childPos);
     return;
   }
@@ -2250,7 +2250,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
       canMerge=false;
     else if (child.type()==MsWksGraphInternal::Zone::Shape || child.type()==MsWksGraphInternal::Zone::Text) {
       MWAWBox2f origBdBox=child.getLocalBox();
-      Vec2f decal = child.m_decal[0] + child.m_decal[1];
+      MWAWVec2f decal = child.m_decal[0] + child.m_decal[1];
       MWAWBox2f localBdBox(origBdBox[0]+decal, origBdBox[1]+decal);
       if (numDataToMerge == 0)
         partialBdBox=localBdBox;
@@ -2284,7 +2284,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
           continue;
         MsWksGraphInternal::Zone const &localChild=*(m_state->m_zonesList[size_t(localCId)]);
         MWAWBox2f origBdBox=localChild.getLocalBox(false);
-        Vec2f decal=localChild.m_decal[0]+localChild.m_decal[1];
+        MWAWVec2f decal=localChild.m_decal[0]+localChild.m_decal[1];
         MWAWPosition pictPos(origBdBox[0]+decal, origBdBox.size(), librevenge::RVNG_POINT);
         pictPos.m_anchorTo=MWAWPosition::Page;
         pictPos.m_wrapping =  MWAWPosition::WBackground;
@@ -2368,7 +2368,7 @@ void MsWksGraph::sendGroup(MsWksGraphInternal::GroupZone const &group, MWAWGraph
     if (cId < 0 || cId >= numZones || !m_state->m_zonesList[size_t(cId)])
       continue;
     MsWksGraphInternal::Zone const &child=*(m_state->m_zonesList[size_t(cId)]);
-    Vec2f decal=child.m_decal[0]+child.m_decal[1];
+    MWAWVec2f decal=child.m_decal[0]+child.m_decal[1];
     MWAWPosition pictPos(child.m_box[0]+decal, child.m_box.size(), librevenge::RVNG_POINT);
     pictPos.m_anchorTo=MWAWPosition::Page;
     pictPos.m_wrapping =  MWAWPosition::WBackground;
@@ -2401,8 +2401,8 @@ shared_ptr<MsWksGraphInternal::GroupZone> MsWksGraph::readGroup(MsWksGraphIntern
   input->seek(header.m_dataPos, librevenge::RVNG_SEEK_SET);
   float dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(4);
-  group->m_box=MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
-  group->m_finalDecal=Vec2f(0,0);
+  group->m_box=MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
+  group->m_finalDecal=MWAWVec2f(0,0);
   long ptr[2];
   for (int i = 0; i < 2; i++)
     ptr[i] = (long) input->readULong(4);
@@ -2719,7 +2719,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   switch (zone->type()) {
   case MsWksGraphInternal::Zone::Text: {
     MsWksGraphInternal::TextBox &textbox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
-    MWAWBox2f box(Vec2f(0,0),textbox.m_box.size());
+    MWAWBox2f box(MWAWVec2f(0,0),textbox.m_box.size());
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBox, id));
     // a textbox can not have border
@@ -2877,7 +2877,7 @@ void MsWksGraph::sendObjects(MsWksGraph::SendData const &what)
           what.m_anchor == MWAWPosition::CharBaseLine) {
         shared_ptr<MsWksGraphInternal::SubDocument> subdoc
         (new MsWksGraphInternal::SubDocument(*this, m_document.getInput(), MsWksGraphInternal::SubDocument::RBILZone, what.m_id));
-        MWAWPosition pictPos(Vec2f(0,0), what.m_size, librevenge::RVNG_POINT);
+        MWAWPosition pictPos(MWAWVec2f(0,0), what.m_size, librevenge::RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char,
                                     MWAWPosition::XLeft, MWAWPosition::YTop);
         pictPos.m_wrapping =  MWAWPosition::WBackground;

@@ -99,14 +99,14 @@ protected:
   bool readParagraph(long fPos, MsWrd1ParserInternal::Paragraph &para);
 
   /** try to read the footnote correspondance ( zone2 ) */
-  bool readFootnoteCorrespondance(Vec2i limit);
+  bool readFootnoteCorrespondance(MWAWVec2i limit);
 
   /** try to read the document info (zone 3) */
-  bool readDocInfo(Vec2i limit);
+  bool readDocInfo(MWAWVec2i limit);
   /** try to read the list of zones: separator between text and footnote? (zone 4) */
-  bool readZones(Vec2i limit);
+  bool readZones(MWAWVec2i limit);
   /** try to read the page break (zone 5) */
-  bool readPageBreak(Vec2i limit);
+  bool readPageBreak(MWAWVec2i limit);
 
   /** prepare the data: separate header/footer zones to the main stream... */
   bool prepareTextZones();
@@ -118,7 +118,7 @@ protected:
   /** shorten an entry if the last character is EOL */
   void removeLastCharIfEOL(MWAWEntry &entry);
   /** read the two first zones (char and paragraph) */
-  bool readPLC(Vec2i limits, int wh);
+  bool readPLC(MWAWVec2i limits, int wh);
 
   /** send the ruler properties */
   void setProperty(MsWrd1ParserInternal::Paragraph const &para);

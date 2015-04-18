@@ -159,7 +159,7 @@ bool LightWayTxtGraph::sendPICT(MWAWEntry const &entry)
     return false;
 
   MWAWBox2f bdBox=pict->getBdBox();
-  MWAWPosition pictPos(Vec2f(0,0), bdBox.size(), librevenge::RVNG_POINT);
+  MWAWPosition pictPos(MWAWVec2f(0,0), bdBox.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   librevenge::RVNGBinaryData pictData;
@@ -195,7 +195,7 @@ bool LightWayTxtGraph::sendJPEG(MWAWEntry const &entry)
   input->readDataBlock(entry.length(), data);
   MWAWPosition pictPos;
   pictPos.setRelativePosition(MWAWPosition::Char);
-  Vec2i sz;
+  MWAWVec2i sz;
   if (findJPEGSize(data,sz)) {
     pictPos.setSize(sz);
     pictPos.setUnit(librevenge::RVNG_POINT);
@@ -215,9 +215,9 @@ bool LightWayTxtGraph::sendJPEG(MWAWEntry const &entry)
   return true;
 }
 
-bool LightWayTxtGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2i &sz)
+bool LightWayTxtGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, MWAWVec2i &sz)
 {
-  sz = Vec2i(100,100);
+  sz = MWAWVec2i(100,100);
   MWAWInputStreamPtr input=MWAWInputStream::get(data, false);
   if (!input) {
     MWAW_DEBUG_MSG(("LightWayTxtGraph::findJPEGSize: can not find the stream\n"));
@@ -251,7 +251,7 @@ bool LightWayTxtGraph::findJPEGSize(librevenge::RVNGBinaryData const &data, Vec2
     int dim[2];
     for (int i = 0; i < 2; i++)
       dim[i] = (int) input->readULong(2);
-    sz = Vec2i(dim[1],dim[0]);
+    sz = MWAWVec2i(dim[1],dim[0]);
     return true;
   }
   return false;

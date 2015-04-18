@@ -470,7 +470,7 @@ bool TeachTxtParser::sendPicture(int id)
   }
   pictInput->seek(0,librevenge::RVNG_SEEK_SET);
   shared_ptr<MWAWPict> thePict(MWAWPictData::get(pictInput, dataSz));
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),box.size(), librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),box.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Paragraph, MWAWPosition::XCenter);
   pictPos.m_wrapping = MWAWPosition::WRunThrough;
   if (thePict) {

@@ -524,7 +524,7 @@ bool ActaText::sendGraphic(ActaTextInternal::Topic const &topic)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   input->readDataBlock(dataSz, file);
 
-  MWAWPosition posi(Vec2f(0,0), box.size(), librevenge::RVNG_POINT);
+  MWAWPosition posi(MWAWVec2f(0,0), box.size(), librevenge::RVNG_POINT);
   posi.setRelativePosition(MWAWPosition::Char);
   listener->insertPicture(posi, file, "image/pict");
   listener->insertEOL();

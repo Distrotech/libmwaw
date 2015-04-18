@@ -166,7 +166,7 @@ struct Token {
   {
     o << "bdbox=" << tkn.m_box << ",";
     if (tkn.m_graphicZone >= 0) o << "zId=" << tkn.m_graphicZone << ",";
-    Vec2i tknSize = tkn.m_box.size();
+    MWAWVec2i tknSize = tkn.m_box.size();
     for (int i = 0; i < 2; i++) {
       if (tknSize == tkn.m_pos[i]) continue;
       o << "pos" << i << "=" << tkn.m_pos[i] << ",";
@@ -189,7 +189,7 @@ struct Token {
   MWAWBox2i m_box;
 
   //! two positions ( seen relative to the RB point)
-  Vec2i m_pos[2];
+  MWAWVec2i m_pos[2];
 
   //! some unknown values
   int m_values[19];
@@ -212,7 +212,7 @@ struct TableData {
   void updateCell(MWAWCell &cell) const
   {
     // as the cells can overlap a little, we build a new box
-    cell.setBdBox(MWAWBox2f(m_box.min(), m_box.max()-Vec2i(1,1)));
+    cell.setBdBox(MWAWBox2f(m_box.min(), m_box.max()-MWAWVec2i(1,1)));
     cell.setBackgroundColor(m_color);
     for (int i=0; i<4; i++) {
       MWAWBorder border;
@@ -1598,14 +1598,14 @@ bool WriteNowText::readToken(MWAWInputStream &input, WriteNowTextInternal::Token
   int dim[4];
   for (int i=0; i < 4; i++)
     dim[i] = (int) input.readLong(2);
-  token.m_box = MWAWBox2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  token.m_box = MWAWBox2i(MWAWVec2i(dim[1], dim[0]), MWAWVec2i(dim[3], dim[2]));
   int actVal = 0;
   for (int st = 0; st < 2; st++) {
     int dim0 = (int) input.readLong(2);
     token.m_values[actVal++] = (int) input.readLong(2); // always 0
     token.m_values[actVal++] = (int) input.readLong(2); // always 0
     int dim1 = (int) input.readLong(2);
-    token.m_pos[st] = Vec2i(dim1, -dim0);
+    token.m_pos[st] = MWAWVec2i(dim1, -dim0);
   }
   /*
     f0/f2:  0 or 1 ( very similar)
@@ -1633,8 +1633,8 @@ bool WriteNowText::readTokenV2(MWAWInputStream &input, WriteNowTextInternal::Tok
   int dim[2];
   for (int i=0; i < 2; i++)
     dim[i] = (int) input.readLong(2);
-  Vec2i box(dim[1], dim[0]);
-  token.m_box=MWAWBox2i(Vec2i(0,0), box);
+  MWAWVec2i box(dim[1], dim[0]);
+  token.m_box=MWAWBox2i(MWAWVec2i(0,0), box);
   // we need to get the size, so...
   while (!input.isEnd())
     input.seek(0x100, librevenge::RVNG_SEEK_CUR);
@@ -1654,11 +1654,11 @@ bool WriteNowText::readTokenV2(MWAWInputStream &input, WriteNowTextInternal::Tok
   std::string type;
   MWAWPosition pictPos;
   if (box.x() > 0 && box.y() > 0) {
-    pictPos=MWAWPosition(Vec2f(0,0),box, librevenge::RVNG_POINT);
+    pictPos=MWAWPosition(MWAWVec2f(0,0),box, librevenge::RVNG_POINT);
     pictPos.setNaturalSize(pict->getBdBox().size());
   }
   else
-    pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), librevenge::RVNG_POINT);
+    pictPos=MWAWPosition(MWAWVec2f(0,0),pict->getBdBox().size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 
   if (pict->getBinary(data,type))
@@ -1709,7 +1709,7 @@ bool WriteNowText::readTable(MWAWInputStream &input, WriteNowTextInternal::Table
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input.readLong(2);
-  table.m_box = MWAWBox2i(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  table.m_box = MWAWBox2i(MWAWVec2i(dim[1], dim[0]), MWAWVec2i(dim[3], dim[2]));
   table.m_values[actVal++] = (int) input.readLong(2);
 
   return true;

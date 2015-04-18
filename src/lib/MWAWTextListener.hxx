@@ -195,7 +195,7 @@ public:
   /** close a cell */
   void closeTableCell();
   /** add empty cell */
-  void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1));
+  void addEmptyTableCell(MWAWVec2i const &pos, MWAWVec2i span=MWAWVec2i(1,1));
 
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */

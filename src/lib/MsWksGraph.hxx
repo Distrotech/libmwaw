@@ -90,7 +90,7 @@ public:
   virtual ~MsWksGraph();
 
   //! define the page left top dimension in point
-  void setPageLeftTop(Vec2f const &leftTop);
+  void setPageLeftTop(MWAWVec2f const &leftTop);
 
   /** returns the file version */
   int version() const;
@@ -120,7 +120,7 @@ public:
     /** the page ( used if anchor==page) */
     int m_page;
     /** the size of the data ( used by rbil ) */
-    Vec2i m_size;
+    MWAWVec2i m_size;
   };
   /** sends all the object of a page, frame, ...  */
   void sendObjects(SendData const &what);

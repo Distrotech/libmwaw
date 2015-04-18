@@ -81,7 +81,7 @@ struct Gradient {
   //! the gradient angle
   float m_angle;
   //! the gradient center
-  Vec2f m_percentCenter;
+  MWAWVec2f m_percentCenter;
   //! extra data
   std::string m_extra;
 };
@@ -122,7 +122,7 @@ std::ostream &operator<<(std::ostream &o, Gradient const &grad)
       o << "[" << grad.m_stopList[s] << "],";
     o << "],";
   }
-  if (grad.m_percentCenter != Vec2f(0.5f,0.5f)) o << "center=" << grad.m_percentCenter << ",";
+  if (grad.m_percentCenter != MWAWVec2f(0.5f,0.5f)) o << "center=" << grad.m_percentCenter << ",";
   o << grad.m_extra;
   return o;
 }
@@ -147,7 +147,7 @@ struct State {
   //! init the pens list
   void initPens();
   //! the document size (in point)
-  Vec2f m_documentSize;
+  MWAWVec2f m_documentSize;
   //! the number of zones
   int m_numStyleZones[6];
   //! the number of color
@@ -263,7 +263,7 @@ void State::initBWPatterns()
       0x7777,0x8f8f,0x7777,0xf8f8,
     };
     MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     pat.m_data.resize(8);
     pat.m_colors[0]=MWAWColor::white();
     pat.m_colors[1]=MWAWColor::black();
@@ -841,7 +841,7 @@ bool MacDrawProStyleManager::readPens(MWAWEntry const &entry, bool inRsrc)
     if (!inRsrc) {
       int dim[2];
       for (int j=0; j<2; ++j) dim[j]=(int) input->readULong(2);
-      f << "pen=" << Vec2i(dim[1],dim[0]) << ",";
+      f << "pen=" << MWAWVec2i(dim[1],dim[0]) << ",";
       m_state->m_penSizeList.push_back(float(dim[0]+dim[1])/2.f);
     }
     else {
@@ -1322,19 +1322,19 @@ bool MacDrawProStyleManager::readDocumentInfo(MWAWEntry const &entry)
   if (dim[0]||dim[1]) f << "pos0?=" << dim[0] << "x" << dim[1] << ",";
   float fDim[2];
   for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  m_state->m_documentSize=Vec2f(fDim[0],fDim[1]);
+  m_state->m_documentSize=MWAWVec2f(fDim[0],fDim[1]);
   f << "document[size]=" << m_state->m_documentSize << ",";
   val=(int) input->readLong(2); // 0|1
   if (val) f << "f5=" << val << ",";
   for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  f << "pos1?=" << Vec2f(fDim[0],fDim[1]) << ",";
+  f << "pos1?=" << MWAWVec2f(fDim[0],fDim[1]) << ",";
   for (int i=0; i<4; ++i) { // always 0?
     val=(int) input->readLong(2);
     if (val)
       f << "g" << i << "=" << val << ",";
   }
   for (int i=0; i<2; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-  f << "page[size]=" << Vec2f(fDim[1],fDim[0]) << ",";
+  f << "page[size]=" << MWAWVec2f(fDim[1],fDim[0]) << ",";
 
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
@@ -1499,7 +1499,7 @@ bool MacDrawProStyleManager::readBWPatterns(MWAWEntry const &entry)
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   MWAWGraphicStyle::Pattern pat;
-  pat.m_dim=Vec2i(8,8);
+  pat.m_dim=MWAWVec2i(8,8);
   pat.m_data.resize(8);
   pat.m_colors[0]=MWAWColor::white();
   pat.m_colors[1]=MWAWColor::black();
@@ -1562,7 +1562,7 @@ bool MacDrawProStyleManager::readColorPatterns(MWAWEntry const &entry)
   int numColors=(int)m_state->m_colorList.size();
   for (int i=0; i<N; ++i) {
     pos=input->tell();
-    MWAWPictBitmapIndexed bitmap(Vec2i(8,8));
+    MWAWPictBitmapIndexed bitmap(MWAWVec2i(8,8));
     bitmap.setColors(m_state->m_colorList);
 
     f.str("");
@@ -1599,11 +1599,11 @@ bool MacDrawProStyleManager::readColorPatterns(MWAWEntry const &entry)
     std::string type;
     if (bitmap.getBinary(binary,type)) {
       pat=MWAWGraphicStyle::Pattern
-          (Vec2i(8,8), binary, type,MWAWColor((unsigned char)(sumColors[0]/64),(unsigned char)(sumColors[1]/64),(unsigned char)(sumColors[2]/64)));
+          (MWAWVec2i(8,8), binary, type,MWAWColor((unsigned char)(sumColors[0]/64),(unsigned char)(sumColors[1]/64),(unsigned char)(sumColors[2]/64)));
     }
     else {
       MWAW_DEBUG_MSG(("MacDrawProStyleManager::readColorPatterns: oops can not create the binary data\n"));
-      pat.m_dim=Vec2i(8,8);
+      pat.m_dim=MWAWVec2i(8,8);
       pat.m_data.resize(8, 0);
       pat.m_colors[0]=MWAWColor::white();
       pat.m_colors[1]=MWAWColor::black();
@@ -2229,7 +2229,7 @@ bool MacDrawProStyleManager::readPatternMap(MWAWEntry const &entry, int N, int f
       if (val) f << "f" << j+1 << "=" << val << ",";
     }
     MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     pat.m_data.resize(8);
     pat.m_colors[0]=MWAWColor::white();
     pat.m_colors[1]=MWAWColor::black();
@@ -2440,7 +2440,7 @@ bool MacDrawProStyleManager::readGradientMap(MWAWEntry const &entry, int N, int 
       if (type==2) gradient.m_type = MWAWGraphicStyle::G_Rectangular;
       int dim[4]; // square which defined the center rectangle
       for (int j=0; j<4; ++j) dim[j]=(int) input->readULong(1);
-      gradient.m_percentCenter=Vec2f(float(dim[1]+dim[3])/200.f, float(dim[0]+dim[2])/200.f);
+      gradient.m_percentCenter=MWAWVec2f(float(dim[1]+dim[3])/200.f, float(dim[0]+dim[2])/200.f);
       break;
     }
     default:
@@ -2880,7 +2880,7 @@ bool MacDrawProStyleManager::readPreferences1(MWAWEntry const &entry)
     int dim[4];
     for (int j=0; j<4; ++j) dim[j]=(int) input->readLong(2);
     if (dim[0]||dim[1]||dim[2]||dim[3])
-      f << "dim" << i << "=" << MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2])) << ",";
+      f << "dim" << i << "=" << MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2])) << ",";
   }
   for (int i=0; i<4; ++i) { // always 0 expected f5=2
     val=(int) input->readLong(2);

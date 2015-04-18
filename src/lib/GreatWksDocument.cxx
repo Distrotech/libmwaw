@@ -294,20 +294,20 @@ bool GreatWksDocument::readPrintInfo(MWAWEntry const &entry)
   f << "Entries(PrintInfo):"<< info;
   entry.setParsed(true);
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -536,7 +536,7 @@ bool GreatWksDocument::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 // read a formula
 ////////////////////////////////////////////////////////////
-bool GreatWksDocument::readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
+bool GreatWksDocument::readCellInFormula(MWAWVec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
 {
   MWAWInputStreamPtr input=m_parserState->m_input;
   instr=MWAWCellContent::FormulaInstruction();
@@ -560,8 +560,8 @@ bool GreatWksDocument::readCellInFormula(Vec2i const &pos, MWAWCellContent::Form
     MWAW_DEBUG_MSG(("GreatWksDocument::readCellInFormula: can not read cell position\n"));
     return false;
   }
-  instr.m_position[0]=Vec2i(cPos[0]-1,cPos[1]-1);
-  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  instr.m_position[0]=MWAWVec2i(cPos[0]-1,cPos[1]-1);
+  instr.m_positionRelative[0]=MWAWVec2b(!absolute[0],!absolute[1]);
   return true;
 }
 
@@ -622,7 +622,7 @@ static Functions const s_listFunctions[] = {
 };
 }
 
-bool GreatWksDocument::readFormula(Vec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+bool GreatWksDocument::readFormula(MWAWVec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
 {
   MWAWInputStreamPtr input=m_parserState->m_input;
   libmwaw::DebugStream f;
@@ -687,7 +687,7 @@ bool GreatWksDocument::readFormula(Vec2i const &cPos, long endPos, std::vector<M
       if (!ok) break;
       // we have not sufficient information to fill the position, let GreatWksDBParser fills it
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Cell;
-      instr.m_positionRelative[0]=Vec2b(true,true);
+      instr.m_positionRelative[0]=MWAWVec2b(true,true);
       instr.m_content=text;
       break;
     }

@@ -178,7 +178,7 @@ bool HanMacWrdKParser::canSendTextAsGraphic(long id, long subId)
 
 bool HanMacWrdKParser::sendZone(long zId)
 {
-  MWAWPosition pos(Vec2i(0,0), Vec2i(0,0), librevenge::RVNG_POINT);
+  MWAWPosition pos(MWAWVec2i(0,0), MWAWVec2i(0,0), librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   return m_graphParser->sendFrame(zId, pos);
 }
@@ -191,10 +191,10 @@ bool HanMacWrdKParser::getColor(int colId, int patternId, MWAWColor &color) cons
 ////////////////////////////////////////////////////////////
 // position and height
 ////////////////////////////////////////////////////////////
-Vec2f HanMacWrdKParser::getPageLeftTop() const
+MWAWVec2f HanMacWrdKParser::getPageLeftTop() const
 {
-  return Vec2f(float(getPageSpan().getMarginLeft()),
-               float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
+  return MWAWVec2f(float(getPageSpan().getMarginLeft()),
+                   float(getPageSpan().getMarginTop()+m_state->m_headerHeight/72.0));
 }
 
 ////////////////////////////////////////////////////////////
@@ -583,27 +583,27 @@ bool HanMacWrdKParser::readPrintInfo(HanMacWrdKZone &zone)
     return false;
   }
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
 
   bool useDocInfo = (dim[3]-dim[1]>margins[2]+margins[0]) &&
                     (dim[2]-dim[0]>margins[2]+margins[0]);
   bool usePrintInfo = pageSize.x() > 0 && pageSize.y() > 0 &&
                       paperSize.x() > 0 && paperSize.y() > 0;
 
-  Vec2f lTopMargin(margins[0],margins[1]), rBotMargin(margins[2],margins[3]);
+  MWAWVec2f lTopMargin(margins[0],margins[1]), rBotMargin(margins[2],margins[3]);
   // define margin from print info
   if (useDocInfo)
-    paperSize = Vec2i(dim[3]-dim[1],dim[2]-dim[0]);
+    paperSize = MWAWVec2i(dim[3]-dim[1],dim[2]-dim[0]);
   else if (usePrintInfo) {
-    lTopMargin= Vec2f(-float(info.paper().pos(0)[0]), -float(info.paper().pos(0)[1]));
+    lTopMargin= MWAWVec2f(-float(info.paper().pos(0)[0]), -float(info.paper().pos(0)[1]));
     rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
     // move margin left | top
     float decalX = lTopMargin.x() > 14 ? 14 : 0;
     float decalY = lTopMargin.y() > 14 ? 14 : 0;
-    lTopMargin -= Vec2f(decalX, decalY);
-    rBotMargin += Vec2f(decalX, decalY);
+    lTopMargin -= MWAWVec2f(decalX, decalY);
+    rBotMargin += MWAWVec2f(decalX, decalY);
   }
 
   // decrease right | bottom

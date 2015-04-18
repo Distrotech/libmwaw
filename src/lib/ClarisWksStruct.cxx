@@ -91,7 +91,7 @@ void DSET::removeChild(int cId, bool normalChild)
 }
 
 
-void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numHorizontalPages)
+void DSET::updateChildPositions(MWAWVec2f const &pageDim, float formLength, int numHorizontalPages)
 {
   float const &textWidth=pageDim[0];
   float textHeight=pageDim[1];
@@ -115,8 +115,8 @@ void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numH
     if (pageY < 0)
       continue;
     if (++pageY > 1) {
-      Vec2f orig = child.m_box[0];
-      Vec2f sz = child.m_box.size();
+      MWAWVec2f orig = child.m_box[0];
+      MWAWVec2f sz = child.m_box.size();
       orig[1]-=float(pageY-1)*textHeight;
       if (orig[1] < 0) {
         if (orig[1]>=-textHeight*0.1f)
@@ -147,8 +147,8 @@ void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numH
     int pageX=1;
     if (numHorizontalPages>1) {
       pageX=int(float(childBdBox[1].x())/textWidth);
-      Vec2f orig = child.m_box[0];
-      Vec2f sz = child.m_box.size();
+      MWAWVec2f orig = child.m_box[0];
+      MWAWVec2f sz = child.m_box.size();
       orig[0]-=float(pageX)*textWidth;
       if (orig[0] < 0) {
         if (orig[0]>=-textWidth*0.1f)

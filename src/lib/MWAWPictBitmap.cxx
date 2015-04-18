@@ -47,7 +47,7 @@
 template <class T>
 bool getPBMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, T white)
 {
-  Vec2i sz = orig.size();
+  MWAWVec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
 
   data.clear();
@@ -77,7 +77,7 @@ bool getPBMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryDa
 template <class T>
 bool getPPMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryData &data, std::vector<MWAWColor> const &indexedColor)
 {
-  Vec2i sz = orig.size();
+  MWAWVec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
 
   int nColors = int(indexedColor.size());
@@ -110,7 +110,7 @@ namespace MWAWPictBitmapInternal
 //! Internal: helper function to create a PPM for a color bitmap
 static bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
-  Vec2i sz = orig.size();
+  MWAWVec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
 
   data.clear();
@@ -150,7 +150,7 @@ static void writeU32(unsigned char *buffer, unsigned &position, const unsigned v
 //! Internal: helper function to create a BMP for a color bitmap (freely inspired from libpwg::WPGBitmap.cpp)
 static bool getBMPData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
-  Vec2i sz = orig.size();
+  MWAWVec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
 
   unsigned tmpPixelSize = unsigned(sz[0]*sz[1]);

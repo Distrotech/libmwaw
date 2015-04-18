@@ -139,7 +139,7 @@ protected:
   //! tries to send a layer
   bool send(MacDrawProParserInternal::Layer const &layer);
   //! tries to send a shape
-  bool send(MacDrawProParserInternal::Shape const &shape, Vec2f const &orig);
+  bool send(MacDrawProParserInternal::Shape const &shape, MWAWVec2f const &orig);
   //! tries to send a bitmap to the listener
   bool sendBitmap(MacDrawProParserInternal::Shape const &shape, MWAWPosition const &pos);
   //! tries to send a text zone to the listener

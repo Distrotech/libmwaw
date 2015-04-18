@@ -54,12 +54,12 @@ struct PrinterInfoData;
 //! the Apple© rectangle : Rect
 struct PrinterRect {
   //! returns the size
-  Vec2i size() const
+  MWAWVec2i size() const
   {
     return m_pos[1]-m_pos[0];
   }
   //! returns the position ( 0: leftTop, 1:rightBottom )
-  Vec2i pos(int i) const
+  MWAWVec2i pos(int i) const
   {
     return m_pos[i];
   }
@@ -72,11 +72,11 @@ struct PrinterRect {
   }
 
   //! read value in a file, knowing the resolution
-  bool read(MWAWInputStreamPtr input, Vec2i const &res);
+  bool read(MWAWInputStreamPtr input, MWAWVec2i const &res);
 
 protected:
   //! the LT and RB positions
-  Vec2i m_pos[2];
+  MWAWVec2i m_pos[2];
 };
 
 //! the Apple© printer information : TPrint

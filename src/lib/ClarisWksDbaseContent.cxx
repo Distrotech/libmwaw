@@ -79,7 +79,7 @@ void ClarisWksDbaseContent::setDatabaseFormats(std::vector<ClarisWksStyleManager
   m_dbFormatList=format;
 }
 
-bool ClarisWksDbaseContent::getExtrema(Vec2i &min, Vec2i &max) const
+bool ClarisWksDbaseContent::getExtrema(MWAWVec2i &min, MWAWVec2i &max) const
 {
   if (m_idColumnMap.empty())
     return false;
@@ -304,7 +304,7 @@ bool ClarisWksDbaseContent::readColumn(int c)
   bool ok=true;
   for (size_t i=0; i < listIds.size(); ++i) {
     pos=input->tell();
-    if (!listIds[i] || readRecordList(Vec2i(c,64*int(i)), col))
+    if (!listIds[i] || readRecordList(MWAWVec2i(c,64*int(i)), col))
       continue;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     ok=false;
@@ -315,7 +315,7 @@ bool ClarisWksDbaseContent::readColumn(int c)
   return ok;
 }
 
-bool ClarisWksDbaseContent::readRecordList(Vec2i const &where, Column &col)
+bool ClarisWksDbaseContent::readRecordList(MWAWVec2i const &where, Column &col)
 {
   if (!m_parserState) return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
@@ -373,7 +373,7 @@ bool ClarisWksDbaseContent::readRecordList(Vec2i const &where, Column &col)
   for (size_t i=0; i<64; ++i) {
     if (!ptrLists[i]) continue;
     Record record;
-    Vec2i wh(where[0],where[1]+(int) i);
+    MWAWVec2i wh(where[0],where[1]+(int) i);
     if ((m_isSpreadsheet && readRecordSS(wh, ptrLists[i], record)) ||
         (!m_isSpreadsheet && readRecordDB(wh, ptrLists[i], record))) {
       col.m_idRecordMap[wh[1]]=record;
@@ -394,7 +394,7 @@ bool ClarisWksDbaseContent::readRecordList(Vec2i const &where, Column &col)
   return true;
 }
 
-bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordSSV1(MWAWVec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
   record=ClarisWksDbaseContent::Record();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -684,7 +684,7 @@ bool ClarisWksDbaseContent::readRecordSSV1(Vec2i const &id, long pos, ClarisWksD
   return ok;
 }
 
-bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordSS(MWAWVec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
   if (m_version <= 3)
     return readRecordSSV1(id, pos, record);
@@ -931,7 +931,7 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   return true;
 }
 
-bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
+bool ClarisWksDbaseContent::readRecordDB(MWAWVec2i const &id, long pos, ClarisWksDbaseContent::Record &record)
 {
   record=ClarisWksDbaseContent::Record();
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
@@ -1029,7 +1029,7 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
   return true;
 }
 
-bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record &record) const
+bool ClarisWksDbaseContent::get(MWAWVec2i const &pos, ClarisWksDbaseContent::Record &record) const
 {
   std::map<int, Column>::const_iterator it=m_idColumnMap.find(pos[0]);
   if (it==m_idColumnMap.end()) return false;
@@ -1053,7 +1053,7 @@ bool ClarisWksDbaseContent::get(Vec2i const &pos, ClarisWksDbaseContent::Record 
   return true;
 }
 
-bool ClarisWksDbaseContent::send(Vec2i const &pos)
+bool ClarisWksDbaseContent::send(MWAWVec2i const &pos)
 {
   MWAWListenerPtr listener=m_parserState->getMainListener();
   if (!listener) {
@@ -1133,7 +1133,7 @@ void ClarisWksDbaseContent::send(double val, bool isNotANumber, ClarisWksStyleMa
 ////////////////////////////////////////////////////////////
 // formula
 ////////////////////////////////////////////////////////////
-bool ClarisWksDbaseContent::readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
+bool ClarisWksDbaseContent::readCellInFormula(MWAWVec2i const &pos, MWAWCellContent::FormulaInstruction &instr)
 {
   MWAWInputStreamPtr input=m_parserState->m_input;
   instr=MWAWCellContent::FormulaInstruction();
@@ -1166,8 +1166,8 @@ bool ClarisWksDbaseContent::readCellInFormula(Vec2i const &pos, MWAWCellContent:
     MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readCellInFormula: can not read cell position\n"));
     return false;
   }
-  instr.m_position[0]=Vec2i(cPos[0],cPos[1]);
-  instr.m_positionRelative[0]=Vec2b(!absolute[0],!absolute[1]);
+  instr.m_position[0]=MWAWVec2i(cPos[0],cPos[1]);
+  instr.m_positionRelative[0]=MWAWVec2b(!absolute[0],!absolute[1]);
   return true;
 }
 
@@ -1213,7 +1213,7 @@ static Operators const s_listOperators[] = {
 };
 }
 
-bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
+bool ClarisWksDbaseContent::readFormula(MWAWVec2i const &cPos, long endPos, std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error)
 {
   MWAWInputStreamPtr input=m_parserState->m_input;
   libmwaw::DebugStream f;
@@ -1396,7 +1396,7 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
 ////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////
-void ClarisWksDbaseContent::Record::updateFormulaCells(Vec2i const &removeDelta)
+void ClarisWksDbaseContent::Record::updateFormulaCells(MWAWVec2i const &removeDelta)
 {
   if (m_content.m_contentType!=MWAWCellContent::C_FORMULA)
     return;

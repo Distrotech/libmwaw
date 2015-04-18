@@ -80,7 +80,7 @@ protected:
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
 
   //! returns the page left top point ( in inches)
-  Vec2f getPageLeftTop() const;
+  MWAWVec2f getPageLeftTop() const;
   //! returns the number of column and the column separator (in point)
   bool getColumnInfo(int &numCols, int &colSep) const;
   //! adds a new page

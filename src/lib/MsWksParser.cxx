@@ -242,8 +242,8 @@ void MsWksParser::createDocument(librevenge::RVNGTextInterface *documentInterfac
   listen->startDocument();
   // time to send page information the graph parser and the text parser
   m_document->getGraphParser()->setPageLeftTop
-  (Vec2f(72.f*float(getPageSpan().getMarginLeft()),
-         72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
+  (MWAWVec2f(72.f*float(getPageSpan().getMarginLeft()),
+             72.f*float(getPageSpan().getMarginTop())+m_document->getHeaderFooterHeight(true)));
 }
 
 ////////////////////////////////////////////////////////////

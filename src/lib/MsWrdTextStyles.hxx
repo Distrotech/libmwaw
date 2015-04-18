@@ -106,7 +106,7 @@ protected:
       Returns a textstruct parag id or -1 (PRM) */
   int readPropertyModifier(bool &complex, std::string &extra);
   //! read the char/paragraph plc : type=0: char, type=1: parag
-  bool readPLC(MsWrdEntry &entry, int type, Vec2<long> const &fileLimit);
+  bool readPLC(MsWrdEntry &entry, int type, MWAWVec2<long> const &fileLimit);
 
   // section:
   //! return a section corresponding to an index

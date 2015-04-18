@@ -157,23 +157,23 @@ public:
   // position
 
   //! position  accessor
-  Vec2i const &position() const
+  MWAWVec2i const &position() const
   {
     return m_position;
   }
   //! set the cell positions :  0,0 -> A1, 0,1 -> A2
-  void setPosition(Vec2i posi)
+  void setPosition(MWAWVec2i posi)
   {
     m_position = posi;
   }
 
   //! returns the number of spanned cells
-  Vec2i const &numSpannedCells() const
+  MWAWVec2i const &numSpannedCells() const
   {
     return m_numberCellSpanned;
   }
-  //! sets the number of spanned cells : Vec2i(1,1) means 1 cellule
-  void setNumSpannedCells(Vec2i numSpanned)
+  //! sets the number of spanned cells : MWAWVec2i(1,1) means 1 cellule
+  void setNumSpannedCells(MWAWVec2i numSpanned)
   {
     m_numberCellSpanned=numSpanned;
   }
@@ -190,18 +190,18 @@ public:
   }
 
   //! bdbox size accessor
-  Vec2f const &bdSize() const
+  MWAWVec2f const &bdSize() const
   {
     return m_bdSize;
   }
   //! set the bdbox size(unit point)
-  void setBdSize(Vec2f sz)
+  void setBdSize(MWAWVec2f sz)
   {
     m_bdSize = sz;
   }
 
   //! return the name of a cell (given row and column) : 0,0 -> A1, 0,1 -> A2
-  static std::string getCellName(Vec2i const &pos, Vec2b const &absolute);
+  static std::string getCellName(MWAWVec2i const &pos, MWAWVec2b const &absolute);
 
   //! return the column name
   static std::string getColumnName(int col);
@@ -321,13 +321,13 @@ public:
   }
 protected:
   //! the cell row and column : 0,0 -> A1, 0,1 -> A2
-  Vec2i m_position;
+  MWAWVec2i m_position;
   //! the cell spanned : by default (1,1)
-  Vec2i m_numberCellSpanned;
+  MWAWVec2i m_numberCellSpanned;
   /** the cell bounding box (unit in point)*/
   MWAWBox2f m_bdBox;
   /** the cell bounding size : unit point */
-  Vec2f m_bdSize;
+  MWAWVec2f m_bdSize;
 
   //! the cell format
   Format m_format;
@@ -363,8 +363,8 @@ public:
     FormulaInstruction() : m_type(F_Text), m_content(""), m_longValue(0), m_doubleValue(0), m_sheet("")
     {
       for (int i=0; i<2; ++i) {
-        m_position[i]=Vec2i(0,0);
-        m_positionRelative[i]=Vec2b(false,false);
+        m_position[i]=MWAWVec2i(0,0);
+        m_positionRelative[i]=MWAWVec2b(false,false);
       }
     }
     /** returns a proplist corresponding to a instruction using a font converter to send the text */
@@ -380,9 +380,9 @@ public:
     //! value ( if type==F_Double )
     double m_doubleValue;
     //! cell position ( if type==F_Cell or F_CellList )
-    Vec2i m_position[2];
+    MWAWVec2i m_position[2];
     //! relative cell position ( if type==F_Cell or F_CellList )
-    Vec2b m_positionRelative[2];
+    MWAWVec2b m_positionRelative[2];
     //! the sheet name (if not empty)
     std::string m_sheet;
   };

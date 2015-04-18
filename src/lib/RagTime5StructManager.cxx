@@ -1618,7 +1618,7 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_DoubleList && child.m_doubleList.size()==2 && child.m_fileType==0x74040) {
-          m_gradientCenter=Vec2f((float) child.m_doubleList[0], (float) child.m_doubleList[1]);
+          m_gradientCenter=MWAWVec2f((float) child.m_doubleList[0], (float) child.m_doubleList[1]);
           continue;
         }
         MWAW_DEBUG_MSG(("RagTime5StructManager::GraphicStyle::read: find some unknown grad center block\n"));
@@ -1688,7 +1688,7 @@ bool RagTime5StructManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTim
       m_pattern.reset(new MWAWGraphicStyle::Pattern);
       m_pattern->m_colors[0]=MWAWColor::white();
       m_pattern->m_colors[1]=MWAWColor::black();
-      m_pattern->m_dim=Vec2i(8,8);
+      m_pattern->m_dim=MWAWVec2i(8,8);
       m_pattern->m_data.resize(8);
       for (size_t i=0; i<8; ++i)
         m_pattern->m_data[i]=(unsigned char) input->readULong(1);
@@ -1735,7 +1735,7 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::GraphicStyle co
   }
   if (style.m_gradientRotation<0 || style.m_gradientRotation>0)
     o << "rot[grad]=" << style.m_gradientRotation << ",";
-  if (style.m_gradientCenter!=Vec2f(0.5f,0.5f))
+  if (style.m_gradientCenter!=MWAWVec2f(0.5f,0.5f))
     o << "center[grad]=" << style.m_gradientCenter << ",";
   switch (style.m_position) {
   case 1:

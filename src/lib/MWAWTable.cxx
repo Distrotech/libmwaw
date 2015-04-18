@@ -181,15 +181,15 @@ void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
     MWAWCell const &cell=*(m_cellsList[c]);
     if (!cell.hasExtraLine())
       continue;
-    Vec2i const &pos=m_cellsList[c]->position();
-    Vec2i const &span=m_cellsList[c]->numSpannedCells();
+    MWAWVec2i const &pos=m_cellsList[c]->position();
+    MWAWVec2i const &span=m_cellsList[c]->numSpannedCells();
     if (span[0] <= 0 || span[1] <= 0 || pos[0]+span[0] > (int)nColumns ||
         pos[1]+span[1] > (int) nRows)
       continue;
     MWAWBox2f box;
-    box.setMin(Vec2f(columnsPos[size_t(pos[0])], rowsPos[size_t(pos[1])]));
-    box.setMax(Vec2f(columnsPos[size_t(pos[0]+span[0])],
-                     rowsPos[size_t(pos[1]+span[1])]));
+    box.setMin(MWAWVec2f(columnsPos[size_t(pos[0])], rowsPos[size_t(pos[1])]));
+    box.setMax(MWAWVec2f(columnsPos[size_t(pos[0]+span[0])],
+                         rowsPos[size_t(pos[1]+span[1])]));
 
     MWAWBorder const &border=cell.extraLineType();
     MWAWGraphicStyle pStyle;
@@ -201,9 +201,9 @@ void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
     lPos.m_wrapping=MWAWPosition::WForeground;
     lPos.setOrder(-1);
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line1)
-      listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,0), box.size()), pStyle);
+      listener->insertPicture(lPos, MWAWGraphicShape::line(MWAWVec2f(0,0), box.size()), pStyle);
     if (cell.extraLine()==MWAWCell::E_Cross || cell.extraLine()==MWAWCell::E_Line2)
-      listener->insertPicture(lPos, MWAWGraphicShape::line(Vec2f(0,box.size()[1]), Vec2f(box.size()[0], 0)), pStyle);
+      listener->insertPicture(lPos, MWAWGraphicShape::line(MWAWVec2f(0,box.size()[1]), MWAWVec2f(box.size()[0], 0)), pStyle);
   }
 }
 
@@ -280,8 +280,8 @@ bool MWAWTable::buildStructures()
         cellPos[dim]++;
       }
     }
-    m_cellsList[c]->setPosition(Vec2i(cellPos[0], cellPos[1]));
-    m_cellsList[c]->setNumSpannedCells(Vec2i(spanCell[0], spanCell[1]));
+    m_cellsList[c]->setPosition(MWAWVec2i(cellPos[0], cellPos[1]));
+    m_cellsList[c]->setNumSpannedCells(MWAWVec2i(spanCell[0], spanCell[1]));
   }
   m_setData |= CellPositionBit;
   // finally update the row/col size
@@ -318,8 +318,8 @@ bool MWAWTable::buildPosToCellId()
     m_numRows = 0;
     for (size_t c = 0; c < nCells; ++c) {
       if (!m_cellsList[c]) continue;
-      Vec2i const &lastPos=m_cellsList[c]->position() +
-                           m_cellsList[c]->numSpannedCells();
+      MWAWVec2i const &lastPos=m_cellsList[c]->position() +
+                               m_cellsList[c]->numSpannedCells();
       if (lastPos[0]>int(m_numCols)) m_numCols=size_t(lastPos[0]);
       if (lastPos[1]>int(m_numRows)) m_numRows=size_t(lastPos[1]);
     }
@@ -332,8 +332,8 @@ bool MWAWTable::buildPosToCellId()
     if (m_cellsList[c]->hasExtraLine())
       m_hasExtraLines=true;
 
-    Vec2i const &pos=m_cellsList[c]->position();
-    Vec2i lastPos=pos+m_cellsList[c]->numSpannedCells();
+    MWAWVec2i const &pos=m_cellsList[c]->position();
+    MWAWVec2i lastPos=pos+m_cellsList[c]->numSpannedCells();
     for (int x = pos[0]; x < lastPos[0]; x++) {
       for (int y = pos[1]; y < lastPos[1]; y++) {
         int tablePos = getCellIdPos(x,y);
@@ -380,8 +380,8 @@ bool MWAWTable::buildDims()
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
       shared_ptr<MWAWCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
-      Vec2i const &pos=cell->position();
-      Vec2i lastPos=pos+cell->numSpannedCells();
+      MWAWVec2i const &pos=cell->position();
+      MWAWVec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
         colLimit[size_t(pos[0])] = cell->bdBox()[0][0];
         colLimit[size_t(lastPos[0])] = cell->bdBox()[1][0];
@@ -415,8 +415,8 @@ bool MWAWTable::buildDims()
       if (cPos<0 || m_posToCellId[size_t(cPos)]<0) continue;
       shared_ptr<MWAWCell> cell=m_cellsList[size_t(m_posToCellId[size_t(cPos)])];
       if (!cell) continue;
-      Vec2i const &pos=cell->position();
-      Vec2i lastPos=pos+cell->numSpannedCells();
+      MWAWVec2i const &pos=cell->position();
+      MWAWVec2i lastPos=pos+cell->numSpannedCells();
       if (m_setData&BoxBit) {
         rowLimit[size_t(pos[1])] = cell->bdBox()[0][1];
         rowLimit[size_t(lastPos[1])] = cell->bdBox()[1][1];
@@ -474,7 +474,7 @@ bool MWAWTable::sendTable(MWAWListenerPtr listener, bool inFrame)
         continue;
       int id = m_posToCellId[size_t(tablePos)];
       if (id == -1)
-        listener->addEmptyTableCell(Vec2i(int(c), int(r)));
+        listener->addEmptyTableCell(MWAWVec2i(int(c), int(r)));
       if (id < 0) continue;
       m_cellsList[size_t(id)]->send(listener, *this);
     }

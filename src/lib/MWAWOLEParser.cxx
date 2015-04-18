@@ -462,7 +462,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
     if (pict.size()) {
       m_objects.push_back(pict);
       if (actualPos.naturalSize().x() <= 0. || actualPos.naturalSize().y() <= 0.) {
-        Vec2f size = potentialSize.naturalSize();
+        MWAWVec2f size = potentialSize.naturalSize();
         if (size.x() > 0 && size.y() > 0)
           actualPos.setNaturalSize(actualPos.getInvUnitScale(potentialSize.unit())*size);
       }
@@ -834,7 +834,7 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, librevenge::RVNGBinaryDat
   // dim in TWIP ?
   long extendX = (long) ip->readULong(4);
   long extendY = (long)ip->readULong(4);
-  if (extendX > 0 && extendY > 0) pos.setNaturalSize(Vec2f(float(extendX)/20.f, float(extendY)/20.f));
+  if (extendX > 0 && extendY > 0) pos.setNaturalSize(MWAWVec2f(float(extendX)/20.f, float(extendY)/20.f));
   long fSize = ip->readLong(4);
   f << "extendX="<< extendX << ", extendY=" << extendY << ", fSize=" << fSize;
 
@@ -958,13 +958,13 @@ bool MWAWOLEParser::readContents(MWAWInputStreamPtr input,
   }
   if (dim[0] > 0 && dim[0] < 3000 &&
       dim[1] > 0 && dim[1] < 3000)
-    pos.setSize(Vec2f(float(dim[0]),float(dim[1])));
+    pos.setSize(MWAWVec2f(float(dim[0]),float(dim[1])));
   else {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd size : %ld %ld\n", dim[0], dim[1]));
   }
   if (naturalSize[0] > 0 && naturalSize[0] < 5000 &&
       naturalSize[1] > 0 && naturalSize[1] < 5000)
-    pos.setNaturalSize(Vec2f(float(naturalSize[0]),float(naturalSize[1])));
+    pos.setNaturalSize(MWAWVec2f(float(naturalSize[0]),float(naturalSize[1])));
   else {
     MWAW_DEBUG_MSG(("MWAWOLEParser: warning: Contents odd naturalsize : %ld %ld\n", naturalSize[0], naturalSize[1]));
   }
@@ -1061,7 +1061,7 @@ bool MWAWOLEParser::readCONTENTS(MWAWInputStreamPtr input,
     for (int i = 0; i < 4; i++) dim[i] = input->readLong(4);
 
     bool ok = dim[0] >= 0 && dim[2] > dim[0] && dim[1] >= 0 && dim[3] > dim[2];
-    if (ok && st==0) pos.setNaturalSize(Vec2f(float(dim[2]-dim[0]), float(dim[3]-dim[1])));
+    if (ok && st==0) pos.setNaturalSize(MWAWVec2f(float(dim[2]-dim[0]), float(dim[3]-dim[1])));
     if (st==0) f << ", bdbox(Text)";
     else f << ", bdbox(Data)";
     if (!ok) f << "###";

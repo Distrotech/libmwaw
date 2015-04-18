@@ -94,7 +94,7 @@ protected:
   bool readWindowsInfo(int zone);
 
   //! send a zone ( 0: MAIN ZONE, 1 : HEADER, 2 : FOOTER )
-  bool sendWindow(int zone, Vec2i limits = Vec2i(-1,-1));
+  bool sendWindow(int zone, MWAWVec2i limits = MWAWVec2i(-1,-1));
 
   //! read the page info zone
   bool readWindowsZone(int zone);
@@ -109,7 +109,7 @@ protected:
   bool readParagraphInfo(int zone);
 
   //! try to find the data which correspond to a section ( mainly column )
-  bool findSection(int zone, Vec2i limits, MWAWSection &sec);
+  bool findSection(int zone, MWAWVec2i limits, MWAWSection &sec);
 
   //! read a section
   bool readSection(WriterPlsParserInternal::ParagraphInfo const &info, bool mainBlock);

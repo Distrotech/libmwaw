@@ -339,7 +339,7 @@ struct Object {
   //! the local id
   int m_id;
   //! the dimension
-  Vec2i m_dim;
+  MWAWVec2i m_dim;
   //! the file id
   long m_fileId;
   //! a string used to store the parsing errors

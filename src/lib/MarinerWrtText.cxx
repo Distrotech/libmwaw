@@ -425,7 +425,7 @@ struct Zone {
     //! the file position
     MWAWEntry m_pos;
     //! the characters positions
-    Vec2l m_cPos;
+    MWAWVec2l m_cPos;
     //! extra data
     std::string m_extra;
   };
@@ -983,7 +983,7 @@ bool MarinerWrtText::sendTable(MarinerWrtTextInternal::Table &table)
       MarinerWrtTextInternal::Paragraph para;
       if (table.m_zone.getRuler(cell.m_rulerId, para))
         para.update(m_mainParser->getPatternPercent(para.m_cellFill.m_patternId), fCell);
-      fCell.setPosition(Vec2i((int)c,0));
+      fCell.setPosition(MWAWVec2i((int)c,0));
 
       listener->openTableCell(fCell);
       MWAWEntry entry(cell.m_entry);

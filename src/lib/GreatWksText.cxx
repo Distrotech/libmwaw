@@ -124,7 +124,7 @@ struct Token {
   //! the picture data size
   long m_dataSize;
   //! the picture dimension
-  Vec2f m_dim;
+  MWAWVec2f m_dim;
   //! the token date (0xFFFFFFFF means actual date)
   uint32_t m_date;
   //! extra data
@@ -824,7 +824,7 @@ bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
     float dim[4];
     for (int j=0; j<4; ++j)
       dim[j]=float(input->readLong(4))/65536.f;
-    frame.m_pos=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+    frame.m_pos=MWAWBox2f(MWAWVec2f(dim[1],dim[0]),MWAWVec2f(dim[3],dim[2]));
     int val=(int) input->readLong(2); // always 0
     if (val) f << "#unkn=" << val << ",";
     frame.m_page=(int) input->readLong(2);
@@ -1119,7 +1119,7 @@ bool GreatWksText::readToken(GreatWksTextInternal::Token &token, long &nChar)
     float dim[2];
     for (int i=0; i < 2; i++)
       dim[i] = float(input->readLong(4))/65536.f;
-    token.m_dim=Vec2f(dim[0],dim[1]); // checkme
+    token.m_dim=MWAWVec2f(dim[0],dim[1]); // checkme
   }
   int nUnread=int(endPos-input->tell())/2;
   for (int i=0; i < nUnread; i++) {
@@ -1427,7 +1427,7 @@ bool GreatWksText::sendZone(GreatWksTextInternal::Zone const &zone, MWAWListener
         MWAW_DEBUG_MSG(("GreatWksText::sendZone: oops, can not send a picture in a graphic zone\n"));
         break;
       }
-      MWAWPosition pictPos(Vec2f(0,0), token.m_dim, librevenge::RVNG_POINT);
+      MWAWPosition pictPos(MWAWVec2f(0,0), token.m_dim, librevenge::RVNG_POINT);
       pictPos.setRelativePosition(MWAWPosition::Char, MWAWPosition::XLeft, MWAWPosition::YBottom);
       m_document.sendPicture(token.m_pictEntry, pictPos);
       break;

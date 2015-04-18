@@ -177,7 +177,7 @@ void State::initPatterns()
       0x8244, 0x2810, 0x2844, 0x8201
     };
     MWAWGraphicStyle::Pattern pat;
-    pat.m_dim=Vec2i(8,8);
+    pat.m_dim=MWAWVec2i(8,8);
     pat.m_data.resize(8);
     pat.m_colors[0]=MWAWColor::white();
     pat.m_colors[1]=MWAWColor::black();
@@ -610,7 +610,7 @@ int MacDrawParser::readObject()
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2));
-    shape.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    shape.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     shape.m_textEntry.setBegin(input->tell());
     shape.m_textEntry.setLength(N);
     shape.m_style.m_lineWidth=0; // no border for textbox
@@ -632,7 +632,7 @@ int MacDrawParser::readObject()
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     f << box << ",";
     shape.m_box=box;
     switch (type) {
@@ -642,7 +642,7 @@ int MacDrawParser::readObject()
       break;
     case 4:
     case 5:
-      shape.m_shape=MWAWGraphicShape::rectangle(box, Vec2f(cornerWidth,cornerWidth));
+      shape.m_shape=MWAWGraphicShape::rectangle(box, MWAWVec2f(cornerWidth,cornerWidth));
       break;
     case 6:
       shape.m_shape=MWAWGraphicShape::circle(box);
@@ -666,7 +666,7 @@ int MacDrawParser::readObject()
         angle[1]+=360;
       }
 
-      Vec2f axis = 0.5*Vec2f(box.size());
+      MWAWVec2f axis = 0.5*MWAWVec2f(box.size());
       // we must compute the real bd box
       float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
       int limitAngle[2];
@@ -682,14 +682,14 @@ int MacDrawParser::readObject()
         if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
         else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
       }
-      Vec2f center = box.center();
-      MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                        Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
-      shape.m_box=MWAWBox2f(Vec2f(shape.m_box[0])+realBox[0],Vec2f(shape.m_box[0])+realBox[1]);
+      MWAWVec2f center = box.center();
+      MWAWBox2f realBox(MWAWVec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                        MWAWVec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+      shape.m_box=MWAWBox2f(MWAWVec2f(shape.m_box[0])+realBox[0],MWAWVec2f(shape.m_box[0])+realBox[1]);
       if (shape.m_style.hasSurface())
-        shape.m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+        shape.m_shape = MWAWGraphicShape::pie(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
       else
-        shape.m_shape = MWAWGraphicShape::arc(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
+        shape.m_shape = MWAWGraphicShape::arc(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
       break;
     }
     default:
@@ -710,7 +710,7 @@ int MacDrawParser::readObject()
     f << "N=" << N << ",";
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     f << box << ",";
     shape.m_shape.m_type = MWAWGraphicShape::Polygon;
     shape.m_shape.m_bdBox= shape.m_box=box;
@@ -723,17 +723,17 @@ int MacDrawParser::readObject()
     }
     val=(int) input->readLong(2); // find a copy of the type here
     if (val!=type) f << "g0=" << val << ",";
-    std::vector<Vec2f> &vertices=shape.m_shape.m_vertices;
+    std::vector<MWAWVec2f> &vertices=shape.m_shape.m_vertices;
     if (type==8) {
       for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      Vec2f point(dim[1],dim[0]);
+      MWAWVec2f point(dim[1],dim[0]);
       vertices.push_back(point);
       f << "orig=" << point << ",";
       f << "delta=[";
       for (int i=0; i<N-1; ++i) {
         int delta[2];
         for (int j=0; j<2; ++j) delta[j]=(int) input->readLong(1);
-        Vec2f deltaPt((float) delta[0], (float) delta[1]);
+        MWAWVec2f deltaPt((float) delta[0], (float) delta[1]);
         point+=deltaPt;
         vertices.push_back(point);
         f << deltaPt << ",";
@@ -745,7 +745,7 @@ int MacDrawParser::readObject()
       for (int i=0; i<N; ++i) {
         float coord[2];
         for (int j=0; j<2; ++j) coord[j]=float(input->readLong(4))/65536.f;
-        Vec2f point(coord[1], coord[0]);
+        MWAWVec2f point(coord[1], coord[0]);
         f << point << ",";
         vertices.push_back(point);
       }
@@ -765,7 +765,7 @@ int MacDrawParser::readObject()
     if (vers==1) {
       float dim[4];
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
       f << box << ",";
       shape.m_box=box;
     }
@@ -778,7 +778,7 @@ int MacDrawParser::readObject()
     if (vers==0) {
       float dim[4];
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
       f << box << ",";
       shape.m_box=box;
     }
@@ -827,11 +827,11 @@ int MacDrawParser::readObject()
     int dim[4];
     for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
     MWAWBox2i &bitmapBox=shape.m_bitmapDim;
-    bitmapBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    bitmapBox=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
     f << "bitmap[dim]="<< bitmapBox << ",";
     float fDim[4];
     for (int i=0; i<4; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-    MWAWBox2f box(Vec2f(fDim[1],fDim[0]), Vec2f(fDim[3],fDim[2]));
+    MWAWBox2f box(MWAWVec2f(fDim[1],fDim[0]), MWAWVec2f(fDim[3],fDim[2]));
     f << box << ",";
     shape.m_box=box;
 
@@ -841,7 +841,7 @@ int MacDrawParser::readObject()
 
     for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
     MWAWBox2i &fileBox=shape.m_bitmapFileDim;
-    fileBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    fileBox=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
     f << "bitmap[dimInFile]="<< fileBox << ",";
     shape.m_bitmapEntry.setBegin(input->tell());
     shape.m_bitmapEntry.setLength(fileBox.size()[1]*shape.m_numBytesByRow);
@@ -1023,8 +1023,8 @@ bool MacDrawParser::readPrintInfo()
     return false;
   }
   f << info;
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) {
     ascii().addPos(pos);
@@ -1034,14 +1034,14 @@ bool MacDrawParser::readPrintInfo()
   }
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;
@@ -1127,7 +1127,7 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
   }
   if (!shape.m_bitmapEntry.valid()) return false;
   int const numBytesByRow=shape.m_numBytesByRow;
-  Vec2i pictDim=shape.m_bitmapDim.size();
+  MWAWVec2i pictDim=shape.m_bitmapDim.size();
   if (shape.m_type!=MacDrawParserInternal::Shape::Bitmap || numBytesByRow<=0 ||
       pictDim[0]<0 || pictDim[1]<0 ||
       numBytesByRow*shape.m_bitmapFileDim.size()[1]<shape.m_bitmapEntry.length() ||

@@ -94,9 +94,9 @@ public:
   // formula data
   //
   /* reads a cell */
-  bool readCellInFormula(Vec2i actPos, MWAWCellContent::FormulaInstruction &instr);
+  bool readCellInFormula(MWAWVec2i actPos, MWAWCellContent::FormulaInstruction &instr);
   /* reads a formula */
-  bool readFormula(long endPos, Vec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
+  bool readFormula(long endPos, MWAWVec2i const &pos,	std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
 
   //! Internal: a structure use to store a frame in a BeagleWorks files
   struct Frame {
@@ -125,9 +125,9 @@ public:
     //! the picture id
     int m_pictId;
     //! the origin ( for a page frame )
-    Vec2f m_origin;
+    MWAWVec2f m_origin;
     //! the dimension
-    Vec2f m_dim;
+    MWAWVec2f m_dim;
     //! the page ( for a page frame )
     int m_page;
     //! the wrapping: 0=none, 1=rectangle, 2=irregular

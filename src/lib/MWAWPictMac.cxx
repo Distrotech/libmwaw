@@ -103,7 +103,7 @@ MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
     if (input->readULong(1) != 0xff) return MWAW_R_BAD;
   }
 
-  box.set(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+  box.set(MWAWVec2f(float(dim[1]),float(dim[0])), MWAWVec2f(float(dim[3]),float(dim[2])));
   if (!empty && (box.size().x() < 0 || box.size().y() < 0)) return MWAW_R_BAD;
   if (box.size().x() <= 0 || box.size().y() <= 0) empty = true;
 
@@ -181,7 +181,7 @@ public:
     }
     int val[4];
     for (int i = 0; i < 4; i++) val[i] = (int) input.readLong(2);
-    m_box.set(Vec2i(val[0], val[1]), Vec2i(val[2], val[3]));
+    m_box.set(MWAWVec2i(val[0], val[1]), MWAWVec2i(val[2], val[3]));
     sz -= 5;
     m_points.resize(0);
     if (sz == 0) return true;
@@ -216,7 +216,7 @@ public:
           MWAW_DEBUG_MSG(("Pict1:Region: found eroneous y value\n"));
           return false;
         }
-        m_points.push_back(Vec2i(x,y));
+        m_points.push_back(MWAWVec2i(x,y));
       }
       if (!endF) {
         MWAW_DEBUG_MSG(("Pict1:Region: does not find end of file...\n"));
@@ -235,7 +235,7 @@ protected:
   //! the bounding box
   MWAWBox2i m_box;
   //! the set of points which defines the mask
-  std::vector<Vec2i> m_points;
+  std::vector<MWAWVec2i> m_points;
 };
 
 //!  Internal and low level: a class used to read pack/unpack black-white bitmap
@@ -257,7 +257,7 @@ struct Bitmap {
     for (int c = 0; c < 3; c++) {
       int val[4];
       for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
-      MWAWBox2i box(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
+      MWAWBox2i box(MWAWVec2i(val[1],val[0]), MWAWVec2i(val[3],val[2]));
       if (box.size().x() <= 0 || box.size().y() <= 0) {
         MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
         return false;
@@ -327,7 +327,7 @@ struct Bitmap {
   {
     if (m_rowBytes <= 0) return false;
     int nRows = int(m_bitmap.size())/m_rowBytes;
-    MWAWPictBitmapBW bitmap(Vec2i(m_rect.size().x(),nRows));
+    MWAWPictBitmapBW bitmap(MWAWVec2i(m_rect.size().x(),nRows));
     if (!bitmap.valid()) return false;
 
     for (int i = 0; i < nRows; i++)
@@ -497,7 +497,7 @@ struct Pixmap {
     // read the rectangle: bound
     int val[4];
     for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
-    m_rect = MWAWBox2i(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
+    m_rect = MWAWBox2i(MWAWVec2i(val[1],val[0]), MWAWVec2i(val[3],val[2]));
     if (m_rect.size().x() <= 0 || m_rect.size().y() <= 0) {
       MWAW_DEBUG_MSG(("Pict1:Pixmap: find odd bound rectangle ... \n"));
       return false;
@@ -534,7 +534,7 @@ struct Pixmap {
       for (int c = 0; c < 2; c++) {
         int dim[4];
         for (int d = 0; d < 4; d++) dim[d] = (int) input.readLong(2);
-        MWAWBox2i box(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+        MWAWBox2i box(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
         if (box.size().x() <= 0 || box.size().y() <= 0) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
           return false;
@@ -603,7 +603,7 @@ struct Pixmap {
     if (W <= 0) return false;
     if (m_colorTable.get() && m_indices.size()) {
       int nRows = int(m_indices.size())/W;
-      MWAWPictBitmapIndexed pixmap(Vec2i(W,nRows));
+      MWAWPictBitmapIndexed pixmap(MWAWVec2i(W,nRows));
       if (!pixmap.valid()) return false;
 
       pixmap.setColors(m_colorTable->m_colors);
@@ -625,7 +625,7 @@ struct Pixmap {
     }
     else if (m_colors.size()) {
       int nRows = int(m_colors.size())/W;
-      MWAWPictBitmapColor pixmap(Vec2i(W,nRows));
+      MWAWPictBitmapColor pixmap(MWAWVec2i(W,nRows));
       if (!pixmap.valid()) return false;
 
       size_t rPos = 0;
@@ -1026,11 +1026,11 @@ struct Value {
   //! the text when type=WP_TEXT
   std::string m_text;
   //! the point when type=WP_POINT
-  Vec2i m_point;
+  MWAWVec2i m_point;
   //! the rectangle when type=WP_RECT
   MWAWBox2i m_box;
   //! the list of points which defined the polygon when type=WP_POLY
-  std::vector<Vec2i> m_listPoint;
+  std::vector<MWAWVec2i> m_listPoint;
   //! the region when type=WP_REGION
   shared_ptr<Region> m_region;
   //! the bitmap when type=WP_BITMAP
@@ -1111,7 +1111,7 @@ struct OpCode {
   \note can be used to read the first dimensions of a picture */
   static bool readRect(MWAWInputStream &input, DataType type, MWAWBox2i &res)
   {
-    Vec2i v[2];
+    MWAWVec2i v[2];
     DataType valType;
     switch (type) {
     case WP_RECT:
@@ -1476,7 +1476,7 @@ protected:
   }
 
   //! low level: reads a point argument
-  static bool readPoint(MWAWInputStream &input, DataType type, Vec2i &res)
+  static bool readPoint(MWAWInputStream &input, DataType type, MWAWVec2i &res)
   {
     int v[2];
     DataType valType;
@@ -1525,7 +1525,7 @@ protected:
   }
 
   //! low level: reads a polygon argument
-  static bool readPoly(MWAWInputStream &input, DataType type, MWAWBox2i &box, std::vector<Vec2i> &res)
+  static bool readPoly(MWAWInputStream &input, DataType type, MWAWBox2i &box, std::vector<MWAWVec2i> &res)
   {
     DataType boxType, valType;
     switch (type) {
@@ -1582,7 +1582,7 @@ protected:
     numPt /= 2;
     res.resize(size_t(numPt));
 
-    Vec2i pt;
+    MWAWVec2i pt;
     for (int p = 0; p < numPt; p++) {
       if (!readPoint(input, valType, pt)) return false;
       res[size_t(p)] = pt;

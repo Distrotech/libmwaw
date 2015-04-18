@@ -680,11 +680,11 @@ bool WriteNowParser::sendPicture(WriteNowEntry const &entry, MWAWBox2i const &bd
         std::string pictType;
         MWAWPosition pictPos;
         if (bdbox.size().x() > 0 && bdbox.size().y() > 0) {
-          pictPos=MWAWPosition(Vec2f(0,0),bdbox.size(), librevenge::RVNG_POINT);
+          pictPos=MWAWPosition(MWAWVec2f(0,0),bdbox.size(), librevenge::RVNG_POINT);
           pictPos.setNaturalSize(pict->getBdBox().size());
         }
         else
-          pictPos=MWAWPosition(Vec2f(0,0),pict->getBdBox().size(), librevenge::RVNG_POINT);
+          pictPos=MWAWPosition(MWAWVec2f(0,0),pict->getBdBox().size(), librevenge::RVNG_POINT);
         pictPos.setRelativePosition(MWAWPosition::Char);
 
         if (pict->getBinary(data,pictType))
@@ -861,20 +861,20 @@ bool WriteNowParser::readPrintInfo(WriteNowEntry const &entry)
   }
   f << info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -50;

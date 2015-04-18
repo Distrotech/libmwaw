@@ -109,7 +109,7 @@ public:
     MWAWBox2f box;
     if (checkOrGet(input, size, box, &res) == MWAW_R_BAD) return 0L;
     if (res) { // if the bdbox is good, we set it
-      Vec2f sz = box.size();
+      MWAWVec2f sz = box.size();
       if (sz.x()>0 && sz.y()>0) res->setBdBox(box);
     }
     return res;

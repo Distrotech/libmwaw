@@ -151,7 +151,7 @@ public:
   /** close a cell */
   virtual void closeTableCell() = 0;
   /** add empty cell */
-  virtual void addEmptyTableCell(Vec2i const &pos, Vec2i span=Vec2i(1,1)) = 0;
+  virtual void addEmptyTableCell(MWAWVec2i const &pos, MWAWVec2i span=MWAWVec2i(1,1)) = 0;
 
   // ------- section ---------------
   /** returns true if we can add open a section, add page break, ... */

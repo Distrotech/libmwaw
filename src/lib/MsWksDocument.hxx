@@ -200,7 +200,7 @@ public:
   //! send an OLE zone
   void sendOLE(int id, MWAWPosition const &pos, MWAWGraphicStyle const &style);
   /** send a rbil zone */
-  void sendRBIL(int id, Vec2i const &sz);
+  void sendRBIL(int id, MWAWVec2i const &sz);
   /** send a textbox */
   void sendTextbox(MWAWEntry const &entry, std::string const &frame);
 

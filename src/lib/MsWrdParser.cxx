@@ -1729,7 +1729,7 @@ bool MsWrdParser::readPicture(MsWrdEntry &entry)
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
-  pict.m_dim=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  pict.m_dim=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
   f << pict;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1751,7 +1751,7 @@ bool MsWrdParser::readPicture(MsWrdEntry &entry)
       zone.m_flags[i] = (int) input->readULong((i==2) ? 2 : 1);
     for (int i = 0; i < 4; i++)
       dim[i] = (int) input->readLong(2);
-    zone.m_dim=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    zone.m_dim=MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
     zone.m_pos.setBegin(pos+16);
     zone.m_pos.setLength(sz-16);
     f << zone;
@@ -1805,7 +1805,7 @@ void MsWrdParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor
     getTextListener()->insertTextBox(pictPos, subdoc);
     return;
   }
-  MWAWPosition basicPos(Vec2f(0.,0.), Vec2f(100.,100.), librevenge::RVNG_POINT);
+  MWAWPosition basicPos(MWAWVec2f(0.,0.), MWAWVec2f(100.,100.), librevenge::RVNG_POINT);
   if (anchor != MWAWPosition::Page && anchor != MWAWPosition::Frame) {
     basicPos.setRelativePosition(anchor, MWAWPosition::XLeft, MWAWPosition::YCenter);
     basicPos.m_wrapping =  MWAWPosition::WBackground;
@@ -1821,7 +1821,7 @@ void MsWrdParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor
     MsWrdParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
     if (!zone.m_pos.valid()) continue;
     MWAWPosition pos(basicPos);
-    pos.setOrigin(pos.origin()+(Vec2f)zone.m_dim.min());
+    pos.setOrigin(pos.origin()+(MWAWVec2f)zone.m_dim.min());
     pos.setSize(zone.m_dim.size());
 
     input->seek(zone.m_pos.begin(), librevenge::RVNG_SEEK_SET);
@@ -1860,20 +1860,20 @@ bool MsWrdParser::readPrintInfo(MsWrdEntry &entry)
   if (!info.read(input)) return false;
   f << "PrintInfo:"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().size() - info.page().size();
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().size() - info.page().size();
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   int leftMargin = lTopMargin.x();
   int topMargin = lTopMargin.y();

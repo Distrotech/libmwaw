@@ -416,7 +416,7 @@ std::string MWAWCell::getColumnName(int col)
   return f.str();
 }
 
-std::string MWAWCell::getCellName(Vec2i const &pos, Vec2b const &absolute)
+std::string MWAWCell::getCellName(MWAWVec2i const &pos, MWAWVec2b const &absolute)
 {
   std::stringstream f;
   f << "[.";
@@ -454,7 +454,7 @@ void MWAWCell::setBorders(int wh, MWAWBorder const &border)
 
 std::ostream &operator<<(std::ostream &o, MWAWCell const &cell)
 {
-  o << MWAWCell::getCellName(cell.m_position, Vec2b(false,false)) << ":";
+  o << MWAWCell::getCellName(cell.m_position, MWAWVec2b(false,false)) << ":";
   if (cell.numSpannedCells()[0] != 1 || cell.numSpannedCells()[1] != 1)
     o << "span=[" << cell.numSpannedCells()[0] << "," << cell.numSpannedCells()[1] << "],";
 

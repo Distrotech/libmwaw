@@ -238,11 +238,11 @@ struct WindowsInfo {
 
   friend std::ostream &operator<<(std::ostream &o, WindowsInfo const &w);
 
-  Vec2i m_startSel, m_endSel; // start end selection (parag, char)
+  MWAWVec2i m_startSel, m_endSel; // start end selection (parag, char)
   int m_posTopY;
   std::vector<Information> m_informations;
   std::vector<int> m_firstParagLine, m_linesHeight;
-  Vec2i m_pageNumber, m_date, m_time;
+  MWAWVec2i m_pageNumber, m_date, m_time;
 };
 
 std::ostream &operator<<(std::ostream &o, WindowsInfo const &w)
@@ -800,20 +800,20 @@ bool MacWrtParser::readPrintInfo()
   if (!info.read(input)) return false;
   f << "Entries(PrintInfo):"<< info;
 
-  Vec2i paperSize = info.paper().size();
-  Vec2i pageSize = info.page().size();
+  MWAWVec2i paperSize = info.paper().size();
+  MWAWVec2i pageSize = info.page().size();
   if (pageSize.x() <= 0 || pageSize.y() <= 0 ||
       paperSize.x() <= 0 || paperSize.y() <= 0) return false;
 
   // define margin from print info
-  Vec2i lTopMargin= -1 * info.paper().pos(0);
-  Vec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
+  MWAWVec2i lTopMargin= -1 * info.paper().pos(0);
+  MWAWVec2i rBotMargin=info.paper().pos(1) - info.page().pos(1);
 
   // move margin left | top
   int decalX = lTopMargin.x() > 14 ? lTopMargin.x()-14 : 0;
   int decalY = lTopMargin.y() > 14 ? lTopMargin.y()-14 : 0;
-  lTopMargin -= Vec2i(decalX, decalY);
-  rBotMargin += Vec2i(decalX, decalY);
+  lTopMargin -= MWAWVec2i(decalX, decalY);
+  rBotMargin += MWAWVec2i(decalX, decalY);
 
   // decrease right | bottom
   int rightMarg = rBotMargin.x() -10;
@@ -882,8 +882,8 @@ bool MacWrtParser::readWindowsInfo(int wh)
   for (int i = 0; i < 2; i++) {
     int x = (int) input->readLong(2);
     int y = (int) input->readLong(2);
-    if (i == 0) info.m_startSel = Vec2i(x,y);
-    else info.m_endSel = Vec2i(x,y);
+    if (i == 0) info.m_startSel = MWAWVec2i(x,y);
+    else info.m_endSel = MWAWVec2i(x,y);
   }
 
   if (version() <= 3) {
@@ -911,9 +911,9 @@ bool MacWrtParser::readWindowsInfo(int wh)
   for (int i = 0; i < 3; i++) {
     int x = (int) input->readLong(2);
     int y = (int) input->readLong(2);
-    if (i == 0) info.m_pageNumber = Vec2i(x,y);
-    else if (i == 1) info.m_date = Vec2i(x,y);
-    else info.m_time = Vec2i(x,y);
+    if (i == 0) info.m_pageNumber = MWAWVec2i(x,y);
+    else if (i == 1) info.m_date = MWAWVec2i(x,y);
+    else info.m_time = MWAWVec2i(x,y);
   }
   f << info;
   bool ok=true;
@@ -1051,7 +1051,7 @@ bool MacWrtParser::readInformationsV3(int numEntries, std::vector<MacWrtParserIn
       info.m_type = MacWrtParserInternal::Information::RULER;
 
     int y = (int) input->readLong(2);
-    info.m_pos=MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), librevenge::RVNG_POINT);
+    info.m_pos=MWAWPosition(MWAWVec2f(0,float(y)), MWAWVec2f(0, float(height)), librevenge::RVNG_POINT);
     info.m_pos.setPage((int) input->readLong(1));
     f << info;
     informations.push_back(info);
@@ -1113,7 +1113,7 @@ bool MacWrtParser::readInformations(MWAWEntry const &entry, std::vector<MacWrtPa
     int y = (int) input->readLong(2);
     int page = (int) input->readULong(1);
     input->seek(3, librevenge::RVNG_SEEK_CUR); // unused
-    info.m_pos = MWAWPosition(Vec2f(0,float(y)), Vec2f(0, float(height)), librevenge::RVNG_POINT);
+    info.m_pos = MWAWPosition(MWAWVec2f(0,float(y)), MWAWVec2f(0, float(height)), librevenge::RVNG_POINT);
     info.m_pos.setPage(page);
 
     int paragStatus = (int) input->readULong(1);
@@ -1553,9 +1553,9 @@ bool MacWrtParser::readGraphic(MacWrtParserInternal::Information const &info)
   }
 
 
-  Vec2f actualSize(float(dim[3]-dim[1]), float(dim[2]-dim[0])), naturalSize(actualSize);
+  MWAWVec2f actualSize(float(dim[3]-dim[1]), float(dim[2]-dim[0])), naturalSize(actualSize);
   if (box.size().x() > 0 && box.size().y()  > 0) naturalSize = box.size();
-  MWAWPosition pictPos=MWAWPosition(Vec2i(0,0),actualSize, librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2i(0,0),actualSize, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
   f << pictPos;

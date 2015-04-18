@@ -58,7 +58,7 @@ public:
 
 public:
   //! constructor
-  MWAWPosition(Vec2f const &orig=Vec2f(), Vec2f const &sz=Vec2f(), librevenge::RVNGUnit theUnit=librevenge::RVNG_INCH):
+  MWAWPosition(MWAWVec2f const &orig=MWAWVec2f(), MWAWVec2f const &sz=MWAWVec2f(), librevenge::RVNGUnit theUnit=librevenge::RVNG_INCH):
     m_anchorTo(Unknown), m_xPos(XLeft), m_yPos(YTop), m_wrapping(WNone),
     m_page(0), m_orig(orig), m_size(sz), m_naturalSize(), m_LTClip(), m_RBClip(), m_unit(theUnit), m_order(0) {}
 
@@ -66,7 +66,7 @@ public:
   //! operator<<
   friend  std::ostream &operator<<(std::ostream &o, MWAWPosition const &pos)
   {
-    Vec2f dest(pos.m_orig+pos.m_size);
+    MWAWVec2f dest(pos.m_orig+pos.m_size);
     o << "Pos=(" << pos.m_orig << ")x(" << dest << ")";
     switch (pos.m_unit) {
     case librevenge::RVNG_INCH:
@@ -109,27 +109,27 @@ public:
     return m_page;
   }
   //! return the frame origin
-  Vec2f const &origin() const
+  MWAWVec2f const &origin() const
   {
     return m_orig;
   }
   //! returns the frame size
-  Vec2f const &size() const
+  MWAWVec2f const &size() const
   {
     return m_size;
   }
   //! returns the natural size (if known)
-  Vec2f const &naturalSize() const
+  MWAWVec2f const &naturalSize() const
   {
     return m_naturalSize;
   }
   //! returns the left top clipping
-  Vec2f const &leftTopClipping() const
+  MWAWVec2f const &leftTopClipping() const
   {
     return m_LTClip;
   }
   //! returns the right bottom clipping
-  Vec2f const &rightBottomClipping() const
+  MWAWVec2f const &rightBottomClipping() const
   {
     return m_RBClip;
   }
@@ -185,17 +185,17 @@ public:
     const_cast<MWAWPosition *>(this)->m_page = pg;
   }
   //! sets the frame origin
-  void setOrigin(Vec2f const &orig)
+  void setOrigin(MWAWVec2f const &orig)
   {
     m_orig = orig;
   }
   //! sets the frame size
-  void setSize(Vec2f const &sz)
+  void setSize(MWAWVec2f const &sz)
   {
     m_size = sz;
   }
   //! sets the natural size (if known)
-  void setNaturalSize(Vec2f const &naturalSz)
+  void setNaturalSize(MWAWVec2f const &naturalSz)
   {
     m_naturalSize = naturalSz;
   }
@@ -205,7 +205,7 @@ public:
     m_unit = newUnit;
   }
   //! sets/resets the page and the origin
-  void setPagePos(int pg, Vec2f const &newOrig) const
+  void setPagePos(int pg, MWAWVec2f const &newOrig) const
   {
     const_cast<MWAWPosition *>(this)->m_page = pg;
     const_cast<MWAWPosition *>(this)->m_orig = newOrig;
@@ -220,7 +220,7 @@ public:
   }
 
   //! sets the clipping position
-  void setClippingPosition(Vec2f lTop, Vec2f rBottom)
+  void setClippingPosition(MWAWVec2f lTop, MWAWVec2f rBottom)
   {
     m_LTClip = lTop;
     m_RBClip = rBottom;
@@ -276,8 +276,8 @@ protected:
 
   //! the page
   int m_page;
-  Vec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
-  Vec2f m_LTClip /** the left top clip position */, m_RBClip /* the right bottom clip position */;
+  MWAWVec2f m_orig /** the origin position in a page */, m_size /* the size of the data*/, m_naturalSize /** the natural size of the data (if known) */;
+  MWAWVec2f m_LTClip /** the left top clip position */, m_RBClip /* the right bottom clip position */;
   //! the unit used in \a orig, in \a m_size and in \a m_LTClip , .... Default: in inches
   librevenge::RVNGUnit m_unit;
   //! background/foward order

@@ -367,7 +367,7 @@ bool FullWrtGraph::readSideBarPosition(FullWrtStruct::EntryPtr zone, FullWrtGrap
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i]=int(input->readLong(2));
-  frame.m_box=MWAWBox2f(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+  frame.m_box=MWAWBox2f(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2]));
   f << "pos=" << frame.m_box << ",";
   int val=int(input->readLong(2));
   if (val) f << "w[wrap]=" << val << "pt,";
@@ -742,15 +742,15 @@ bool FullWrtGraph::sendGraphic(FullWrtStruct::EntryPtr zone)
     return false;
   }
 
-  Vec2f actualSize, naturalSize;
+  MWAWVec2f actualSize, naturalSize;
   if (box.size().x() > 0 && box.size().y()  > 0) {
     actualSize = naturalSize = box.size();
   }
   else if (actualSize.x() <= 0 || actualSize.y() <= 0) {
     MWAW_DEBUG_MSG(("FullWrtGraph::sendGraphic: can not find the picture size\n"));
-    actualSize = naturalSize = Vec2f(100,100);
+    actualSize = naturalSize = MWAWVec2f(100,100);
   }
-  MWAWPosition pictPos=MWAWPosition(Vec2f(0,0),actualSize, librevenge::RVNG_POINT);
+  MWAWPosition pictPos=MWAWPosition(MWAWVec2f(0,0),actualSize, librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
   pictPos.setNaturalSize(naturalSize);
 

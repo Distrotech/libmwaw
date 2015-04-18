@@ -66,14 +66,14 @@ public:
   bool readContent();
 
   //! returns the dimension of the read data
-  bool getExtrema(Vec2i &min, Vec2i &max) const;
+  bool getExtrema(MWAWVec2i &min, MWAWVec2i &max) const;
   //! returns the list of filled record (for database)
   bool getRecordList(std::vector<int> &list) const;
 
   //! retrieves the cell data
-  bool get(Vec2i const &pos, Record &data) const;
+  bool get(MWAWVec2i const &pos, Record &data) const;
   //! try to send a cell content to the listener
-  bool send(Vec2i const &pos);
+  bool send(MWAWVec2i const &pos);
   //! set the field format ( for database )
   void setDatabaseFormats(std::vector<ClarisWksStyleManager::CellFormat> const &format);
   /** struct which stores a record in ClarisWksDbaseContent */
@@ -84,7 +84,7 @@ public:
     {
     }
     //! update the formula cell (removing delta to each position)
-    void updateFormulaCells(Vec2i const &removeDelta);
+    void updateFormulaCells(MWAWVec2i const &removeDelta);
     //! the style if known
     int m_style;
     //! the format
@@ -122,13 +122,13 @@ protected:
   //! try to read the column structure(COLM): a list of chnk
   bool readColumn(int c);
   //! try to read a list of records(CHNK)
-  bool readRecordList(Vec2i const &where, Column &col);
+  bool readRecordList(MWAWVec2i const &where, Column &col);
   //! try to read a spreadsheet record
-  bool readRecordSS(Vec2i const &where, long pos, Record &record);
+  bool readRecordSS(MWAWVec2i const &where, long pos, Record &record);
   //! try to read a spreadsheet record(v1-v3)
-  bool readRecordSSV1(Vec2i const &where, long pos, Record &record);
+  bool readRecordSSV1(MWAWVec2i const &where, long pos, Record &record);
   //! try to read a database record
-  bool readRecordDB(Vec2i const &where, long pos, Record &record);
+  bool readRecordDB(MWAWVec2i const &where, long pos, Record &record);
 
   //! send a double with a corresponding cell format
   void send(double val, bool isNotaNumber, ClarisWksStyleManager::CellFormat const &format);
@@ -138,13 +138,13 @@ protected:
   //
 
   /** reads a cell */
-  bool readCellInFormula(Vec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
+  bool readCellInFormula(MWAWVec2i const &pos, MWAWCellContent::FormulaInstruction &instr);
   /** try to read a string */
   bool readString(long endPos, std::string &res);
   /** try to read a number */
   bool readNumber(long endPos, double &res, bool &isNan);
   //! read to read a formula
-  bool readFormula(Vec2i const &cPos, long endPos,
+  bool readFormula(MWAWVec2i const &cPos, long endPos,
                    std::vector<MWAWCellContent::FormulaInstruction> &formula, std::string &error);
 
   //! the file version

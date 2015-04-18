@@ -99,12 +99,12 @@ void DebugFile::sort()
     m_notes[i] = *(it++);
   if (i != numNotes) m_notes.resize(i);
 
-  Vec2i::MapX sMap;
+  MWAWVec2i::MapX sMap;
   size_t numSkip = m_skipZones.size();
   for (i = 0; i < numSkip; i++) sMap[m_skipZones[i]] = 0;
 
   i = 0;
-  for (Vec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); ++it)
+  for (MWAWVec2i::MapX::iterator it = sMap.begin(); it != sMap.end(); ++it)
     m_skipZones[i++] = it->first;
   if (i < numSkip) m_skipZones.resize(i);
 }
