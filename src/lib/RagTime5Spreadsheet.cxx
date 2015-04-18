@@ -111,8 +111,8 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
     for (int i=0; i<3; ++i) {
       float dim[4];
       for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-      Box2f box(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
-      if (box!=Box2f(Vec2f(0,0),Vec2f(0,0)))
+      MWAWBox2f box(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
+      if (box!=MWAWBox2f(Vec2f(0,0),Vec2f(0,0)))
         f << "dim" << i << "=" << box << ",";
     }
     return true;
@@ -1931,8 +1931,8 @@ protected:
       f << "],";
       int lDim[4];
       for (int i=0; i<4; ++i) lDim[i]=(int) input->readLong(4);
-      Box2i box(Vec2i(lDim[0],lDim[1]),Vec2i(lDim[1],lDim[2]));
-      if (box!=Box2i(Vec2i(0,0),Vec2i(0,0)))
+      MWAWBox2i box(Vec2i(lDim[0],lDim[1]),Vec2i(lDim[1],lDim[2]));
+      if (box!=MWAWBox2i(Vec2i(0,0),Vec2i(0,0)))
         f << "dim1=" << box << ",";
       for (int i=0; i<3; ++i) { // g0=1-5, g1=1-14, g2=13|19|fa
         val=(int) input->readULong(2);
@@ -2045,8 +2045,8 @@ protected:
     if (val) f << "fl2=" << std::hex << val << std::dec << ",";
     for (int i=0; i<3; ++i) { // never seems dim3 so unsure ...
       for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-      Box2f bdbox(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
-      if (bdbox!=Box2f(Vec2f(0,0),Vec2f(0,0)))
+      MWAWBox2f bdbox(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+      if (bdbox!=MWAWBox2f(Vec2f(0,0),Vec2f(0,0)))
         f << "dim" << i+1 << "?=" << bdbox << ",";
     }
     val=(int) input->readLong(2); // always 0?

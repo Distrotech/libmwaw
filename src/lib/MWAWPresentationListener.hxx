@@ -184,7 +184,7 @@ public:
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
   /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
-  void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
+  void insertGroup(MWAWBox2f const &bdbox, MWAWSubDocumentPtr subDocument);
   /** insert a slide note */
   void insertSlideNote(MWAWPosition const &pos, MWAWSubDocumentPtr &subDocument);
   /** insert a note

@@ -431,7 +431,7 @@ bool MsWksTable::sendChart(int chartId)
 #endif
 
     input->seek(chart.m_backgroundEntry.begin(), librevenge::RVNG_SEEK_SET);
-    Box2f naturalBox;
+    MWAWBox2f naturalBox;
     MWAWPict::ReadResult res = MWAWPictData::check(input, (int)chart.m_backgroundEntry.length(), naturalBox);
     if (res == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("MsWksTable::sendChart: can not find the picture\n"));

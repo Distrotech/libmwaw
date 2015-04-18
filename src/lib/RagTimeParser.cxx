@@ -104,7 +104,7 @@ struct Picture {
   //! the data position
   MWAWEntry m_pos;
   //! the dimension
-  Box2f m_dim;
+  MWAWBox2f m_dim;
   //! the beginning of the header(for debugging)
   long m_headerPos;
   //! a flag to know if the picture is sent
@@ -123,7 +123,7 @@ struct Zone {
     for (int i=0; i<5; ++i) m_linkZones[i]=0;
   }
   //! returns the bounding box
-  Box2f getBoundingBox() const
+  MWAWBox2f getBoundingBox() const
   {
     Vec2f minPt=m_dimension[0], maxPt=m_dimension[1];
     for (int i=0; i<2; ++i) {
@@ -132,7 +132,7 @@ struct Zone {
       minPt[i]=m_dimension[1][i];
       maxPt[i]=m_dimension[0][i];
     }
-    return Box2f(minPt,maxPt);
+    return MWAWBox2f(minPt,maxPt);
   }
   //! returns a zone name
   std::string getTypeString() const
@@ -170,7 +170,7 @@ struct Zone {
   //! flag to know if the datasize in uint16 or uint32
   bool m_read32Size;
   //! the dimension
-  Box2f m_dimension;
+  MWAWBox2f m_dimension;
   //! the page
   int m_page;
   //! the rotation
@@ -879,7 +879,7 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
     else
       dim[i]=(float) input->readLong(2);
   }
-  zone.m_dimension=Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  zone.m_dimension=MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
 
   int numZones=m_state->m_numDataZone;
   val=(int) input->readLong(2); // 0, find also 6 for a line ?
@@ -1204,7 +1204,7 @@ bool RagTimeParser::readPictZone(MWAWEntry &entry)
 
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readULong(4))/65536.f;
-  pict.m_dim=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  pict.m_dim=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     float dim2[2];
@@ -1311,7 +1311,7 @@ bool RagTimeParser::readPictZoneV2(MWAWEntry &entry)
   pict.m_headerPos=entry.begin();
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readULong(2);
-  pict.m_dim=Box2f(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
+  pict.m_dim=MWAWBox2f(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
   f << "dim=" << pict.m_dim << ",";
   for (int i=0; i<2; ++i) {
     int dim2[2];
@@ -2387,7 +2387,7 @@ bool RagTimeParser::sendPicture(int zId, MWAWPosition const &position)
   if (!pict.m_pos.valid()) return false;
 
   MWAWInputStreamPtr input = getInput();
-  Box2f box;
+  MWAWBox2f box;
   input->seek(pict.m_pos.begin(), librevenge::RVNG_SEEK_SET);
   if (pict.m_type==2 || pict.m_type==3 || pict.m_type==6) {
     // first read the picture
@@ -2567,7 +2567,7 @@ bool RagTimeParser::send(int zId)
     return false;
   }
   RagTimeParserInternal::Zone const &zone=m_state->m_idZoneMap.find(zId)->second;
-  Box2i box=zone.getBoundingBox();
+  MWAWBox2i box=zone.getBoundingBox();
   MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
   pos.m_anchorTo=MWAWPosition::Page;
   if (zone.m_page>0)

@@ -71,7 +71,7 @@ struct Shape {
   //! the shape type
   int m_type;
   //! the shape bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
 
   //! the graphic shape ( for line, rect, ...)
   MWAWGraphicShape m_shape;
@@ -770,7 +770,7 @@ bool BeagleWksDRParser::readShapePositions()
     f << "f0=" << val << ",";
     float dim[4];
     for (int j=0; j<4; ++j) dim[j]=float(input->readLong(4))/65536.f;
-    shape.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+    shape.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
     f << "pos=" << shape.m_box << ",";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
@@ -1044,7 +1044,7 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
         angle[1]+=360;
       }
     }
-    Box2f box=shape.m_box;
+    MWAWBox2f box=shape.m_box;
     Vec2f center = box.center();
     Vec2f axis = 0.5*Vec2f(box.size());
     // we must compute the real bd box
@@ -1062,8 +1062,8 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                  Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
     shape.m_box=realBox;
     shape.m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;
@@ -1241,7 +1241,7 @@ bool BeagleWksDRParser::sendPictures()
 
   for (size_t i=0; i<m_state->m_shapeList.size(); i++) {
     BeagleWksDRParserInternal::Shape const &shape=m_state->m_shapeList[i];
-    Box2f box=shape.m_box;
+    MWAWBox2f box=shape.m_box;
     /* if m_rotate!=0, the box is the rotate box, so we need to rotate
        it back Normally, ok because the angle is a multiple of 90,
        but, in pratical, the new center is not good...

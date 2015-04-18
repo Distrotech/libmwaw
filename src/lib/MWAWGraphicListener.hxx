@@ -64,7 +64,7 @@ public:
   /** simplified constructor (can be used for a embedded graphic with one page).
 
    \note the box coordinates must be given in point.*/
-  MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface);
+  MWAWGraphicListener(MWAWParserState &parserState, MWAWBox2f const &box, librevenge::RVNGDrawingInterface *documentInterface);
   /** destructor */
   virtual ~MWAWGraphicListener();
 
@@ -188,7 +188,7 @@ public:
   /** adds a textbox in given position */
   void insertTextBox(MWAWPosition const &pos, MWAWSubDocumentPtr subDocument, MWAWGraphicStyle const &style);
   /** adds a group: ie. next insertion will be done relative to this bdbox[0] position */
-  void insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument);
+  void insertGroup(MWAWBox2f const &bdbox, MWAWSubDocumentPtr subDocument);
   /** insert a note
 
    \note as RVNGDrawingInterface does not accept note, note can only be inserted in a text zone (and are inserted between --) */

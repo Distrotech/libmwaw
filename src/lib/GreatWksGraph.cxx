@@ -151,7 +151,7 @@ struct Frame {
   //! the data size ( if know)
   long m_dataSize;
   //! the zone bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the page
   int m_page;
   //! extra data
@@ -1468,7 +1468,7 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return res;
   }
-  zone.m_box=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+  zone.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
   zone.m_styleId=(int) input->readULong(2);
   zone.m_parent=(int) input->readULong(2);
   zone.m_order=(int) input->readULong(2);
@@ -1584,15 +1584,15 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2f circleBox=zone.m_box;
+    MWAWBox2f circleBox=zone.m_box;
     // we have the shape box, we need to reconstruct the circle box
     if (maxVal[0]>minVal[0] && maxVal[1]>minVal[1]) {
       float scaling[2]= { (zone.m_box[1][0]-zone.m_box[0][0])/(maxVal[0]-minVal[0]),
                           (zone.m_box[1][1]-zone.m_box[0][1])/(maxVal[1]-minVal[1])
                         };
       float constant[2]= { zone.m_box[0][0]-minVal[0] *scaling[0], zone.m_box[0][1]-minVal[1] *scaling[1]};
-      circleBox=Box2f(Vec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
-                      Vec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
+      circleBox=MWAWBox2f(Vec2f(constant[0]-scaling[0], constant[1]-scaling[1]),
+                          Vec2f(constant[0]+scaling[0], constant[1]+scaling[1]));
     }
     if (type==1)
       graph->m_shape = MWAWGraphicShape::pie(zone.m_box, circleBox, Vec2f(float(angle[0]), float(angle[1])));
@@ -1811,13 +1811,13 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   // increase slightly x and set y to atleast
   Vec2f newSz(fSz[0]+3,fSz[1]);
   if (listener->getType()==MWAWListener::Graphic)
-    return sendTextboxAsGraphic(Box2f(pos.origin(),pos.origin()+newSz), text, style, listener);
+    return sendTextboxAsGraphic(MWAWBox2f(pos.origin(),pos.origin()+newSz), text, style, listener);
 
   MWAWPosition finalPos(pos);
   finalPos.setSize(Vec2f(newSz[0],-newSz[1]));
   if ((text.hasTransform() || style.hasPattern() || style.hasGradient()) &&
       m_document.canSendTextboxAsGraphic(text.m_entry)) {
-    Box2f box(Vec2f(0,0),newSz);
+    MWAWBox2f box(Vec2f(0,0),newSz);
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener
     (new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
@@ -1840,7 +1840,7 @@ bool GreatWksGraph::sendTextbox(GreatWksGraphInternal::FrameText const &text, Gr
   return true;
 }
 
-bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text,
+bool GreatWksGraph::sendTextboxAsGraphic(MWAWBox2f const &box, GreatWksGraphInternal::FrameText const &text,
     MWAWGraphicStyle const &style, MWAWListenerPtr listener)
 {
   libmwaw::SubDocumentType subdocType;
@@ -1851,7 +1851,7 @@ bool GreatWksGraph::sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal
   shared_ptr<MWAWSubDocument> doc(new GreatWksGraphInternal::SubDocument(*this, m_parserState->m_input, text.m_entry));
 
   Vec2f fSz=box.size();
-  Box2f textBox=Box2f(box[0],box[0]+Vec2f(fSz[0],-fSz[1]));
+  MWAWBox2f textBox=MWAWBox2f(box[0],box[0]+Vec2f(fSz[0],-fSz[1]));
   /* rotation are multiple of 90, so we can use the inverse rotation to find
      the original box */
   if (text.m_rotate)
@@ -1965,7 +1965,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
     shared_ptr<GreatWksGraphInternal::Frame> frame=zone.m_frameList[size_t(childId-1)];
     if (!frame) continue;
 
-    Box2f const &box=frame->m_box;
+    MWAWBox2f const &box=frame->m_box;
     MWAWGraphicStyle style;
     if (frame->m_styleId>=1 && frame->m_styleId <= int(zone.m_styleList.size()))
       style = zone.m_styleList[size_t(frame->m_styleId-1)];
@@ -1982,7 +1982,7 @@ void GreatWksGraph::sendGroup(GreatWksGraphInternal::FrameGroup const &group, Gr
       sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*frame), zone,listener);
       break;
     case GreatWksGraphInternal::Frame::T_TEXT:
-      sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
+      sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+Vec2f(3,0)),
                            static_cast<GreatWksGraphInternal::FrameText const &>(*frame), style, listener);
       break;
     case GreatWksGraphInternal::Frame::T_DBFIELD:
@@ -2008,7 +2008,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
   bool isDraw=listener->getType()==MWAWListener::Graphic;
   int numDataToMerge=0;
   int numFrames=(int) zone.m_frameList.size();
-  Box2f partialBdBox;
+  MWAWBox2f partialBdBox;
   MWAWPosition partialPos(pos);
 
   for (size_t c=0; c<numChilds; ++c) {
@@ -2039,7 +2039,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
         break;
       }
     }
-    Box2f box=frame->m_box;
+    MWAWBox2f box=frame->m_box;
     bool isLast=false;
     if (canMerge) {
       if (numDataToMerge == 0)
@@ -2080,7 +2080,7 @@ void GreatWksGraph::sendGroupChild(GreatWksGraphInternal::FrameGroup const &grou
           sendGroup(static_cast<GreatWksGraphInternal::FrameGroup const &>(*child), zone,graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_TEXT:
-          sendTextboxAsGraphic(Box2f(box[0],box[1]+Vec2f(3,0)),
+          sendTextboxAsGraphic(MWAWBox2f(box[0],box[1]+Vec2f(3,0)),
                                static_cast<GreatWksGraphInternal::FrameText const &>(*child), style, graphicListener);
           break;
         case GreatWksGraphInternal::Frame::T_DBFIELD:

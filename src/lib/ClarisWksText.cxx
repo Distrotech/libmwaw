@@ -795,7 +795,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
       int dim[2];
       for (int j = 0; j < 2; j++)
         dim[j] = (int) input->readLong(2);
-      child.m_box = Box2i(Vec2i(0,0), Vec2i(dim[0], dim[1]));
+      child.m_box = MWAWBox2i(Vec2i(0,0), Vec2i(dim[0], dim[1]));
       textZone->m_childs.push_back(child);
       plc.m_id = i;
       textZone->m_plcMap.insert(std::map<long, ClarisWksTextInternal::PLC>::value_type(child.m_posC, plc));

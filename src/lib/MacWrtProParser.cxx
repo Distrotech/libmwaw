@@ -180,7 +180,7 @@ struct Token {
   //! the block id
   int m_blockId;
   //! the bdbox ( filled in MWII for figure)
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! some flags
   int m_flags[4];
 };
@@ -1315,7 +1315,7 @@ bool MacWrtProParser::readTextTokens(shared_ptr<MacWrtProParserInternal::Zone> z
       f << "sz=" << std::hex << sz << std::dec << ",";
       int dim[4];
       for (int j = 0; j < 4; j++) dim[j] = (int) input->readLong(2);
-      token.m_box = Box2f(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+      token.m_box = MWAWBox2f(Vec2f(float(dim[1]),float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
       f << "dim=[" << dim[1] << "x" << dim[0] << "-"
         << dim[3] << "x" << dim[2] << ",";
       for (int j = 0; j < 4; j++) dim[j] = (int) input->readLong(2);

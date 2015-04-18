@@ -84,7 +84,7 @@ struct Index {
   //! the page
   int m_page;
   //! the bdbox
-  Box2i m_box;
+  MWAWBox2i m_box;
   //! extra data
   std::string m_extra;
 };
@@ -262,7 +262,7 @@ bool MacDocParser::createZones()
       MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
       if (!pictInput)
         continue;
-      Box2f box;
+      MWAWBox2f box;
       MWAWPict::ReadResult res = MWAWPictData::check(pictInput,(int) data.size(), box);
       if (res != MWAWPict::MWAW_R_BAD && box.size()[0]>0 && box.size()[1]>0) {
         pageSizeSet=true;
@@ -432,7 +432,7 @@ bool MacDocParser::readIndex(MWAWEntry const &entry)
     int dim[4];
     for (int i=0; i<4; ++i)
       dim[i]=(int) input->readLong(2);
-    index.m_box=Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+    index.m_box=MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
     val=(int) input->readLong(2);
     if (val) f << "#f1=" << val << ",";
     index.m_numChild=(int) input->readLong(2);
@@ -577,7 +577,7 @@ bool MacDocParser::sendPicture(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MacDocParser::sendPicture: oops can not find an input\n"));
     return false;
   }
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MacDocParser::sendPicture: can not find the picture\n"));

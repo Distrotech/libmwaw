@@ -74,15 +74,15 @@ public:
   enum ReadResult { MWAW_R_BAD=0, MWAW_R_OK, MWAW_R_OK_EMPTY, MWAW_R_MAYBE };
 
   //! returns the bdbox of the picture
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
-    Box2f res(m_bdbox);
+    MWAWBox2f res(m_bdbox);
     res.extend(m_bdBoxExt);
     return res;
   }
 
   //! sets the bdbox of the picture
-  void setBdBox(Box2f const &box)
+  void setBdBox(MWAWBox2f const &box)
   {
     m_bdbox = box;
   }
@@ -112,10 +112,10 @@ public:
   }
 protected:
   //! computes the minimum and maximum of a list of point
-  static Box2f getBdBox(int numPt, Vec2f const *pt)
+  static MWAWBox2f getBdBox(int numPt, Vec2f const *pt)
   {
     if (numPt <= 0) {
-      return Box2f();
+      return MWAWBox2f();
     }
 
     float minV[2], maxV[2];
@@ -129,7 +129,7 @@ protected:
       }
     }
 
-    return Box2f(Vec2f(minV[0], minV[1]), Vec2f(maxV[0], maxV[1]));
+    return MWAWBox2f(Vec2f(minV[0], minV[1]), Vec2f(maxV[0], maxV[1]));
   }
 
   // a function to extend the bdbox
@@ -158,7 +158,7 @@ protected:
 
 private:
   //! the bdbox (min and max pt)
-  Box2f m_bdbox;
+  MWAWBox2f m_bdbox;
   //! the actual extension of the original box,
   float m_bdBoxExt;
 };

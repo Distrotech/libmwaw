@@ -940,7 +940,7 @@ bool MoreParser::readGraphic(MWAWEntry const &entry)
 
   input->seek(pos, librevenge::RVNG_SEEK_SET);
 
-  Box2f box;
+  MWAWBox2f box;
   if (MWAWPictData::check(input, (int)entry.length(), box)==MWAWPict::MWAW_R_BAD)
     return false;
 #ifdef DEBUG_WITH_FILES

@@ -118,7 +118,7 @@ struct ClustListParser : public RagTime5StructManager::DataParser {
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
     // very often (0x0<->1x1), if not, we often have dim[0]+dim[2]~1 and dim[1]+dim[3]~1, some margins?
-    f << "dim=" << Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
+    f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3])) << ",";
     val=(int) input->readLong(2); // 0|1
     if (val) f << "f2=" << val << ",";
     return true;
@@ -634,7 +634,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     f << "surf[id]=GS" << val << ",";
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-  f << "dim=" << Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+  f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
   long dataPos=input->tell();
   if (fl&0xFF) {
     val=(int) input->readLong(2);
@@ -658,7 +658,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
       f << "###";
       ok=false;
     }
-    f << "dim2=" << Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+    f << "dim2=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
   }
   switch (type) {
   case RagTime5GraphInternal::Shape::S_Rect:
@@ -698,7 +698,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
         f << "###";
         ok=false;
       }
-      f << "dim2=" << Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+      f << "dim2=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
     }
     for (int i=0; i<2; ++i) { // h2=0|1
       val=(int) input->readLong(2);

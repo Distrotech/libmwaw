@@ -48,9 +48,9 @@ namespace ClarisWksStruct
 //------------------------------------------------------------
 // DSET
 //------------------------------------------------------------
-Box2i DSET::getUnionChildBox() const
+MWAWBox2i DSET::getUnionChildBox() const
 {
-  Box2i res;
+  MWAWBox2i res;
   long maxX=1000;
   for (size_t i=0; i<m_childs.size(); ++i) {
     Child const &child=m_childs[i];
@@ -105,12 +105,12 @@ void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numH
     MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: the width can not be null\n"));
     numHorizontalPages=1;
   }
-  Box2f groupBox;
+  MWAWBox2f groupBox;
   int groupPage=-1;
   bool firstGroupFound=false;
   for (size_t i=0; i < m_childs.size(); i++) {
     Child &child=m_childs[i];
-    Box2f childBdBox=child.getBdBox();
+    MWAWBox2f childBdBox=child.getBdBox();
     int pageY=int(float(childBdBox[1].y())/textHeight);
     if (pageY < 0)
       continue;
@@ -142,7 +142,7 @@ void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numH
             orig[1]=textHeight-sz[1];
         }
       }
-      child.m_box = Box2f(orig, orig+sz);
+      child.m_box = MWAWBox2f(orig, orig+sz);
     }
     int pageX=1;
     if (numHorizontalPages>1) {
@@ -172,7 +172,7 @@ void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numH
             orig[0]=textWidth-sz[0];
         }
       }
-      child.m_box = Box2f(orig, orig+sz);
+      child.m_box = MWAWBox2f(orig, orig+sz);
       pageX++;
     }
     int page=pageX+(pageY-1)*numHorizontalPages;
@@ -212,7 +212,7 @@ void DSET::findForbiddenPagesBreaking(float pageDim, float formDim, int dim, std
   float const eps=0.1f*length;
   for (size_t i=0; i < m_childs.size(); i++) {
     Child const &child=m_childs[i];
-    Box2f childBdBox=child.getBdBox();
+    MWAWBox2f childBdBox=child.getBdBox();
     // as the recomputation of page position is not accurate, just ignore the small size
     if (childBdBox.size()[dim]<=length)
       continue;

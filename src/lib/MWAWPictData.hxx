@@ -94,8 +94,8 @@ public:
   /** checks if the data pointed by input is known
      - if not return MWAW_R_BAD
      - if true
-     - fills box if possible, if not set box=Box2f() */
-  static ReadResult check(MWAWInputStreamPtr input, int size, Box2f &box)
+     - fills box if possible, if not set box=MWAWBox2f() */
+  static ReadResult check(MWAWInputStreamPtr input, int size, MWAWBox2f &box)
   {
     return checkOrGet(input, size, box, 0L);
   }
@@ -106,7 +106,7 @@ public:
   static MWAWPictData *get(MWAWInputStreamPtr input, int size)
   {
     MWAWPictData *res = 0L;
-    Box2f box;
+    MWAWBox2f box;
     if (checkOrGet(input, size, box, &res) == MWAW_R_BAD) return 0L;
     if (res) { // if the bdbox is good, we set it
       Vec2f sz = box.size();
@@ -152,7 +152,7 @@ protected:
 
   //! protected constructor: use check to construct a picture
   MWAWPictData(): m_data(), m_empty(false) { }
-  MWAWPictData(Box2f &): m_data(), m_empty(false) { }
+  MWAWPictData(MWAWBox2f &): m_data(), m_empty(false) { }
 
   /** \brief checks if the data pointed by input and of given size is a pict
    * - if not returns MWAW_R_BAD
@@ -160,7 +160,7 @@ protected:
    *    - fills the box size
    *    - creates a picture if result is given and if the picture is not empty */
   static ReadResult checkOrGet(MWAWInputStreamPtr input, int size,
-                               Box2f &box, MWAWPictData **result = 0L);
+                               MWAWBox2f &box, MWAWPictData **result = 0L);
 
   //! the data size (without the empty header of 512 characters)
   librevenge::RVNGBinaryData m_data;

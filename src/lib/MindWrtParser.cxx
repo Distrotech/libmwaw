@@ -936,8 +936,8 @@ bool MindWrtParser::readGraphic(MindWrtParserInternal::LineInfo const &line)
 
   int dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (int) input->readLong(2);
-  Box2f box(Vec2f((float)dim[1],(float)dim[0]),
-            Vec2f((float)dim[3],(float)dim[2]));
+  MWAWBox2f box(Vec2f((float)dim[1],(float)dim[0]),
+                Vec2f((float)dim[3],(float)dim[2]));
   f << "Entries(graphic): bdBox=" << box << ",";
 
   shared_ptr<MWAWPict> pict(MWAWPictData::get(input, sz-8));

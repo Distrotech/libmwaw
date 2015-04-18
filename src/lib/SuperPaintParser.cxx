@@ -61,7 +61,7 @@ struct Shape {
   //! the type
   enum Type { GraphicShape, Group, Picture, TextBox };
   //! constructor
-  Shape(Type type, Box2f const &box) : m_type(type), m_box(box), m_entry(), m_shape(), m_style(), m_font(), m_justify(MWAWParagraph::JustificationLeft), m_interline(1)
+  Shape(Type type, MWAWBox2f const &box) : m_type(type), m_box(box), m_entry(), m_shape(), m_style(), m_font(), m_justify(MWAWParagraph::JustificationLeft), m_interline(1)
   {
   }
   //! operator<<
@@ -69,7 +69,7 @@ struct Shape {
   //! the shape type
   Type m_type;
   //! the bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the picture/textbox entry
   MWAWEntry m_entry;
   //! the graphic shape
@@ -465,7 +465,7 @@ bool SuperPaintParser::readShape()
   }
   int dim[4];
   for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-  Box2f box(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
+  MWAWBox2f box(Vec2f((float)dim[1],(float)dim[0]),Vec2f((float)dim[3],(float)dim[2]));
   f << "box=" << dim[1] << "x" << dim[0] << "<->" << dim[3] << "x" << dim[2] << ",";
   int val;
   for (int i=0; i<4; ++i) { // always 0?
@@ -688,8 +688,8 @@ bool SuperPaintParser::readShape()
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                  Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
     m_state->m_shapeList.push_back(SuperPaintParserInternal::Shape(shapeType, realBox));
     m_state->m_shapeList.back().m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;

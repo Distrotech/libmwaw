@@ -125,7 +125,7 @@ struct Gradient {
       o << gr.m_colors[c] << ",";
     }
     o << "],";
-    if (gr.m_box!=Box2i(Vec2i(0,0),Vec2i(0,0)))
+    if (gr.m_box!=MWAWBox2i(Vec2i(0,0),Vec2i(0,0)))
       o << "center=" << gr.m_box << ",";
     return o;
   }
@@ -140,7 +140,7 @@ struct Gradient {
   //! the decal
   float m_decal;
   //! the center bdbox
-  Box2i m_box;
+  MWAWBox2i m_box;
 };
 
 bool Gradient::update(MWAWGraphicStyle &style) const
@@ -344,15 +344,15 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad5
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(79,80),Vec2i(79,80));
+  grad.m_box=MWAWBox2i(Vec2i(79,80),Vec2i(79,80));
   m_gradientList.push_back(grad);
   // grad6
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(81,20),Vec2i(81,20));
+  grad.m_box=MWAWBox2i(Vec2i(81,20),Vec2i(81,20));
   m_gradientList.push_back(grad);
   // grad7
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(50,50),Vec2i(50,50));
+  grad.m_box=MWAWBox2i(Vec2i(50,50),Vec2i(50,50));
   m_gradientList.push_back(grad);
   // grad8
   grad=Gradient(0,2,90,1);
@@ -371,19 +371,19 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad13
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(22,77),Vec2i(23,77));
+  grad.m_box=MWAWBox2i(Vec2i(22,77),Vec2i(23,77));
   m_gradientList.push_back(grad);
   // grad14
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(22,22),Vec2i(22,22));
+  grad.m_box=MWAWBox2i(Vec2i(22,22),Vec2i(22,22));
   m_gradientList.push_back(grad);
   // grad15
   grad=Gradient(1,2,0,0);
-  grad.m_box=Box2i(Vec2i(51,50),Vec2i(51,50));
+  grad.m_box=MWAWBox2i(Vec2i(51,50),Vec2i(51,50));
   m_gradientList.push_back(grad);
   // grad16
   grad=Gradient(2,3,0,0);
-  grad.m_box=Box2i(Vec2i(79,15),Vec2i(86,22));
+  grad.m_box=MWAWBox2i(Vec2i(79,15),Vec2i(86,22));
   grad.m_colors[1]=MWAWColor(0xaa0000);
   grad.m_colors[2]=MWAWColor(0xcc3300);
   m_gradientList.push_back(grad);
@@ -402,7 +402,7 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad19
   grad=Gradient(1,4,332,0);
-  grad.m_box=Box2i(Vec2i(77,71),Vec2i(77,71));
+  grad.m_box=MWAWBox2i(Vec2i(77,71),Vec2i(77,71));
   grad.m_colors[0]=MWAWColor(0xffff00);
   grad.m_colors[1]=MWAWColor(0xff3300);
   grad.m_colors[2]=MWAWColor(0x9900cc);
@@ -425,7 +425,7 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad23
   grad=Gradient(2,4,0,0);
-  grad.m_box=Box2i(Vec2i(41,40),Vec2i(62,62));
+  grad.m_box=MWAWBox2i(Vec2i(41,40),Vec2i(62,62));
   grad.m_colors[0]=MWAWColor(0xffffff);
   grad.m_colors[1]=MWAWColor(0xccffff);
   grad.m_colors[2]=MWAWColor(0x99ffff);
@@ -468,13 +468,13 @@ void State::setDefaultGradientList(int)
   m_gradientList.push_back(grad);
   // grad30
   grad=Gradient(2,2,0,0);
-  grad.m_box=Box2i(Vec2i(0,88),Vec2i(12,100));
+  grad.m_box=MWAWBox2i(Vec2i(0,88),Vec2i(12,100));
   grad.m_colors[0]=MWAWColor(0xff6600);
   grad.m_colors[1]=MWAWColor(0xffff00);
   m_gradientList.push_back(grad);
   // grad31
   grad=Gradient(2,4,0,0);
-  grad.m_box=Box2i(Vec2i(99,52),Vec2i(100,54));
+  grad.m_box=MWAWBox2i(Vec2i(99,52),Vec2i(100,54));
   grad.m_colors[0]=MWAWColor(0xffffff);
   grad.m_colors[1]=MWAWColor(0xffffcc);
   grad.m_colors[2]=MWAWColor(0xffff66);
@@ -1849,7 +1849,7 @@ bool ClarisWksStyleManager::readGradientList(long endPos)
     grad.m_decal=float(input->readLong(4))/65536.f;
     int dim[4];
     for (int j=0; j<4; ++j) dim[j]=(int)input->readLong(2);
-    grad.m_box=Box2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3]));
+    grad.m_box=MWAWBox2i(Vec2i(dim[0],dim[1]),Vec2i(dim[2],dim[3]));
     f << grad;
     if (!grad.ok()) {
       f << "##";

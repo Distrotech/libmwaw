@@ -86,7 +86,7 @@ struct Font {
   //! a series of flags
   int m_format2;
   //! two picture dim ( orig && file ?)
-  Box2i m_pictureDim[2];
+  MWAWBox2i m_pictureDim[2];
   //! extra data
   std::string m_extra;
 };
@@ -264,7 +264,7 @@ struct PicturePara {
   //! the paragraph position
   int m_paragraph;
   //! the position
-  Box2i m_position;
+  MWAWBox2i m_position;
 };
 
 std::ostream &operator<<(std::ostream &o, PicturePara const &pict)
@@ -902,7 +902,7 @@ bool NisusWrtText::readFonts(MWAWEntry const &entry)
       for (int st = 0; st < 2; st++) {
         for (int j = 0; j < 4; j++)
           dim[j] = (int) input->readLong(2);
-        font.m_pictureDim[st]=Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+        font.m_pictureDim[st]=MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
       }
     }
 
@@ -1403,7 +1403,7 @@ bool NisusWrtText::readPICD(MWAWEntry const &entry, NisusWrtStruct::ZoneType zon
     int dim[4];
     for (int j = 0; j < 4; j++)
       dim[j] = (int) input->readLong(2);
-    pict.m_position = Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    pict.m_position = MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     pict.m_id = (int) input->readULong(2);
     zone.m_pictureParaList.push_back(pict);
 

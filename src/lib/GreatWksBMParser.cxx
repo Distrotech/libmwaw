@@ -232,7 +232,7 @@ bool GreatWksBMParser::checkHeader(MWAWHeader *header, bool strict)
     return false;
   if (strict) {
     input->seek(512, librevenge::RVNG_SEEK_SET);
-    Box2f box;
+    MWAWBox2f box;
     if (MWAWPictData::check(input, (int)(input->size()-512), box)==MWAWPict::MWAW_R_BAD)
       return false;
   }

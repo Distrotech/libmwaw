@@ -127,7 +127,7 @@ protected:
   //! try to send a textbox
   bool sendTextbox(GreatWksGraphInternal::FrameText const &text, GreatWksGraphInternal::Zone const &zone, MWAWPosition const &pos);
   //! try to send a textbox via a graphiclistener
-  bool sendTextboxAsGraphic(Box2f const &box, GreatWksGraphInternal::FrameText const &text, MWAWGraphicStyle const &style, MWAWListenerPtr listener);
+  bool sendTextboxAsGraphic(MWAWBox2f const &box, GreatWksGraphInternal::FrameText const &text, MWAWGraphicStyle const &style, MWAWListenerPtr listener);
   //! try to send the textbox text (via the mainParser)
   bool sendTextbox(MWAWEntry const &entry, MWAWListenerPtr listener);
 

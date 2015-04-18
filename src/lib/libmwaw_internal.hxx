@@ -897,20 +897,20 @@ typedef Vec3<int> Vec3i;
 /*! \brief Vec3 of float */
 typedef Vec3<float> Vec3f;
 
-/*! \class Box2
+/*! \class MWAWBox2
  *   \brief small class which defines a 2D Box
  */
-template <class T> class Box2
+template <class T> class MWAWBox2
 {
 public:
   //! constructor
-  Box2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
+  MWAWBox2(Vec2<T> minPt=Vec2<T>(), Vec2<T> maxPt=Vec2<T>())
   {
     m_pt[0] = minPt;
     m_pt[1] = maxPt;
   }
   //! generic constructor
-  template <class U> Box2(Box2<U> const &p)
+  template <class U> MWAWBox2(MWAWBox2<U> const &p)
   {
     for (int c=0; c < 2; c++) m_pt[c] = p[c];
   }
@@ -1004,9 +1004,9 @@ public:
   }
 
   //! returns the union between this and box
-  Box2<T> getUnion(Box2<T> const &box) const
+  MWAWBox2<T> getUnion(MWAWBox2<T> const &box) const
   {
-    Box2<T> res;
+    MWAWBox2<T> res;
     res.m_pt[0]=Vec2<T>(m_pt[0][0]<box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
                         m_pt[0][1]<box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
     res.m_pt[1]=Vec2<T>(m_pt[1][0]>box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
@@ -1014,9 +1014,9 @@ public:
     return res;
   }
   //! returns the intersection between this and box
-  Box2<T> getIntersection(Box2<T> const &box) const
+  MWAWBox2<T> getIntersection(MWAWBox2<T> const &box) const
   {
-    Box2<T> res;
+    MWAWBox2<T> res;
     res.m_pt[0]=Vec2<T>(m_pt[0][0]>box.m_pt[0][0]?m_pt[0][0] : box.m_pt[0][0],
                         m_pt[0][1]>box.m_pt[0][1]?m_pt[0][1] : box.m_pt[0][1]);
     res.m_pt[1]=Vec2<T>(m_pt[1][0]<box.m_pt[1][0]?m_pt[1][0] : box.m_pt[1][0],
@@ -1024,23 +1024,23 @@ public:
     return res;
   }
   //! comparison operator==
-  bool operator==(Box2<T> const &p) const
+  bool operator==(MWAWBox2<T> const &p) const
   {
     return cmp(p) == 0;
   }
   //! comparison operator!=
-  bool operator!=(Box2<T> const &p) const
+  bool operator!=(MWAWBox2<T> const &p) const
   {
     return cmp(p) != 0;
   }
   //! comparison operator< : fist sorts min by Y,X values then max extremity
-  bool operator<(Box2<T> const &p) const
+  bool operator<(MWAWBox2<T> const &p) const
   {
     return cmp(p) < 0;
   }
 
   //! comparison function : fist sorts min by Y,X values then max extremity
-  int cmp(Box2<T> const &p) const
+  int cmp(MWAWBox2<T> const &p) const
   {
     int diff  = m_pt[0].cmpY(p.m_pt[0]);
     if (diff) return diff;
@@ -1050,7 +1050,7 @@ public:
   }
 
   //! print data in form X0xY0<->X1xY1
-  friend std::ostream &operator<< (std::ostream &o, Box2<T> const &f)
+  friend std::ostream &operator<< (std::ostream &o, MWAWBox2<T> const &f)
   {
     o << "(" << f.m_pt[0] << "<->" << f.m_pt[1] << ")";
     return o;
@@ -1061,33 +1061,33 @@ public:
    */
   struct PosSizeLt {
     //! comparaison function
-    bool operator()(Box2<T> const &s1, Box2<T> const &s2) const
+    bool operator()(MWAWBox2<T> const &s1, MWAWBox2<T> const &s2) const
     {
       return s1.cmp(s2) < 0;
     }
   };
   /*! \typedef Map
-   *  \brief map of Box2
+   *  \brief map of MWAWBox2
    */
-  typedef std::map<Box2<T>, T,struct PosSizeLt> Map;
+  typedef std::map<MWAWBox2<T>, T,struct PosSizeLt> Map;
 
 protected:
   //! the two extremities
   Vec2<T> m_pt[2];
 };
 
-/*! \brief Box2 of int */
-typedef Box2<int> Box2i;
-/*! \brief Box2 of float */
-typedef Box2<float> Box2f;
-/*! \brief Box2 of long */
-typedef Box2<long> Box2l;
+/*! \brief MWAWBox2 of int */
+typedef MWAWBox2<int> MWAWBox2i;
+/*! \brief MWAWBox2 of float */
+typedef MWAWBox2<float> MWAWBox2f;
+/*! \brief MWAWBox2 of long */
+typedef MWAWBox2<long> MWAWBox2l;
 
 // some geometrical function
 namespace libmwaw
 {
 //! rotate a bdox and returns the final bdbox
-Box2f rotateBoxFromCenter(Box2f const &box, float angle);
+MWAWBox2f rotateBoxFromCenter(MWAWBox2f const &box, float angle);
 }
 #endif /* LIBMWAW_INTERNAL_H */
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -358,7 +358,7 @@ bool EDocParser::sendPicture(int pictId, bool compressed)
     MWAW_DEBUG_MSG(("EDocParser::sendPicture: oops can not find an input\n"));
     return false;
   }
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("EDocParser::sendPicture: can not find the picture\n"));

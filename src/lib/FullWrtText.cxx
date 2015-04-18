@@ -301,7 +301,7 @@ struct ColumnInfo {
   //! the column number
   int m_column;
   //! the bdbox
-  Box2i m_box;
+  MWAWBox2i m_box;
   //! the first data
   int m_beginPos;
 };
@@ -418,7 +418,7 @@ struct Zone {
   //! the main zone
   FullWrtStruct::EntryPtr m_zone;
   //! the bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
 
   //! the beginning of the text data
   long m_begin;
@@ -1697,7 +1697,7 @@ bool FullWrtText::readTextData(FullWrtStruct::EntryPtr zone)
     dim[i]=(int)input->readLong(2);
   if (dimUnk != dim[2]) f << "dimUnk=" << dimUnk << ",";
 
-  text->m_box=Box2f(Vec2f(float(dim[0]),float(dim[1])),Vec2f(float(dim[2]),float(dim[3])));
+  text->m_box=MWAWBox2f(Vec2f(float(dim[0]),float(dim[1])),Vec2f(float(dim[2]),float(dim[3])));
   text->m_pages[1] = (int)input->readLong(2);
   if (text->m_pages[1] == 16000) text->m_pages[1] = 0;
   text->m_pages[0] = (int)input->readLong(2);
@@ -1822,7 +1822,7 @@ bool FullWrtText::readTextData(FullWrtStruct::EntryPtr zone)
         col.m_column = i;
         col.m_beginPos = (int)input->readLong(2);
         for (int j = 0; j < 4; j++) dim[j] = (int)input->readLong(2);
-        col.m_box = Box2i(Vec2i(dim[0],dim[2]), Vec2i(dim[1], dim[3]));
+        col.m_box = MWAWBox2i(Vec2i(dim[0],dim[2]), Vec2i(dim[1], dim[3]));
         f << col;
         page.m_columns.push_back(col);
 

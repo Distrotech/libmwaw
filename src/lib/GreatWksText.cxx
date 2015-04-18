@@ -281,7 +281,7 @@ struct Frame {
   }
 
   //! the frame position
-  Box2f m_pos;
+  MWAWBox2f m_pos;
   //! the page
   int m_page;
   //! extra data
@@ -824,7 +824,7 @@ bool GreatWksText::readZonePositions(GreatWksTextInternal::Zone &zone)
     float dim[4];
     for (int j=0; j<4; ++j)
       dim[j]=float(input->readLong(4))/65536.f;
-    frame.m_pos=Box2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
+    frame.m_pos=MWAWBox2f(Vec2f(dim[1],dim[0]),Vec2f(dim[3],dim[2]));
     int val=(int) input->readLong(2); // always 0
     if (val) f << "#unkn=" << val << ",";
     frame.m_page=(int) input->readLong(2);

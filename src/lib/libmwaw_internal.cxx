@@ -361,7 +361,7 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
 // a little geometry
 namespace libmwaw
 {
-Box2f rotateBoxFromCenter(Box2f const &box, float angle)
+MWAWBox2f rotateBoxFromCenter(MWAWBox2f const &box, float angle)
 {
   Vec2f center=box.center();
   float angl=float(M_PI/180.)*angle;
@@ -382,7 +382,7 @@ Box2f rotateBoxFromCenter(Box2f const &box, float angle)
         maxPt[c]=pt[c];
     }
   }
-  return Box2f(minPt,maxPt);
+  return MWAWBox2f(minPt,maxPt);
 }
 
 // debug message

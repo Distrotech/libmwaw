@@ -671,7 +671,7 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
   float totalWidth=0;
   for (size_t l=0; l < listW.size(); ++l) totalWidth += listW[l];
   if (lineH<totalWidth) lineH=totalWidth;
-  Box2f box(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH));
+  MWAWBox2f box(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH));
   MWAWPosition pos(box[0], box[1], librevenge::RVNG_POINT);
   pos.setRelativePosition(MWAWPosition::Char);
   MWAWGraphicStyle pStyle;
@@ -685,7 +685,7 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     pStyle.m_lineWidth=0;
     pat.m_pattern.m_colors[1]=col;
     pStyle.setPattern(pat.m_pattern);
-    shape=MWAWGraphicShape::rectangle(Box2f(Vec2f(0,0), Vec2f(float(sz[0]),listW[0])));
+    shape=MWAWGraphicShape::rectangle(MWAWBox2f(Vec2f(0,0), Vec2f(float(sz[0]),listW[0])));
   }
 
   if (listW.size()==1) {
@@ -694,7 +694,7 @@ void MarinerWrtGraph::sendRule(MarinerWrtGraphInternal::Token const &tkn)
     return;
   }
   MWAWGraphicEncoder graphicEncoder;
-  MWAWGraphicListener graphicListener(*m_parserState, Box2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)), &graphicEncoder);
+  MWAWGraphicListener graphicListener(*m_parserState, MWAWBox2f(Vec2f(0,0), Vec2f(sz)+Vec2f(0,lineH)), &graphicEncoder);
   graphicListener.startDocument();
   float actH = (lineH-totalWidth)/2.f;
   for (size_t l=0; l < listW.size(); ++l) {

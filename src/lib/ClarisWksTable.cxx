@@ -596,7 +596,7 @@ bool ClarisWksTable::readTableCells(ClarisWksTableInternal::Table &table)
     shared_ptr<ClarisWksTableInternal::TableCell> cell(new ClarisWksTableInternal::TableCell());
     float posi[6];
     for (int j = 0; j < 6; j++) posi[j] = float(input->readLong(4))/256.f;
-    cell->setBdBox(Box2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2])));
+    cell->setBdBox(MWAWBox2f(Vec2f(posi[1], posi[0]), Vec2f(posi[3], posi[2])));
     cell->setBdSize(Vec2f(float(posi[5]), float(posi[4])));
     cell->m_zoneId = (int) input->readULong(4);
     val = (int) input->readLong(2);

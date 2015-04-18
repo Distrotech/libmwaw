@@ -2880,7 +2880,7 @@ bool MacDrawProStyleManager::readPreferences1(MWAWEntry const &entry)
     int dim[4];
     for (int j=0; j<4; ++j) dim[j]=(int) input->readLong(2);
     if (dim[0]||dim[1]||dim[2]||dim[3])
-      f << "dim" << i << "=" << Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2])) << ",";
+      f << "dim" << i << "=" << MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2])) << ",";
   }
   for (int i=0; i<4; ++i) { // always 0 expected f5=2
     val=(int) input->readLong(2);

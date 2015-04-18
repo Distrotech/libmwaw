@@ -158,7 +158,7 @@ bool LightWayTxtGraph::sendPICT(MWAWEntry const &entry)
   if (!pict)
     return false;
 
-  Box2f bdBox=pict->getBdBox();
+  MWAWBox2f bdBox=pict->getBdBox();
   MWAWPosition pictPos(Vec2f(0,0), bdBox.size(), librevenge::RVNG_POINT);
   pictPos.setRelativePosition(MWAWPosition::Char);
 

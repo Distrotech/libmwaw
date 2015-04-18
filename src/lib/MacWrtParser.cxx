@@ -1545,7 +1545,7 @@ bool MacWrtParser::readGraphic(MacWrtParserInternal::Information const &info)
   libmwaw::DebugStream f;
   f << "Entries(Graphic):";
 
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(input, int(entry.length()-8), box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("MacWrtParser::readGraphic: can not find the picture\n"));

@@ -108,7 +108,7 @@ protected:
   void sendFootnote(WriteNowEntry const &entry);
 
   //! try to send the graphic zone
-  bool sendGraphic(int gId, Box2i const &bdbox);
+  bool sendGraphic(int gId, MWAWBox2i const &bdbox);
 
   /*
    * interface with subdocument
@@ -142,7 +142,7 @@ protected:
   bool readGenericUnkn(WriteNowEntry const &entry);
 
   //! try to send a picture to the listener
-  bool sendPicture(WriteNowEntry const &entry, Box2i const &bdbox);
+  bool sendPicture(WriteNowEntry const &entry, MWAWBox2i const &bdbox);
 
   //! read a file entry
   WriteNowEntry readEntry();

@@ -125,7 +125,7 @@ struct Zone {
   virtual void fillFrame(MWAWGraphicStyle &) const { }
 
   //! return the box
-  Box2f getLocalBox(bool extendWithBord=true) const
+  MWAWBox2f getLocalBox(bool extendWithBord=true) const
   {
     float x = m_box.size().x(), y=m_box.size().y();
     Vec2f min = m_box.min();
@@ -137,7 +137,7 @@ struct Zone {
       min+=Vec2f(0,y);
       y *= -1.0f;
     }
-    Box2f res(min, min+Vec2f(x,y));
+    MWAWBox2f res(min, min+Vec2f(x,y));
     if (!extendWithBord) return res;
     float bExtra = needExtraBorderWidth();
     if (bExtra > 0) res.extend(2.0f*bExtra);
@@ -147,7 +147,7 @@ struct Zone {
   MWAWPosition getPosition(MWAWPosition::AnchorTo rel) const
   {
     MWAWPosition res;
-    Box2f box = getLocalBox();
+    MWAWBox2f box = getLocalBox();
     if (rel==MWAWPosition::Paragraph || rel==MWAWPosition::Frame) {
       res = MWAWPosition(box.min()+m_finalDecal, box.size(), librevenge::RVNG_POINT);
       res.setRelativePosition(rel);
@@ -188,11 +188,11 @@ struct Zone {
   //! the page
   int m_page;
   //! the local position
-  Box2f m_decal;
+  MWAWBox2f m_decal;
   //! the final local position
   Vec2f m_finalDecal;
   //! local bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the line position(v1)
   int m_line;
   //! the style
@@ -282,7 +282,7 @@ void Zone::print(std::ostream &o) const
     o << "#type=" << m_subType << ",";
   }
   if (m_page>=0) o << "page=" << m_page << ",";
-  if (m_decal!=Box2f())
+  if (m_decal!=MWAWBox2f())
     o << "pos=" << m_decal << ",";
   o << "bdbox=" << m_box << ",";
   o << "style=[" << m_style << "],";
@@ -400,7 +400,7 @@ struct DataPict : public Zone {
   //! the end of data (only defined when different to m_pos.end())
   long m_dataEndPos;
   //! the pict box (if known )
-  mutable Box2f m_naturalBox;
+  mutable MWAWBox2f m_naturalBox;
 };
 
 bool DataPict::getBinaryData(MWAWInputStreamPtr ip,
@@ -471,7 +471,7 @@ struct DataBitmap : public Zone {
   int m_numRows /** the number of rows*/, m_numCols/** the number of columns*/;
   long m_dataSize /** the bitmap data size */;
   //! the pict box (if known )
-  mutable Box2f m_naturalBox;
+  mutable MWAWBox2f m_naturalBox;
 };
 
 bool DataBitmap::getPictureData
@@ -1161,14 +1161,14 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
   float offset[4];
   for (int i = 0; i < 4; i++)
     offset[i] = (float) input->readLong(2);
-  pict.m_decal = Box2f(Vec2f(offset[0],offset[1]), Vec2f(offset[3],offset[2]));
+  pict.m_decal = MWAWBox2f(Vec2f(offset[0],offset[1]), Vec2f(offset[3],offset[2]));
   pict.m_finalDecal = Vec2f(float(offset[0]+offset[3]), float(offset[1]+offset[2]));
 
   // the two point which allows to create the form ( in general the bdbox)
   float dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = float(input->readLong(4))/65536.f;
-  pict.m_box=Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+  pict.m_box=MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
 
   int flags = (int) input->readLong(1);
   // 2: rotations, 1:lock ?, 0: nothing, other ?
@@ -1423,7 +1423,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
       float dim[4];
       for (int i = 0; i < 4; i++)
         dim[i] = float(input->readLong(4))/65536.f;
-      Box2f box(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+      MWAWBox2f box(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
       f << "bdbox2=" << box << ",";
       break;
     }
@@ -1436,7 +1436,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
   pict.m_dataPos++;
 
   if (pict.m_subType > 0xd) {
-    f << ", " << std::hex << input->readULong(4) << std::dec << ", BdBox2=(";
+    f << ", " << std::hex << input->readULong(4) << std::dec << ", BdMWAWBox2=(";
     for (int i = 0; i < 4; i++)
       f << float(input->readLong(4))/65536.f << ", ";
     f << ")";
@@ -1453,7 +1453,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
   case 1: // rect
   case 2: // rectoval
   case 3: { // circle
-    Box2f bdbox = pict.m_box;
+    MWAWBox2f bdbox = pict.m_box;
     MsWksGraphInternal::BasicShape *form = new MsWksGraphInternal::BasicShape(pict);
     res.reset(form);
     form->m_shape.m_bdBox = form->m_shape.m_formBox = bdbox;
@@ -1478,7 +1478,7 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     float dim[4]; // real Bdbox
     for (int i = 0; i < 4; i++)
       dim[i] = (float) input->readLong(2);
-    Box2f realBox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    MWAWBox2f realBox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
     form->m_shape=MWAWGraphicShape::arc(realBox,pict.m_box,Vec2f(450.f-angl2,450.f-angle));
     form->m_box = realBox;
     break;
@@ -1903,7 +1903,7 @@ int MsWksGraph::getEntryPictureV1(int zoneId, MWAWEntry &zone, bool autoSend)
   int dim[4]; // pictbox
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
-  pict->m_box = Box2f(Vec2f(float(dim[1]), float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
+  pict->m_box = MWAWBox2f(Vec2f(float(dim[1]), float(dim[0])), Vec2f(float(dim[3]),float(dim[2])));
 
   Vec2i pictMin = pict->m_box.min(), pictSize = pict->m_box.size();
   if (pictSize.x() < 0 || pictSize.y() < 0) return -1;
@@ -2236,7 +2236,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
   size_t numZones=m_state->m_zonesList.size();
   size_t numChild=group.m_childs.size(), childNotSent=0;
   int numDataToMerge=0;
-  Box2f partialBdBox;
+  MWAWBox2f partialBdBox;
   MWAWPosition partialPos(pos);
   bool isDraw=listener->getType()==MWAWListener::Graphic;
   for (size_t c=0; c < numChild; ++c) {
@@ -2249,9 +2249,9 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
     if (isDraw)
       canMerge=false;
     else if (child.type()==MsWksGraphInternal::Zone::Shape || child.type()==MsWksGraphInternal::Zone::Text) {
-      Box2f origBdBox=child.getLocalBox();
+      MWAWBox2f origBdBox=child.getLocalBox();
       Vec2f decal = child.m_decal[0] + child.m_decal[1];
-      Box2f localBdBox(origBdBox[0]+decal, origBdBox[1]+decal);
+      MWAWBox2f localBdBox(origBdBox[0]+decal, origBdBox[1]+decal);
       if (numDataToMerge == 0)
         partialBdBox=localBdBox;
       else
@@ -2283,7 +2283,7 @@ void MsWksGraph::sendGroupChild(int id, MWAWPosition const &pos)
         if (localCId < 0 || localCId >= int(numZones) || !m_state->m_zonesList[size_t(localCId)])
           continue;
         MsWksGraphInternal::Zone const &localChild=*(m_state->m_zonesList[size_t(localCId)]);
-        Box2f origBdBox=localChild.getLocalBox(false);
+        MWAWBox2f origBdBox=localChild.getLocalBox(false);
         Vec2f decal=localChild.m_decal[0]+localChild.m_decal[1];
         MWAWPosition pictPos(origBdBox[0]+decal, origBdBox.size(), librevenge::RVNG_POINT);
         pictPos.m_anchorTo=MWAWPosition::Page;
@@ -2401,7 +2401,7 @@ shared_ptr<MsWksGraphInternal::GroupZone> MsWksGraph::readGroup(MsWksGraphIntern
   input->seek(header.m_dataPos, librevenge::RVNG_SEEK_SET);
   float dim[4];
   for (int i = 0; i < 4; i++) dim[i] = (float) input->readLong(4);
-  group->m_box=Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
+  group->m_box=MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3]));
   group->m_finalDecal=Vec2f(0,0);
   long ptr[2];
   for (int i = 0; i < 2; i++)
@@ -2719,7 +2719,7 @@ void MsWksGraph::send(int id, MWAWPosition const &pos)
   switch (zone->type()) {
   case MsWksGraphInternal::Zone::Text: {
     MsWksGraphInternal::TextBox &textbox = static_cast<MsWksGraphInternal::TextBox &>(*zone);
-    Box2f box(Vec2f(0,0),textbox.m_box.size());
+    MWAWBox2f box(Vec2f(0,0),textbox.m_box.size());
     shared_ptr<MsWksGraphInternal::SubDocument> subdoc
     (new MsWksGraphInternal::SubDocument(*this, input, MsWksGraphInternal::SubDocument::TextBox, id));
     // a textbox can not have border

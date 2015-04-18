@@ -1672,7 +1672,7 @@ bool WriterPlsParser::readGraphic(WriterPlsParserInternal::ParagraphInfo const &
   f.str("");
   f << "Paragraph" << data.m_type << "(III):";
 
-  Box2f box;
+  MWAWBox2f box;
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)length, box);
   if (res == MWAWPict::MWAW_R_BAD) {

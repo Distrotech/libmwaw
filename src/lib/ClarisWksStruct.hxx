@@ -84,7 +84,7 @@ struct DSET {
     return m_position==P_Slide || m_position==P_SlideNote || m_position==P_SlideThumbnail || m_position==P_SlideMaster;
   }
   //! return the zone bdbox
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
     Vec2f minPt(m_box[0][0], m_box[0][1]);
     Vec2f maxPt(m_box[1][0], m_box[1][1]);
@@ -93,7 +93,7 @@ struct DSET {
       minPt[c]=m_box[1][c];
       maxPt[c]=m_box[0][c];
     }
-    return Box2f(minPt,maxPt);
+    return MWAWBox2f(minPt,maxPt);
   }
   /** returns the maximum page */
   int getMaximumPage() const
@@ -119,7 +119,7 @@ struct DSET {
   //! find forbidden page break
   void findForbiddenPagesBreaking(float pageDim, float formDim, int dim, std::set<int> &forbiddenPageBreak) const;
   //! returns the child box (ie. the union of the childs box)
-  Box2i getUnionChildBox() const;
+  MWAWBox2i getUnionChildBox() const;
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, DSET const &doc);
@@ -141,7 +141,7 @@ struct DSET {
   //! the page (if known)
   int m_page;
   //! the bounding box (if known)
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the page dimension (if know)
   Vec2f m_pageDimension;
 
@@ -178,7 +178,7 @@ struct DSET {
     {
     }
     //! return the zone bdbox
-    Box2f getBdBox() const
+    MWAWBox2f getBdBox() const
     {
       Vec2f minPt(m_box[0][0], m_box[0][1]);
       Vec2f maxPt(m_box[1][0], m_box[1][1]);
@@ -187,7 +187,7 @@ struct DSET {
         minPt[c]=m_box[1][c];
         maxPt[c]=m_box[0][c];
       }
-      return Box2f(minPt,maxPt);
+      return MWAWBox2f(minPt,maxPt);
     }
 
     //! operator<<
@@ -225,7 +225,7 @@ struct DSET {
     //! the page if known
     int m_page;
     //! the bdbox
-    Box2f m_box;
+    MWAWBox2f m_box;
   };
 };
 }

@@ -112,7 +112,7 @@ public:
 
 protected:
   //! protected constructor: use check to construct a picture
-  MWAWPictMac(Box2f box) : MWAWPictData(box), m_version(-1), m_subVersion(-1)
+  MWAWPictMac(MWAWBox2f box) : MWAWPictData(box), m_version(-1), m_subVersion(-1)
   {
     extendBDBox(1.0);
   }
@@ -125,7 +125,7 @@ protected:
      - creates a picture if result is given
   */
   static ReadResult checkOrGet(MWAWInputStreamPtr input, int size,
-                               Box2f &box, MWAWPictData **result = 0L);
+                               MWAWBox2f &box, MWAWPictData **result = 0L);
 
   //! the picture version
   int m_version;

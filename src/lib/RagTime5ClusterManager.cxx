@@ -1136,7 +1136,7 @@ protected:
         f << "g" << i+3 << "=" << val << ",";
     }
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    f << "dim=" << Box2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
+    f << "dim=" << MWAWBox2f(Vec2f(dim[0],dim[1]), Vec2f(dim[2],dim[3])) << ",";
     for (int i=0; i<4; ++i) { // h3=0|1|3|6
       val=(int) input->readLong(2);
       if (val)

@@ -53,10 +53,10 @@ bool MWAWPictData::createFileData(librevenge::RVNGBinaryData const &orig, librev
 }
 
 MWAWPictData::ReadResult MWAWPictData::checkOrGet
-(MWAWInputStreamPtr input, int size,  Box2f &box, MWAWPictData **result)
+(MWAWInputStreamPtr input, int size,  MWAWBox2f &box, MWAWPictData **result)
 {
   if (result) *result=0L;
-  box = Box2f();
+  box = MWAWBox2f();
 
   if (size <= 0) return MWAW_R_BAD;
 

@@ -68,14 +68,14 @@ struct Shape {
   }
 
   //! return the shape bdbox
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
     return m_type==Basic ? m_shape.getBdBox() : m_box;
   }
   //! the graphic type
   Type m_type;
   //! the shape bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the graphic style
   MWAWGraphicStyle m_style;
   //! the graphic shape ( for basic geometric form )
@@ -95,9 +95,9 @@ struct Shape {
   //! the number of bytes by row (for a bitmap)
   int m_numBytesByRow;
   //! the bitmap dimension (in page)
-  Box2i m_bitmapDim;
+  MWAWBox2i m_bitmapDim;
   //! the bitmap dimension (in the file)
-  Box2i m_bitmapFileDim;
+  MWAWBox2i m_bitmapFileDim;
   //! the bitmap entry (data)
   MWAWEntry m_bitmapEntry;
   //! a flag used to know if the object is sent to the listener or not
@@ -610,7 +610,7 @@ int MacDrawParser::readObject()
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2));
-    shape.m_box=Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    shape.m_box=MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
     shape.m_textEntry.setBegin(input->tell());
     shape.m_textEntry.setLength(N);
     shape.m_style.m_lineWidth=0; // no border for textbox
@@ -632,7 +632,7 @@ int MacDrawParser::readObject()
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    Box2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
     f << box << ",";
     shape.m_box=box;
     switch (type) {
@@ -683,9 +683,9 @@ int MacDrawParser::readObject()
         else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
       }
       Vec2f center = box.center();
-      Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                    Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
-      shape.m_box=Box2f(Vec2f(shape.m_box[0])+realBox[0],Vec2f(shape.m_box[0])+realBox[1]);
+      MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                        Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+      shape.m_box=MWAWBox2f(Vec2f(shape.m_box[0])+realBox[0],Vec2f(shape.m_box[0])+realBox[1]);
       if (shape.m_style.hasSurface())
         shape.m_shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
       else
@@ -710,7 +710,7 @@ int MacDrawParser::readObject()
     f << "N=" << N << ",";
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    Box2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+    MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
     f << box << ",";
     shape.m_shape.m_type = MWAWGraphicShape::Polygon;
     shape.m_shape.m_bdBox= shape.m_box=box;
@@ -765,7 +765,7 @@ int MacDrawParser::readObject()
     if (vers==1) {
       float dim[4];
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      Box2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
       f << box << ",";
       shape.m_box=box;
     }
@@ -778,7 +778,7 @@ int MacDrawParser::readObject()
     if (vers==0) {
       float dim[4];
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      Box2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f box(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
       f << box << ",";
       shape.m_box=box;
     }
@@ -826,12 +826,12 @@ int MacDrawParser::readObject()
     }
     int dim[4];
     for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-    Box2i &bitmapBox=shape.m_bitmapDim;
-    bitmapBox=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    MWAWBox2i &bitmapBox=shape.m_bitmapDim;
+    bitmapBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     f << "bitmap[dim]="<< bitmapBox << ",";
     float fDim[4];
     for (int i=0; i<4; ++i) fDim[i]=float(input->readLong(4))/65536.f;
-    Box2f box(Vec2f(fDim[1],fDim[0]), Vec2f(fDim[3],fDim[2]));
+    MWAWBox2f box(Vec2f(fDim[1],fDim[0]), Vec2f(fDim[3],fDim[2]));
     f << box << ",";
     shape.m_box=box;
 
@@ -840,8 +840,8 @@ int MacDrawParser::readObject()
     shape.m_numBytesByRow=(int) input->readULong(2);
 
     for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
-    Box2i &fileBox=shape.m_bitmapFileDim;
-    fileBox=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    MWAWBox2i &fileBox=shape.m_bitmapFileDim;
+    fileBox=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     f << "bitmap[dimInFile]="<< fileBox << ",";
     shape.m_bitmapEntry.setBegin(input->tell());
     shape.m_bitmapEntry.setLength(fileBox.size()[1]*shape.m_numBytesByRow);
@@ -926,7 +926,7 @@ bool MacDrawParser::checkHeader(MWAWHeader *header, bool strict)
     if (dim[0]<dim[2] && dim[1]<dim[3] && (val==0x1101 || (val==0x11 && input->readLong(2)==0x2ff))) {
       // posible
       input->seek(512, librevenge::RVNG_SEEK_SET);
-      Box2f box;
+      MWAWBox2f box;
       if (MWAWPictData::check(input, (int)(input->size()-512), box) != MWAWPict::MWAW_R_BAD)
         return false;
     }
@@ -1076,7 +1076,7 @@ bool MacDrawParser::send(MacDrawParserInternal::Shape const &shape)
     return false;
   }
   shape.m_isSent=true;
-  Box2f box=shape.getBdBox();
+  MWAWBox2f box=shape.getBdBox();
   MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
   pos.m_anchorTo = MWAWPosition::Page;
   switch (shape.m_type) {

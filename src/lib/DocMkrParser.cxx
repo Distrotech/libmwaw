@@ -456,7 +456,7 @@ bool DocMkrParser::sendPicture(int zId, int lId, double /*lineW*/)
     MWAW_DEBUG_MSG(("DocMkrText::sendPicture: oops can not find an input\n"));
     return false;
   }
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("DocMkrText::sendPicture: can not find the picture\n"));

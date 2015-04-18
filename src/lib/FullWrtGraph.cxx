@@ -61,7 +61,7 @@ struct SideBar : public FullWrtStruct::ZoneHeader {
   {
   }
   //! the position (in point)
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the page
   int m_page;
   //! the border id
@@ -367,7 +367,7 @@ bool FullWrtGraph::readSideBarPosition(FullWrtStruct::EntryPtr zone, FullWrtGrap
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i]=int(input->readLong(2));
-  frame.m_box=Box2f(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+  frame.m_box=MWAWBox2f(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
   f << "pos=" << frame.m_box << ",";
   int val=int(input->readLong(2));
   if (val) f << "w[wrap]=" << val << "pt,";
@@ -734,7 +734,7 @@ bool FullWrtGraph::sendGraphic(FullWrtStruct::EntryPtr zone)
 #endif
 
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res =
     MWAWPictData::check(input, sz, box);
   if (res == MWAWPict::MWAW_R_BAD) {

@@ -222,12 +222,12 @@ struct Block {
     if (m_baseline < 0.75*height) return MWAWPosition::YCenter;
     return MWAWPosition::YTop;
   }
-  bool contains(Box2f const &box) const
+  bool contains(MWAWBox2f const &box) const
   {
     return box[0][0] >= m_box[0][0] && box[0][1] >= m_box[0][1] &&
            box[1][0] <= m_box[1][0] && box[1][1] <= m_box[1][1];
   }
-  bool intersects(Box2f const &box) const
+  bool intersects(MWAWBox2f const &box) const
   {
     if (box[0][0] >= m_box[1][0] || box[0][1] >= m_box[1][1] ||
         box[1][0] <= m_box[0][0] || box[1][1] <= m_box[1][1])
@@ -257,7 +257,7 @@ struct Block {
   int m_page;
 
   //! the bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
 
   //! the borders width
   double m_borderWList[4];
@@ -357,7 +357,7 @@ struct Cell : public MWAWCell {
   Cell(MacWrtProStructures &parser, Block *block) : MWAWCell(), m_parser(parser), m_blockId(0)
   {
     if (!block) return;
-    setBdBox(Box2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1)));
+    setBdBox(MWAWBox2f(block->m_box.min(), block->m_box.max()-Vec2f(1,1)));
     setBackgroundColor(block->m_surfaceColor);
     m_blockId = block->m_id;
     for (int b=0; b<4; ++b) {
@@ -1948,7 +1948,7 @@ shared_ptr<MacWrtProStructuresInternal::Block>  MacWrtProStructures::readBlockV2
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(m_input->readLong(2));
-  res->m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  res->m_box = MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
   for (int i = 0; i < 4; ++i) { // 8000*4 ?
     val = (long) m_input->readULong(i==3 ? 1 : 2);
     if (val != 0x8000) f << "g" << i+1 << "=" << std::hex << val << std::dec << ",";
@@ -2013,7 +2013,7 @@ shared_ptr<MacWrtProStructuresInternal::Block> MacWrtProStructures::readBlock()
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(m_input->readLong(4))/65536.f;
-  block->m_box = Box2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+  block->m_box = MWAWBox2f(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
 
   static int const(wh[4])= { libmwaw::Top, libmwaw::Left, libmwaw::Bottom, libmwaw::Right };
   for (int i = 0; i < 4; ++i)
@@ -2111,7 +2111,7 @@ shared_ptr<MacWrtProStructuresInternal::Block> MacWrtProStructures::readBlock()
       if (isNote && val) {
         // ok, reset the box only if it is bigger
         if (dim2[3]-dim2[1]>dim[3]-dim[1] && dim2[2]-dim2[0]>dim[2]-dim[0])
-          block->m_box=Box2f(Vec2f(dim2[1],dim2[0]),Vec2f(dim2[3],dim2[2]));
+          block->m_box=MWAWBox2f(Vec2f(dim2[1],dim2[0]),Vec2f(dim2[3],dim2[2]));
       }
     }
     if (isNote) {

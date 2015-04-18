@@ -179,12 +179,12 @@ public:
   }
 
   //! bdbox  accessor
-  Box2f const &bdBox() const
+  MWAWBox2f const &bdBox() const
   {
     return m_bdBox;
   }
   //! set the bdbox (unit point)
-  void setBdBox(Box2f box)
+  void setBdBox(MWAWBox2f box)
   {
     m_bdBox = box;
   }
@@ -325,7 +325,7 @@ protected:
   //! the cell spanned : by default (1,1)
   Vec2i m_numberCellSpanned;
   /** the cell bounding box (unit in point)*/
-  Box2f m_bdBox;
+  MWAWBox2f m_bdBox;
   /** the cell bounding size : unit point */
   Vec2f m_bdSize;
 

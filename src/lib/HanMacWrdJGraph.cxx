@@ -304,7 +304,7 @@ struct Frame {
   {
   }
   //! return the frame bdbox
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
     Vec2f minPt(m_pos[0][0], m_pos[0][1]);
     Vec2f maxPt(m_pos[1][0], m_pos[1][1]);
@@ -313,7 +313,7 @@ struct Frame {
       minPt[c]=m_pos[1][c];
       maxPt[c]=m_pos[0][c];
     }
-    return Box2f(minPt,maxPt);
+    return MWAWBox2f(minPt,maxPt);
   }
   //! destructor
   virtual ~Frame()
@@ -337,7 +337,7 @@ struct Frame {
   //! the page
   int m_page;
   //! the position
-  Box2f m_pos;
+  MWAWBox2f m_pos;
   //! the baseline
   float m_baseline;
   //! true if this node is a group's child
@@ -1297,7 +1297,7 @@ shared_ptr<HanMacWrdJGraphInternal::Frame> HanMacWrdJGraph::readFrame(int id)
   float dim[4];
   for (int i = 0; i < 4; ++i)
     dim[i] = float(input->readLong(4))/65536.f;
-  graph.m_pos = Box2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
+  graph.m_pos = MWAWBox2f(Vec2f(dim[0],dim[1]),Vec2f(dim[2],dim[3]));
   graph.m_id = (int) input->readLong(2); // check me
   val = (int) input->readLong(2);
   if (val) f << "f1=" << val << ",";
@@ -1999,7 +1999,7 @@ bool HanMacWrdJGraph::sendEmptyPicture(MWAWPosition pos)
   pictPos.setRelativePosition(MWAWPosition::Frame);
   pictPos.setOrder(-1);
 
-  Box2f box=Box2f(Vec2f(0,0),pictSz);
+  MWAWBox2f box=MWAWBox2f(Vec2f(0,0),pictSz);
   MWAWPosition shapePos(Vec2f(0,0),pictSz, librevenge::RVNG_POINT);
   shapePos.m_anchorTo=MWAWPosition::Page;
   MWAWGraphicEncoder graphicEncoder;
@@ -2130,7 +2130,7 @@ bool HanMacWrdJGraph::sendFrame(HanMacWrdJGraphInternal::Frame const &frame, MWA
       if (!textbox.isLinked() && m_mainParser->canSendTextAsGraphic(textbox.m_zId,0)) {
         MWAWSubDocumentPtr subdoc
         (new HanMacWrdJGraphInternal::SubDocument(*this, input, HanMacWrdJGraphInternal::SubDocument::Text, textbox.m_zId));
-        Box2f box(Vec2f(0,0),pos.size());
+        MWAWBox2f box(Vec2f(0,0),pos.size());
         MWAWGraphicEncoder graphicEncoder;
         MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
         graphicListener.startDocument();
@@ -2476,7 +2476,7 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
   int flag = int(val&0xf);
   bool isLine = graphType==0 || graphType==3;
   bool ok = graphType >= 0 && graphType < 7;
-  Box2f bdbox=graph->m_pos;
+  MWAWBox2f bdbox=graph->m_pos;
   MWAWGraphicShape &shape=graph->m_shape;
   shape = MWAWGraphicShape();
   shape.m_bdBox = shape.m_formBox = bdbox;
@@ -2553,8 +2553,8 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
                         bdbox.size()[1]/(maxVal[1]>minVal[1]?maxVal[1]-minVal[1]:0.f)
                        };
       float delta[2]= {bdbox[0][0]-minVal[0] *factor[0],bdbox[0][1]-minVal[1] *factor[1]};
-      shape.m_formBox=Box2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
-                            Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
+      shape.m_formBox=MWAWBox2f(Vec2f(delta[0]-factor[0],delta[1]-factor[1]),
+                                Vec2f(delta[0]+factor[0],delta[1]+factor[1]));
       shape.m_type=MWAWGraphicShape::Pie;
       shape.m_arcAngles=Vec2f(angles[0],angles[1]);
       break;
@@ -2765,7 +2765,7 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
         !m_state->m_framesList[size_t(fIt->second)])
       continue;
     HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
-    Box2f box=frame.getBdBox();
+    MWAWBox2f box=frame.getBdBox();
     HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(frame.m_formatId);
     MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
     pictPos.m_anchorTo=MWAWPosition::Page;
@@ -2812,7 +2812,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
   if (!numChilds) return;
 
   int numDataToMerge=0;
-  Box2f partialBdBox;
+  MWAWBox2f partialBdBox;
   MWAWPosition partialPos(pos);
   MWAWInputStreamPtr &input= m_parserState->m_input;
   std::map<long, int>::const_iterator fIt;
@@ -2846,7 +2846,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
     }
     bool isLast=false;
     if (canMerge) {
-      Box2f box=frame.getBdBox();
+      MWAWBox2f box=frame.getBdBox();
       if (numDataToMerge == 0)
         partialBdBox=box;
       else
@@ -2870,7 +2870,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
             !m_state->m_framesList[size_t(fIt->second)])
           continue;
         HanMacWrdJGraphInternal::Frame const &child=*m_state->m_framesList[size_t(fIt->second)];
-        Box2f box=child.getBdBox();
+        MWAWBox2f box=child.getBdBox();
         HanMacWrdJGraphInternal::FrameFormat const &format=m_state->getFrameFormat(child.m_formatId);
         MWAWPosition pictPos(box[0], box.size(), librevenge::RVNG_POINT);
         pictPos.m_anchorTo=MWAWPosition::Page;

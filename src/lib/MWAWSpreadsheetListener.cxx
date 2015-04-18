@@ -214,7 +214,7 @@ MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, s
 {
 }
 
-MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface) : MWAWListener(),
+MWAWSpreadsheetListener::MWAWSpreadsheetListener(MWAWParserState &parserState, MWAWBox2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface) : MWAWListener(),
   m_ds(), m_ps(new MWAWSpreadsheetListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
   MWAWPageSpan pageSpan;

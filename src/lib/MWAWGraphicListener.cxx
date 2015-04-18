@@ -180,7 +180,7 @@ MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, std::vect
 {
 }
 
-MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWListener(),
+MWAWGraphicListener::MWAWGraphicListener(MWAWParserState &parserState, MWAWBox2f const &box, librevenge::RVNGDrawingInterface *documentInterface) : MWAWListener(),
   m_ds(), m_ps(new MWAWGraphicListenerInternal::State), m_psStack(), m_parserState(parserState), m_documentInterface(documentInterface)
 {
   MWAWPageSpan pageSpan;
@@ -1126,7 +1126,7 @@ void MWAWGraphicListener::insertTextBox
   closeFrame();
 }
 
-void MWAWGraphicListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
+void MWAWGraphicListener::insertGroup(MWAWBox2f const &bdbox, MWAWSubDocumentPtr subDocument)
 {
   if (!m_ds->m_isDocumentStarted || m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWGraphicListener::insertGroup: can not insert a group\n"));

@@ -70,7 +70,7 @@ struct RSSOEntry {
   //! the id
   int m_id;
   //! the bdbox
-  Box2f m_position;
+  MWAWBox2f m_position;
 };
 ////////////////////////////////////////
 //! Internal: the state of a NisusWrtGraph
@@ -406,7 +406,7 @@ std::vector<NisusWrtGraphInternal::RSSOEntry> NisusWrtGraph::findRSSOEntry(MWAWI
     NisusWrtGraphInternal::RSSOEntry rsso;
     rsso.m_id = (int) input->readLong(2);
     if (input->isEnd()) break;
-    rsso.m_position=Box2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+    rsso.m_position=MWAWBox2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
     if (rsso.m_id > 0)
       listRSSO.push_back(rsso);
     else if (version() > 3) {
@@ -501,7 +501,7 @@ bool NisusWrtGraph::sendPageGraphics()
     MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
     if (!dataInput) continue;
     dataInput->seek(0, librevenge::RVNG_SEEK_SET);
-    Box2f box;
+    MWAWBox2f box;
     if (MWAWPictData::check(dataInput, (int)data.size(), box) == MWAWPict::MWAW_R_BAD) {
       MWAW_DEBUG_MSG(("NisusWrtGraph::sendPageGraphics: can not determine the picture type\n"));
       continue;

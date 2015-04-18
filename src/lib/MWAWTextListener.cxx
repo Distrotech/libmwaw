@@ -1190,9 +1190,9 @@ void MWAWTextListener::insertPicture
   case MWAWGraphicShape::C_Path: {
     // odt seems to have some problem displaying path so
     // first create the picture, reset origin (if it is bad)
-    Box2f bdbox = shape.getBdBox(style,true);
+    MWAWBox2f bdbox = shape.getBdBox(style,true);
     MWAWGraphicEncoder graphicEncoder;
-    MWAWGraphicListener graphicListener(m_parserState, Box2f(Vec2f(0,0),bdbox.size()), &graphicEncoder);
+    MWAWGraphicListener graphicListener(m_parserState, MWAWBox2f(Vec2f(0,0),bdbox.size()), &graphicEncoder);
     graphicListener.startDocument();
     MWAWPosition pathPos(-1.f*bdbox[0],bdbox.size(),librevenge::RVNG_POINT);
     pathPos.m_anchorTo=MWAWPosition::Page;

@@ -70,7 +70,7 @@ public:
   /** simplified constructor (can be used for a embedded spreadsheet with one page).
 
    \note the box coordinates must be given in point.*/
-  MWAWSpreadsheetListener(MWAWParserState &parserState, Box2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface);
+  MWAWSpreadsheetListener(MWAWParserState &parserState, MWAWBox2f const &box, librevenge::RVNGSpreadsheetInterface *documentInterface);
   /** destructor */
   virtual ~MWAWSpreadsheetListener();
 

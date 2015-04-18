@@ -96,7 +96,7 @@ public:
   //! static constructor to create a line
   static MWAWGraphicShape line(Vec2f const &orign, Vec2f const &dest);
   //! static constructor to create a rectangle
-  static MWAWGraphicShape rectangle(Box2f const &box, Vec2f const &corners=Vec2f(0,0))
+  static MWAWGraphicShape rectangle(MWAWBox2f const &box, Vec2f const &corners=Vec2f(0,0))
   {
     MWAWGraphicShape res;
     res.m_type=Rectangle;
@@ -105,7 +105,7 @@ public:
     return res;
   }
   //! static constructor to create a circle
-  static MWAWGraphicShape circle(Box2f const &box)
+  static MWAWGraphicShape circle(MWAWBox2f const &box)
   {
     MWAWGraphicShape res;
     res.m_type=Circle;
@@ -113,7 +113,7 @@ public:
     return res;
   }
   //! static constructor to create a arc
-  static MWAWGraphicShape arc(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  static MWAWGraphicShape arc(MWAWBox2f const &box, MWAWBox2f const &circleBox, Vec2f const &angles)
   {
     MWAWGraphicShape res;
     res.m_type=Arc;
@@ -123,7 +123,7 @@ public:
     return res;
   }
   //! static constructor to create a pie
-  static MWAWGraphicShape pie(Box2f const &box, Box2f const &circleBox, Vec2f const &angles)
+  static MWAWGraphicShape pie(MWAWBox2f const &box, MWAWBox2f const &circleBox, Vec2f const &angles)
   {
     MWAWGraphicShape res;
     res.m_type=Pie;
@@ -133,7 +133,7 @@ public:
     return res;
   }
   //! static constructor to create a polygon
-  static MWAWGraphicShape polygon(Box2f const &box)
+  static MWAWGraphicShape polygon(MWAWBox2f const &box)
   {
     MWAWGraphicShape res;
     res.m_type=Polygon;
@@ -141,7 +141,7 @@ public:
     return res;
   }
   //! static constructor to create a path
-  static MWAWGraphicShape path(Box2f const &box)
+  static MWAWGraphicShape path(MWAWBox2f const &box)
   {
     MWAWGraphicShape res;
     res.m_type=Path;
@@ -163,12 +163,12 @@ public:
     return m_type;
   }
   //! returns the basic bdbox
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
     return m_bdBox;
   }
   //! returns the bdbox corresponding to a style
-  Box2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
+  MWAWBox2f getBdBox(MWAWGraphicStyle const &style, bool moveToO=false) const;
   //! updates the propList to send to an interface
   Command addTo(Vec2f const &orig, bool asSurface, librevenge::RVNGPropertyList &propList) const;
   //! a print operator
@@ -182,9 +182,9 @@ public:
   //! the type
   Type m_type;
   //! the shape bdbox
-  Box2f m_bdBox;
+  MWAWBox2f m_bdBox;
   //! the internal shape bdbox ( used for arc, circle to store the circle bdbox )
-  Box2f m_formBox;
+  MWAWBox2f m_formBox;
   //! the rectangle round corner
   Vec2f m_cornerWidth;
   //! the start and end value which defines an arc

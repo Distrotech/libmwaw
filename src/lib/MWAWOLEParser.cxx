@@ -426,7 +426,7 @@ bool MWAWOLEParser::parse(MWAWInputStreamPtr file)
         MWAWInputStreamPtr dataInput=MWAWInputStream::get(data, false);
         if (dataInput) {
           dataInput->seek(0, librevenge::RVNG_SEEK_SET);
-          Box2f box;
+          MWAWBox2f box;
           if (MWAWPictData::check(dataInput, (int)data.size(), box) != MWAWPict::MWAW_R_BAD) {
             isPict = true;
             newConfidence = 100;

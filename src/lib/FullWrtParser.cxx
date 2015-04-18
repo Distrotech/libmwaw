@@ -114,7 +114,7 @@ struct SideBar : public FullWrtStruct::ZoneHeader {
   {
   }
   //! the position (in point)
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the page
   int m_page;
 };

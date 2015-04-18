@@ -79,7 +79,7 @@ public:
     //! show or not the label
     bool m_showLabel;
     //! the label range if defined
-    Box2i m_labelRange;
+    MWAWBox2i m_labelRange;
     //! the graphic style
     MWAWGraphicStyle m_style;
   };
@@ -127,7 +127,7 @@ public:
     //! the type
     Type m_type;
     //! the data range
-    Box2i m_range;
+    MWAWBox2i m_range;
     //! the graphic style
     MWAWGraphicStyle m_style;
   };

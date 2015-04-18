@@ -201,7 +201,7 @@ struct Zone {
   //! destructor
   virtual ~Zone() {}
   //! return the zone bdbox
-  Box2f getBdBox() const
+  MWAWBox2f getBdBox() const
   {
     Vec2f minPt(m_box[0][0], m_box[0][1]);
     Vec2f maxPt(m_box[1][0], m_box[1][1]);
@@ -210,7 +210,7 @@ struct Zone {
       minPt[c]=m_box[1][c];
       maxPt[c]=m_box[0][c];
     }
-    return Box2f(minPt,maxPt);
+    return MWAWBox2f(minPt,maxPt);
   }
   //! return the main type
   virtual Type getType() const
@@ -254,7 +254,7 @@ struct Zone {
   //! the page (checkme: or frame linked )
   int m_page;
   //! the bdbox
-  Box2f m_box;
+  MWAWBox2f m_box;
   //! the ordering
   int m_ordering;
   //! the style
@@ -1050,7 +1050,7 @@ void ClarisWksGraph::findMasterPage() const
       MWAW_DEBUG_MSG(("ClarisWksGraph::findMasterPage: a master block is already found\n"));
       return;
     }
-    Box2f box=mainGroup->m_zones[i]->getBdBox();
+    MWAWBox2f box=mainGroup->m_zones[i]->getBdBox();
     if (box[0][0]<=0 && box[0][0]>=0 && box[0][1]<=0 && box[0][1]>=0)
       pageDim=box.size();
     else {
@@ -1202,7 +1202,7 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     dim[j] = float(input->readLong(4))/256.f;
     if (dim[j] < -100) f << "##dim?,";
   }
-  zone.m_box = Box2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
+  zone.m_box = MWAWBox2f(Vec2f(dim[1], dim[0]), Vec2f(dim[3], dim[2]));
   style.m_lineWidth = (float) input->readLong(1);
   val = (int) input->readULong(1);
   if (val) f << "f1=" << val << ",";
@@ -1557,7 +1557,7 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
     return false;
 
   Vec2f pictSz=zone.getBdBox().size();
-  Box2i box(Vec2f(0,0), pictSz);
+  MWAWBox2i box(Vec2f(0,0), pictSz);
   MWAWGraphicShape &shape=zone.m_shape;
   shape.m_bdBox=shape.m_formBox=box;
   libmwaw::DebugStream f;
@@ -1624,9 +1624,9 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
       if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
       else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
     }
-    Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
-                  Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
-    zone.m_box=Box2f(Vec2f(zone.m_box[0])+realBox[0],Vec2f(zone.m_box[0])+realBox[1]);
+    MWAWBox2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
+                      Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
+    zone.m_box=MWAWBox2f(Vec2f(zone.m_box[0])+realBox[0],Vec2f(zone.m_box[0])+realBox[1]);
     shape = MWAWGraphicShape::pie(realBox, box, Vec2f(float(angle[0]),float(angle[1])));
     break;
   }
@@ -1674,7 +1674,7 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
       shape=shape.rotate(float(-zone.m_rotate), shape.m_bdBox.center());
       Vec2f orig=zone.m_box[0]+shape.m_bdBox[0];
       shape.translate(-1.f*shape.m_bdBox[0]);
-      zone.m_box=Box2f(orig, orig+shape.m_bdBox.size());
+      zone.m_box=MWAWBox2f(orig, orig+shape.m_bdBox.size());
     }
     if (vers==6) {
       for (int i=0; i < 2; i++) { // always 0
@@ -2110,7 +2110,7 @@ bool ClarisWksGraph::readPICT(ClarisWksGraphInternal::ZonePict &zone)
   libmwaw::DebugStream f;
   f << "Entries(Graphic):";
 
-  Box2f box;
+  MWAWBox2f box;
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
 
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)sz, box);
@@ -2495,8 +2495,8 @@ bool ClarisWksGraph::sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInterna
   for (size_t g = 0; g < numZones; g++) {
     shared_ptr<ClarisWksGraphInternal::Zone> child = lChild[g];
     if (!child) continue;
-    Box2f box=child->getBdBox();
-    box=Box2f(box[0]+leftTop, box[1]+leftTop);
+    MWAWBox2f box=child->getBdBox();
+    box=MWAWBox2f(box[0]+leftTop, box[1]+leftTop);
     ClarisWksGraphInternal::Zone::Type type=child->getType();
     MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Page;
@@ -2566,7 +2566,7 @@ bool ClarisWksGraph::sendPageChild(ClarisWksGraphInternal::Group &group)
       if (dset && dset->m_position==ClarisWksStruct::DSET::P_Main)
         continue;
     }
-    Box2f const &box=child->m_box;
+    MWAWBox2f const &box=child->m_box;
     MWAWPosition pos(box[0]+leftTop, box.size(), librevenge::RVNG_POINT);
     pos.setRelativePosition(MWAWPosition::Page);
     pos.setPage(child->m_page);
@@ -2632,7 +2632,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   }
 #endif
   if (!mainGroup && canSendAsGraphic(group)) {
-    Box2f box=group.m_box;
+    MWAWBox2f box=group.m_box;
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
     graphicListener->startDocument();
@@ -2705,7 +2705,7 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     }
     size_t numJobs=listJobs[st].size();
     for (size_t g = 0; g < numJobs; g++) {
-      Box2f box;
+      MWAWBox2f box;
       std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > groupList;
       int page = 0;
       size_t lastOk=g;
@@ -2823,7 +2823,7 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
     return sendBitmap(zId, MWAWListenerPtr(), pos);
   if (!isLinked && (cStyle.hasPattern() || cStyle.hasGradient()) &&
       (dset && dset->m_fileType==1) && m_document.canSendZoneAsGraphic(zId)) {
-    Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
+    MWAWBox2f box=MWAWBox2f(Vec2f(0,0), childZone.m_box.size());
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListener graphicListener(*m_parserState, box, &graphicEncoder);
     graphicListener.startDocument();
@@ -2889,7 +2889,7 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
     return true;
   }
   if (dset && dset->m_fileType==2) { // spreadsheet
-    Box2f box=Box2f(Vec2f(0,0), childZone.m_box.size());
+    MWAWBox2f box=MWAWBox2f(Vec2f(0,0), childZone.m_box.size());
     MWAWSpreadsheetEncoder spreadsheetEncoder;
     MWAWSpreadsheetListener *spreadsheetListener=new MWAWSpreadsheetListener(*m_parserState, box, &spreadsheetEncoder);
     MWAWListenerPtr sheetListener(spreadsheetListener);

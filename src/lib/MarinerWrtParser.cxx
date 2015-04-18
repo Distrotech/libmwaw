@@ -89,11 +89,11 @@ struct Zone {
   //! right/bottom position
   Vec2l m_RBpos;
   //! the zone total position
-  Box2l m_dim;
+  MWAWBox2l m_dim;
   //! the page dimension (?)
-  Box2i m_pageDim;
+  MWAWBox2i m_pageDim;
   //! the zone of text dimension ( ie page less margins)
-  Box2i m_pageTextDim;
+  MWAWBox2i m_pageTextDim;
   //! the section
   MWAWSection m_section;
   //! the background color
@@ -769,7 +769,7 @@ bool MarinerWrtParser::readZoneHeader(MarinerWrtEntry const &entry, int actId, b
       dim[j-28] = (int) data.value(0);
       while (j<31)
         dim[++j-28] = (int) dataList[d++].value(0);
-      zone.m_dim = Box2l(Vec2l(dim[1],dim[0]), Vec2l(dim[3],dim[2]));
+      zone.m_dim = MWAWBox2l(Vec2l(dim[1],dim[0]), Vec2l(dim[3],dim[2]));
       break;
     case 32:
     case 33:
@@ -869,7 +869,7 @@ bool MarinerWrtParser::readZoneDim(MarinerWrtEntry const &entry, int zoneId)
         dim[j] = (int) data.value(0);
     }
     // checkme
-    Box2i dimension(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    MWAWBox2i dimension(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     f << "pos=" << dimension << ",";
     bool dimOk=dim[0] >= 0 && dim[0] < dim[2] && dim[1] >= 0 && dim[1] < dim[3];
     if (i==0 && dimOk) {

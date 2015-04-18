@@ -509,7 +509,7 @@ bool ActaText::sendGraphic(ActaTextInternal::Topic const &topic)
   ascFile.addNote("Entries(Graphic):");
   ascFile.skipZone(pos, pos+dataSz-1);
 
-  Box2f box;
+  MWAWBox2f box;
   input->seek(pos, librevenge::RVNG_SEEK_SET);
   MWAWPict::ReadResult res = MWAWPictData::check(input, (int)dataSz, box);
   if (res == MWAWPict::MWAW_R_BAD) {

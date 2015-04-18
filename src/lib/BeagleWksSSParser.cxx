@@ -640,7 +640,7 @@ bool BeagleWksSSParser::readChart()
   if (val!=0x12) f << "f1=" << val << ",";
   bool findRange=false;
   shared_ptr<BeagleWksSSParserInternal::Chart> chart(new BeagleWksSSParserInternal::Chart(m_state->m_spreadsheetName, *this));
-  Box2i serieRange;
+  MWAWBox2i serieRange;
   for (int i=0; i<2; ++i) {
     long actPos=input->tell();
     int dSz=(int) input->readULong(2);
@@ -857,8 +857,8 @@ bool BeagleWksSSParser::readChart()
     chart->setDataType(serieType, true);
     for (int r=serieRange[0][1]; r<serieRange[1][1]; ++r) {
       MWAWChart::Series series;
-      series.m_range=Box2i(Vec2i(serieRange[0][0], r),
-                           Vec2i(serieRange[1][0], r));
+      series.m_range=MWAWBox2i(Vec2i(serieRange[0][0], r),
+                               Vec2i(serieRange[1][0], r));
       series.m_type=serieType;
       unsigned char gray=(unsigned char)((r%4)*30);
       series.m_style.m_lineWidth=1;

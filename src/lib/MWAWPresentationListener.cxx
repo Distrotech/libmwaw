@@ -1138,7 +1138,7 @@ void MWAWPresentationListener::insertSlideNote(MWAWPosition const &pos, MWAWSubD
   closeFrame();
 }
 
-void MWAWPresentationListener::insertGroup(Box2f const &bdbox, MWAWSubDocumentPtr subDocument)
+void MWAWPresentationListener::insertGroup(MWAWBox2f const &bdbox, MWAWSubDocumentPtr subDocument)
 {
   if (!m_ds->m_isDocumentStarted || m_ps->isInTextZone()) {
     MWAW_DEBUG_MSG(("MWAWPresentationListener::insertGroup: can not insert a group\n"));

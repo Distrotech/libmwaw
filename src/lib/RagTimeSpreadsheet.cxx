@@ -2507,7 +2507,7 @@ bool RagTimeSpreadsheet::send(int zId, MWAWPosition const &pos)
     return false;
   }
   RagTimeSpreadsheetInternal::Spreadsheet &sheet=*m_state->m_idSpreadsheetMap.find(zId)->second;
-  Box2f box=Box2f(Vec2f(0,0), pos.size());
+  MWAWBox2f box=MWAWBox2f(Vec2f(0,0), pos.size());
   MWAWSpreadsheetEncoder spreadsheetEncoder;
   MWAWSpreadsheetListenerPtr spreadsheetListener(new MWAWSpreadsheetListener(*m_parserState, box, &spreadsheetEncoder));
   spreadsheetListener->startDocument();

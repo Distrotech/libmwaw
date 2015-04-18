@@ -1648,12 +1648,12 @@ bool NisusWrtParser::readPageLimit(MWAWEntry const &entry)
   val = input->readLong(2); // always 0x0
   if (val) f << "f2=" << val << ",";
 
-  Box2i boxes[3];
+  MWAWBox2i boxes[3];
   for (int i = 0; i < 3; i++) {
     int dim[4];
     for (int d = 0; d < 4; d++)
       dim[d] = (int) input->readLong(2);
-    boxes[i] = Box2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
+    boxes[i] = MWAWBox2i(Vec2i(dim[1],dim[0]),Vec2i(dim[3],dim[2]));
   }
   f << "page=" << boxes[0] << ",";
   f << "page[text]=" << boxes[1] << ",";
@@ -1735,7 +1735,7 @@ bool NisusWrtParser::readPageLimit(MWAWEntry const &entry)
   int dim[4];
   for (int d = 0; d < 4; d++)
     dim[d] = (int) input->readLong(2);
-  Box2i realPage = Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  MWAWBox2i realPage = MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
   if (dimOk && realPage.size()[0] >= pageDim[0] && realPage.size()[1] >= pageDim[1]) {
     LT -= realPage[0];
     RB += (realPage[1]-boxes[0][1]);

@@ -885,7 +885,7 @@ bool MsWksDocument::readGroupHeaderFooter(bool header, int check)
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
 
-  Box2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
+  MWAWBox2i box(Vec2i(dim[1], dim[0]), Vec2i(dim[3], dim[2]));
   if (box.size().x() < -2000 || box.size().y() < -2000 ||
       box.size().x() > 2000 || box.size().y() > 2000 ||
       box.min().x() < -200 || box.min().y() < -200) return false;

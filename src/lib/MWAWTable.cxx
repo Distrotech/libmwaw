@@ -186,7 +186,7 @@ void MWAWTable::sendExtraLines(MWAWListenerPtr listener) const
     if (span[0] <= 0 || span[1] <= 0 || pos[0]+span[0] > (int)nColumns ||
         pos[1]+span[1] > (int) nRows)
       continue;
-    Box2f box;
+    MWAWBox2f box;
     box.setMin(Vec2f(columnsPos[size_t(pos[0])], rowsPos[size_t(pos[1])]));
     box.setMax(Vec2f(columnsPos[size_t(pos[0]+span[0])],
                      rowsPos[size_t(pos[1]+span[1])]));

@@ -209,7 +209,7 @@ void WriteNowParser::send(WriteNowEntry const &entry)
   m_textParser->send(entry);
 }
 
-bool WriteNowParser::sendGraphic(int gId, Box2i const &bdbox)
+bool WriteNowParser::sendGraphic(int gId, MWAWBox2i const &bdbox)
 {
   if (gId < 8 || (gId-8) >= int(m_state->m_picturesList.size())) {
     MWAW_DEBUG_MSG(("WriteNowParser::sendGraphic: called with bad id=%d\n", gId));
@@ -249,7 +249,7 @@ void WriteNowParser::parse(librevenge::RVNGTextInterface *docInterface)
 
       // ok, we can now send what is not send.
       m_textParser->flushExtra();
-      Box2i emptyBdBox;
+      MWAWBox2i emptyBdBox;
       for (size_t i = 0; i < m_state->m_picturesList.size(); i++) {
         if (m_state->m_picturesList[i].isParsed() ||
             !m_state->m_picturesList[i].isZone()) continue;
@@ -629,7 +629,7 @@ bool WriteNowParser::parseGraphicZone(WriteNowEntry const &entry)
 ////////////////////////////////////////////////////////////
 // try to read a graphic zone
 ////////////////////////////////////////////////////////////
-bool WriteNowParser::sendPicture(WriteNowEntry const &entry, Box2i const &bdbox)
+bool WriteNowParser::sendPicture(WriteNowEntry const &entry, MWAWBox2i const &bdbox)
 {
   MWAWInputStreamPtr input = getInput();
 

@@ -215,7 +215,7 @@ MWAWGraphicShape MWAWGraphicShape::line(Vec2f const &orig, Vec2f const &dest)
     else
       minPt[c]=dest[c];
   }
-  res.m_bdBox=Box2f(minPt,maxPt);
+  res.m_bdBox=MWAWBox2f(minPt,maxPt);
   return res;
 }
 
@@ -294,11 +294,11 @@ int MWAWGraphicShape::cmp(MWAWGraphicShape const &a) const
   return 0;
 }
 
-Box2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO) const
+MWAWBox2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO) const
 {
-  Box2f bdBox=m_bdBox;
+  MWAWBox2f bdBox=m_bdBox;
   if (moveToO)
-    bdBox=Box2f(Vec2f(0,0),m_bdBox.size());
+    bdBox=MWAWBox2f(Vec2f(0,0),m_bdBox.size());
   if (style.hasLine())
     bdBox.extend(style.m_lineWidth/2.f);
   if (m_type==Line) {
@@ -313,8 +313,8 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
 {
   if (decal==Vec2f(0,0))
     return;
-  m_bdBox=Box2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
-  m_formBox=Box2f(m_formBox.min()+decal, m_formBox.max()+decal);
+  m_bdBox=MWAWBox2f(m_bdBox.min()+decal, m_bdBox.max()+decal);
+  m_formBox=MWAWBox2f(m_formBox.min()+decal, m_formBox.max()+decal);
   for (size_t pt=0; pt<m_vertices.size(); ++pt)
     m_vertices[pt]+=decal;
   for (size_t pt=0; pt<m_path.size(); ++pt)
@@ -323,10 +323,10 @@ void MWAWGraphicShape::translate(Vec2f const &decal)
 
 void MWAWGraphicShape::scale(Vec2f const &scaling)
 {
-  m_bdBox=Box2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
-                Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
-  m_formBox=Box2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
-                  Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
+  m_bdBox=MWAWBox2f(Vec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
+                    Vec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
+  m_formBox=MWAWBox2f(Vec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),
+                      Vec2f(scaling[0]*m_formBox.max()[0],scaling[1]*m_formBox.max()[1]));
   for (size_t pt=0; pt<m_vertices.size(); ++pt)
     m_vertices[pt]=Vec2f(scaling[0]*m_vertices[pt][0],
                          scaling[1]*m_vertices[pt][1]);
@@ -342,13 +342,13 @@ MWAWGraphicShape MWAWGraphicShape::rotate(float angle, Vec2f const &center) cons
   float angl=angle*float(M_PI/180.);
   Vec2f decal=center-Vec2f(std::cos(angl)*center[0]-std::sin(angl)*center[1],
                            std::sin(angl)*center[0]+std::cos(angl)*center[1]);
-  Box2f fBox;
+  MWAWBox2f fBox;
   for (int i=0; i < 4; ++i) {
     Vec2f pt=Vec2f(m_bdBox[i%2][0],m_bdBox[i/2][1]);
     pt = Vec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
                std::sin(angl)*pt[0]+std::cos(angl)*pt[1])+decal;
-    if (i==0) fBox=Box2f(pt,pt);
-    else fBox=fBox.getUnion(Box2f(pt,pt));
+    if (i==0) fBox=MWAWBox2f(pt,pt);
+    else fBox=fBox.getUnion(MWAWBox2f(pt,pt));
   }
   MWAWGraphicShape res = path(fBox);
   res.m_path=getPath();
@@ -505,7 +505,7 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
   }
   case Rectangle:
     if (m_cornerWidth[0] > 0 && m_cornerWidth[1] > 0) {
-      Box2f box=m_formBox;
+      MWAWBox2f box=m_formBox;
       Vec2f c=m_cornerWidth;
       res.push_back(PathData('M',Vec2f(box[1][0]-c[0],box[0][1])));
       PathData data('A',Vec2f(box[1][0],box[0][1]+c[1]));

@@ -139,7 +139,7 @@ struct Picture {
   }
 
   //! the dimension
-  Box2i m_dim;
+  MWAWBox2i m_dim;
   //! the list of picture
   std::vector<Zone> m_picturesList;
   //! an unknown flag
@@ -163,7 +163,7 @@ struct Picture {
     //! the position in file
     MWAWEntry m_pos;
     //! the dimension
-    Box2i m_dim;
+    MWAWBox2i m_dim;
     //! three unknown flags
     int m_flags[3];
   };
@@ -1729,7 +1729,7 @@ bool MsWrdParser::readPicture(MsWrdEntry &entry)
   int dim[4];
   for (int i = 0; i < 4; i++)
     dim[i] = (int) input->readLong(2);
-  pict.m_dim=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+  pict.m_dim=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
   f << pict;
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1751,7 +1751,7 @@ bool MsWrdParser::readPicture(MsWrdEntry &entry)
       zone.m_flags[i] = (int) input->readULong((i==2) ? 2 : 1);
     for (int i = 0; i < 4; i++)
       dim[i] = (int) input->readLong(2);
-    zone.m_dim=Box2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+    zone.m_dim=MWAWBox2i(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
     zone.m_pos.setBegin(pos+16);
     zone.m_pos.setLength(sz-16);
     f << zone;
@@ -1816,7 +1816,7 @@ void MsWrdParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor
   long actPos = input->tell();
   std::string pictType;
   librevenge::RVNGBinaryData data;
-  Box2f naturalBox;
+  MWAWBox2f naturalBox;
   for (size_t p = 0; p < pict.m_picturesList.size(); p++) {
     MsWrdParserInternal::Picture::Zone const &zone=pict.m_picturesList[p];
     if (!zone.m_pos.valid()) continue;

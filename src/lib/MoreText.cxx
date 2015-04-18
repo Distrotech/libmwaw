@@ -1325,7 +1325,7 @@ bool MoreText::sendText(MWAWEntry const &entry, MWAWFont const &font)
       float dim[4];
       for (int i=0; i < 4; ++i)
         dim[i] = float(input->readLong(2));
-      Box2f bdbox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
+      MWAWBox2f bdbox(Vec2f(dim[1],dim[0]), Vec2f(dim[3],dim[2]));
       f << "bdbox=" << bdbox << ",";
       if (sz>22) {
         shared_ptr<MWAWPict> pict(MWAWPictData::get(input, (int)sz-22));

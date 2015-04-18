@@ -462,7 +462,7 @@ bool TeachTxtParser::sendPicture(int id)
   MWAWInputStreamPtr pictInput=MWAWInputStream::get(data, false);
   if (!pictInput)
     return false;
-  Box2f box;
+  MWAWBox2f box;
   MWAWPict::ReadResult res = MWAWPictData::check(pictInput, dataSz,box);
   if (res == MWAWPict::MWAW_R_BAD) {
     MWAW_DEBUG_MSG(("TeachTxtParser::sendPicture: can not find the picture\n"));

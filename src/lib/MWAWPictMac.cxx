@@ -54,7 +54,7 @@
 #define DEBUG_BITMAP 0
 
 MWAWPictMac::ReadResult MWAWPictMac::checkOrGet
-(MWAWInputStreamPtr input, int size, Box2f &box, MWAWPictData **result)
+(MWAWInputStreamPtr input, int size, MWAWBox2f &box, MWAWPictData **result)
 {
   if (result) *result=0L;
 
@@ -233,7 +233,7 @@ public:
 
 protected:
   //! the bounding box
-  Box2i m_box;
+  MWAWBox2i m_box;
   //! the set of points which defines the mask
   std::vector<Vec2i> m_points;
 };
@@ -257,7 +257,7 @@ struct Bitmap {
     for (int c = 0; c < 3; c++) {
       int val[4];
       for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
-      Box2i box(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
+      MWAWBox2i box(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
       if (box.size().x() <= 0 || box.size().y() <= 0) {
         MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
         return false;
@@ -419,7 +419,7 @@ struct Bitmap {
   }
   //! the num of bytes used to store a row
   int m_rowBytes;
-  Box2i m_rect /** the bitmap rectangle */, m_src/** the initial dimension */, /** another final dimension */ m_dst  ;
+  MWAWBox2i m_rect /** the bitmap rectangle */, m_src/** the initial dimension */, /** another final dimension */ m_dst  ;
   //! the region
   shared_ptr<Region> m_region;
   //! the bitmap
@@ -497,7 +497,7 @@ struct Pixmap {
     // read the rectangle: bound
     int val[4];
     for (int d = 0; d < 4; d++) val[d] = (int) input.readLong(2);
-    m_rect = Box2i(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
+    m_rect = MWAWBox2i(Vec2i(val[1],val[0]), Vec2i(val[3],val[2]));
     if (m_rect.size().x() <= 0 || m_rect.size().y() <= 0) {
       MWAW_DEBUG_MSG(("Pict1:Pixmap: find odd bound rectangle ... \n"));
       return false;
@@ -534,7 +534,7 @@ struct Pixmap {
       for (int c = 0; c < 2; c++) {
         int dim[4];
         for (int d = 0; d < 4; d++) dim[d] = (int) input.readLong(2);
-        Box2i box(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
+        MWAWBox2i box(Vec2i(dim[1],dim[0]), Vec2i(dim[3],dim[2]));
         if (box.size().x() <= 0 || box.size().y() <= 0) {
           MWAW_DEBUG_MSG(("Pict1:Bitmap: find odd rectangle %d... \n", c));
           return false;
@@ -841,7 +841,7 @@ struct Pixmap {
 
   //! the num of bytes used to store a row
   int m_rowBytes;
-  Box2i m_rect /** the pixmap rectangle */;
+  MWAWBox2i m_rect /** the pixmap rectangle */;
   int m_version /** the pixmap version */;
   int m_packType /** the packing format */;
   long m_packSize /** size of data in the packed state */;
@@ -853,7 +853,7 @@ struct Pixmap {
   long m_planeBytes /** offset to the next plane */;
   shared_ptr<ColorTable> m_colorTable /** the color table */;
 
-  Box2i m_src/** the initial dimension */, /** another final dimension */ m_dst  ;
+  MWAWBox2i m_src/** the initial dimension */, /** another final dimension */ m_dst  ;
   //! the region
   shared_ptr<Region> m_region;
   //! the pixmap indices
@@ -1028,7 +1028,7 @@ struct Value {
   //! the point when type=WP_POINT
   Vec2i m_point;
   //! the rectangle when type=WP_RECT
-  Box2i m_box;
+  MWAWBox2i m_box;
   //! the list of points which defined the polygon when type=WP_POLY
   std::vector<Vec2i> m_listPoint;
   //! the region when type=WP_REGION
@@ -1109,7 +1109,7 @@ struct OpCode {
   /** read a rectangles field
 
   \note can be used to read the first dimensions of a picture */
-  static bool readRect(MWAWInputStream &input, DataType type, Box2i &res)
+  static bool readRect(MWAWInputStream &input, DataType type, MWAWBox2i &res)
   {
     Vec2i v[2];
     DataType valType;
@@ -1525,7 +1525,7 @@ protected:
   }
 
   //! low level: reads a polygon argument
-  static bool readPoly(MWAWInputStream &input, DataType type, Box2i &box, std::vector<Vec2i> &res)
+  static bool readPoly(MWAWInputStream &input, DataType type, MWAWBox2i &box, std::vector<Vec2i> &res)
   {
     DataType boxType, valType;
     switch (type) {
@@ -1761,7 +1761,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   dFile.addNote(s.str().c_str());
   actPos = 2;
 
-  Box2i box;
+  MWAWBox2i box;
   bool ok = OpCode::readRect(*input, WP_RECT, box);
   if (ok) {
     s.str("");
@@ -1984,7 +1984,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
   dFile.addNote(s.str().c_str());
   actPos = 2;
 
-  Box2i box;
+  MWAWBox2i box;
   bool ok = OpCode::readRect(*input, WP_RECT, box);
   if (ok) {
     s.str("");

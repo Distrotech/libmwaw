@@ -251,7 +251,7 @@ protected:
   //! protected constructor: use check to construct a picture
   MWAWPictBitmap(Vec2i const &sz)
   {
-    setBdBox(Box2f(Vec2f(0,0), sz));
+    setBdBox(MWAWBox2f(Vec2f(0,0), sz));
   }
 };
 
