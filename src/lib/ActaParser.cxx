@@ -247,8 +247,12 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("ActaParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
-  static_cast<ActaParser *>(m_parser)->sendHeaderFooter();
+  ActaParser *parser=dynamic_cast<ActaParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("ActaParserInternal::SubDocument::parse: can not find main parser\n"));
+    return;
+  }
+  parser->sendHeaderFooter();
 }
 }
 

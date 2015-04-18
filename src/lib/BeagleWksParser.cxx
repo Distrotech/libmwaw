@@ -159,8 +159,7 @@ void BeagleWksParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void BeagleWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     // create the asciiFile

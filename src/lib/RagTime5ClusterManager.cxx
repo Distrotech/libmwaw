@@ -200,8 +200,8 @@ bool RagTime5ClusterManager::readClusterMainList(RagTime5ClusterManager::Cluster
   if (!root.m_listClusterName.empty())
     m_mainParser.readUnicodeStringList(root.m_listClusterName, idToNameMap);
   std::vector<long> unknList;
-  if (!root.m_listClusterUnkn.empty())
-    m_mainParser.readLongList(root.m_listClusterUnkn, unknList);
+  if (!root.m_listClusterLink[0].empty())
+    m_mainParser.readLongList(root.m_listClusterLink[0], unknList);
   shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(root.m_listClusterId);
   if (!zone || zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData" ||
       zone->m_entry.length()<24 || (zone->m_entry.length()%8)) {
@@ -224,9 +224,9 @@ bool RagTime5ClusterManager::readClusterMainList(RagTime5ClusterManager::Cluster
     long pos=input->tell();
     f.str("");
     if (i==0)
-      f << "Entries(ClustMainList)[" << *zone << "]:";
+      f << "Entries(RootClustMain)[" << *zone << "]:";
     else
-      f << "ClustMainList-" << i+1 << ":";
+      f << "RootClustMain-" << i+1 << ":";
     librevenge::RVNGString name("");
     if (idToNameMap.find(i+1)!=idToNameMap.end()) {
       name=idToNameMap.find(i+1)->second;
@@ -736,7 +736,7 @@ struct LayoutCParser : public RagTime5ClusterManager::ClusterParser {
     m_what=2;
 
     if (N<0) {
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::LayoutCParser::endZone: N value seems bad\n"));
+      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::LayoutCParser::parseZone: N value seems bad\n"));
       f << "###N=" << N << ",";
       return true;
     }
@@ -1325,20 +1325,39 @@ struct RootCParser : public RagTime5ClusterManager::ClusterParser {
     }
     else if (m_what==3)
       m_cluster->m_graphicTypeLink=m_link;
-    else if (m_linkId==0)
-      m_cluster->m_listClusterName=m_link;
-    else if (m_linkId==2)
-      m_cluster->m_linkUnknown=m_link;
-    else if (m_linkId==1)
-      m_cluster->m_docInfoLink=m_link;
-    else if (m_linkId==3)
-      m_cluster->m_settingLinks.push_back(m_link);
-    else if (m_linkId==4)
-      m_cluster->m_conditionFormulaLinks.push_back(m_link);
-    else if (m_linkId==5)
-      m_cluster->m_listClusterUnkn=m_link;
-    else
-      m_cluster->m_linksList.push_back(m_link);
+    else {
+      bool ok=true;
+      switch (m_linkId) {
+      case 0:
+        ok=m_cluster->m_listClusterName.empty();
+        m_cluster->m_listClusterName=m_link;
+        break;
+      case 1:
+        ok=m_cluster->m_docInfoLink.empty();
+        m_cluster->m_docInfoLink=m_link;
+        break;
+      case 2:
+        ok=m_cluster->m_linkUnknown.empty();
+        m_cluster->m_linkUnknown=m_link;
+        break;
+      case 3:
+        m_cluster->m_settingLinks.push_back(m_link);
+        break;
+      case 4:
+        m_cluster->m_conditionFormulaLinks.push_back(m_link);
+        break;
+      case 5:
+      case 6:
+        ok=m_cluster->m_listClusterLink[m_linkId-5].empty();
+        m_cluster->m_listClusterLink[m_linkId-5]=m_link;
+        break;
+      default:
+        m_cluster->m_linksList.push_back(m_link);
+      }
+      if (!ok) {
+        MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::RootCParser::endZone: oops  link %d is already set\n", m_linkId));
+      }
+    }
   }
 
   //! parse the header zone
@@ -1531,7 +1550,7 @@ protected:
       if (m_link.m_fileType[0]==0x35800) {
         f << "zone[longs],";
         m_fieldName="zone:longs";
-        m_link.m_name="LongListRoot";
+        m_link.m_name="RootLongList1";
       }
       else if (m_link.m_fileType[0]==0x3e800) {
         if (m_expectedId<2) {
@@ -1543,7 +1562,7 @@ protected:
           m_linkId=5;
         f << "list[long0],";
         m_fieldName="list:longs0";
-        m_link.m_name="LongListRoot";
+        m_link.m_name="RootLongList2";
       }
       else if (fSz==30 && m_expectedId<=3  && !linkValues[0]) {
         if (m_expectedId!=3) {
@@ -1563,7 +1582,8 @@ protected:
       else if (fSz==30 && !linkValues[0]) {
         expectedFileType1=0;
         expectedFieldSize=4;
-        m_fieldName="unknDataC";
+        m_linkId=6;
+        m_fieldName="clusterFieldLink";
       }
       else if (fSz==32 && m_dataId==1) {
         m_fieldName="zone:names";
@@ -1713,13 +1733,19 @@ protected:
       val=(int) input->readLong(2);
       if (val!=100)
         f << "f6=" << val << ",";
-      f << "ID=[";
-      for (int i=0; i<4; ++i) { // very big number
-        val=(int) input->readULong(4);
-        if (val)
-          f << std::hex << val << std::dec << ",";
-        else
-          f << "_,";
+      f << "marg?=[";
+      for (int i=0; i<2; ++i) {
+        actPos=input->tell();
+        double res;
+        bool isNan;
+        if (input->readDouble8(res, isNan)) // typically 0.01
+          f << res << ",";
+        else {
+          MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::RootCParser::parseDataZone: can not read a double\n"));
+          f << "##double,";
+          input->seek(actPos+8, librevenge::RVNG_SEEK_SET);
+        }
+        f << ",";
       }
       f << "],";
       listIds.clear();
@@ -1874,7 +1900,7 @@ protected:
   int m_what;
   //! a index to known which field is expected : 0:data ... 7: filename, ...
   int m_expectedId;
-  //! the link id : 0: zone[names], 1: field5=doc[info]?, 2: field6, 3: settings, 4: formula, 5: cluster[list]
+  //! the link id : 0: zone[names], 1: field5=doc[info]?, 2: field6, 3: settings, 4: formula, 5: cluster[list], 6: a def cluster list
   int m_linkId;
   //! the actual field name
   std::string m_fieldName;
@@ -2434,6 +2460,7 @@ struct StyleCParser : public RagTime5ClusterManager::ClusterParser {
       m_link.m_name=m_fieldName="graphStyle";
       m_cluster->m_type=RagTime5ClusterManager::Cluster::C_GraphicStyles;
     }
+    f << m_link << ",";
     return true;
   }
   //! parse a field

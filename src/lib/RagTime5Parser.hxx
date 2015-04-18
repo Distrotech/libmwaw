@@ -185,6 +185,8 @@ protected:
   //! try to read a data in a structured zone
   bool readStructData(RagTime5Zone &zone, long endPos, int n, int headerSz,
                       RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
+  //! try to read a main structured zone (unknown content)
+  bool readStructMainZone(RagTime5Zone &zone);
 
   //! try to read a list zone
   bool readListZone(RagTime5ClusterManager::Link const &link);

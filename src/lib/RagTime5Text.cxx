@@ -1030,7 +1030,7 @@ protected:
         expectedFileType1=0x10;
         // 00010021c000[zId?=0006]000000000001: clust link with size 14...
         m_fieldName="listClust";
-        m_link.m_name="Text_ListClust1";
+        m_link.m_name="TextClustLst1";
         m_link.m_type=RagTime5ClusterManager::Link::L_ClusterLink;
         m_linkId=1;
       }
@@ -1484,7 +1484,7 @@ bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
     m_mainParser.readFixedSizeZone(cluster->m_unknownLink[4], "TextUnkn4");
   for (int i=0; i<2; ++i) {
     if (cluster->m_clusterLink[i].empty()) continue;
-    RagTime5TextInternal::ClustListParser linkParser(*clusterManager, i==0 ? "Text_ListClust1" : "Text_ListClust2");
+    RagTime5TextInternal::ClustListParser linkParser(*clusterManager, i==0 ? "TextClustLst1" : "TextClustLst2");
     if (i==0)
       m_mainParser.readListZone(cluster->m_clusterLink[i], linkParser);
     else {

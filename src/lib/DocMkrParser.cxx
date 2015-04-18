@@ -252,9 +252,7 @@ void DocMkrParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void DocMkrParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0 && getRSRCParser());
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !getRSRCParser() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     checkHeader(0L);

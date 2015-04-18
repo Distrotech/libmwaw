@@ -268,7 +268,7 @@ public:
   struct ClusterRoot : public Cluster {
     //! constructor
     ClusterRoot() : Cluster(), m_graphicTypeLink(), m_docInfoLink(),
-      m_listClusterId(0), m_listClusterName(), m_listClusterUnkn(), m_linkUnknown(), m_fileName("")
+      m_listClusterId(0), m_listClusterName(), m_linkUnknown(), m_fileName("")
     {
       for (int i=0; i<8; ++i) m_styleClusterIds[i]=0;
       for (int i=0; i<1; ++i) m_clusterIds[i]=0;
@@ -291,8 +291,8 @@ public:
     int m_listClusterId;
     //! the cluster list id name zone link
     Link m_listClusterName;
-    //! an unknown link related to the cluster list
-    Link m_listClusterUnkn;
+    //! first the main cluster link, second list of field definition link
+    Link m_listClusterLink[2];
 
     //! other link: scripts and field 6
     Link m_linkUnknown;

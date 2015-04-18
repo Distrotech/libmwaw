@@ -283,7 +283,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
 {
   libmwaw::DebugStream f;
   long debPos=input->tell();
-  if ((fSz>0 && (fSz<4 || debPos+fSz<endPos)) || (fSz<=0 && debPos+5>endPos)) {
+  if ((fSz>0 && (fSz<4 || debPos+fSz>endPos)) || (fSz<=0 && debPos+5>endPos)) {
     MWAW_DEBUG_MSG(("RagTime5StructManager::readField: the zone seems too short\n"));
     return false;
   }
@@ -1174,9 +1174,8 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
       f << "###func[name],";
       break;
     }
-    int val;
     for (int i=0; i<3; ++i) { // f1=0|-1, f2=small number, other 0
-      val=(int) input->readLong(2);
+      int val=(int) input->readLong(2);
       if (val) f << "f" << i+1 << "=" << val << ",";
     }
     field.m_type=Field::T_FieldList;
@@ -2073,7 +2072,6 @@ bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTi
         s << "###font[" << wh << "]=" << child << ",";
       }
       m_extra+=s.str();
-      return true;
       return true;
     }
     case 0xa7077:
