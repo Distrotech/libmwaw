@@ -276,7 +276,7 @@ struct Table : public MWAWTable {
   //! the background color
   MWAWColor m_backgroundColor;
   //! the table cells
-  std::vector<Variable<MsWrdStruct::Table::Cell> > m_cells;
+  std::vector<MWAWVariable<MsWrdStruct::Table::Cell> > m_cells;
 };
 
 ////////////////////////////////////////

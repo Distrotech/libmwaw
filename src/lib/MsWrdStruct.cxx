@@ -421,10 +421,10 @@ std::ostream &operator<<(std::ostream &o, Section const &section)
 }
 
 // table
-Variable<Table::Cell> &Table::getCell(int id)
+MWAWVariable<Table::Cell> &Table::getCell(int id)
 {
   if (id < 0) {
-    static Variable<Table::Cell> badCell;
+    static MWAWVariable<Table::Cell> badCell;
     MWAW_DEBUG_MSG(("MsWrdStruct::Table::getCell: can not return a negative cell id\n"));
     return badCell;
   }
@@ -576,7 +576,7 @@ bool Table::read(MWAWInputStreamPtr &input, long endPos)
     std::string bExtra;
     MWAWBorder border = getBorder((int) input->readULong(2), bExtra);
     for (int i = firstCol; i < lastCol; i++) {
-      Variable<Cell> &cell = getCell(i);
+      MWAWVariable<Cell> &cell = getCell(i);
       if (cell->m_borders.size() < maxVal)
         cell->m_borders.resize(maxVal);
       if (val&1) cell->m_borders[0] = border;
@@ -616,7 +616,7 @@ void Table::insert(Table const &table)
   }
   size_t tNumCells = table.m_cells.size();
   if (tNumCells > m_cells.size())
-    m_cells.resize(tNumCells, Variable<Cell>());
+    m_cells.resize(tNumCells, MWAWVariable<Cell>());
   for (size_t i=0; i < tNumCells; i++) {
     if (!m_cells[i].isSet())
       m_cells[i] = table.m_cells[i];

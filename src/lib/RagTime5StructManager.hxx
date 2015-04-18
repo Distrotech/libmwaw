@@ -440,7 +440,7 @@ public:
     // paragraph
 
     //! the keep with next flag
-    Variable<bool> m_keepWithNext;
+    MWAWVariable<bool> m_keepWithNext;
     //! justify 0: left, 1:center, 2:right, 3:full, 4:full all
     int m_justify;
     //! the interline/before/after value
@@ -465,7 +465,7 @@ public:
     //! the font flags (add and remove )
     uint32_t m_fontFlags[2];
     //! the font script position ( in percent)
-    Variable<float> m_scriptPosition;
+    MWAWVariable<float> m_scriptPosition;
     //! the font script position ( in percent)
     float m_fontScaling;
     //! underline : none, single, double

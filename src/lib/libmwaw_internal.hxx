@@ -460,15 +460,15 @@ typedef shared_ptr<MWAWTextListener> MWAWTextListenerPtr;
 when its content is acceded by a function which returns a not-const
 reference... You can use the function setSet to unset it.
 */
-template <class T> struct Variable {
+template <class T> struct MWAWVariable {
   //! constructor
-  Variable() : m_data(), m_set(false) {}
+  MWAWVariable() : m_data(), m_set(false) {}
   //! constructor with a default value
-  Variable(T const &def) : m_data(def), m_set(false) {}
+  MWAWVariable(T const &def) : m_data(def), m_set(false) {}
   //! copy constructor
-  Variable(Variable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
+  MWAWVariable(MWAWVariable const &orig) : m_data(orig.m_data), m_set(orig.m_set) {}
   //! copy operator
-  Variable &operator=(Variable const &orig)
+  MWAWVariable &operator=(MWAWVariable const &orig)
   {
     if (this != &orig) {
       m_data = orig.m_data;
@@ -477,14 +477,14 @@ template <class T> struct Variable {
     return *this;
   }
   //! set a value
-  Variable &operator=(T const &val)
+  MWAWVariable &operator=(T const &val)
   {
     m_data = val;
     m_set = true;
     return *this;
   }
   //! update the current value if orig is set
-  void insert(Variable const &orig)
+  void insert(MWAWVariable const &orig)
   {
     if (orig.m_set) {
       m_data = orig.m_data;

@@ -280,7 +280,7 @@ struct LineHeader {
   /** the previous line height in point ( if known) */
   float m_prevHeight;
   /** the text indent in inches ( if known) */
-  Variable<double> m_textIndent;
+  MWAWVariable<double> m_textIndent;
   /** extra data */
   std::string m_extra;
 };

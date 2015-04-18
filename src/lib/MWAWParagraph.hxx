@@ -140,43 +140,43 @@ public:
    * - 0: first line left margin
    * - 1: left margin
    * - 2: right margin*/
-  Variable<double> m_margins[3]; // 0: first line left, 1: left, 2: right
+  MWAWVariable<double> m_margins[3]; // 0: first line left, 1: left, 2: right
   /** the margins INCH, ... */
-  Variable<librevenge::RVNGUnit> m_marginsUnit;
+  MWAWVariable<librevenge::RVNGUnit> m_marginsUnit;
   /** the line spacing
    *
    * - 0: interline
    * - 1: before
    * - 2: after */
-  Variable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
+  MWAWVariable<double> m_spacings[3]; // 0: interline, 1: before, 2: after
   /** the interline unit PERCENT or INCH, ... */
-  Variable<librevenge::RVNGUnit> m_spacingsInterlineUnit;
+  MWAWVariable<librevenge::RVNGUnit> m_spacingsInterlineUnit;
   /** the interline type: fixed, atLeast, ... */
-  Variable<LineSpacingType> m_spacingsInterlineType;
+  MWAWVariable<LineSpacingType> m_spacingsInterlineType;
   //! the tabulations
-  Variable<std::vector<MWAWTabStop> > m_tabs;
+  MWAWVariable<std::vector<MWAWTabStop> > m_tabs;
   //! true if the tabs are relative to left margin, false if there are relative to the page margin (default)
-  Variable<bool> m_tabsRelativeToLeftMargin;
+  MWAWVariable<bool> m_tabsRelativeToLeftMargin;
 
   /** the justification */
-  Variable<Justification> m_justify;
+  MWAWVariable<Justification> m_justify;
   /** a list of bits: 0x1 (unbreakable), 0x2 (do not break after) */
-  Variable<int> m_breakStatus; // BITS: 1: unbreakable, 2: dont break after
+  MWAWVariable<int> m_breakStatus; // BITS: 1: unbreakable, 2: dont break after
 
   /** the actual level index */
-  Variable<int> m_listLevelIndex;
+  MWAWVariable<int> m_listLevelIndex;
   /** the list id (if know ) */
-  Variable<int> m_listId;
+  MWAWVariable<int> m_listId;
   /** the list start value (if set ) */
-  Variable<int> m_listStartValue;
+  MWAWVariable<int> m_listStartValue;
   /** the actual level */
-  Variable<MWAWListLevel> m_listLevel;
+  MWAWVariable<MWAWListLevel> m_listLevel;
 
   //! the background color
-  Variable<MWAWColor> m_backgroundColor;
+  MWAWVariable<MWAWColor> m_backgroundColor;
 
   //! list of border ( order MWAWBorder::Pos)
-  std::vector<Variable<MWAWBorder> > m_borders;
+  std::vector<MWAWVariable<MWAWBorder> > m_borders;
 
   //! the style name
   std::string m_styleName;

@@ -77,7 +77,7 @@ struct Border {
   //! try to read a border definiton
   bool read(shared_ptr<FullWrtStruct::Entry> zone, int fSz);
   //! returns the list of border order MWAWBorder::Pos
-  std::vector<Variable<MWAWBorder> > getParagraphBorders() const;
+  std::vector<MWAWVariable<MWAWBorder> > getParagraphBorders() const;
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Border const &p);
 

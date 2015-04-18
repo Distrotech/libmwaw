@@ -221,15 +221,15 @@ bool Border::read(shared_ptr<FullWrtStruct::Entry> zone, int fSz)
   return true;
 }
 
-std::vector<Variable<MWAWBorder> > Border::getParagraphBorders() const
+std::vector<MWAWVariable<MWAWBorder> > Border::getParagraphBorders() const
 {
-  std::vector<Variable<MWAWBorder> > res;
+  std::vector<MWAWVariable<MWAWBorder> > res;
   int wh=-1;
   if (m_type[0]>0 && m_type[0]<=8) wh=0;
   else if (m_type[1]>0 && m_type[1]<=8) wh=1;
   if (wh == -1)
     return res;
-  Variable<MWAWBorder> border=getBorder(m_type[wh]);
+  MWAWVariable<MWAWBorder> border=getBorder(m_type[wh]);
   border->m_color=m_color[wh];
   if (wh==0)
     res.resize(4,border);

@@ -95,7 +95,7 @@ public:
     /** the width in point */
     float m_width;
     /** the color ( if not set, we use the font color )*/
-    Variable<MWAWColor> m_color;
+    MWAWVariable<MWAWColor> m_color;
   };
   /** a small struct to define the script position in MWAWFont */
   struct Script {
@@ -516,18 +516,18 @@ public:
   }
 
 protected:
-  Variable<int> m_id /** font identificator*/;
-  Variable<float> m_size /** font size */;
-  Variable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl in point*/;
-  Variable<float> m_texteWidthScaling /** the texte width scaling */;
-  Variable<Script> m_scriptPosition /** the sub/super script definition */;
-  Variable<uint32_t> m_flags /** font attributes */;
-  Variable<Line> m_overline /** overline attributes */;
-  Variable<Line> m_strikeoutline /** overline attributes */;
-  Variable<Line> m_underline /** underline attributes */;
-  Variable<MWAWColor> m_color /** font color */;
-  Variable<MWAWColor> m_backgroundColor /** font background color */;
-  Variable<std::string> m_language /** the language if set */;
+  MWAWVariable<int> m_id /** font identificator*/;
+  MWAWVariable<float> m_size /** font size */;
+  MWAWVariable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl in point*/;
+  MWAWVariable<float> m_texteWidthScaling /** the texte width scaling */;
+  MWAWVariable<Script> m_scriptPosition /** the sub/super script definition */;
+  MWAWVariable<uint32_t> m_flags /** font attributes */;
+  MWAWVariable<Line> m_overline /** overline attributes */;
+  MWAWVariable<Line> m_strikeoutline /** overline attributes */;
+  MWAWVariable<Line> m_underline /** underline attributes */;
+  MWAWVariable<MWAWColor> m_color /** font color */;
+  MWAWVariable<MWAWColor> m_backgroundColor /** font background color */;
+  MWAWVariable<std::string> m_language /** the language if set */;
 public:
   //! extra data
   std::string m_extra;

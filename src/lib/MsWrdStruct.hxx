@@ -60,7 +60,7 @@ struct Font {
   //! the constructor
   Font(): m_font(MWAWFont(-1,0)), m_size(0), m_value(0), m_picturePos(0), m_unknown(0), m_extra("")
   {
-    for (int i = 0; i < NumFlags; i++) m_flags[i]=Variable<int>(0);
+    for (int i = 0; i < NumFlags; i++) m_flags[i]=MWAWVariable<int>(0);
   }
 
   //! insert new font data ( beginning by updating font flags )
@@ -92,17 +92,17 @@ struct Font {
     return 0;
   }
   //! the font
-  Variable<MWAWFont> m_font;
+  MWAWVariable<MWAWFont> m_font;
   //! a second size
-  Variable<float> m_size;
+  MWAWVariable<float> m_size;
   //! a unknown value
-  Variable<int> m_value;
+  MWAWVariable<int> m_value;
   //! a list of flags
-  Variable<int> m_flags[NumFlags];
+  MWAWVariable<int> m_flags[NumFlags];
   //! a picture file position (if this corresponds to a picture)
-  Variable<long> m_picturePos;
+  MWAWVariable<long> m_picturePos;
   //! some unknown flag
-  Variable<int> m_unknown;
+  MWAWVariable<int> m_unknown;
   //! extra data
   std::string m_extra;
 };
@@ -138,19 +138,19 @@ struct Section {
   friend std::ostream &operator<<(std::ostream &o, Section const &section);
 
   //! the identificator
-  Variable<int> m_id;
+  MWAWVariable<int> m_id;
   //! the type
-  Variable<int> m_type;
+  MWAWVariable<int> m_type;
   //! the paragraph id
-  Variable<int> m_paragraphId;
+  MWAWVariable<int> m_paragraphId;
   //! the num of columns
-  Variable<int> m_col;
+  MWAWVariable<int> m_col;
   //! the spacing between column
-  Variable<float> m_colSep;
+  MWAWVariable<float> m_colSep;
   //! only a column break
-  Variable<bool> m_colBreak;
+  MWAWVariable<bool> m_colBreak;
   //! some flag ( in the main position)
-  Variable<int> m_flag;
+  MWAWVariable<int> m_flag;
   /** the errors */
   std::string m_extra;
 };
@@ -168,23 +168,23 @@ struct Table {
   //! try to read a data
   bool read(MWAWInputStreamPtr &input, long endPos);
   //! returns the ith Cell
-  Variable<Cell> &getCell(int id);
+  MWAWVariable<Cell> &getCell(int id);
 
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Table const &table);
 
   //! the row height in inches
-  Variable<float> m_height;
+  MWAWVariable<float> m_height;
   //! the justification
-  Variable<MWAWParagraph::Justification> m_justify;
+  MWAWVariable<MWAWParagraph::Justification> m_justify;
   //! the indent
-  Variable<float> m_indent;
+  MWAWVariable<float> m_indent;
   //! the table columns
-  Variable<std::vector<float> > m_columns;
+  MWAWVariable<std::vector<float> > m_columns;
   //! the columns width modifier
-  Variable<std::vector<float> > m_columnsWidthMod;
+  MWAWVariable<std::vector<float> > m_columnsWidthMod;
   //! the table cells
-  std::vector<Variable<Cell> > m_cells;
+  std::vector<MWAWVariable<Cell> > m_cells;
   /** the errors */
   std::string m_extra;
 
@@ -216,9 +216,9 @@ struct Table {
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Cell const &cell);
     /** the borders TLBR */
-    std::vector<Variable<MWAWBorder> > m_borders;
+    std::vector<MWAWVariable<MWAWBorder> > m_borders;
     /** the background gray color */
-    Variable<float> m_backColor;
+    MWAWVariable<float> m_backColor;
     /** extra data */
     std::string m_extra;
   };
@@ -269,11 +269,11 @@ struct ParagraphInfo {
   //! insert the new values
   void insert(ParagraphInfo const &pInfo);
   //! the type
-  Variable<int> m_type;
+  MWAWVariable<int> m_type;
   //! the zone dimension
-  Variable<MWAWVec2f> m_dim;
+  MWAWVariable<MWAWVec2f> m_dim;
   //! the number of lines
-  Variable<int> m_numLines;
+  MWAWVariable<int> m_numLines;
   /** the errors */
   std::string m_error;
 };
@@ -314,25 +314,25 @@ struct Paragraph : public MWAWParagraph {
   //! the file version
   int m_version;
   //! the style id (if known)
-  Variable<int> m_styleId;
+  MWAWVariable<int> m_styleId;
   //! the interline if set
-  Variable<double> m_interline;
+  MWAWVariable<double> m_interline;
   //! the delete tabulation
   std::vector<float> m_deletedTabs;
   //! the dimension
-  Variable<ParagraphInfo> m_info;
+  MWAWVariable<ParagraphInfo> m_info;
   //! the font
-  Variable<Font> m_font, m_modFont /** font (modifier) */;
+  MWAWVariable<Font> m_font, m_modFont /** font (modifier) */;
   //! the section
-  Variable<Section> m_section;
+  MWAWVariable<Section> m_section;
   //! the border style ( old v3)
-  Variable<MWAWBorder> m_bordersStyle;
+  MWAWVariable<MWAWBorder> m_bordersStyle;
   //! a cell/textbox
-  Variable<bool> m_inCell;
+  MWAWVariable<bool> m_inCell;
   //! a table flag
-  Variable<bool> m_tableDef;
+  MWAWVariable<bool> m_tableDef;
   //! the table
-  Variable<Table> m_table;
+  MWAWVariable<Table> m_table;
 };
 }
 #endif
