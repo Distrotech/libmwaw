@@ -427,8 +427,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
-
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("GreatWksGraphInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   m_graphParser->sendTextbox(m_zone,listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

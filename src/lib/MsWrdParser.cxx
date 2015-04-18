@@ -246,18 +246,22 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWrdParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  MsWrdParser *parser=dynamic_cast<MsWrdParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MsWrdParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   if (m_type == libmwaw::DOC_NONE && m_pictCPos >= 0 && m_pictFPos > 0)
-    static_cast<MsWrdParser *>(m_parser)->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
+    parser->sendPicture(m_pictFPos, m_pictCPos, MWAWPosition::Frame);
   else if (m_type == libmwaw::DOC_HEADER_FOOTER)
-    static_cast<MsWrdParser *>(m_parser)->send(m_zone);
+    parser->send(m_zone);
   else
-    static_cast<MsWrdParser *>(m_parser)->send(m_id, type);
+    parser->send(m_id, type);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -401,9 +405,7 @@ void MsWrdParser::send(int id, libmwaw::SubDocumentType type)
 ////////////////////////////////////////////////////////////
 void MsWrdParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

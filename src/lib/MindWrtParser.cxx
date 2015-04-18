@@ -534,22 +534,24 @@ protected:
 
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
-  if (!listener.get() || !m_parser) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener or no parser\n"));
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("MindWrtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("MindWrtParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
   if (m_step < 0 || m_step > 1) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown step\n"));
+    MWAW_DEBUG_MSG(("MindWrtParserInternal::SubDocument::parse: unknown step\n"));
     return;
   }
-
-  assert(m_parser);
+  MindWrtParser *parser=dynamic_cast<MindWrtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MindWrtParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
-  MindWrtParser *parser=static_cast<MindWrtParser *>(m_parser);
   if (m_step==0)
     parser->sendHeaderFooter(m_id==1);
   else
@@ -615,9 +617,7 @@ MWAWEntry MindWrtParser::readEntry()
 ////////////////////////////////////////////////////////////
 void MindWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

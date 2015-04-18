@@ -401,9 +401,7 @@ void MacDrawProParser::init()
 ////////////////////////////////////////////////////////////
 void MacDrawProParser::parse(librevenge::RVNGDrawingInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     // create the asciiFile

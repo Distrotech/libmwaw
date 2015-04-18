@@ -127,9 +127,12 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     MWAW_DEBUG_MSG(("ClarisWksSSParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
-
-  assert(m_parser);
-  static_cast<ClarisWksSSParser *>(m_parser)->m_document->sendZone(m_id, listener, m_position);
+  ClarisWksSSParser *parser=dynamic_cast<ClarisWksSSParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("ClarisWksSSParserInternal::SubDocument::parse: can not find parser\n"));
+    return;
+  }
+  parser->m_document->sendZone(m_id, listener, m_position);
 }
 }
 
@@ -183,9 +186,7 @@ bool ClarisWksSSParser::checkHeader(MWAWHeader *header, bool strict)
 ////////////////////////////////////////////////////////////
 void ClarisWksSSParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

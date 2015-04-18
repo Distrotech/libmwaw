@@ -215,12 +215,16 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MarinerWrtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  MarinerWrtParser *parser=dynamic_cast<MarinerWrtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MarinerWrtParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
-  static_cast<MarinerWrtParser *>(m_parser)->sendText(m_id);
+  parser->sendText(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -326,9 +330,7 @@ void MarinerWrtParser::sendToken(int zoneId, long tokenId)
 ////////////////////////////////////////////////////////////
 void MarinerWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L)) throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L)) throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

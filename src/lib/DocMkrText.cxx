@@ -227,7 +227,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_textParser);
+  if (!m_textParser) {
+    MWAW_DEBUG_MSG(("SubDocument::parse: no text parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   if (m_type == libmwaw::DOC_HEADER_FOOTER)

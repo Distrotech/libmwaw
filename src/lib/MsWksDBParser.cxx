@@ -461,7 +461,6 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("MsWksDBParser::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
 
   long pos = m_input->tell();
   //MsWksDBParser *parser = static_cast<MsWksDBParser *>(m_parser);

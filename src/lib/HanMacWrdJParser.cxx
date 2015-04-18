@@ -143,10 +143,14 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     MWAW_DEBUG_MSG(("HanMacWrdJParserInternal::SubDocument::parse: unexpected document type\n"));
     return;
   }
+  HanMacWrdJParser *parser=dynamic_cast<HanMacWrdJParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("HanMacWrdJParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
-  assert(m_parser);
   long pos = m_input->tell();
-  static_cast<HanMacWrdJParser *>(m_parser)->sendText(m_id, 0);
+  parser->sendText(m_id, 0);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -251,9 +255,7 @@ bool HanMacWrdJParser::readClassicHeader(HanMacWrdJZoneHeader &header, long endP
 ////////////////////////////////////////////////////////////
 void HanMacWrdJParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L)) throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L)) throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

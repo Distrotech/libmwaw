@@ -457,7 +457,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("MarinerWrtGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("MarinerWrtGraphInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   m_graphParser->sendText(m_id);

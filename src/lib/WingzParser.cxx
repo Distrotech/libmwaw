@@ -267,9 +267,7 @@ void WingzParser::init()
 ////////////////////////////////////////////////////////////
 void WingzParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     if (m_state->m_encrypted)

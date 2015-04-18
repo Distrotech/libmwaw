@@ -129,7 +129,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("FullWrtGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("FullWrtGraphInternal::SubDocument::parse: no graph parser\n"));
+    return;
+  }
   m_graphParser->send(m_id, m_fontColor);
 }
 

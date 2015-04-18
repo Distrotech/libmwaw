@@ -331,10 +331,13 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("RagTimeParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
-
+  RagTimeParser *parser=dynamic_cast<RagTimeParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("RagTimeParserInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
   long pos = m_input->tell();
-  static_cast<RagTimeParser *>(m_parser)->sendText(m_id, listener);
+  parser->sendText(m_id, listener);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -452,9 +455,7 @@ void RagTimeParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void RagTimeParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

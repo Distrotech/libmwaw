@@ -153,7 +153,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_presentationParser);
+  if (!m_presentationParser) {
+    MWAW_DEBUG_MSG(("ClarisWksPresentationInternal::SubDocument::parse: can not find parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   m_presentationParser->askToSend(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

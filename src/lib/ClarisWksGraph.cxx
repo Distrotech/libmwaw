@@ -727,7 +727,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("ClarisWksGraphInternal::SubDocument::parse: no graph parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   m_graphParser->askToSend(m_id,listener,m_position);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

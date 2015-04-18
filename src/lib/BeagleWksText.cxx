@@ -320,7 +320,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("BeagleWksTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_textParser);
+  if (!m_textParser) {
+    MWAW_DEBUG_MSG(("BeagleWksTextInternal::SubDocument::parse: no text parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   m_textParser->sendHF(m_hfId, m_sectId);

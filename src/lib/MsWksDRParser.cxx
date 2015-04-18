@@ -145,9 +145,7 @@ void MsWksDRParser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 void MsWksDRParser::parse(librevenge::RVNGDrawingInterface *docInterface)
 {
-  assert(m_document && m_document->getInput());
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!checkHeader(0L) || !m_document || !m_document->getInput())  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

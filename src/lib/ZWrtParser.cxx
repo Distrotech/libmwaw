@@ -113,9 +113,13 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("ZWrtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  ZWrtParser *parser=dynamic_cast<ZWrtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("ZWrtParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
-  static_cast<ZWrtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  parser->sendHeaderFooter(m_isHeader);
 }
 }
 
@@ -198,8 +202,7 @@ void ZWrtParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void ZWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0 && getRSRCParser());
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !getRSRCParser() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     checkHeader(0L);

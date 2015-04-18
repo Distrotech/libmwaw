@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "libmwaw_internal.hxx"
+#include "MWAWDebug.hxx"
 #include "MWAWPict.hxx"
 
 ////////////////////////////////////////////////////////////
@@ -105,20 +106,25 @@ public:
   //! accessor of a cell m_data
   T const &get(int i, int j) const
   {
-    assert(m_data != 0L && i>=0 && i < m_size[0] && j>=0 && j < m_size[1]);
+    if (m_data == 0L || i<0 || i >= m_size[0] || j<0 || j >= m_size[1])
+      throw libmwaw::GenericException();
     return m_data[i+m_size[0]*j];
   }
   //! accessor of a row m_data
   T const *getRow(int j) const
   {
-    assert(m_data != 0L && j>=0 && j < m_size[1]);
+    if (m_data == 0L || j<0 || j >= m_size[1])
+      throw libmwaw::GenericException();
     return m_data+m_size[0]*j;
   }
 
   //! sets a cell m_data
   void set(int i, int j, T const &v)
   {
-    assert(m_data != 0L && i>=0 && i < m_size[0] && j>=0 && j < m_size[1]);
+    if (m_data == 0L || i<0 || i >= m_size[0] || j<0 || j >= m_size[1]) {
+      MWAW_DEBUG_MSG(("MWAWPictBitmapContainer::set: call with bad coordinate %d %d\n", i, j));
+      return;
+    }
     m_data[i+j*m_size[0]] = v;
   }
 
@@ -126,7 +132,10 @@ public:
   template <class U>
   void setRow(int j, U const *val)
   {
-    assert(m_data != 0L && j>=0 && j < m_size[1]);
+    if (m_data == 0L || j<0 || j >= m_size[1]) {
+      MWAW_DEBUG_MSG(("MWAWPictBitmapContainer::setRow: call with bad coordinate %d\n", j));
+      return;
+    }
     for (int i = 0, ind=j*m_size[0]; i < m_size[0]; i++, ind++) m_data[ind] = T(val[i]);
   }
 
@@ -134,7 +143,10 @@ public:
   template <class U>
   void setColumn(int i, U const *val)
   {
-    assert(m_data != 0L && i>=0 && i < m_size[0]);
+    if (m_data == 0L || i<0 || i >= m_size[0]) {
+      MWAW_DEBUG_MSG(("MWAWPictBitmapContainer::setColumn: call with bad coordinate %d\n", i));
+      return;
+    }
     for (int j = 0, ind=i; j < m_size[1]; j++, ind+=m_size[0]) m_data[ind] = T(val[i]);
   }
 
@@ -172,7 +184,10 @@ public:
   //! allows to use packed m_data
   void setRowPacked(int j, unsigned char const *val)
   {
-    assert(m_data != 0L && j>=0 && j < m_size[1]);
+    if (m_data == 0L || j<0 || j >= m_size[1]) {
+      MWAW_DEBUG_MSG(("MWAWPictBitmapContainerBool::setRowPacked: call with bad coordinate %d %d\n", j));
+      return;
+    }
     for (int i = 0, ind = j*m_size[0]; i < m_size[0];) {
       unsigned char v = *(val++);
       unsigned char mask = 0x80;

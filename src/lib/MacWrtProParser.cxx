@@ -279,13 +279,16 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
 {
   if (m_id == -3) return; // empty block
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MacWrtProParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  MacWrtProParser *parser = dynamic_cast<MacWrtProParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MacWrtProParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
-  MacWrtProParser *parser = static_cast<MacWrtProParser *>(m_parser);
   if (parser->m_structures.get())
     parser->m_structures->send(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -369,9 +372,7 @@ std::vector<int> const &MacWrtProParser::getBlocksCalledByToken() const
 ////////////////////////////////////////////////////////////
 void MacWrtProParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     m_state->m_blocksMap.clear();

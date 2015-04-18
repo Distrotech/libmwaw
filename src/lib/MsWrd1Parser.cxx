@@ -243,17 +243,21 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWrd1ParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  MsWrd1Parser *parser=dynamic_cast<MsWrd1Parser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MsWrd1ParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   if (!m_zone.valid()) {
     listener->insertChar(' ');
     return;
   }
   long pos = m_input->tell();
-  static_cast<MsWrd1Parser *>(m_parser)->sendText(m_zone);
+  parser->sendText(m_zone);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -314,9 +318,7 @@ void MsWrd1Parser::removeLastCharIfEOL(MWAWEntry &entry)
 ////////////////////////////////////////////////////////////
 void MsWrd1Parser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

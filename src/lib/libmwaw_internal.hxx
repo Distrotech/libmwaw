@@ -560,13 +560,13 @@ public:
   //! operator[]
   T operator[](int c) const
   {
-    assert(c >= 0 && c <= 1);
+    if (c<0 || c>1) throw libmwaw::GenericException();
     return (c==0) ? m_x : m_y;
   }
   //! operator[]
   T &operator[](int c)
   {
-    assert(c >= 0 && c <= 1);
+    if (c<0 || c>1) throw libmwaw::GenericException();
     return (c==0) ? m_x : m_y;
   }
 
@@ -757,13 +757,13 @@ public:
   //! operator[]
   T operator[](int c) const
   {
-    assert(c >= 0 && c <= 2);
+    if (c<0 || c>2) throw libmwaw::GenericException();
     return m_val[c];
   }
   //! operator[]
   T &operator[](int c)
   {
-    assert(c >= 0 && c <= 2);
+    if (c<0 || c>2) throw libmwaw::GenericException();
     return m_val[c];
   }
 
@@ -940,7 +940,7 @@ public:
    */
   Vec2<T> const &operator[](int c) const
   {
-    assert(c >= 0 && c <= 1);
+    if (c<0 || c>1) throw libmwaw::GenericException();
     return m_pt[c];
   }
   //! the box size

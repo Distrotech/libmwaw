@@ -873,7 +873,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("HanMacWrdJGraphInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   if (listener->getType()==MWAWListener::Graphic) {

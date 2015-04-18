@@ -114,9 +114,13 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("LightWayTxtParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  LightWayTxtParser *parser=dynamic_cast<LightWayTxtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("LightWayTxtParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
-  static_cast<LightWayTxtParser *>(m_parser)->sendHeaderFooter(m_isHeader);
+  parser->sendHeaderFooter(m_isHeader);
 }
 }
 
@@ -234,9 +238,7 @@ void LightWayTxtParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void LightWayTxtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0 && getRSRCParser());
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !getRSRCParser() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     // create the asciiFile

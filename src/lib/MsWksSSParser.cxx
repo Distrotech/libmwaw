@@ -180,13 +180,15 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWksSSParser::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWksSSParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
-
+  MsWksSSParser *parser = dynamic_cast<MsWksSSParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MsWksSSParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
-  MsWksSSParser *parser = static_cast<MsWksSSParser *>(m_parser);
   parser->sendNote(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }

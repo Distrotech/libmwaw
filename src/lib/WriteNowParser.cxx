@@ -110,13 +110,17 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("WriteNowParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  WriteNowParser *parser=dynamic_cast<WriteNowParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("WriteNowParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
-  static_cast<WriteNowParser *>(m_parser)->send(m_pos);
+  parser->send(m_pos);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -226,9 +230,7 @@ bool WriteNowParser::sendGraphic(int gId, Box2i const &bdbox)
 ////////////////////////////////////////////////////////////
 void WriteNowParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

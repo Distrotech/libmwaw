@@ -260,13 +260,17 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("FullWrtParserInternall::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  FullWrtParser *parser=dynamic_cast<FullWrtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("FullWrtParserInternall::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
-  static_cast<FullWrtParser *>(m_parser)->send(m_id);
+  parser->send(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -371,9 +375,7 @@ bool FullWrtParser::send(int fileId, MWAWColor fontColor)
 ////////////////////////////////////////////////////////////
 void FullWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
 #ifdef DEBUG

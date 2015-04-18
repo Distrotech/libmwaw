@@ -316,11 +316,14 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("MacWrtParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
-
-  assert(m_parser);
+  MacWrtParser *parser=dynamic_cast<MacWrtParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("MacWrtParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
-  static_cast<MacWrtParser *>(m_parser)->sendWindow(m_id);
+  parser->sendWindow(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -379,9 +382,7 @@ void MacWrtParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void MacWrtParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile

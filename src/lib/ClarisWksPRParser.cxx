@@ -127,9 +127,12 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     MWAW_DEBUG_MSG(("ClarisWksPRParserInternal::SubDocument::parse: unknown zone\n"));
     return;
   }
-
-  assert(m_parser);
-  static_cast<ClarisWksPRParser *>(m_parser)->m_document->sendZone(m_id, listener, m_position);
+  ClarisWksPRParser *parser=dynamic_cast<ClarisWksPRParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("ClarisWksPRParserInternal::SubDocument::parse: can not find parser\n"));
+    return;
+  }
+  parser->m_document->sendZone(m_id, listener, m_position);
 }
 }
 

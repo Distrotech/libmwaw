@@ -134,7 +134,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("MoreParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
+  MWAW_DEBUG_MSG(("MoreParserInternal::SubDocument::parse: not implemented\n"));
   //static_cast<MoreParser *>(m_parser)->sendHeaderFooter();
 }
 }
@@ -249,8 +249,7 @@ bool MoreParser::getColor(int id, MWAWColor &col) const
 ////////////////////////////////////////////////////////////
 void MoreParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     // create the asciiFile

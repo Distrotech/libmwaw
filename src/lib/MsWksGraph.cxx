@@ -861,10 +861,13 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWksGraph::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWksGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("MsWksGraphInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   switch (m_type) {

@@ -593,18 +593,21 @@ protected:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
   if (m_id != 1 && m_id != 2) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: unknown zone\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParserInternal::SubDocument::parse: unknown zone\n"));
+    return;
+  }
+  WriterPlsParser *parser=dynamic_cast<WriterPlsParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("WriterPlsParserInternal::SubDocument::parse: no parser\n"));
     return;
   }
 
-  assert(m_parser);
-
   long pos = m_input->tell();
-  static_cast<WriterPlsParser *>(m_parser)->sendWindow(m_id);
+  parser->sendWindow(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 }
@@ -664,9 +667,7 @@ void WriterPlsParser::newPage(int number)
 ////////////////////////////////////////////////////////////
 void WriterPlsParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = true;
   try {
     // create the asciiFile
@@ -800,13 +801,16 @@ bool WriterPlsParser::checkHeader(MWAWHeader *header, bool strict)
 
 bool WriterPlsParser::readWindowsInfo(int zone)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsInfo:the zone seems bad\n"));
+    return false;
+  }
   MWAWInputStreamPtr input = getInput();
 
   long debPos = input->tell();
   input->seek(debPos+0xf4,librevenge::RVNG_SEEK_SET);
   if (int(input->tell()) != debPos+0xf4) {
-    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: file is too short\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsInfo: file is too short\n"));
     return false;
   }
 
@@ -925,7 +929,10 @@ bool WriterPlsParser::readWindowsInfo(int zone)
 ////////////////////////////////////////////////////////////
 bool WriterPlsParser::readWindowsZone(int zone)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone:the zone seems bad\n"));
+    return false;
+  }
 
   MWAWInputStreamPtr input = getInput();
   WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
@@ -1019,10 +1026,13 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
 {
   MWAWTextListenerPtr listener=getTextListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: can not find a listener\n"));
+    MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: can not find a listener\n"));
     return false;
   }
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow:the zone seems bad\n"));
+    return false;
+  }
   WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
   bool sendAll = limits[0] < 0;
@@ -1038,11 +1048,11 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
       actParag = limits[0];
       endParag = limits[1];
       if (endParag > int(wInfo.m_paragraphs.size())) {
-        MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with limits\n"));
+        MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: pb with limits\n"));
         endParag = int(wInfo.m_paragraphs.size());
       }
       if (endParag <= actParag) {
-        MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb2 with limits\n"));
+        MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: pb2 with limits\n"));
         return true;
       }
     }
@@ -1056,7 +1066,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
       else {
         endParag = wInfo.m_pages[(size_t)pg+1].m_firstLine-1;
         if (endParag == -1 || endParag < actParag) {
-          MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with page zone\n"));
+          MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: pb with page zone\n"));
           continue;
         }
       }
@@ -1073,7 +1083,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
       case 3: // col break: seems similar to an entry data (with a text zone which does not contain any character)
         if (numCols) {
           if (actCol >numCols) {
-            MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: pb with col break\n"));
+            MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: pb with col break\n"));
           }
           else {
             actCol++;
@@ -1091,7 +1101,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
         if (findSection(zone, Vec2i(i, endParag), section)) {
           if (!canCreateSection) {
             if (section.numColumns()>1) {
-              MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: find a section in auxilliary zone\n"));
+              MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: find a section in auxilliary zone\n"));
             }
           }
           else {
@@ -1131,7 +1141,7 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
           }
         }
         else {
-          MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsZone: table across a page\n"));
+          MWAW_DEBUG_MSG(("WriterPlsParser::sendWindow: table across a page\n"));
         }
         break;
       default:
@@ -1158,7 +1168,10 @@ bool WriterPlsParser::sendWindow(int zone, Vec2i limits)
  */
 bool WriterPlsParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::findSection:the zone seems bad\n"));
+    return false;
+  }
   WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
 
   sec=MWAWSection();
@@ -1214,10 +1227,12 @@ bool WriterPlsParser::findSection(int zone, Vec2i limits, MWAWSection &sec)
 ////////////////////////////////////////////////////////////
 bool WriterPlsParser::readPageInfo(int zone)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readPageInfo:the zone seems bad\n"));
+    return false;
+  }
 
   MWAWInputStreamPtr input = getInput();
-
   libmwaw::DebugStream f;
 
   WriterPlsParserInternal::WindowsInfo &wInfo = m_state->m_windows[zone];
@@ -1281,7 +1296,10 @@ MWAWParagraph WriterPlsParser::getParagraph(WriterPlsParserInternal::ParagraphDa
 
 bool WriterPlsParser::readParagraphInfo(int zone)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readParagraphInfo:the zone seems bad\n"));
+    return false;
+  }
 
   libmwaw::DebugStream f;
 
@@ -1344,7 +1362,10 @@ bool WriterPlsParser::readParagraphInfo(int zone)
 ////////////////////////////////////////////////////////////
 bool WriterPlsParser::readColInfo(int zone)
 {
-  assert(zone >= 0 && zone < 3);
+  if (zone<0 || zone>=3) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readColInfo:the zone seems bad\n"));
+    return false;
+  }
 
   libmwaw::DebugStream f;
 
@@ -1381,7 +1402,10 @@ bool WriterPlsParser::readText(WriterPlsParserInternal::ParagraphInfo const &inf
 {
   WriterPlsParserInternal::ParagraphData data;
   std::vector<WriterPlsParserInternal::Line> lines;
-  assert(info.m_pos);
+  if (!info.m_pos) {
+    MWAW_DEBUG_MSG(("WriterPlsParser::readText: pb with pos\n"));
+    return false;
+  }
 
   if (!readParagraphData(info, true, data))
     return false;

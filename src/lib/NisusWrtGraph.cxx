@@ -124,11 +124,13 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtGraphInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_graphParser);
-
+  if (!m_graphParser) {
+    MWAW_DEBUG_MSG(("NisusWrtGraphInternal::SubDocument::parse: no graph parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   m_graphParser->sendPicture(m_id, true, m_position);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

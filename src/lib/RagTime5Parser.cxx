@@ -261,7 +261,6 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
     MWAW_DEBUG_MSG(("RagTime5ParserInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_parser);
 
   long pos = m_input->tell();
   // TODO

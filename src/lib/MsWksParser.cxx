@@ -130,8 +130,7 @@ void MsWksParser::newPage(int number, bool softBreak)
 ////////////////////////////////////////////////////////////
 void MsWksParser::parse(librevenge::RVNGTextInterface *docInterface)
 {
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
-  assert(m_document && m_document->getInput());
+  if (!checkHeader(0L) || !m_document || !m_document->getInput())  throw(libmwaw::ParseException());
 
   int const vers=version();
   bool ok = true;

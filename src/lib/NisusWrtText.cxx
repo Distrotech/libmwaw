@@ -410,18 +410,20 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("NisusWrtTextInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_textParser);
-
+  if (!m_textParser) {
+    MWAW_DEBUG_MSG(("NisusWrtTextInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   if (m_type == libmwaw::DOC_NOTE)
     m_textParser->sendFootnote(m_id);
   else if (m_type == libmwaw::DOC_HEADER_FOOTER)
     m_textParser->sendHeaderFooter(m_id);
   else {
-    MWAW_DEBUG_MSG(("SubDocument::parse: oops do not know how to send this kind of document\n"));
+    MWAW_DEBUG_MSG(("NisusWrtTextInternal::SubDocument::parse: oops do not know how to send this kind of document\n"));
     return;
   }
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

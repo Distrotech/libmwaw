@@ -32,8 +32,7 @@
 */
 
 /*
- * Structure to store and construct a chart from an unstructured list
- * of cell
+ * Structure to store and construct a chart
  *
  */
 

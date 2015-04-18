@@ -364,7 +364,10 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*ty
       listener->insertCharacter((unsigned char) m_bookmark[c]);
     return;
   }
-  assert(m_textParser);
+  if (!m_textParser) {
+    MWAW_DEBUG_MSG(("HanMacWrdJTextInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
   m_textParser->sendText(m_id, m_cPos);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);

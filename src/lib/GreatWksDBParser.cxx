@@ -430,10 +430,13 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     return;
   }
 
-  assert(m_parser);
-
+  GreatWksDBParser *parser=dynamic_cast<GreatWksDBParser *>(m_parser);
+  if (!parser) {
+    MWAW_DEBUG_MSG(("GreatWksDBParserInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
   long pos = m_input->tell();
-  static_cast<GreatWksDBParser *>(m_parser)->sendHF(m_id);
+  parser->sendHF(m_id);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -486,8 +489,7 @@ bool GreatWksDBParser::sendHF(int id)
 ////////////////////////////////////////////////////////////
 void GreatWksDBParser::parse(librevenge::RVNGSpreadsheetInterface *docInterface)
 {
-  assert(getInput().get() != 0);
-  if (!checkHeader(0L))  throw(libmwaw::ParseException());
+  if (!getInput().get() || !checkHeader(0L))  throw(libmwaw::ParseException());
   bool ok = false;
   try {
     // create the asciiFile

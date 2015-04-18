@@ -226,10 +226,13 @@ private:
 void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
 {
   if (!listener.get()) {
-    MWAW_DEBUG_MSG(("MsWks3Text::SubDocument::parse: no listener\n"));
+    MWAW_DEBUG_MSG(("MsWks3TextInternal::SubDocument::parse: no listener\n"));
     return;
   }
-  assert(m_textParser);
+  if (!m_textParser) {
+    MWAW_DEBUG_MSG(("MsWks3TextInternal::SubDocument::parse: no parser\n"));
+    return;
+  }
 
   long pos = m_input->tell();
   m_textParser->sendNote(m_id, m_noteId);
