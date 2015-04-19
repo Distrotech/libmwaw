@@ -127,6 +127,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="CDrw") { // CHANGEME: ClarisDraw
+      if (type=="dDrw" || type=="iLib") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1));
+        return res;
+      }
+    }
     else if (creator=="C#+A") { // solo
       if (type=="C#+D" || type=="C#+F") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
@@ -605,6 +611,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MORE, 3));
     return res;
   }
+  if ((val[0]==0x100||val[0]==0x200) && val[2]==0x4558 && val[3]==0x5057) { // CHANGEME: ClarisDraw
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1));
+    return res;
+  }
 
   if (val[0]==0x100 || val[0]==0x200) {
     if (val[1]==0x5a57 && val[2]==0x5254) {
@@ -677,7 +687,6 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     if (vers >= 0)
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MICROSOFTWORD, vers));
   }
-
   // ----------- less discriminant ------------------
   if (val[0] == 0x2e && val[1] == 0x2e) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacWrite II file\n"));

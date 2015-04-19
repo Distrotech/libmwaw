@@ -185,7 +185,7 @@ public:
   void setRowPacked(int j, unsigned char const *val)
   {
     if (m_data == 0L || j<0 || j >= m_size[1]) {
-      MWAW_DEBUG_MSG(("MWAWPictBitmapContainerBool::setRowPacked: call with bad coordinate %d %d\n", j));
+      MWAW_DEBUG_MSG(("MWAWPictBitmapContainerBool::setRowPacked: call with bad coordinate %d\n", j));
       return;
     }
     for (int i = 0, ind = j*m_size[0]; i < m_size[0];) {

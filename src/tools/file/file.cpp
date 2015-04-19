@@ -274,7 +274,7 @@ bool File::readFileInformation()
     checkFInfoType("RagTime 5");
   }
   else if (m_fInfoCreator=="CDrw") {
-    checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
+    checkFInfoType("dDrw", "ClarisDraw") || checkFInfoType("iLib", "ClarisDraw[library]") || checkFInfoType("ClarisDraw");
   }
   else if (m_fInfoCreator=="DkmR") {
     checkFInfoType("TEXT","Basic text(created by DOCMaker)") || checkFInfoType("DOCMaker");
@@ -709,6 +709,13 @@ bool File::readDataInformation()
       m_dataResult.push_back("GreatWorks[chart]");
       return true;
     }
+  }
+  if ((val[0]==0x100||val[0]==0x200) && val[2]==0x4558 && val[3]==0x5057) {
+    if (val[0]==0x100)
+      m_dataResult.push_back("ClarisDraw");
+    else
+      m_dataResult.push_back("ClarisDraw[library]");
+    return true;
   }
   // less discriminant
   if ((val[0]==0xfe32 && val[1]==0) || (val[0]==0xfe34 && val[1]==0) ||
