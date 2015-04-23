@@ -226,7 +226,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
   bool ok = readZone1(*sheet);
   if (ok) {
     pos = input->tell();
-    ok = m_document.readStructZone("SpreadsheetZone2", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "SpreadsheetZone2", false);
   }
   if (ok) {
     pos = input->tell();
@@ -238,12 +238,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
     pos = input->tell();
     if (!readRowHeightZone(*sheet)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok = m_document.readStructZone("SpreadsheetRowHeight", false);
+      ok = ClarisWksStruct::readStructZone(*m_parserState, "SpreadsheetRowHeight", false);
     }
   }
   if (ok && vers <= 2) { // field with size 0xa in v2
     pos = input->tell();
-    ok = m_document.readStructZone("SpreadsheetUnkn1", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "SpreadsheetUnkn1", false);
   }
   /* checkme: now a sequence of 5/6 lists: when filed the first two zones are a list of cell,
    while the last 2 lists contains only 4 numbers */
@@ -265,7 +265,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksSpreadsheet::readSpreadsheetZone
     ok = m_document.readStructCellZone("SpreadsheetListCell", false, res);
     if (ok) continue;
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    ok = m_document.readStructZone("SpreadsheetUnkn2", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "SpreadsheetUnkn2", false);
     if (ok) {
       MWAW_DEBUG_MSG(("ClarisWksSpreadsheet::readSpreadsheetZone: find unexpected Unkn2 zone\n"));
     }

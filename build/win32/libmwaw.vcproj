@@ -208,6 +208,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisDrawGraph.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawStyleManager.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawText.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksBMParser.cxx"
 				>
 			</File>
@@ -742,6 +758,22 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\BeagleWksText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawGraph.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawStyleManager.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisDrawText.hxx"
 				>
 			</File>
 			<File

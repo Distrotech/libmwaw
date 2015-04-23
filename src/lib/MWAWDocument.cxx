@@ -50,6 +50,7 @@
 #include "BeagleWksDBParser.hxx"
 #include "BeagleWksDRParser.hxx"
 #include "BeagleWksSSParser.hxx"
+#include "ClarisDrawParser.hxx"
 #include "ClarisWksParser.hxx"
 #include "ClarisWksBMParser.hxx"
 #include "ClarisWksPRParser.hxx"
@@ -162,8 +163,11 @@ try
   case MWAW_T_WRITENOW:
   case MWAW_T_WRITERPLUS:
   case MWAW_T_ZWRITE:
+
+  case MWAW_T_RESERVED1:
     confidence = MWAW_C_EXCELLENT;
     break;
+
   case MWAW_T_ADOBEILLUSTRATOR:
   case MWAW_T_DBASE:
   case MWAW_T_FAMILYTREEMAKER:
@@ -186,7 +190,6 @@ try
   case MWAW_T_XPRESS:
   case MWAW_T_4DIMENSION:
 
-  case MWAW_T_RESERVED1:
   case MWAW_T_RESERVED2:
   case MWAW_T_RESERVED3:
   case MWAW_T_RESERVED4:
@@ -507,6 +510,11 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_SUPERPAINT:
       parser.reset(new SuperPaintParser(input, rsrcParser, header));
       break;
+    case MWAWDocument::MWAW_T_RESERVED1:
+#ifdef DEBUG
+      parser.reset(new ClarisDrawParser(input, rsrcParser, header));
+#endif
+      break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
     case MWAWDocument::MWAW_T_ADOBEILLUSTRATOR:
@@ -553,7 +561,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_ZWRITE:
     case MWAWDocument::MWAW_T_4DIMENSION:
 
-    case MWAWDocument::MWAW_T_RESERVED1:
     case MWAWDocument::MWAW_T_RESERVED2:
     case MWAWDocument::MWAW_T_RESERVED3:
     case MWAWDocument::MWAW_T_RESERVED4:

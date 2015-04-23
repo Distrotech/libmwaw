@@ -129,7 +129,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     }
     else if (creator=="CDrw") { // CHANGEME: ClarisDraw
       if (type=="dDrw" || type=="iLib") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
@@ -612,7 +612,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
   if ((val[0]==0x100||val[0]==0x200) && val[2]==0x4558 && val[3]==0x5057) { // CHANGEME: ClarisDraw
-    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
 

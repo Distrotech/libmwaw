@@ -220,7 +220,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
       break;
     case MWAWGraphicShape::ShapeUnknown:
     default:
-      o << "###unknwown[shape],";
+      o << "###unknown[shape],";
       break;
     }
     break;

@@ -1750,7 +1750,7 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
         02ca02c9-02cc02c6-02400000
         03f801e6
         8002e3ff e0010000 ee02e6ff */
-    bool ok = m_document.readStructIntZone("GroupDef", false, 2, res);
+    bool ok = ClarisWksStruct::readIntZone(*m_parserState, "GroupDef", false, 2, res);
     f.str("");
     f << "[GroupDef(data" << i << ")]";
     if (ok) {
@@ -1781,7 +1781,7 @@ bool ClarisWksGraph::readGroupHeader(ClarisWksGraphInternal::Group &group)
       if (input->readLong(2)==2) {
         std::vector<int> res;
         input->seek(pos, librevenge::RVNG_SEEK_SET);
-        if (sz>12 && m_document.readStructIntZone("GroupDef", false, 2, res)) {
+        if (sz>12 && ClarisWksStruct::readIntZone(*m_parserState, "GroupDef", false, 2, res)) {
           ascFile.addPos(pos);
           ascFile.addNote(f.str().c_str());
           continue;

@@ -173,7 +173,7 @@ ClarisWksDocument::ClarisWksDocument(MWAWParser &parser) :
   m_databaseParser(), m_graphParser(), m_presentationParser(), m_spreadsheetParser(), m_tableParser(), m_textParser(),
   m_newPage(0), m_sendFootnote(0)
 {
-  m_styleManager.reset(new ClarisWksStyleManager(*this));
+  m_styleManager.reset(new ClarisWksStyleManager(m_parserState, this));
 
   m_databaseParser.reset(new ClarisWksDatabase(*this));
   m_graphParser.reset(new ClarisWksGraph(*this));
@@ -1249,7 +1249,7 @@ bool ClarisWksDocument::readDocHeader()
       return false;
     }
     pos=input->tell();
-    if (!readStructZone("DocUnkn1", false)) { // related to link/filename?
+    if (!ClarisWksStruct::readStructZone(*m_parserState, "DocUnkn1", false)) { // related to link/filename?
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1257,7 +1257,7 @@ bool ClarisWksDocument::readDocHeader()
     ascFile.addPos(pos);
     ascFile.addNote("Entries(DocUnkn2)"); // another struct ?
     input->seek(4, librevenge::RVNG_SEEK_CUR);
-    if (!readStructZone("DocH0", false)) {
+    if (!ClarisWksStruct::readStructZone(*m_parserState, "DocH0", false)) {
       input->seek(pos+4, librevenge::RVNG_SEEK_SET);
       return false;
     }
@@ -1305,7 +1305,7 @@ bool ClarisWksDocument::readDocHeader()
         return false;
       }
       pos = input->tell(); // series of data with size 42 or 46
-      if (!readStructZone("DocUnkn1", false)) {
+      if (!ClarisWksStruct::readStructZone(*m_parserState, "DocUnkn1", false)) {
         input->seek(pos,librevenge::RVNG_SEEK_SET);
         return false;
       }
@@ -1363,7 +1363,7 @@ bool ClarisWksDocument::readDocHeader()
         }
         break;
       case 2: // a serie of id? num
-        if (!readStructZone("DocH0", false)) {
+        if (!ClarisWksStruct::readStructZone(*m_parserState, "DocH0", false)) {
           input->seek(pos, librevenge::RVNG_SEEK_SET);
           return false;
         }
@@ -2195,155 +2195,6 @@ bool ClarisWksDocument::readPrintInfo()
   return true;
 }
 
-///////////////////////////////////////////////////////////
-// try to read a unknown structured zone
-////////////////////////////////////////////////////////////
-bool ClarisWksDocument::readStructZone(char const *zoneName, bool hasEntete)
-{
-  if (!m_parserState) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructZone: can not find the parser state\n"));
-    return false;
-  }
-  MWAWInputStreamPtr input = m_parserState->m_input;
-  long pos = input->tell();
-  long sz = (long) input->readULong(4);
-  long endPos = pos+4+sz;
-  if (!input->checkPosition(endPos)) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructZone: unexpected size for %s\n", zoneName));
-    return false;
-  }
-  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
-  libmwaw::DebugStream f;
-  f << "Entries(" << zoneName << "):";
-
-  if (sz == 0) {
-    if (hasEntete) {
-      ascFile.addPos(pos-4);
-      ascFile.addNote(f.str().c_str());
-    }
-    else {
-      ascFile.addPos(pos);
-      ascFile.addNote("NOP");
-    }
-    return true;
-  }
-
-  int N = (int) input->readLong(2);
-  f << "N=" << N << ",";
-  int type = (int) input->readLong(2);
-  if (type != -1)
-    f << "#type=" << type << ",";
-  int val = (int) input->readLong(2);
-  if (val) f << "#unkn=" << val << ",";
-  int fSz = (int) input->readULong(2);
-  int hSz = (int) input->readULong(2);
-  if (!fSz || N *fSz+hSz+12 != sz) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructZone: unexpected size for %s\n", zoneName));
-    return false;
-  }
-
-  if (long(input->tell()) != pos+4+hSz)
-    ascFile.addDelimiter(input->tell(), '|');
-  ascFile.addPos(hasEntete ? pos-4 : pos);
-  ascFile.addNote(f.str().c_str());
-
-  long debPos = endPos-N*fSz;
-  for (int i = 0; i < N; i++) {
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    f.str("");
-    f << zoneName << "-" << i << ":";
-
-    long actPos = input->tell();
-    if (actPos != debPos && actPos != debPos+fSz)
-      ascFile.addDelimiter(input->tell(),'|');
-    ascFile.addPos(debPos);
-    ascFile.addNote(f.str().c_str());
-    debPos += fSz;
-  }
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
-// try to read a list of structured zone
-bool ClarisWksDocument::readStructIntZone(char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
-{
-  if (!m_parserState) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: can not find the parser state\n"));
-    return false;
-  }
-  res.resize(0);
-  if (intSz != 1 && intSz != 2 && intSz != 4) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: unknown int size: %d\n", intSz));
-    return false;
-  }
-
-  MWAWInputStreamPtr input = m_parserState->m_input;
-  long pos = input->tell();
-  long sz = (long) input->readULong(4);
-  long endPos = pos+4+sz;
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  if (long(input->tell()) != endPos) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: unexpected size for %s\n", zoneName ? zoneName : "unamed"));
-    return false;
-  }
-  libmwaw::DebugStream f;
-  libmwaw::DebugFile &ascFile=m_parserState->m_asciiFile;
-  if (zoneName && strlen(zoneName))
-    f << "Entries(" << zoneName << "):";
-
-  if (sz == 0) {
-    if (hasEntete) {
-      ascFile.addPos(pos-4);
-      ascFile.addNote(f.str().c_str());
-    }
-    else {
-      ascFile.addPos(pos);
-      ascFile.addNote("NOP");
-    }
-    return true;
-  }
-
-  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-  int N = (int) input->readLong(2);
-  f << "N=" << N << ",";
-  int type = (int) input->readLong(2);
-  if (type != -1)
-    f << "#type=" << type << ",";
-  long val = input->readLong(2);
-  if (val) f << "#unkn=" << val << ",";
-  int fSz = (int) input->readULong(2);
-  int hSz = (int) input->readULong(2);
-  if (fSz != intSz || N *fSz+hSz+12 != sz) {
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readStructIntZone: unexpected field size\n"));
-    return false;
-  }
-
-  long debPos = endPos-N*fSz;
-  if (long(input->tell()) != debPos) {
-    ascFile.addDelimiter(input->tell(), '|');
-    if (N) ascFile.addDelimiter(debPos, '|');
-  }
-  input->seek(debPos, librevenge::RVNG_SEEK_SET);
-  f << "[";
-  for (int i = 0; i < N; i++) {
-    val = input->readLong(fSz);
-    res.push_back((int) val);
-    if (val>1000) f << "0x" << std::hex << val << std::dec << ",";
-    else f << val << ",";
-  }
-  f << "]";
-
-  ascFile.addPos(hasEntete ? pos-4 : pos);
-  ascFile.addNote(f.str().c_str());
-
-  input->seek(endPos,librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
 // try to read a list of cell's zone
 bool ClarisWksDocument::readStructCellZone(char const *zoneName, bool hasEntete, std::vector<MWAWVec2i> &res)
 {
@@ -2488,7 +2339,7 @@ bool ClarisWksDocument::readZoneA()
   ascFile.addNote(f.str().c_str());
 
   pos=input->tell();
-  if (!readStructZone("ZoneA",false)) { // find one time a list of id, 0x10
+  if (!ClarisWksStruct::readStructZone(*m_parserState, "ZoneA",false)) { // find one time a list of id, 0x10
     MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not read ZoneA-A\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
@@ -2500,7 +2351,7 @@ bool ClarisWksDocument::readZoneA()
     pos = input->tell();
     if ((i%2)==0) {
       // the header contains a string: some chart/figure name?
-      if (!readStructZone("ZoneA",false)) {
+      if (!ClarisWksStruct::readStructZone(*m_parserState, "ZoneA",false)) {
         MWAW_DEBUG_MSG(("ClarisWksDocument::readZoneA: can not read ZoneA-B\n"));
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         return true;

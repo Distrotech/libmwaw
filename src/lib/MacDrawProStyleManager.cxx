@@ -2311,7 +2311,7 @@ bool MacDrawProStyleManager::readFAMap(MWAWEntry const &entry, int N, int fieldS
   entry.setParsed(true);
   long pos=entry.begin();
   if (fieldSize<54 || entry.length()!=N*fieldSize) {
-    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readPatternMap: the data size seems bad\n"));
+    MWAW_DEBUG_MSG(("MacDrawProStyleManager::readFAMap: the data size seems bad\n"));
     f << "###";
     ascFile.addPos(pos-4);
     ascFile.addNote(f.str().c_str());

@@ -32,7 +32,7 @@
 */
 
 /*
- * Class used to read main style by Claris Works parser
+ * Class used to read main style by AppleWorks/ClarisWorks parser
  *
  */
 #ifndef CLARIS_WKS_STYLE_MANAGER
@@ -65,7 +65,7 @@ public:
   struct Style;
 public:
   //! constructor
-  ClarisWksStyleManager(ClarisWksDocument &document);
+  ClarisWksStyleManager(MWAWParserStatePtr parserState, ClarisWksDocument *document=0);
   //! destructor
   ~ClarisWksStyleManager();
 
@@ -134,7 +134,7 @@ protected:
 
 protected:
   //! the document
-  ClarisWksDocument &m_document;
+  ClarisWksDocument *m_document;
   //! the parser state
   MWAWParserStatePtr m_parserState;
   //! the state

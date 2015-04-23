@@ -41,10 +41,155 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWDebug.hxx"
+#include "MWAWInputStream.hxx"
+#include "MWAWParser.hxx"
+
 #include "ClarisWksStruct.hxx"
 
 namespace ClarisWksStruct
 {
+// try to read a list of structured zone
+bool readIntZone(MWAWParserState &parserState, char const *zoneName, bool hasEntete, int intSz, std::vector<int> &res)
+{
+  res.resize(0);
+  if (intSz != 1 && intSz != 2 && intSz != 4) {
+    MWAW_DEBUG_MSG(("ClarisWksStruct::readIntZone: unknown int size: %d\n", intSz));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = parserState.m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  if (long(input->tell()) != endPos) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksStruct::readIntZone: unexpected size for %s\n", zoneName ? zoneName : "unamed"));
+    return false;
+  }
+  libmwaw::DebugStream f;
+  libmwaw::DebugFile &ascFile=parserState.m_asciiFile;
+  if (zoneName && strlen(zoneName))
+    f << "Entries(" << zoneName << "):";
+
+  if (sz == 0) {
+    if (hasEntete) {
+      ascFile.addPos(pos-4);
+      ascFile.addNote(f.str().c_str());
+    }
+    else {
+      ascFile.addPos(pos);
+      ascFile.addNote("NOP");
+    }
+    return true;
+  }
+
+  input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  long val = input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (fSz != intSz || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksStruct::readIntZone: unexpected field size\n"));
+    return false;
+  }
+
+  long debPos = endPos-N*fSz;
+  if (long(input->tell()) != debPos) {
+    ascFile.addDelimiter(input->tell(), '|');
+    if (N) ascFile.addDelimiter(debPos, '|');
+  }
+  input->seek(debPos, librevenge::RVNG_SEEK_SET);
+  f << "[";
+  for (int i = 0; i < N; i++) {
+    val = input->readLong(fSz);
+    res.push_back((int) val);
+    if (val>1000) f << "0x" << std::hex << val << std::dec << ",";
+    else f << val << ",";
+  }
+  f << "]";
+
+  ascFile.addPos(hasEntete ? pos-4 : pos);
+  ascFile.addNote(f.str().c_str());
+
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+///////////////////////////////////////////////////////////
+// try to read a unknown structured zone
+////////////////////////////////////////////////////////////
+bool readStructZone(MWAWParserState &parserState, char const *zoneName, bool hasEntete)
+{
+  MWAWInputStreamPtr input = parserState.m_input;
+  long pos = input->tell();
+  long sz = (long) input->readULong(4);
+  long endPos = pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksStruct::readStructZone: unexpected size for %s\n", zoneName));
+    return false;
+  }
+  libmwaw::DebugFile &ascFile= parserState.m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(" << zoneName << "):";
+
+  if (sz == 0) {
+    if (hasEntete) {
+      ascFile.addPos(pos-4);
+      ascFile.addNote(f.str().c_str());
+    }
+    else {
+      ascFile.addPos(pos);
+      ascFile.addNote("NOP");
+    }
+    return true;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (!fSz || N *fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisWksStruct::readStructZone: unexpected size for %s\n", zoneName));
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+hSz)
+    ascFile.addDelimiter(input->tell(), '|');
+  ascFile.addPos(hasEntete ? pos-4 : pos);
+  ascFile.addNote(f.str().c_str());
+
+  long debPos = endPos-N*fSz;
+  for (int i = 0; i < N; i++) {
+    input->seek(debPos, librevenge::RVNG_SEEK_SET);
+    f.str("");
+    f << zoneName << "-" << i << ":";
+
+    long actPos = input->tell();
+    if (actPos != debPos && actPos != debPos+fSz)
+      ascFile.addDelimiter(input->tell(),'|');
+    ascFile.addPos(debPos);
+    ascFile.addNote(f.str().c_str());
+    debPos += fSz;
+  }
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
 //------------------------------------------------------------
 // DSET
 //------------------------------------------------------------
@@ -284,6 +429,8 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
     o << "text";
     if (doc.m_textType==0xFF)
       o << "*,";
+    else if (doc.m_textType==0xa) // appear in graphic file
+      o << "[textbox],";
     else if (doc.m_textType)
       o << "[#type=" << std::hex << doc.m_textType<< std::dec << "],";
     else

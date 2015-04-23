@@ -123,6 +123,22 @@ SOURCE=..\..\src\lib\BeagleWksText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ClarisDrawGraph.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawStyleManager.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawText.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\ClarisWksBMParser.cxx
 # End Source File
 # Begin Source File
@@ -656,6 +672,22 @@ SOURCE=..\..\src\lib\BeagleWksStructManager.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\BeagleWksText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawGraph.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawStyleManager.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisDrawText.hxx
 # End Source File
 # Begin Source File
 

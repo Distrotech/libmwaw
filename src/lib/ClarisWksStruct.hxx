@@ -44,9 +44,16 @@
 
 #include "libmwaw_internal.hxx"
 
-/** namespace to store the main structure which appears in a Claris Works file */
+class MWAWParserState;
+
+/** namespace to store the main structure which appears in a ClarisDraw/ClarisWorks file */
 namespace ClarisWksStruct
 {
+/** try to read a int structured zone
+    where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
+bool readIntZone(MWAWParserState &parserState, char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
+//! try to read a structured zone with unknown content
+bool readStructZone(MWAWParserState &parserState, char const *zoneName, bool hasEntete);
 //! main structure which correspond to a document part
 struct DSET {
   struct Child;

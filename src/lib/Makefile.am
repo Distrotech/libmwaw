@@ -36,6 +36,14 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	BeagleWksStructManager.hxx	\
 	BeagleWksText.cxx		\
 	BeagleWksText.hxx		\
+	ClarisDrawGraph.cxx		\
+	ClarisDrawGraph.hxx		\
+	ClarisDrawParser.cxx		\
+	ClarisDrawParser.hxx		\
+	ClarisDrawStyleManager.cxx	\
+	ClarisDrawStyleManager.hxx	\
+	ClarisDrawText.cxx		\
+	ClarisDrawText.hxx		\
 	ClarisWksBMParser.cxx		\
 	ClarisWksBMParser.hxx		\
 	ClarisWksDatabase.cxx		\

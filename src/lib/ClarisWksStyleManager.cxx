@@ -1558,8 +1558,8 @@ std::ostream &operator<<(std::ostream &o, ClarisWksStyleManager::Style const &st
 ////////////////////////////////////////////////////
 // StyleManager function
 ////////////////////////////////////////////////////
-ClarisWksStyleManager::ClarisWksStyleManager(ClarisWksDocument &document) :
-  m_document(document), m_parserState(document.m_parserState), m_state()
+ClarisWksStyleManager::ClarisWksStyleManager(MWAWParserStatePtr parserState, ClarisWksDocument *document) :
+  m_document(document), m_parserState(parserState), m_state()
 {
   m_state.reset(new ClarisWksStyleManagerInternal::State);
 }
@@ -1793,7 +1793,7 @@ bool ClarisWksStyleManager::readGradientList(long endPos)
   if (sz<0 || (sz && sz < 76) || (endPos>0 && finalPos>endPos) ||
       (endPos<0 && !input->checkPosition(finalPos))) {
     f << "###";
-    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: can read pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: can read zone size\n"));
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(pos,librevenge::RVNG_SEEK_SET);
@@ -1810,24 +1810,26 @@ bool ClarisWksStyleManager::readGradientList(long endPos)
   static long const expectedVal[]= {-1,0,0x28,0x40,1}; // type, ?, fSz, ?, ?
   for (int i=0; i<5; ++i) {
     val= input->readLong(2);
-    if (i==2 && val!=0x28) {
+    if (i==2 && val!=0x28) { // fSz
       input->seek(pos,librevenge::RVNG_SEEK_SET);
       return false;
     }
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
   }
-  for (int i=0; i < 32; ++i) {
-    val= input->readLong(2);
-    if (val!=i) f << "grad" << i << "=" << val << ",";
-  }
-  if (76+40*N!=sz) {
+  int const numDefGrad=32;
+  if (12+2*numDefGrad+40*N!=sz) {
     f << "###";
-    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: unexpected pattern size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readGradientList: unexpected fieldSize\n"));
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     input->seek(finalPos,librevenge::RVNG_SEEK_SET);
     return true;
+  }
+
+  for (int i=0; i < numDefGrad; ++i) {
+    val= input->readLong(2);
+    if (val!=i) f << "grad" << i << "=" << val << ",";
   }
 
   ascFile.addPos(pos);
@@ -1836,7 +1838,7 @@ bool ClarisWksStyleManager::readGradientList(long endPos)
   for (int i=0; i < N; ++i) {
     pos=input->tell();
     f.str("");
-    f << "GradientList-" << 32+i << ":";
+    f << "GradientList-" << numDefGrad+i << ":";
     ClarisWksStyleManagerInternal::Gradient grad;
     for (int j=0; j<4; ++j) {
       unsigned char color[3];
@@ -2036,7 +2038,7 @@ bool ClarisWksStyleManager::readGenStyle(int id)
     else if (name == "NAME")
       ok = readStyleNames(N, fSz);
     else if (name == "RULR")
-      ok = m_document.getTextParser() && m_document.getTextParser()->readSTYL_RULR(N, fSz);
+      ok = m_document && m_document->getTextParser() && m_document->getTextParser()->readSTYL_RULR(N, fSz);
     else if (name == "STYL")
       ok = readStylesDef(N, fSz);
     if (!ok) {
@@ -2206,9 +2208,9 @@ bool ClarisWksStyleManager::readFontNames()
   if (val) f << "#unkn=" << val << ",";
   int fSz = (int) input->readULong(2);
   int hSz = (int) input->readULong(2);
-  if (!fSz || N *fSz+hSz+12 != sz) {
+  if (!fSz || N*fSz+hSz+12 != sz) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: unexpected field/header size\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: unexpected field/header size\n"));
     f << "###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -2225,7 +2227,7 @@ bool ClarisWksStyleManager::readFontNames()
   pos=input->tell();
   if (fSz!=72) {
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: no sure how to read the data\n"));
+    MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: no sure how to read the data\n"));
     ascFile.addPos(pos);
     ascFile.addNote("FNTM-data:###");
     return true;
@@ -2238,14 +2240,14 @@ bool ClarisWksStyleManager::readFontNames()
     int fId=(int) input->readULong(2);
     f << "fId=" << fId << ",";
     val=(int) input->readULong(2); // always fId?
-    if (val!=fId) f << "fId2=" << fId << ",";
+    if (val!=fId) f << "fId2=" << val << ",";
     for (int j=0; j<2; ++j) { // always 0?
       val=(int) input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
     }
     int sSz=(int) input->readULong(1);
-    if (!sSz || sSz>63) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::readFontNames: the string size seems bad\n"));
+    if (!sSz || sSz+9>fSz) {
+      MWAW_DEBUG_MSG(("ClarisWksStyleManager::readFontNames: the string size seems bad\n"));
       f << "###";
     }
     else {
@@ -2254,7 +2256,7 @@ bool ClarisWksStyleManager::readFontNames()
       f << "'" << name << "'";
       m_parserState->m_fontConverter->setCorrespondance(fId, name);
     }
-    input->seek(pos+72, librevenge::RVNG_SEEK_SET);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
@@ -2595,7 +2597,7 @@ bool ClarisWksStyleManager::readGraphStyles(int N, int fSz)
     for (int j = 0; j < 3; j++)
       values16.push_back((int16_t)input->readLong(2));
 
-    m_document.checkOrdering(values16, values32);
+    if (m_document) m_document->checkOrdering(values16, values32);
     if (values16[0] || values16[1])
       f << "dim=" << values16[0] << "x" << values16[1] << ",";
     for (size_t j = 0; j < 2; ++j) {

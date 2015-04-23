@@ -408,14 +408,14 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksTable::readTableZone
     s << "TableUnknown-" << i;
     std::vector<int> res;
     pos = input->tell();
-    ok = m_document.readStructIntZone(s.str().c_str(), false, 2, res);
+    ok = ClarisWksStruct::readIntZone(*m_parserState, s.str().c_str(), false, 2, res);
   }
   if (ok) {
     pos = input->tell();
     ok = readTablePointers(*tableZone);
     if (!ok) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      ok = m_document.readStructZone("TablePointers", false);
+      ok = ClarisWksStruct::readStructZone(*m_parserState, "TablePointers", false);
     }
   }
   if (ok) {

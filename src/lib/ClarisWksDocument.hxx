@@ -215,11 +215,6 @@ public:
   /** remove uneeded edge (mainly header/footer edges in main graph) */
   void cleanZonesGraph();
 
-  //! try to read a structured zone
-  bool readStructZone(char const *zoneName, bool hasEntete);
-  /** try to read a int structured zone
-      where \a fSz to the int size: 1(int8), 2(int16), 4(int32) */
-  bool readStructIntZone(char const *zoneName, bool hasEntete, int fSz, std::vector<int> &res);
   /** try to read a structured zone list of cells */
   bool readStructCellZone(char const *zoneName, bool hasEntete, std::vector<MWAWVec2i> &res);
   /* read a list of string zone */

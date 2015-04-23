@@ -358,12 +358,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    ok = m_document.readStructZone("DatabaseListUnkn0", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "DatabaseListUnkn0", false);
   }
   if (ok) {
     pos = input->tell();
     // probably: field number followed by 1 : increasing, 2 : decreasing
-    ok = m_document.readStructZone("DatabaseSortFunction", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "DatabaseSortFunction", false);
   }
   if (ok) {
     pos = input->tell();
@@ -374,7 +374,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
   std::vector<int> listLayout;
   if (ok) {
     pos = input->tell();
-    ok = m_document.readStructIntZone("DatabaseLayout", false, 4, listLayout);
+    ok = ClarisWksStruct::readIntZone(*m_parserState, "DatabaseLayout", false, 4, listLayout);
   }
   if (ok) {
     for (size_t i=0; i<listLayout.size(); ++i) {
@@ -392,7 +392,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
   if (ok) {
     pos = input->tell();
     // in v1-v4 list of id block?, in v5-v6 list of block id+?
-    ok = m_document.readStructZone("DatabaseListUnkn3", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "DatabaseListUnkn3", false);
   }
 
   if (ok) { // never seems,
@@ -421,12 +421,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
   }
   if (ok) {
     pos = input->tell();
-    ok = m_document.readStructZone("DatabaseUnkn5", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "DatabaseUnkn5", false);
   }
   if (ok && vers>=4) {
     // version 4 can contains more block: list of int+flag?
     pos=input->tell();
-    ok = m_document.readStructZone("DatabaseUnkn6", false);
+    ok = ClarisWksStruct::readStructZone(*m_parserState, "DatabaseUnkn6", false);
   }
   // now the following seems to be different
   if (!ok)
@@ -779,7 +779,7 @@ bool ClarisWksDatabase::readLayout(ClarisWksDatabaseInternal::Database &dBase)
   }
 
   pos=input->tell();
-  if (!m_document.readStructZone("DatabaseLayout", false)) {
+  if (!ClarisWksStruct::readStructZone(*m_parserState, "DatabaseLayout", false)) {
     MWAW_DEBUG_MSG(("ClarisWksDatabase::readLayout: can not read the layout second part\n"));
     ascFile.addPos(pos);
     ascFile.addNote("DatabaseLayout-B:###");
