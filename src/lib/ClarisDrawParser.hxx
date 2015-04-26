@@ -64,7 +64,6 @@ class ClarisDrawParser : public MWAWGraphicParser
 {
   friend class ClarisDrawGraph;
   friend class ClarisDrawText;
-  friend class ClarisDrawParserInternal::SubDocument;
 public:
   //! constructor
   ClarisDrawParser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header);
@@ -74,8 +73,13 @@ public:
   //! checks if the document header is correct (or not)
   bool checkHeader(MWAWHeader *header, bool strict=false);
 
-  // the main parse function
+  //! the main parse function
   void parse(librevenge::RVNGDrawingInterface *documentInterface);
+
+  //! returns the file type corresponding to a zone id
+  int getFileType(int zoneId) const;
+  //! sends a text zone
+  bool sendTextZone(int number, int subZone=-1);
 
 protected:
   //! inits all internal variables
@@ -103,6 +107,9 @@ protected:
   bool readPrintInfo();
   //! try to read the document info zone
   bool readDocInfo();
+  //! try to read the layout
+  bool readLayouts();
+
   //
   // low level
   //

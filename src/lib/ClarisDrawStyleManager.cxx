@@ -127,18 +127,23 @@ bool Gradient::update(MWAWGraphicStyle &style) const
   if (m_type==1 || m_type==2) {
     style.m_gradientType=m_type==1 ? MWAWGraphicStyle::G_Radial : MWAWGraphicStyle::G_Rectangular;
     for (int c=0; c < m_numColors; ++c)
-      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
+      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[c]));
     style.m_gradientPercentCenter=MWAWVec2f(float(m_box.center()[1])/100.f, float(m_box.center()[0])/100.f);
     return true;
   }
   style.m_gradientAngle=float(m_angle+90);
-  if (m_decal<=0.05f) {
+  if (m_decal>=0.5f-0.1e-3f && m_decal<=0.5f+0.1e-3f) {
     style.m_gradientType= MWAWGraphicStyle::G_Axial;
     for (int c=0; c < m_numColors; ++c)
       style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
     return true;
   }
   style.m_gradientType= MWAWGraphicStyle::G_Linear;
+  if (m_decal <= 0.05f) {
+    for (int c=0; c < m_numColors; ++c)
+      style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[m_numColors-1-c]));
+    return true;
+  }
   if (m_decal >=0.95f)  {
     for (int c=0; c < m_numColors; ++c)
       style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(float(c)/float(m_numColors-1), m_colors[c]));
@@ -146,13 +151,13 @@ bool Gradient::update(MWAWGraphicStyle &style) const
   }
   for (int c=-m_numColors+1; c<m_numColors; ++c) {
     // checkme: look almost good
-    float pos=float(c)/float(m_numColors-1)+(1-m_decal)/2.f;
+    float pos=float(c)/float(m_numColors-1)+m_decal/2.f;
     if (pos < 0) {
       if (c!=m_numColors-1 && float(c+1)/float(m_numColors-1)+(1-m_decal)/2.f>=0)
         continue;
       pos=0;
     }
-    style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(pos>1?1:pos, m_colors[c<0?-c:c]));
+    style.m_gradientStopList.push_back(MWAWGraphicStyle::GradientStop(pos>1?1:pos, m_colors[m_numColors-1+(c<0?c:-c)]));
     if (pos>=1)
       break;
   }
@@ -300,6 +305,7 @@ void State::initDashs()
   m_dashList.push_back(dash);
   // 6: 72x9, 9x9, 9x9
   dash.resize(6,9);
+  m_dashList.push_back(dash);
 }
 
 void State::initGradients()
@@ -307,516 +313,396 @@ void State::initGradients()
   if (!m_gradientList.empty()) return;
   Gradient grad;
 // grad0
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(0,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad1
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=180;
+  grad=Gradient(0,2,180,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad2
-  grad=Gradient();
-  grad.m_type=0;
+  grad=Gradient(0,2,90,0.5f);
   grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=90;
   m_gradientList.push_back(grad);
 // grad3
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=315;
+  grad=Gradient(0,2,315,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad4
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=225;
+  grad=Gradient(0,2,225,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad5
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(79,80),MWAWVec2i(79,80));
   m_gradientList.push_back(grad);
 // grad6
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(81,20),MWAWVec2i(81,20));
   m_gradientList.push_back(grad);
 // grad7
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(50,50),MWAWVec2i(50,50));
   m_gradientList.push_back(grad);
 // grad8
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=90;
+  grad=Gradient(0,2,90,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad9
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.989578f;
+  grad=Gradient(0,2,270,0.989578f);
   grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=270;
   m_gradientList.push_back(grad);
 // grad10
-  grad=Gradient();
-  grad.m_type=0;
+  grad=Gradient(0,2,0,0.5f);
   grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0xffffff);
   m_gradientList.push_back(grad);
 // grad11
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=45;
+  grad=Gradient(0,2,45,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad12
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=135;
+  grad=Gradient(0,2,135,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
   m_gradientList.push_back(grad);
 // grad13
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(22,77),MWAWVec2i(23,77));
   m_gradientList.push_back(grad);
 // grad14
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(22,22),MWAWVec2i(22,22));
   m_gradientList.push_back(grad);
 // grad15
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=180;
+  grad=Gradient(1,2,180,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,1),MWAWVec2i(0,0));
   m_gradientList.push_back(grad);
 // grad16
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff0000);
-  grad.m_colors[1]=MWAWColor(0xff7f00);
-  grad.m_colors[2]=MWAWColor(0xffff00);
-  grad.m_colors[3]=MWAWColor(0x00ff00);
-  m_gradientList.push_back(grad);
-// grad17
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
+  grad=Gradient(0,4,0,0);
   grad.m_colors[0]=MWAWColor(0x00ff00);
-  grad.m_colors[1]=MWAWColor(0x00ffc0);
-  grad.m_colors[2]=MWAWColor(0x00a0ff);
-  grad.m_colors[3]=MWAWColor(0x0000ff);
-  m_gradientList.push_back(grad);
-// grad18
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x0000ff);
-  grad.m_colors[1]=MWAWColor(0x7f00ff);
-  grad.m_colors[2]=MWAWColor(0xff00aa);
+  grad.m_colors[1]=MWAWColor(0xffff00);
+  grad.m_colors[2]=MWAWColor(0xff7f00);
   grad.m_colors[3]=MWAWColor(0xff0000);
   m_gradientList.push_back(grad);
+// grad17
+  grad=Gradient(0,4,0,0);
+  grad.m_colors[0]=MWAWColor(0x0000ff);
+  grad.m_colors[1]=MWAWColor(0x00a0ff);
+  grad.m_colors[2]=MWAWColor(0x00ffc0);
+  grad.m_colors[3]=MWAWColor(0x00ff00);
+  m_gradientList.push_back(grad);
+// grad18
+  grad=Gradient(0,4,0,0);
+  grad.m_colors[0]=MWAWColor(0xff0000);
+  grad.m_colors[1]=MWAWColor(0xff00aa);
+  grad.m_colors[2]=MWAWColor(0x7f00ff);
+  grad.m_colors[3]=MWAWColor(0x0000ff);
+  m_gradientList.push_back(grad);
 // grad19
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x660066);
+  grad=Gradient(0,3,135,0);
+  grad.m_colors[0]=MWAWColor(0x4cbcff);
   grad.m_colors[1]=MWAWColor(0x000000);
-  grad.m_colors[2]=MWAWColor(0x4cbcff);
-  grad.m_angle=135;
+  grad.m_colors[2]=MWAWColor(0x660066);
   m_gradientList.push_back(grad);
 // grad20
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff00ff);
+  grad=Gradient(0,3,225,0);
+  grad.m_colors[0]=MWAWColor(0xa64cff);
   grad.m_colors[1]=MWAWColor(0x4c4cff);
-  grad.m_colors[2]=MWAWColor(0xa64cff);
-  grad.m_angle=225;
+  grad.m_colors[2]=MWAWColor(0xff00ff);
   m_gradientList.push_back(grad);
 // grad21
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x111111);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0xffcc66);
   grad.m_colors[1]=MWAWColor(0x993300);
-  grad.m_colors[2]=MWAWColor(0xffcc66);
+  grad.m_colors[2]=MWAWColor(0x111111);
+  grad.m_box=MWAWBox2i(MWAWVec2i(23,22),MWAWVec2i(27,24));
   m_gradientList.push_back(grad);
 // grad22
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x0c0c0c);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0x3300ff);
   grad.m_colors[1]=MWAWColor(0x3300ff);
-  grad.m_colors[2]=MWAWColor(0x3300ff);
+  grad.m_colors[2]=MWAWColor(0x0c0c0c);
+  grad.m_box=MWAWBox2i(MWAWVec2i(28,26),MWAWVec2i(28,31));
   m_gradientList.push_back(grad);
 // grad23
-  grad=Gradient();
-  grad.m_type=1;
+  grad=Gradient(1,4,135,0);
   grad.m_colors[0]=MWAWColor(0x000000);
-  grad.m_colors[1]=MWAWColor(0x000000);
-  grad.m_colors[2]=MWAWColor(0x0000ff);
+  grad.m_colors[1]=MWAWColor(0x0000ff);
+  grad.m_colors[2]=MWAWColor(0x000000);
   grad.m_colors[3]=MWAWColor(0x000000);
-  grad.m_angle=135;
+  grad.m_box=MWAWBox2i(MWAWVec2i(255,247),MWAWVec2i(255,250));
   m_gradientList.push_back(grad);
 // grad24
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.998474f;
+  grad=Gradient(0,3,270,0.998474f);
   grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0x330099);
   grad.m_colors[2]=MWAWColor(0xffc000);
-  grad.m_angle=270;
   m_gradientList.push_back(grad);
 // grad25
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x660044);
+  grad=Gradient(0,3,270,0);
+  grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0x4c4cff);
-  grad.m_colors[2]=MWAWColor(0x000000);
-  grad.m_angle=270;
+  grad.m_colors[2]=MWAWColor(0x660044);
   m_gradientList.push_back(grad);
 // grad26
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xcc00ff);
+  grad=Gradient(0,3,180,0);
+  grad.m_colors[0]=MWAWColor(0x666666);
   grad.m_colors[1]=MWAWColor(0x33cc33);
-  grad.m_colors[2]=MWAWColor(0x666666);
-  grad.m_angle=180;
+  grad.m_colors[2]=MWAWColor(0xcc00ff);
   m_gradientList.push_back(grad);
 // grad27
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x664c00);
-  grad.m_colors[1]=MWAWColor(0xff0000);
-  grad.m_angle=45;
+  grad=Gradient(0,2,45,0);
+  grad.m_colors[0]=MWAWColor(0xff0000);
+  grad.m_colors[1]=MWAWColor(0x664c00);
   m_gradientList.push_back(grad);
 // grad28
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x006633);
-  grad.m_colors[1]=MWAWColor(0x00cc99);
-  grad.m_colors[2]=MWAWColor(0x00e0ff);
-  grad.m_colors[3]=MWAWColor(0x006099);
-  grad.m_angle=145;
+  grad=Gradient(0,4,145,0);
+  grad.m_colors[0]=MWAWColor(0x006099);
+  grad.m_colors[1]=MWAWColor(0x00e0ff);
+  grad.m_colors[2]=MWAWColor(0x00cc99);
+  grad.m_colors[3]=MWAWColor(0x006633);
   m_gradientList.push_back(grad);
 // grad29
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x111111);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0xcccc33);
   grad.m_colors[1]=MWAWColor(0x666600);
-  grad.m_colors[2]=MWAWColor(0xcccc33);
+  grad.m_colors[2]=MWAWColor(0x111111);
+  grad.m_box=MWAWBox2i(MWAWVec2i(23,21),MWAWVec2i(23,21));
   m_gradientList.push_back(grad);
 // grad30
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x0c0c0c);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0x00cc33);
   grad.m_colors[1]=MWAWColor(0x005500);
-  grad.m_colors[2]=MWAWColor(0x00cc33);
+  grad.m_colors[2]=MWAWColor(0x0c0c0c);
+  grad.m_box=MWAWBox2i(MWAWVec2i(19,21),MWAWVec2i(22,26));
   m_gradientList.push_back(grad);
 // grad31
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0x66002a);
+  grad=Gradient(1,3,45,0);
+  grad.m_colors[0]=MWAWColor(0xff4c4c);
   grad.m_colors[1]=MWAWColor(0x000000);
-  grad.m_colors[2]=MWAWColor(0xff4c4c);
-  grad.m_angle=45;
+  grad.m_colors[2]=MWAWColor(0x66002a);
+  grad.m_box=MWAWBox2i(MWAWVec2i(255,224),MWAWVec2i(255,237));
   m_gradientList.push_back(grad);
 // grad32
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x9999ff);
+  grad=Gradient(0,3,180,0);
+  grad.m_colors[0]=MWAWColor(0xff00ff);
   grad.m_colors[1]=MWAWColor(0x6666cc);
-  grad.m_colors[2]=MWAWColor(0xff00ff);
-  grad.m_angle=180;
+  grad.m_colors[2]=MWAWColor(0x9999ff);
   m_gradientList.push_back(grad);
 // grad33
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.660599f;
+  grad=Gradient(0,2,177,0.660599f);
   grad.m_colors[0]=MWAWColor(0x00cc00);
   grad.m_colors[1]=MWAWColor(0xffdf00);
-  grad.m_angle=177;
   m_gradientList.push_back(grad);
 // grad34
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.576279f;
+  grad=Gradient(0,4,270,0.576279f);
   grad.m_colors[0]=MWAWColor(0x66002a);
   grad.m_colors[1]=MWAWColor(0x990066);
   grad.m_colors[2]=MWAWColor(0x990099);
   grad.m_colors[3]=MWAWColor(0xcc00cc);
-  grad.m_angle=270;
   m_gradientList.push_back(grad);
 // grad35
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.712677f;
+  grad=Gradient(0,2,155,0.712677f);
   grad.m_colors[0]=MWAWColor(0xff0000);
   grad.m_colors[1]=MWAWColor(0xffff00);
-  grad.m_angle=155;
   m_gradientList.push_back(grad);
 // grad36
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff4c4c);
-  grad.m_colors[1]=MWAWColor(0xffffcc);
-  grad.m_colors[2]=MWAWColor(0x00e0ff);
-  grad.m_colors[3]=MWAWColor(0x004066);
-  grad.m_angle=45;
+  grad=Gradient(0,4,45,0);
+  grad.m_colors[0]=MWAWColor(0x004066);
+  grad.m_colors[1]=MWAWColor(0x00e0ff);
+  grad.m_colors[2]=MWAWColor(0xffffcc);
+  grad.m_colors[3]=MWAWColor(0xff4c4c);
   m_gradientList.push_back(grad);
 // grad37
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x262626);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0xff9999);
   grad.m_colors[1]=MWAWColor(0x990000);
-  grad.m_colors[2]=MWAWColor(0xff9999);
+  grad.m_colors[2]=MWAWColor(0x262626);
+  grad.m_box=MWAWBox2i(MWAWVec2i(17,19),MWAWVec2i(23,26));
   m_gradientList.push_back(grad);
 // grad38
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x111111);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0x0099cc);
   grad.m_colors[1]=MWAWColor(0x0033cc);
-  grad.m_colors[2]=MWAWColor(0x0099cc);
+  grad.m_colors[2]=MWAWColor(0x111111);
+  grad.m_box=MWAWBox2i(MWAWVec2i(18,18),MWAWVec2i(22,21));
   m_gradientList.push_back(grad);
 // grad39
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0x0000cc);
-  grad.m_colors[1]=MWAWColor(0xffdf00);
-  grad.m_angle=214;
+  grad=Gradient(1,2,214,0);
+  grad.m_colors[0]=MWAWColor(0xffdf00);
+  grad.m_colors[1]=MWAWColor(0x0000cc);
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,24),MWAWVec2i(255,232));
   m_gradientList.push_back(grad);
 // grad40
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x660033);
+  grad=Gradient(0,3,0,0);
+  grad.m_colors[0]=MWAWColor(0x330033);
   grad.m_colors[1]=MWAWColor(0x006666);
-  grad.m_colors[2]=MWAWColor(0x330033);
+  grad.m_colors[2]=MWAWColor(0x660033);
   m_gradientList.push_back(grad);
 // grad41
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff4c4c);
-  grad.m_colors[1]=MWAWColor(0x005966);
-  grad.m_angle=90;
+  grad=Gradient(0,2,90,0);
+  grad.m_colors[0]=MWAWColor(0x005966);
+  grad.m_colors[1]=MWAWColor(0xff4c4c);
   m_gradientList.push_back(grad);
 // grad42
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
+  grad=Gradient(0,3,180,0);
   grad.m_colors[0]=MWAWColor(0x000000);
   grad.m_colors[1]=MWAWColor(0x0080ff);
   grad.m_colors[2]=MWAWColor(0x000000);
-  grad.m_angle=180;
   m_gradientList.push_back(grad);
 // grad43
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x6600cc);
+  grad=Gradient(0,3,45,0);
+  grad.m_colors[0]=MWAWColor(0x004066);
   grad.m_colors[1]=MWAWColor(0x4c4cff);
-  grad.m_colors[2]=MWAWColor(0x004066);
-  grad.m_angle=45;
+  grad.m_colors[2]=MWAWColor(0x6600cc);
   m_gradientList.push_back(grad);
 // grad44
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xccccff);
-  grad.m_colors[1]=MWAWColor(0xffff99);
-  grad.m_colors[2]=MWAWColor(0xa64cff);
-  grad.m_colors[3]=MWAWColor(0x330066);
-  grad.m_angle=135;
+  grad=Gradient(0,4,135,0);
+  grad.m_colors[0]=MWAWColor(0x330066);
+  grad.m_colors[1]=MWAWColor(0xa64cff);
+  grad.m_colors[2]=MWAWColor(0xffff99);
+  grad.m_colors[3]=MWAWColor(0xccccff);
   m_gradientList.push_back(grad);
 // grad45
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x990066);
-  grad.m_colors[1]=MWAWColor(0x7f00ff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0x7f00ff);
+  grad.m_colors[1]=MWAWColor(0x990066);
+  grad.m_box=MWAWBox2i(MWAWVec2i(70,24),MWAWVec2i(78,30));
   m_gradientList.push_back(grad);
 // grad46
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0xff0000);
-  grad.m_colors[1]=MWAWColor(0x7f00ff);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0x7f00ff);
+  grad.m_colors[1]=MWAWColor(0xff0000);
+  grad.m_box=MWAWBox2i(MWAWVec2i(70,24),MWAWVec2i(78,30));
   m_gradientList.push_back(grad);
 // grad47
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0x990066);
+  grad=Gradient(1,3,166,0);
+  grad.m_colors[0]=MWAWColor(0x008699);
   grad.m_colors[1]=MWAWColor(0x4c9900);
-  grad.m_colors[2]=MWAWColor(0x008699);
-  grad.m_angle=166;
+  grad.m_colors[2]=MWAWColor(0x990066);
   m_gradientList.push_back(grad);
 // grad48
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff0000);
+  grad=Gradient(0,3,180,0);
+  grad.m_colors[0]=MWAWColor(0xcc99ff);
   grad.m_colors[1]=MWAWColor(0xff7f00);
-  grad.m_colors[2]=MWAWColor(0xcc99ff);
-  grad.m_angle=180;
+  grad.m_colors[2]=MWAWColor(0xff0000);
   m_gradientList.push_back(grad);
 // grad49
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xffff00);
-  grad.m_colors[1]=MWAWColor(0xffffff);
-  grad.m_angle=180;
+  grad=Gradient(0,2,180,0);
+  grad.m_colors[0]=MWAWColor(0xffffff);
+  grad.m_colors[1]=MWAWColor(0xffff00);
   m_gradientList.push_back(grad);
 // grad50
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x0000dd);
-  grad.m_colors[1]=MWAWColor(0x330066);
-  grad.m_colors[2]=MWAWColor(0xa64cff);
-  grad.m_colors[3]=MWAWColor(0x000000);
-  grad.m_angle=270;
+  grad=Gradient(0,4,270,0);
+  grad.m_colors[0]=MWAWColor(0x000000);
+  grad.m_colors[1]=MWAWColor(0xa64cff);
+  grad.m_colors[2]=MWAWColor(0x330066);
+  grad.m_colors[3]=MWAWColor(0x0000dd);
   m_gradientList.push_back(grad);
 // grad51
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x005966);
+  grad=Gradient(0,3,315,0);
+  grad.m_colors[0]=MWAWColor(0x4cff4c);
   grad.m_colors[1]=MWAWColor(0x4cffd3);
-  grad.m_colors[2]=MWAWColor(0x4cff4c);
-  grad.m_angle=315;
+  grad.m_colors[2]=MWAWColor(0x005966);
   m_gradientList.push_back(grad);
 // grad52
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x0000ff);
-  grad.m_colors[1]=MWAWColor(0x990066);
-  grad.m_angle=225;
+  grad=Gradient(0,2,225,0);
+  grad.m_colors[0]=MWAWColor(0x990066);
+  grad.m_colors[1]=MWAWColor(0x0000ff);
   m_gradientList.push_back(grad);
 // grad53
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x661900);
-  grad.m_colors[1]=MWAWColor(0xff0000);
-  grad.m_colors[2]=MWAWColor(0xffc000);
-  grad.m_colors[3]=MWAWColor(0xfff399);
+  grad=Gradient(2,4,0,0);
+  grad.m_colors[0]=MWAWColor(0xfff399);
+  grad.m_colors[1]=MWAWColor(0xffc000);
+  grad.m_colors[2]=MWAWColor(0xff0000);
+  grad.m_colors[3]=MWAWColor(0x661900);
+  grad.m_box=MWAWBox2i(MWAWVec2i(90,43),MWAWVec2i(100,50));
   m_gradientList.push_back(grad);
 // grad54
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0xff00aa);
-  grad.m_colors[1]=MWAWColor(0xffff4c);
+  grad=Gradient(2,2,0,0);
+  grad.m_colors[0]=MWAWColor(0xffff4c);
+  grad.m_colors[1]=MWAWColor(0xff00aa);
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(7,7));
   m_gradientList.push_back(grad);
 // grad55
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0x990066);
-  grad.m_colors[1]=MWAWColor(0x00ffc0);
-  grad.m_colors[2]=MWAWColor(0x000000);
-  grad.m_colors[3]=MWAWColor(0x003ecc);
-  grad.m_angle=360;
+  grad=Gradient(1,4,360,0);
+  grad.m_colors[0]=MWAWColor(0x003ecc);
+  grad.m_colors[1]=MWAWColor(0x000000);
+  grad.m_colors[2]=MWAWColor(0x00ffc0);
+  grad.m_colors[3]=MWAWColor(0x990066);
   m_gradientList.push_back(grad);
 // grad56
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0x666600);
+  grad=Gradient(0,3,270,0);
+  grad.m_colors[0]=MWAWColor(0x0c0c0c);
   grad.m_colors[1]=MWAWColor(0x6633ff);
-  grad.m_colors[2]=MWAWColor(0x0c0c0c);
-  grad.m_angle=270;
+  grad.m_colors[2]=MWAWColor(0x666600);
   m_gradientList.push_back(grad);
 // grad57
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff0000);
+  grad=Gradient(0,4,90,0);
+  grad.m_colors[0]=MWAWColor(0x00ff7f);
   grad.m_colors[1]=MWAWColor(0x000000);
   grad.m_colors[2]=MWAWColor(0x000000);
-  grad.m_colors[3]=MWAWColor(0x00ff7f);
-  grad.m_angle=90;
+  grad.m_colors[3]=MWAWColor(0xff0000);
   m_gradientList.push_back(grad);
 // grad58
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.999985f;
-  grad.m_colors[0]=MWAWColor(0x6600cc);
-  grad.m_colors[1]=MWAWColor(0x00ffff);
-  grad.m_colors[2]=MWAWColor(0xff9999);
-  grad.m_colors[3]=MWAWColor(0xff794c);
+  grad=Gradient(0,4,0,0);
+  grad.m_colors[0]=MWAWColor(0xff794c);
+  grad.m_colors[1]=MWAWColor(0xff9999);
+  grad.m_colors[2]=MWAWColor(0x00ffff);
+  grad.m_colors[3]=MWAWColor(0x6600cc);
   m_gradientList.push_back(grad);
 // grad59
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=0.958786f;
+  grad=Gradient(0,2,45,0.958786f);
   grad.m_colors[0]=MWAWColor(0xffff00);
   grad.m_colors[1]=MWAWColor(0xff00aa);
-  grad.m_angle=45;
   m_gradientList.push_back(grad);
 // grad60
-  grad=Gradient();
-  grad.m_type=0;
-  grad.m_decal=1;
-  grad.m_colors[0]=MWAWColor(0xff006a);
-  grad.m_colors[1]=MWAWColor(0xff00ff);
-  grad.m_colors[2]=MWAWColor(0x006099);
-  grad.m_colors[3]=MWAWColor(0x660066);
-  grad.m_angle=135;
+  grad=Gradient(0,4,135,0);
+  grad.m_colors[0]=MWAWColor(0x660066);
+  grad.m_colors[1]=MWAWColor(0x006099);
+  grad.m_colors[2]=MWAWColor(0xff00ff);
+  grad.m_colors[3]=MWAWColor(0xff006a);
   m_gradientList.push_back(grad);
 // grad61
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0xff99c4);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0xf3f3f3);
   grad.m_colors[1]=MWAWColor(0x99ffff);
-  grad.m_colors[2]=MWAWColor(0xf3f3f3);
+  grad.m_colors[2]=MWAWColor(0xff99c4);
+  grad.m_box=MWAWBox2i(MWAWVec2i(18,58),MWAWVec2i(25,89));
   m_gradientList.push_back(grad);
 // grad62
-  grad=Gradient();
-  grad.m_type=2;
-  grad.m_colors[0]=MWAWColor(0x001f66);
+  grad=Gradient(2,3,0,0);
+  grad.m_colors[0]=MWAWColor(0xff006a);
   grad.m_colors[1]=MWAWColor(0x660044);
-  grad.m_colors[2]=MWAWColor(0xff006a);
+  grad.m_colors[2]=MWAWColor(0x001f66);
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(7,100));
   m_gradientList.push_back(grad);
 // grad63
-  grad=Gradient();
-  grad.m_type=1;
-  grad.m_colors[0]=MWAWColor(0xccccff);
-  grad.m_colors[1]=MWAWColor(0x0000ff);
-  grad.m_angle=294;
+  grad=Gradient(1,2,294,0);
+  grad.m_colors[0]=MWAWColor(0x0000ff);
+  grad.m_colors[1]=MWAWColor(0xccccff);
+  grad.m_box=MWAWBox2i(MWAWVec2i(0,13),MWAWVec2i(0,29));
   m_gradientList.push_back(grad);
 }
 
@@ -913,6 +799,8 @@ bool ClarisDrawStyleManager::getDash(int dId, std::vector<float> &dash) const
 {
   if (dId==0) // a solid line
     return false;
+  if (m_state->m_dashList.empty())
+    m_state->initDashs();
   if (dId<=0||dId>int(m_state->m_dashList.size())) {
     MWAW_DEBUG_MSG(("ClarisDrawStyleManager::getDash: can not find dash %d\n", dId));
     return false;

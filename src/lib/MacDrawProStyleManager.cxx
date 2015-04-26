@@ -217,6 +217,7 @@ void State::initDashs()
   m_dashList.push_back(dash);
   // 6: 72x9, 9x9, 9x9
   dash.resize(6,9);
+  m_dashList.push_back(dash);
 }
 
 void State::initPens()

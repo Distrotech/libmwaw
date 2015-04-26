@@ -90,19 +90,27 @@ public:
 
   //! reads the zone Group DSET
   shared_ptr<ClarisWksStruct::DSET> readGroupZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry);
-
   //! reads the zone Bitmap DSET
   shared_ptr<ClarisWksStruct::DSET> readBitmapZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry);
+  //! read the transformations
+  bool readTransformations();
+  //! update the group: ie. remove empty group child
+  void updateGroup();
 
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(ClarisDrawGraphInternal::Style const &style, MWAWColor &col) const;
 protected:
-
+  //! sends the bitmap data to the listener (if it exists )
+  bool sendBitmap(int number, MWAWPosition const &pos=MWAWPosition());
+  //! sends the zone data to the listener (if it exists )
+  bool sendGroup(int number, MWAWPosition const &pos=MWAWPosition());
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
   // interface with main parser
 
+  //! sends a text box content (via the main parser )
+  bool sendTextZone(int number, int subZone=-1);
 
   //
   // Intermediate level
@@ -137,6 +145,12 @@ protected:
 
   /* read some unknown data in first zone */
   bool readGroupUnknown(ClarisDrawGraphInternal::Group &group, int zoneSz, int id);
+
+  //! sends a basic graphic zone
+  bool sendShape(ClarisDrawGraphInternal::ZoneShape &pict, MWAWPosition pos);
+
+  //! sends a bitmap graphic zone
+  bool sendBitmap(ClarisDrawGraphInternal::Bitmap &pict, MWAWPosition pos);
 
 private:
   ClarisDrawGraph(ClarisDrawGraph const &orig);

@@ -57,7 +57,7 @@
 namespace ClarisDrawTextInternal
 {
 struct Paragraph;
-struct Zone;
+struct DSET;
 struct State;
 }
 
@@ -88,6 +88,8 @@ public:
   //! reads the zone Text DSET
   shared_ptr<ClarisWksStruct::DSET> readDSETZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry);
 protected:
+  //! sends the zone data
+  bool sendZone(int number, int subZone=-1);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -105,6 +107,20 @@ protected:
       present at the beginning of the text in the first version of Claris Works : v1-2,
       present in the STYL entries in v4-v6 files */
   bool readParagraph(int id=-1);
+  //! try to read the paragraph
+  bool readParagraphs(MWAWEntry const &entry, ClarisDrawTextInternal::DSET &zone);
+
+  //! try to read a font sequence
+  bool readFonts(MWAWEntry const &entry, ClarisDrawTextInternal::DSET &zone);
+
+  //! try to the token zone)
+  bool readTokens(MWAWEntry const &entry, ClarisDrawTextInternal::DSET &zone);
+
+  //! try to read the text zone size
+  bool readTextZoneSize(MWAWEntry const &entry, ClarisDrawTextInternal::DSET &zone);
+
+  //! send the text zone to the listener
+  bool sendText(ClarisDrawTextInternal::DSET const &zone, int subZone);
 
 private:
   ClarisDrawText(ClarisDrawText const &orig);

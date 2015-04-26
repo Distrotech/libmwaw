@@ -38,6 +38,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <stack>
 
 #include <librevenge/librevenge.h>
 
@@ -46,6 +47,7 @@
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWListener.hxx"
+#include "MWAWParagraph.hxx"
 #include "MWAWParser.hxx"
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
@@ -103,6 +105,32 @@ struct CurvePoint {
   int m_type;
 };
 
+//! Internal: the structure used to store a transformation ClarisDrawGraph
+struct Transformation {
+  //! constructor
+  Transformation() : m_rotate(0), m_originalSize()
+  {
+    for (int i=0; i<2; ++i) m_values[i]=0;
+  }
+  friend std::ostream &operator<<(std::ostream &o, Transformation const &trans)
+  {
+    if (trans.m_rotate<0||trans.m_rotate>0)
+      o << "rot=" << trans.m_rotate << ",";
+    if (trans.m_originalSize!=MWAWVec2f(0,0))
+      o << "size=" << trans.m_originalSize << ",";
+    o << "val=[";
+    for (int i=0; i<2; ++i) o << trans.m_values[i] << ",";
+    o << "],";
+    return o;
+  }
+
+  //! the rotation
+  float m_rotate;
+  //! the original size
+  MWAWVec2f m_originalSize;
+  //! other values
+  float m_values[2];
+};
 //! Internal: the structure used to store a style of a ClarisDrawGraph
 struct Style : public MWAWGraphicStyle {
   //! constructor
@@ -162,7 +190,7 @@ struct Style : public MWAWGraphicStyle {
 //! Internal: the generic structure used to store a zone of a ClarisDrawGraph
 struct Zone {
   //! the list of types
-  enum Type { T_Zone, T_Zone2, T_Shape, T_Unknown,
+  enum Type { T_Zone, T_Shape, T_Unknown,
               /* basic subtype */
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly, T_Connector
             };
@@ -258,14 +286,14 @@ struct Zone {
 //! Internal: small class to store a basic graphic zone of a ClarisDrawGraph
 struct ZoneShape : public Zone {
   //! constructor
-  ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape(), m_rotate(0)
+  ZoneShape(Zone const &z, Type type) : Zone(z), m_type(type), m_shape(), m_autosize(false)
   {
   }
   //! print the data
   virtual void print(std::ostream &o) const
   {
     o << m_shape;
-    if (m_rotate) o << "rot=" << m_rotate << ",";
+    if (m_autosize) o << "autosize,";
   }
   //! return the main type
   virtual Type getType() const
@@ -280,8 +308,7 @@ struct ZoneShape : public Zone {
   //! return the number of data
   virtual int getNumData() const
   {
-    if (m_shape.m_type == MWAWGraphicShape::Polygon || m_type==T_Connector) return 1;
-    return 0;
+    return m_type==T_Connector ? 2 : m_type==T_Poly ? 1 : 0;
   }
   //! return a child corresponding to this zone
   virtual ClarisWksStruct::DSET::Child getChild() const
@@ -296,8 +323,8 @@ struct ZoneShape : public Zone {
   Type m_type;
   //! the shape
   MWAWGraphicShape m_shape;
-  //! the rotation
-  int m_rotate;
+  //! true if autosize is set
+  bool m_autosize;
 };
 
 //! Internal: structure to store a bitmap of a ClarisDrawGraph
@@ -332,21 +359,44 @@ struct Bitmap : public ClarisWksStruct::DSET {
 //! Internal: structure to store a link to a zone of a ClarisDrawGraph
 struct ZoneZone : public Zone {
   //! constructor
-  ZoneZone(Zone const &z, Type fileType) : Zone(z), m_subType(fileType), m_id(-1), m_subId(-1), m_frameId(-1), m_frameSubId(-1), m_frameLast(true), m_styleId(-1), m_wrappingSep(5)
+  ZoneZone(Zone const &z, Type fileType) : Zone(z), m_subType(fileType), m_id(-1), m_subId(-1), m_frameId(-1), m_frameSubId(-1), m_frameLast(true), m_transformationId(-1), m_wrappingSep(5)
   {
     for (int i = 0; i < 9; i++)
       m_flags[i] = 0;
   }
+  //! return true if the zone is a note
+  bool isANote() const
+  {
+    return m_flags[4]==1;
+  }
+  /** check if we need to send the frame is linked to another frmae */
+  bool isLinked() const
+  {
+    return m_frameId>=0 && m_frameSubId>=0;
+  }
+  /** add the frame name if needed */
+  bool addFrameName(MWAWGraphicStyle &style) const
+  {
+    if (!isLinked()) return false;
+    if (m_frameSubId>0) {
+      librevenge::RVNGString fName;
+      fName.sprintf("Frame%d-%d", m_frameId, m_frameSubId);
+      style.m_frameName=fName.cstr();
+    }
+    if (!m_frameLast) {
+      librevenge::RVNGString fName;
+      fName.sprintf("Frame%d-%d", m_frameId, m_frameSubId+1);
+      style.m_frameNextName=fName.cstr();
+    }
+    return true;
+  }
+
   //! print the zone
   virtual void print(std::ostream &o) const
   {
-    if (m_subType==T_Zone2) {
-      o << "ZONE2" << ",";
-      return;
-    }
     o << "ZONE, id=" << m_id << ",";
     if (m_subId > 0) o << "subId=" << m_subId << ",";
-    if (m_styleId >= 0) o << "styleId=" << m_styleId << ",";
+    if (m_transformationId >= 0) o << "transf=T" << m_transformationId << ",";
     if (m_wrappingSep != 5) o << "wrappingSep=" << m_wrappingSep << ",";
     for (int i = 0; i < 9; i++) {
       if (m_flags[i]) o << "fl" << i << "=" << m_flags[i] << ",";
@@ -365,7 +415,7 @@ struct ZoneZone : public Zone {
   //! return the number of data to define this zone in the file
   virtual int getNumData() const
   {
-    return m_subType==T_Zone ? 0 : 1;
+    return 0;
   }
   //! returns the id of the reference zone
   virtual int getZoneId() const
@@ -395,8 +445,8 @@ struct ZoneZone : public Zone {
   int m_frameSubId;
   //! true if this is the last frame of a frame zone
   bool m_frameLast;
-  //! the style id
-  int m_styleId;
+  //! the transformation id
+  int m_transformationId;
   //! the wrapping separator
   int m_wrappingSep;
   //! flag
@@ -455,6 +505,11 @@ struct Group : public ClarisWksStruct::DSET {
     m_page=0;
   }
 
+  //! returns true if the group is empty
+  bool isEmpty() const
+  {
+    return m_zones.empty();
+  }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Group const &doc)
   {
@@ -495,14 +550,12 @@ struct Group : public ClarisWksStruct::DSET {
 //! Internal: the state of a ClarisDrawGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_pageDimensions(0,0), m_masterId(-1), m_groupMap(), m_bitmapMap(), m_positionsComputed(false), m_ordering(0) { }
-  /** returns a new ordering.
-
-      \note: the shapes seem to appear in increasing ordering, so we can use this function.
-   */
-  int getOrdering() const
+  State() : m_numPages(0), m_pageDimensions(0,0), m_masterId(-1), m_transformations(),
+    m_groupMap(), m_bitmapMap(), m_positionsComputed(false), m_frameId(0) { }
+  //! returns true if a group does not exist or is empty
+  bool isGroupEmpty(int gId) const
   {
-    return ++m_ordering;
+    return m_groupMap.find(gId)==m_groupMap.end() || !m_groupMap.find(gId)->second || m_groupMap.find(gId)->second->isEmpty();
   }
   //! the number of pages
   int m_numPages;
@@ -510,14 +563,16 @@ struct State {
   MWAWVec2f m_pageDimensions;
   //! the master group id ( in a draw file )
   int m_masterId;
+  //! the list of transformation
+  std::vector<Transformation> m_transformations;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_groupMap;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Bitmap> > m_bitmapMap;
   //! true if the ClarisDrawGraph::computePositions was called
   bool m_positionsComputed;
-  //! the last ordering used
-  mutable int m_ordering;
+  //! the actuel frame id
+  int m_frameId;
 };
 
 ////////////////////////////////////////
@@ -525,8 +580,12 @@ struct State {
 class SubDocument : public MWAWSubDocument
 {
 public:
-  SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, int zoneId, MWAWPosition pos=MWAWPosition()) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_position(pos) {}
+  //! constructor for zone
+  SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, int zoneId, int subId) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_subId(subId), m_label("") {}
+  //! constructor for label
+  SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, std::string const &label) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(-1), m_subId(-1), m_label(label) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -539,6 +598,8 @@ public:
     if (!sDoc) return true;
     if (m_graphParser != sDoc->m_graphParser) return true;
     if (m_id != sDoc->m_id) return true;
+    if (m_subId != sDoc->m_subId) return true;
+    if (m_label != sDoc->m_label) return true;
     return false;
   }
 
@@ -555,8 +616,10 @@ public:
 protected:
   //! the subdocument id
   int m_id;
-  //! the position if known
-  MWAWPosition m_position;
+  //! the subdocument sub id
+  int m_subId;
+  //! the label
+  std::string m_label;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -572,8 +635,20 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     MWAW_DEBUG_MSG(("ClarisDrawGraphInternal::SubDocument::parse: no graph parser\n"));
     return;
   }
+  if (m_id<0) {
+    if (m_label.empty()) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraphInternal::SubDocument::parse: can not find the label\n"));
+      return;
+    }
+    listener->setFont(MWAWFont(3,10));
+    MWAWParagraph para;
+    para.m_justify = MWAWParagraph::JustificationCenter;
+    listener->setParagraph(para);
+    listener->insertUnicodeString(m_label.c_str());
+    return;
+  }
   long pos = m_input->tell();
-  // TODO m_graphParser->askToSend(m_id,listener,m_position);
+  m_graphParser->sendTextZone(m_id, m_subId);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -612,14 +687,175 @@ int ClarisDrawGraph::numPages() const
   return nPages;
 }
 
+bool ClarisDrawGraph::sendTextZone(int number, int subZone)
+{
+  return m_mainParser->sendTextZone(number, subZone);
+}
+
+
 ////////////////////////////////////////////////////////////
 // Intermediate level
 ////////////////////////////////////////////////////////////
+void ClarisDrawGraph::updateGroup()
+{
+  // first looked for frame link and remove the empty link
+  std::stack<int> emptyGroup;
+  std::multimap<int, int> fatherMap;
+  std::map<int, std::map<int, ClarisDrawGraphInternal::ZoneZone *> > idSIdCIdMap;
+
+  std::map<int, shared_ptr<ClarisDrawGraphInternal::Group> >::iterator iter;
+  for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
+    shared_ptr<ClarisDrawGraphInternal::Group> group = iter->second;
+    if (!group) continue;
+    if (group->isEmpty()) {
+      emptyGroup.push(group->m_id);
+      continue;
+    }
+    for (size_t i=0; i<group->m_zones.size(); ++i) {
+      shared_ptr<ClarisDrawGraphInternal::Zone> child=group->m_zones[i];
+      if (child->getType() != ClarisDrawGraphInternal::Zone::T_Zone) continue;
+      ClarisDrawGraphInternal::ZoneZone *cChild = dynamic_cast<ClarisDrawGraphInternal::ZoneZone *>(child.get());
+      if (!cChild) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::updateGroup: oops can not find a child\n"));
+        continue;
+      }
+      int zId=cChild->getZoneId();
+      fatherMap.insert(std::multimap<int,int>::value_type(group->m_id,zId));
+
+      // now look for linked text box text
+      if (m_mainParser->getFileType(zId)!=1) continue;
+      if (idSIdCIdMap.find(zId)==idSIdCIdMap.end())
+        idSIdCIdMap.insert(std::map<int, std::map<int, ClarisDrawGraphInternal::ZoneZone *> >::value_type
+                           (zId, std::map<int, ClarisDrawGraphInternal::ZoneZone *>()));
+      std::map<int, ClarisDrawGraphInternal::ZoneZone *> &sIdCIdMap=idSIdCIdMap.find(zId)->second;
+      if (sIdCIdMap.find(cChild->m_subId)!=sIdCIdMap.end()) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::updateGroup: zone %d already find with subId %d\n",
+                        zId, cChild->m_subId));
+      }
+      else
+        sIdCIdMap[cChild->m_subId]=cChild;
+    }
+  }
+
+  // update the linked frame data, ie. zone->m_frame*
+  std::map<int, std::map<int, ClarisDrawGraphInternal::ZoneZone *> >::const_iterator it;
+  for (it=idSIdCIdMap.begin(); it!=idSIdCIdMap.end(); ++it) {
+    std::map<int, ClarisDrawGraphInternal::ZoneZone *> const &sIdCIdMap=it->second;
+    if (sIdCIdMap.size()<=1) continue;
+    int frameId=m_state->m_frameId++;
+    int frameSubId=0;
+    for (std::map<int, ClarisDrawGraphInternal::ZoneZone *>::const_iterator cIt=sIdCIdMap.begin(); cIt!=sIdCIdMap.end();) {
+      ClarisDrawGraphInternal::ZoneZone *child =cIt++->second;
+      child->m_frameId=frameId;
+      child->m_frameSubId=frameSubId++;
+      child->m_frameLast=cIt==sIdCIdMap.end();
+    }
+  }
+
+  while (!emptyGroup.empty()) {
+    int id=emptyGroup.top();
+    emptyGroup.pop();
+    std::multimap<int, int>::const_iterator fIt=fatherMap.find(id);
+    while (fIt!=fatherMap.end() && fIt->first==id) {
+      int fId=fIt++->second;
+      iter=m_state->m_groupMap.find(fId);
+      if (iter==m_state->m_groupMap.end() || !iter->second) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readTransformations: oops can not find a father\n"));
+        continue;
+      }
+      iter->second->removeChild(id, true);
+      if (iter->second->isEmpty())
+        emptyGroup.push(fId);
+    }
+  }
+}
+
 bool ClarisDrawGraph::getSurfaceColor(ClarisDrawGraphInternal::Style const &style, MWAWColor &col) const
 {
   if (!style.hasSurfaceColor())
     return false;
   col = style.m_surfaceColor;
+  return true;
+}
+
+bool ClarisDrawGraph::readTransformations()
+{
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  long pos=input->tell();
+  if (!input->checkPosition(pos+12)) return false;
+  libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
+  libmwaw::DebugStream f;
+  f << "Entries(Transformation):";
+  long sz = (long) input->readULong(4);
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    return true;
+  }
+  long endPos=pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::readTransformations: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (N*fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::readTransformations: unexpected field/header size\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+12+hSz) {
+    ascFile.addDelimiter(input->tell(), '|');
+    input->seek(pos+4+12+hSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (fSz!=30) {
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::readTransformations: no sure how to read the data\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("Transformation-data:###");
+    return true;
+  }
+
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "Transformation-" << i << ":";
+    ClarisDrawGraphInternal::Transformation trans;
+    float angle= float(input->readLong(4))/65536.f; // in radians
+    trans.m_rotate = float(180./M_PI*angle);
+    float dim[2];
+    for (int j=0; j<2; ++j) dim[j]=float(input->readLong(4))/256.f;
+    trans.m_originalSize=MWAWVec2f(dim[1],dim[0]);
+    for (int j=0; j<2; ++j) trans.m_values[j]=float(input->readLong(4))/256.f;
+    f << trans;
+    for (int j=0; j<5; ++j) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "f" << j+1 << "=" << val << ",";
+    }
+    m_state->m_transformations.push_back(trans);
+    input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
   return true;
 }
 
@@ -642,9 +878,6 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawGraph::readGroupZone(ClarisWksStruct
   switch (val) {
   case 0:
     break; // normal
-  case 3:
-    f << "database/spreadsheet,";
-    break;
   default:
     f << "#type?=" << val << ",";
     break;
@@ -675,7 +908,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawGraph::readGroupZone(ClarisWksStruct
     pos = input->tell();
     if (!readGroupUnknown(*group, 42, -1)) {
       ascFile.addPos(pos);
-      ascFile.addNote("GroupDef(Head-###)");
+      ascFile.addNote("GroupDef_A###:");
     }
   }
 
@@ -885,9 +1118,6 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
   case 8:
     type = ClarisDrawGraphInternal::Zone::T_Poly;
     break;
-  case 11: // old method to define a textbox ?
-    type = ClarisDrawGraphInternal::Zone::T_Zone2;
-    break;
   default:
     MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: find unknown type=%d!!!\n", typeId));
     f << "###typeId=" << typeId << ",";
@@ -895,13 +1125,13 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
   }
   int val = (int) input->readULong(1);
   style.m_wrapping = (val & 3);
-  style.m_surfacePatternType = (val >> 2);
+  if (val>>2) f << "unk=" << (val>>2) << ","; // 0 or 8
   zone.m_zoneType = (int) input->readULong(1);
   if (zone.m_zoneType & 0x40) style.m_arrows[0]=true;
   if (zone.m_zoneType & 0x80) style.m_arrows[1]=true;
   zone.m_zoneType &= 0x3F;
   val = (int) input->readULong(1);
-  if (val) f << "f0=" << val << ",";
+  if (val) f << "f0=" << std::hex << val << std::dec << ",";
 
   float dim[4];
   for (int j = 0; j < 4; j++) {
@@ -909,9 +1139,7 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
     if (dim[j] < -100) f << "##dim?,";
   }
   zone.m_box = MWAWBox2f(MWAWVec2f(dim[1], dim[0]), MWAWVec2f(dim[3], dim[2]));
-  style.m_lineWidth = (float) input->readLong(1);
-  val = (int) input->readULong(1);
-  if (val) f << "f1=" << val << ",";
+  style.m_lineWidth = float(input->readLong(2))/256.f;
   for (int j = 0; j < 2; j++) {
     int col = (int) input->readULong(1);
     MWAWColor color;
@@ -930,12 +1158,6 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
     val = (int) input->readULong(1);  // probably also related to surface
     if (val) f << "pat" << j << "[high]=" << val << ",";
     int pat = (int) input->readULong(1);
-    if (j==1 && style.m_surfacePatternType) {
-      // find one time 2 associtated with a picture
-      f << "###surf[patternType]=" << style.m_surfacePatternType << ",";
-      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: unknown surface pattern type!!!\n"));
-      continue;
-    }
     if (j==1 && (zone.m_zoneType & 0x10)) {
       f << "hasGrad,";
       zone.m_zoneType &= 0xEF;
@@ -971,13 +1193,13 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
     int nFlags = 0;
     ClarisDrawGraphInternal::ZoneZone *z = new ClarisDrawGraphInternal::ZoneZone(zone, type);
     res.reset(z);
-    z->m_flags[nFlags++] = (int) input->readLong(2);
+    for (int j=0; j < 3; ++j)
+      z->m_flags[nFlags++] = (int) input->readLong(2);
     z->m_id = (int) input->readULong(2);
 
     int numRemains = int(entry.end()-long(input->tell()));
     numRemains/=2;
-    // v1-2:3 v4-v5:6 v6:8
-    if (numRemains > 8) numRemains = 8;
+    if (numRemains > 9) numRemains = 9;
     for (int j = 0; j < numRemains; j++) {
       val = (int) input->readLong(2);
       switch (j) {
@@ -987,19 +1209,14 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
       case 2:
         z->m_wrappingSep = val;
         break;
-      case 3: // checkme
-        z->m_styleId = val;
+      case 6:
+        z->m_transformationId = val;
         break;
       default:
         z->m_flags[nFlags++] = val;
         break;
       }
     }
-    break;
-  }
-  case ClarisDrawGraphInternal::Zone::T_Zone2:  { // checkme: read the end of the zone
-    ClarisDrawGraphInternal::ZoneZone *z = new ClarisDrawGraphInternal::ZoneZone(zone, type);
-    res.reset(z);
     break;
   }
   case ClarisDrawGraphInternal::Zone::T_Connector:
@@ -1061,6 +1278,7 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
   long pos, sz;
   size_t numChilds = group.m_zones.size();
   int numError = 0;
+  int numConnectors=0;
   for (size_t i = 0; i < numChilds; i++) {
     shared_ptr<ClarisDrawGraphInternal::Zone> z = group.m_zones[i];
     int numZoneExpected = z ? z->getNumData() : 0;
@@ -1089,46 +1307,23 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
       bool parsed = true;
       switch (z->getSubType()) {
       case ClarisDrawGraphInternal::Zone::T_Poly:
-        if (z->getNumData() && !readPolygonData(z))
+        if (z->getNumData() && !readPolygonData(z)) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve polygon child\n"));
           return false;
+        }
         break;
-      case ClarisDrawGraphInternal::Zone::T_Zone2: {
-        ClarisDrawGraphInternal::ZoneZone *child=dynamic_cast<ClarisDrawGraphInternal::ZoneZone *>(z.get());
-        if (!child) {
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve the zone for type 11\n"));
-          parsed=false;
-          break;
-        }
-        if (!input->checkPosition(pos+4+sz) || sz< 0x1a) {
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: the size of the 11 zone seems bad\n"));
-          parsed=false;
-          break;
-        }
-        input->seek(pos+4, librevenge::RVNG_SEEK_SET);
+      case ClarisDrawGraphInternal::Zone::T_Connector:
+        ++numConnectors;
         f.str("");
-        f << "Entries(Zone2Data):";
-        int val;
-        for (int j=0; j<2; ++j) { // f0=2, f1=1
-          val=(int) input->readULong(1);
-          if (val) f << "f" << j << "=" << val << ",";
-        }
-        val=(int) input->readULong(2); // 6e
-        if (val) f << "f2=" << val << ",";
-        f << "ids=[";
-        for (int j=0; j<2; ++j)
-          f << input->readULong(4) << ",";;
-        f << "],";
-        val=(int) input->readULong(2); // always 0
-        if (val) f << "f3=" << val << ",";
-        child->m_id=(int) input->readULong(2);
-        f << "child=" << child->m_id << ",";
-        ascFile.addDelimiter(input->tell(),'|');
+        f << "Entries(ConnectorData):";
         ascFile.addPos(pos);
         ascFile.addNote(f.str().c_str());
         input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+        if (!readPolygonData(z)) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve connector child\n"));
+          return false;
+        }
         break;
-      }
-      case ClarisDrawGraphInternal::Zone::T_Connector:
       case ClarisDrawGraphInternal::Zone::T_Line:
       case ClarisDrawGraphInternal::Zone::T_Rect:
       case ClarisDrawGraphInternal::Zone::T_RectOval:
@@ -1172,6 +1367,36 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
 
   if (input->isEnd())
     return true;
+  pos=input->tell();
+  if (numConnectors) {
+    int n=(int) input->readULong(2);
+    if (!n || n>numConnectors+1) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexcepted connector data\n"));
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      n=0;
+    }
+    else {
+      f.str("");
+      f << "Entries(ConnectorN):" << n;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+    }
+    for (int i=1; i<n; ++i) {
+      pos=input->tell();
+      sz=(long) input->readULong(4);
+      if (!input->checkPosition(pos+4+sz)) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexcepted connector data\n"));
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      f.str("");
+      f << "Entries(ConnectorDef):" << i;
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+    }
+  }
+
   // sanity check: normaly no zero except maybe for the last zone
   pos=input->tell();
   sz=(long) input->readULong(4);
@@ -1217,15 +1442,28 @@ bool ClarisDrawGraph::readShape(MWAWEntry const &entry, ClarisDrawGraphInternal:
   MWAWGraphicShape &shape=zone.m_shape;
   shape.m_bdBox=shape.m_formBox=box;
   libmwaw::DebugStream f;
+  bool canHaveDash=false;
+  int val;
   switch (zone.getSubType()) {
   case ClarisDrawGraphInternal::Zone::T_Line: {
     int yDeb=(zone.m_zoneType&1)?1:0;
     shape = MWAWGraphicShape::line(MWAWVec2f(zone.m_box[0][0],zone.m_box[yDeb][1]),
                                    MWAWVec2f(zone.m_box[1][0],zone.m_box[1-yDeb][1]));
+    zone.m_autosize=(zone.m_zoneType&4);
+    /* checkme: find also where the grid align is defined and do something like that
+       MWAWVec2f vec=shape.m_vertices[1]-shape.m_vertices[0];
+       float absDiff[2]={vec[0]<0 ? -vec[0]:vec[0], vec[1]<0 ? -vec[1]:vec[1]};
+       if (absDiff[0]<absDiff[1]/4.f)
+         shape=MWAWGraphicShape::line(shape.m_vertices[0], shape.m_vertices[0]+MWAWVec2f(0, vec[1]));
+       else if (absDiff[1]<absDiff[0]/4.f)
+         shape=MWAWGraphicShape::line(shape.m_vertices[0], shape.m_vertices[0]+MWAWVec2f(vec[0],0));
+    */
+    canHaveDash=true;
     break;
   }
   case ClarisDrawGraphInternal::Zone::T_Connector:
-    MWAW_DEBUG_MSG(("ClarisDrawGraph::readSimpleGraphicZone: connect is not implemented\n"));
+    canHaveDash=true;
+    shape.m_type = MWAWGraphicShape::Polygon; // value are defined in second zone
     break;
   case ClarisDrawGraphInternal::Zone::T_Rect:
     shape.m_type = MWAWGraphicShape::Rectangle;
@@ -1237,14 +1475,18 @@ bool ClarisDrawGraph::readShape(MWAWEntry const &entry, ClarisDrawGraphInternal:
     shape.m_type = MWAWGraphicShape::Polygon;
     break; // value are defined in next zone
   case ClarisDrawGraphInternal::Zone::T_Arc: {
-    if (remainBytes < 4) {
+    if (remainBytes < 7) {
       MWAW_DEBUG_MSG(("ClarisDrawGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
+    val=(int) input->readLong(2);
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2);
+    if (val) f << "f1=" << val << ",";
     int fileAngle[2];
     for (int i = 0; i < 2; i++)
       fileAngle[i] = (int) input->readLong(2);
-    int val=(int) input->readLong(1);
+    val=(int) input->readLong(1);
     if (val==1) f<< "show[axis],";
     else if (val) f << "#show[axis]=" << val << ",";
     int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
@@ -1295,29 +1537,101 @@ bool ClarisDrawGraph::readShape(MWAWEntry const &entry, ClarisDrawGraphInternal:
       MWAW_DEBUG_MSG(("ClarisDrawGraph::readSimpleGraphicZone: arc zone is too short\n"));
       return false;
     }
+    val = (int) input->readULong(2);
+    if (val) f << "f0=" << val << ",";
+    val = (int) input->readULong(2);
+    if (val) f << "f1=" << val << ",";
     for (int i = 0; i < 2; i++) {
       float dim=float(input->readLong(2))/2.0f;
       shape.m_cornerWidth[i]=(2.f*dim <= pictSz[i]) ? dim : pictSz[i]/2.f;
-      int val = (int) input->readULong(2);
+      val = (int) input->readULong(2);
       if (val) f << "rRect" << i << "=" << val << ",";
     }
     break;
   }
   case ClarisDrawGraphInternal::Zone::T_Zone:
-  case ClarisDrawGraphInternal::Zone::T_Zone2:
   case ClarisDrawGraphInternal::Zone::T_Shape:
   case ClarisDrawGraphInternal::Zone::T_Unknown:
   default:
     MWAW_DEBUG_MSG(("ClarisDrawGraph::readSimpleGraphicZone: unknown type\n"));
     return false;
   }
-
-  long nextToRead = entry.end();
-  int numRemain = int(nextToRead-input->tell());
+  val = (int) input->readULong(2);
+  if (val) f << "f2=" << val << ",";
+  int numRemain = int(entry.end()-input->tell());
   numRemain /= 2;
+  int dashId=0;
+  bool hasShadow=false;
   for (int i = 0; i < numRemain; i++) {
-    int val = (int) input->readLong(2);
-    if (val) f << "g" << i << "=" << val << ",";
+    if (i==10) {
+      zone.m_style.m_shadowOffset=MWAWVec2i((int) input->readLong(1), (int) input->readLong(1));
+      hasShadow=(zone.m_style.m_shadowOffset!=MWAWVec2i(0,0));
+      continue;
+    }
+    if (i==11) {
+      int col=(int) input->readULong(1);
+      MWAWColor color;
+      if (!m_styleManager->getColor(col, color)) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: unknown shadow color!!!\n"));
+        f << "###shadow[col]=" << col << ",";
+      }
+      else if (hasShadow)
+        zone.m_style.setShadowColor(color);
+      col=(int) input->readLong(1);
+      if (col) {
+        static bool first=true;
+        if (first) {
+          first=false;
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: lighting is not implemented!!!\n"));
+        }
+        if (!m_styleManager->getColor(col, color)) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: unknown lighting color!!!\n"));
+          f << "###lighting[col]=" << col << ",";
+        }
+        else
+          f << "lighting[col]=" << color << ",";
+      }
+      continue;
+    }
+    val = (int) input->readULong(2);
+    if (!val) continue;
+    if (i==9) {
+      if (val==0xFFFF)
+        continue;
+      else {
+        f << "transf=T" << val << ",";
+        if (val<0 || val>=int(m_state->m_transformations.size())) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupDef: can not find the transformation!!!\n"));
+          f << "###";
+        }
+        else if (shape.m_type!=MWAWGraphicShape::Polygon && shape.m_type!=MWAWGraphicShape::Line) {
+          ClarisDrawGraphInternal::Transformation const &trans=m_state->m_transformations[size_t(val)];
+          if (shape.m_type!=MWAWGraphicShape::Arc && shape.m_type!=MWAWGraphicShape::Pie)
+            shape.m_bdBox.resizeFromCenter(trans.m_originalSize);
+          if (shape.m_type==MWAWGraphicShape::Arc || shape.m_type==MWAWGraphicShape::Pie ||
+              shape.m_type==MWAWGraphicShape::Circle)
+            shape.m_formBox.resizeFromCenter(trans.m_originalSize);
+          shape=shape.rotate(trans.m_rotate, shape.m_bdBox.center());
+          MWAWVec2f orig=zone.m_box[0]+shape.m_bdBox[0];
+          shape.translate(-1.f*shape.m_bdBox[0]);
+          zone.m_box=MWAWBox2f(orig, orig+shape.m_bdBox.size());
+        }
+      }
+    }
+    else if (i==4 && canHaveDash) {
+      dashId=(val&0xFFFF);
+      if (val>>8)
+        f << "g4=" << (val>>8) << ",";
+    }
+    else if (i==5 && canHaveDash && (val>>8)==1) {
+      if (!m_styleManager->getDash(dashId+1, zone.m_style.m_lineDashWidth))
+        f << "###";
+      f << "dashId=D" << dashId+1 << ",";
+      if (val&0xFFFF)
+        f << "g4=" << (val&0xFFFF) << ",";
+    }
+    else
+      f << "g" << i << "=" << std::hex << val << std::dec << ",";
   }
   shape.m_extra=f.str();
   return true;
@@ -1371,7 +1685,7 @@ bool ClarisDrawGraph::readGroupHeader(ClarisDrawGraphInternal::Group &group)
     if (readGroupUnknown(group, fSz, i))
       continue;
     ascFile.addPos(pos);
-    ascFile.addNote("GroupDef(Head-###)");
+    ascFile.addNote("GroupDef-B###:");
     input->seek(pos+fSz, librevenge::RVNG_SEEK_SET);
   }
 
@@ -1379,15 +1693,9 @@ bool ClarisDrawGraph::readGroupHeader(ClarisDrawGraphInternal::Group &group)
   for (int i = 0; i < numHeaders; i++) {
     pos = input->tell();
     std::vector<int> res;
-    /** not frequent but we can find a list of int16 as
-        00320060 00480060 0048ffe9 013a0173 01ba0173 01ea02a0
-        01f8ffe7 02080295 020c012c 02140218 02ae01c1
-        02ca02c9-02cc02c6-02400000
-        03f801e6
-        8002e3ff e0010000 ee02e6ff */
     bool ok = ClarisWksStruct::readIntZone(*m_parserState, "GroupDef", false, 2, res);
     f.str("");
-    f << "[GroupDef(data" << i << ")]";
+    f << "[GroupDef_B" <<i << "[data0]";
     if (ok) {
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -1405,7 +1713,7 @@ bool ClarisDrawGraph::readGroupHeader(ClarisDrawGraphInternal::Group &group)
     pos = input->tell();
     sz=(long) input->readULong(4);
     f.str("");
-    f << "[GroupDef(dataB" << i << ")]:";
+    f << "[GroupDef_B" << i << "[data1]:";
     if (!sz) {
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -1446,9 +1754,8 @@ bool ClarisDrawGraph::readGroupUnknown(ClarisDrawGraphInternal::Group &group, in
   }
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
-  f << "GroupDef(Head-";
-  if (id >= 0) f << id << "):";
-  else f << "_" << "):";
+  if (id >= 0) f << "GroupDef_B" << id << ":";
+  else f << "GroupDef_A" << ":";
   if (zoneSz < 42) {
     MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupUnknown: zone is too short\n"));
     f << "###";
@@ -1503,8 +1810,6 @@ bool ClarisDrawGraph::readPolygonData(shared_ptr<ClarisDrawGraphInternal::Zone> 
   ClarisDrawGraphInternal::ZoneShape *bZone =
     static_cast<ClarisDrawGraphInternal::ZoneShape *>(zone.get());
   MWAWGraphicShape &shape = bZone->m_shape;
-  if (shape.m_type!=MWAWGraphicShape::Polygon)
-    return false;
   MWAWInputStreamPtr &input= m_parserState->m_input;
   long pos = input->tell();
   long sz = (long) input->readULong(4);
@@ -1718,15 +2023,274 @@ bool ClarisDrawGraph::readBitmapData(ClarisDrawGraphInternal::Bitmap &zone)
 // send data to the listener
 ////////////////////////////////////////////////////////////
 
+bool ClarisDrawGraph::sendGroup(int number, MWAWPosition const &position)
+{
+  MWAWGraphicListenerPtr listener=m_mainParser->getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendGroup: can not find the listener\n"));
+    return false;
+  }
+  std::map<int, shared_ptr<ClarisDrawGraphInternal::Group> >::iterator iter
+    = m_state->m_groupMap.find(number);
+  if (iter == m_state->m_groupMap.end() || !iter->second)
+    return false;
+  shared_ptr<ClarisDrawGraphInternal::Group> group = iter->second;
+  group->m_parsed=true;
+  for (size_t i=0; i<group->m_zones.size(); ++i) {
+    shared_ptr<ClarisDrawGraphInternal::Zone> child=group->m_zones[i];
+    if (!child)
+      continue;
+
+    MWAWBox2f box=child->getBdBox();
+    MWAWPosition pos(box[0]+position.origin(), box.size(), librevenge::RVNG_POINT);
+    pos.m_anchorTo=MWAWPosition::Page;
+
+    ClarisDrawGraphInternal::Style cStyle = child->m_style;
+    pos.m_wrapping=cStyle.getWrapping();
+    pos.setOrder(child->m_ordering);
+    ClarisDrawGraphInternal::Zone::Type type = child->getType();
+    if (type==ClarisDrawGraphInternal::Zone::T_Shape)
+      sendShape(static_cast<ClarisDrawGraphInternal::ZoneShape &>(*child), pos);
+    else if (type==ClarisDrawGraphInternal::Zone::T_Zone) {
+      int cId=child->getZoneId();
+      switch (m_mainParser->getFileType(child->getZoneId())) {
+      case 0:
+        if (m_state->isGroupEmpty(cId))
+          break;
+        listener->openGroup(pos);
+        sendGroup(cId, pos.origin());
+        listener->closeGroup();
+        break;
+      case 1: {
+        ClarisDrawGraphInternal::ZoneZone *cZone=dynamic_cast<ClarisDrawGraphInternal::ZoneZone *>(child.get());
+        if (cZone && cZone->isANote()) {
+          cStyle.m_lineWidth=1;
+
+          MWAWBorder border;
+          border.m_color=MWAWColor::black();
+          border.m_width=1;
+          cStyle.setBorders(libmwaw::LeftBit|libmwaw::BottomBit|libmwaw::RightBit, border);
+          border.m_color=MWAWColor(0x60,0x60,0); // normally pattern of yellow and black
+          border.m_width=20;
+          cStyle.setBorders(libmwaw::TopBit, border);
+
+          cStyle.setSurfaceColor(MWAWColor(0xff,0xff,0));
+          cStyle.m_shadowOffset=MWAWVec2i(3,3);
+          cStyle.setShadowColor(MWAWColor(0x80,0x80,0x80));
+        }
+        if (cZone->m_transformationId>=0 && cZone->m_transformationId<(int) m_state->m_transformations.size())
+          cStyle.m_rotate=m_state->m_transformations[size_t(cZone->m_transformationId)].m_rotate;
+        /* if we can link text frame, use:
+        cZone->addFrameName(cStyle);
+        shared_ptr<MWAWSubDocument> doc;
+        if (!cZone->isLinked()||cZone->m_subId==0)
+          doc.reset(new ClarisDrawGraphInternal::SubDocument(*this, m_parserState->m_input, cId));
+        */
+        shared_ptr<MWAWSubDocument> doc(new ClarisDrawGraphInternal::SubDocument
+                                        (*this, m_parserState->m_input, cId, cZone->isLinked() ? cZone->m_subId : -1));
+        listener->insertTextBox(pos, doc, cStyle);
+        break;
+      }
+      case 4:
+        sendBitmap(cId, pos);
+        break;
+      default:
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::sendGroup: find unexpected group type\n"));
+        break;
+      }
+    }
+  }
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// basic shape, bitmap
+////////////////////////////////////////////////////////////
+bool ClarisDrawGraph::sendShape(ClarisDrawGraphInternal::ZoneShape &pict, MWAWPosition pos)
+{
+  MWAWListenerPtr listener=m_mainParser->getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendShape: can not find the listener\n"));
+    return false;
+  }
+  if (pos.size()[0] < 0 || pos.size()[1] < 0)
+    pos.setSize(pict.getBdBox().size());
+  MWAWGraphicStyle pStyle(pict.m_style);
+  if (pict.m_shape.m_type!=MWAWGraphicShape::Line)
+    pStyle.m_arrows[0]=pStyle.m_arrows[1]=false;
+  listener->insertPicture(pos, pict.m_shape, pStyle);
+  if (pict.m_shape.m_type!=MWAWGraphicShape::Line || !pict.m_autosize)
+    return true;
+
+  MWAWVec2f lineSz=pos.size();
+  MWAWVec2f center=pos.origin() + 0.5*lineSz;
+  MWAWPosition labelPos(pos);
+  labelPos.setOrigin(center-MWAWVec2f(30,6));
+  labelPos.setSize(MWAWVec2f(60,12));
+  labelPos.setOrder(pos.order()+1);
+  std::stringstream s;
+  s << std::setprecision(0) << std::fixed << std::sqrt(lineSz[0]*lineSz[0]+lineSz[1]*lineSz[1]) << " pt";
+  shared_ptr<MWAWSubDocument> doc(new ClarisDrawGraphInternal::SubDocument(*this, m_parserState->m_input, s.str()));
+  MWAWGraphicStyle labelStyle;
+  labelStyle.m_lineWidth=0;
+  labelStyle.setSurfaceColor(MWAWColor::white());
+  listener->insertTextBox(labelPos, doc, labelStyle);
+  return true;
+}
+
+bool ClarisDrawGraph::sendBitmap(int number, MWAWPosition const &pos)
+{
+  std::map<int, shared_ptr<ClarisDrawGraphInternal::Bitmap> >::iterator iter
+    = m_state->m_bitmapMap.find(number);
+  if (iter == m_state->m_bitmapMap.end() || !iter->second) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: can not find bitmap %d\n", number));
+    return false;
+  }
+  return sendBitmap(*iter->second, pos);
+}
+
+bool ClarisDrawGraph::sendBitmap(ClarisDrawGraphInternal::Bitmap &bitmap, MWAWPosition pos)
+{
+  MWAWListenerPtr listener=m_mainParser->getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: can not find the listener\n"));
+    return false;
+  }
+  bitmap.m_parsed=true;
+  if (!bitmap.m_entry.valid() || !bitmap.m_numBytesPerPixel)
+    return false;
+  int bytesPerPixel = bitmap.m_numBytesPerPixel;
+  if (bytesPerPixel<0 && (bytesPerPixel!=-2 && bytesPerPixel!=-4)) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: unknown group of color\n"));
+    return false;
+  }
+  int numColors = int(bitmap.m_colorMap.size());
+  shared_ptr<MWAWPictBitmap> bmap;
+
+  MWAWPictBitmapIndexed *bmapIndexed = 0;
+  MWAWPictBitmapColor *bmapColor = 0;
+  bool indexed = false;
+  if (numColors > 2) {
+    bmapIndexed =  new MWAWPictBitmapIndexed(bitmap.m_bitmapSize);
+    bmapIndexed->setColors(bitmap.m_colorMap);
+    bmap.reset(bmapIndexed);
+    indexed = true;
+  }
+  else {
+    if (bytesPerPixel<0) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: unexpected mode for compressed bitmap. Bitmap ignored.\n"));
+      return false;
+    }
+    bmap.reset((bmapColor=new MWAWPictBitmapColor(bitmap.m_bitmapSize)));
+  }
+
+  bool const isCompressed =  bytesPerPixel<0;
+  int const numColorByData= isCompressed ? -bytesPerPixel : 1;
+  long const colorMask= !isCompressed ? 0 : numColorByData==2 ? 0xF : 0x3;
+  int const numColorBytes = isCompressed ? 8/numColorByData : 8*bytesPerPixel;
+  //! let go
+  MWAWInputStreamPtr &input= m_parserState->m_input;
+  input->seek(bitmap.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  for (int r = 0; r < bitmap.m_bitmapSize[1]; r++) {
+    long rPos=input->tell();
+    int numRead=0;
+    long read=0;
+    for (int c = 0; c < bitmap.m_bitmapSize[0]; c++) {
+      if (numRead==0) {
+        read=(long) input->readULong(isCompressed ? 1 : bytesPerPixel);
+        numRead=numColorByData;
+      }
+      --numRead;
+      long val=!isCompressed ? read : (read>>(numColorBytes*numRead))&colorMask;
+      if (indexed) {
+        bmapIndexed->set(c,r,(int)val);
+        continue;
+      }
+      switch (bytesPerPixel) {
+      case 1:
+        bmapColor->set(c,r, MWAWColor((unsigned char)val,(unsigned char)val,(unsigned char)val));
+        break;
+      case 2: // rgb compressed ?
+        bmapColor->set(c,r, MWAWColor((unsigned char)(((val>>10)&0x1F) << 3),(unsigned char)(((val>>5)&0x1F) << 3),(unsigned char)(((val>>0)&0x1F) << 3)));
+        break;
+      case 4:
+        bmapColor->set(c,r, MWAWColor(uint32_t(val)|0xFF000000)); // checkme
+        break;
+      default: {
+        static bool first = true;
+        if (first) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: unknown data size\n"));
+          first = false;
+        }
+        break;
+      }
+      }
+    }
+    input->seek(rPos+bitmap.m_bitmapRowSize, librevenge::RVNG_SEEK_SET);
+  }
+
+  librevenge::RVNGBinaryData data;
+  std::string type;
+  if (!bmap->getBinary(data,type)) return false;
+  if (pos.size()[0] <= 0 || pos.size()[1] <= 0) {
+    pos.m_anchorTo=MWAWPosition::Char;
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: can not find bitmap size\n"));
+    pos.setSize(MWAWVec2f(70,70));
+  }
+  if (pos.m_anchorTo==MWAWPosition::Unknown) {
+    MWAW_DEBUG_MSG(("ClarisDrawGraph::sendBitmap: anchor is not set, revert to page\n"));
+    pos.m_anchorTo=MWAWPosition::Page;
+  }
+  listener->insertPicture(pos, data, "image/pict");
+  return true;
+}
+
 
 ////////////////////////////////////////////////////////////
 // basic shape, bitmap, pict
 ////////////////////////////////////////////////////////////
-
-
 void ClarisDrawGraph::flushExtra()
 {
-  MWAW_DEBUG_MSG(("ClarisDrawGraph::flushExtra: not implemented\n"));
+  shared_ptr<MWAWListener> listener=m_mainParser->getGraphicListener();
+  if (!listener) return;
+
+  MWAWVec2f leftTop=72.0f*MWAWVec2f(float(m_parserState->m_pageSpan.getMarginLeft()),
+                                    float(m_parserState->m_pageSpan.getMarginTop()));
+
+  // first group
+  std::map<int, shared_ptr<ClarisDrawGraphInternal::Group> >::iterator gIter
+    = m_state->m_groupMap.begin();
+  for (; gIter !=  m_state->m_groupMap.end(); ++gIter) {
+    shared_ptr<ClarisDrawGraphInternal::Group> zone = gIter->second;
+    // can be some footer print on the last page or an unused header/footer
+    if (!zone || zone->m_parsed || zone->isHeaderFooter())
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::flushExtra: find some extra graph %d\n", zone->m_id));
+      first=false;
+    }
+    MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
+    pos.setRelativePosition(MWAWPosition::Page);
+    sendGroup(gIter->first, pos);
+  }
+  // first second
+  std::map<int, shared_ptr<ClarisDrawGraphInternal::Bitmap> >::iterator bIter
+    = m_state->m_bitmapMap.begin();
+  for (; bIter !=  m_state->m_bitmapMap.end(); ++bIter) {
+    shared_ptr<ClarisDrawGraphInternal::Bitmap> zone = bIter->second;
+    // can be some footer print on the last page or an unused header/footer
+    if (!zone || zone->m_parsed || zone->isHeaderFooter())
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::flushExtra: find some extra bitmap %d\n", zone->m_id));
+      first=false;
+    }
+    MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
+    pos.setRelativePosition(MWAWPosition::Page);
+    sendBitmap(bIter->first, pos);
+  }
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

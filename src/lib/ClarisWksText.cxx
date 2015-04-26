@@ -1226,17 +1226,13 @@ bool ClarisWksText::readTokens(MWAWEntry const &entry, ClarisWksTextInternal::Zo
   default:
     break;
   }
-  if (dataSize && (entry.length()%dataSize) != 4)
+  if (!dataSize || (entry.length()%dataSize) != 4)
     return false;
 
   MWAWInputStreamPtr &input= m_parserState->m_input;
   libmwaw::DebugFile &ascFile = m_parserState->m_asciiFile;
   ascFile.addPos(pos);
   ascFile.addNote("Entries(Token)");
-  if (dataSize == 0) {
-    input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-    return true;
-  }
 
   int numElt = int((entry.length()-4)/dataSize);
   input->seek(pos+4, librevenge::RVNG_SEEK_SET); // skip header

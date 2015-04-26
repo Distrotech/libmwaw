@@ -39,6 +39,7 @@
 
 #include <librevenge/librevenge.h>
 
+#include "MWAWFontConverter.hxx"
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicShape.hxx"
 #include "MWAWGraphicStyle.hxx"
@@ -59,11 +60,27 @@
 /** Internal: the structures of a ClarisDrawParser */
 namespace ClarisDrawParserInternal
 {
+// generic class used to defined a layer
+struct Layer {
+  //! constructor
+  Layer() : m_groupId(0), m_isHidden(false), m_name("")
+  {
+  }
+  //! the first group id
+  int m_groupId;
+  //! true if the layer is hidden
+  bool m_isHidden;
+  //! the layer name
+  librevenge::RVNGString m_name;
+};
+
 ////////////////////////////////////////////
 //! Internal: the state of a ClarisDrawParser
 struct State {
   //! constructor
-  State() : m_version(0), m_isLibrary(false), m_numDSET(0), m_pageSpanSet(false), m_headerId(0), m_footerId(0), m_pages(1,1)
+  State() : m_version(0), m_isLibrary(false), m_numDSET(0),
+    m_actualLayer(1), m_numLayers(1), m_numHiddenLayers(0), m_numVisibleLayers(0), m_createMasterPage(false), m_layerList(),
+    m_pageSpanSet(false), m_headerId(0), m_footerId(0), m_pages(1,1), m_zonesMap(), m_zoneIdToFileTypeMap()
   {
   }
   //! the file version
@@ -72,6 +89,18 @@ struct State {
   bool m_isLibrary;
   //! the number of DSET+FNTM
   int m_numDSET;
+  //! the actual layer
+  int m_actualLayer;
+  //! the number of layer
+  int m_numLayers;
+  //! the number of hidden layer
+  int m_numHiddenLayers;
+  //! the number of visible layer
+  int m_numVisibleLayers;
+  //! flag to know if we need or not to create a master
+  bool m_createMasterPage;
+  //! the layer list
+  std::vector<Layer> m_layerList;
   //! flag to know if the page has been set
   bool m_pageSpanSet;
   //! header id
@@ -80,60 +109,11 @@ struct State {
   int m_footerId;
   //! the number of pages
   MWAWVec2i m_pages;
+  /** the map of zone*/
+  std::map<int, shared_ptr<ClarisWksStruct::DSET> > m_zonesMap;
+  /** map zone id to file type */
+  std::map<int, int> m_zoneIdToFileTypeMap;
 };
-
-////////////////////////////////////////
-//! Internal: the subdocument of a ClarisDrawParser
-class SubDocument : public MWAWSubDocument
-{
-public:
-  SubDocument(ClarisDrawParser &pars, MWAWInputStreamPtr input, int zoneId) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId) {}
-
-  //! destructor
-  virtual ~SubDocument() {}
-
-  //! operator!=
-  virtual bool operator!=(MWAWSubDocument const &doc) const
-  {
-    if (MWAWSubDocument::operator!=(doc)) return true;
-    SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
-    if (!sDoc) return true;
-    if (m_id != sDoc->m_id) return true;
-    return false;
-  }
-
-  //! operator!==
-  virtual bool operator==(MWAWSubDocument const &doc) const
-  {
-    return !operator!=(doc);
-  }
-  //! the parser function
-  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
-
-protected:
-  //! the subdocument id
-  int m_id;
-private:
-  SubDocument(SubDocument const &orig);
-  SubDocument &operator=(SubDocument const &orig);
-};
-
-void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
-{
-  if (!listener || !listener->canWriteText()) {
-    MWAW_DEBUG_MSG(("ClarisDrawParserInternal::SubDocument::parse: no listener\n"));
-    return;
-  }
-  ClarisDrawParser *parser=dynamic_cast<ClarisDrawParser *>(m_parser);
-  if (!parser) {
-    MWAW_DEBUG_MSG(("ClarisDrawParserInternal::SubDocument::parse: no parser\n"));
-    return;
-  }
-  long pos = m_input->tell();
-  // TODO
-  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
-}
-
 }
 
 ////////////////////////////////////////////////////////////
@@ -162,6 +142,20 @@ void ClarisDrawParser::init()
   getPageSpan().setMargins(0.1);
 }
 
+int ClarisDrawParser::getFileType(int zoneId) const
+{
+  if (m_state->m_zoneIdToFileTypeMap.find(zoneId) == m_state->m_zoneIdToFileTypeMap.end()) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::getFileType: zone %d does not exists!!!!\n", zoneId));
+    return -1;
+  }
+  return m_state->m_zoneIdToFileTypeMap.find(zoneId)->second;
+}
+
+bool ClarisDrawParser::sendTextZone(int number, int subZone)
+{
+  return m_textParser->sendZone(number, subZone);
+}
+
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -174,9 +168,10 @@ void ClarisDrawParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ascii().setStream(getInput());
     ascii().open(asciiName());
     checkHeader(0L);
-    ok = createZones() && false;
+    ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      m_graphParser->flushExtra();
     }
     ascii().reset();
   }
@@ -200,6 +195,7 @@ void ClarisDrawParser::createDocument(librevenge::RVNGDrawingInterface *document
     return;
   }
 
+  m_graphParser->updateGroup();
   // create the page list
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(1);
@@ -247,7 +243,7 @@ bool ClarisDrawParser::createZones()
     ascii().addPos(input->tell());
     ascii().addNote("Entries(BAD):###");
   }
-  return false;
+  return true;
 }
 
 bool ClarisDrawParser::readZone()
@@ -401,7 +397,7 @@ bool ClarisDrawParser::readDocHeader()
   f << "DocHeader(Col):";
   int numCols = (int) input->readLong(2);
   if (numCols < 1 || numCols > 9) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: pb reading number of columns\n"));
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: pb reading number of columns\n"));
     f << "###numCols=" << numCols;
     numCols = 1;
   }
@@ -480,7 +476,7 @@ bool ClarisDrawParser::readDocHeader()
       continue;
     }
     if (!input->checkPosition(pos+4+fSz)) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: can not find zone %d\n", i+1));
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: can not find zone %d\n", i+1));
       ascii().addPos(pos);
       ascii().addNote("###");
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -523,8 +519,8 @@ bool ClarisDrawParser::readDocHeader()
     case 18: // Ruler style
       done=m_styleManager->readRulers();
       break;
-    case 20: // fieldData=1e, link to transformation ?
-      done = ClarisWksStruct::readStructZone(*getParserState(), "Zone20A", false);
+    case 20:
+      done = m_graphParser->readTransformations();
       break;
     case 21: // fieldData=36
       done = ClarisWksStruct::readStructZone(*getParserState(), "Zone21A", false);
@@ -549,15 +545,15 @@ bool ClarisDrawParser::readDocHeader()
     return true;
   }
   pos=input->tell();
-  if (!ClarisWksStruct::readStructZone(*getParserState(), "Layout", false)) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: can not find layout zone\n"));
+  if (!readLayouts()) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: can not find layout zone\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
   pos=input->tell();
   input->seek(pos+4, librevenge::RVNG_SEEK_SET);
   if (input->readULong(2)!=0x100) {
-    MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: can not find UnknZone zone\n"));
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: can not find UnknZone zone\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     return true;
   }
@@ -577,7 +573,7 @@ bool ClarisDrawParser::readDocHeader()
       continue;
     }
     if (!input->checkPosition(pos+4+fSz)) {
-      MWAW_DEBUG_MSG(("ClarisWksDocument::readDocHeader: can not find zone %d\n", i+1));
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: can not find zone %d\n", i+1));
       ascii().addPos(pos);
       ascii().addNote("###");
       input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -834,6 +830,124 @@ bool ClarisDrawParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 }
 
 ////////////////////////////////////////////////////////////
+// read the layout
+////////////////////////////////////////////////////////////
+bool ClarisDrawParser::readLayouts()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (!input->checkPosition(pos+8)) return false;
+  libmwaw::DebugFile &ascFile = ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(Layout):";
+  long sz = (long) input->readULong(4);
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    return true;
+  }
+  long endPos=pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLayouts: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (!fSz || N*fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLayouts: unexpected field/header size\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+12+hSz) {
+    ascFile.addDelimiter(input->tell(), '|');
+    input->seek(pos+4+12+hSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (fSz!=336) {
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLayouts: no sure how to read the data\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("Layout:###");
+    return true;
+  }
+  for (int i=0; i<N; ++i) {
+    pos=input->tell();
+    ClarisDrawParserInternal::Layer layer;
+    f.str("");
+    f << "Layout-A" << i << ":";
+    int cSz=(int) input->readULong(1);
+    librevenge::RVNGString name("");
+    for (int c=0; c<cSz; ++c) {
+      char ch=(char) input->readULong(1);
+      if (!ch) continue;
+      f << ch;
+      int unicode= getParserState()->m_fontConverter->unicode(3, (unsigned char) ch);
+      if (unicode==-1)
+        name.append(ch);
+      else
+        libmwaw::appendUnicode((uint32_t) unicode, name);
+    }
+    f << ",";
+    layer.m_name=name;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+
+    input->seek(pos+256, librevenge::RVNG_SEEK_SET);
+    pos=input->tell();
+    f.str("");
+    f << "Layout-B" << i << ":";
+    val=(int) input->readULong(1); // always 40|80
+    if (val&0x80) {
+      f << "hidden,";
+      layer.m_isHidden=true;
+    }
+    val &=0x7F;
+    if (val!=0x40) f << "fl0=" << std::hex << val << std::dec << ",";
+    val=(int) input->readULong(1); // 0|1|2|6c|d8|fc|ff
+    if (val) f << "fl1=" << std::hex << val << std::dec << ",";
+    for (int j=0; j<2; ++j) { // always 0
+      val=(int) input->readULong(2);
+      if (val) f << "f" << j << "=" << val << ",";
+    }
+    layer.m_groupId=(int) input->readULong(2);
+    f << "id[group]=" << layer.m_groupId << ",";
+    val=(int) input->readLong(4);
+    if (val==-1)
+      f << "locked,";
+    else if (val)
+      f << "#lock=" << val << ",";
+    for (int j=0; j<16; ++j) { // always 0
+      val=(int) input->readULong(4);
+      if (val) f << "g" << j << "=" << val << ",";
+    }
+    val=(int) input->readULong(4);
+    if (val) f << "ID=" << std::hex << val << std::dec << ",";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+80, librevenge::RVNG_SEEK_SET);
+    m_state->m_layerList.push_back(layer);
+  }
+  return true;
+}
+////////////////////////////////////////////////////////////
 // read the document information
 ////////////////////////////////////////////////////////////
 bool ClarisDrawParser::readDocInfo()
@@ -988,50 +1102,67 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawParser::readDSET()
   }
   dset.m_flags[nFlags++] = (int) input->readLong(2);
   dset.m_id = (int) input->readULong(2) ;
+  shared_ptr<ClarisWksStruct::DSET> zone;
   switch (dset.m_fileType)  {
   case 0:
-    return m_graphParser->readGroupZone(dset, entry);
+    zone=m_graphParser->readGroupZone(dset, entry);
+    break;
   case 1:
-    return m_textParser->readDSETZone(dset, entry);
+    zone=m_textParser->readDSETZone(dset, entry);
+    break;
   case 4:
-    return m_graphParser->readBitmapZone(dset, entry);
+    zone=m_graphParser->readBitmapZone(dset, entry);
+    break;
   default:
     break;
   }
-  MWAW_DEBUG_MSG(("ClarisDrawParser::readDSET: find unexpected type\n"));
-  shared_ptr<ClarisWksStruct::DSET> zone(new ClarisWksStruct::DSET(dset));
-  f << "Entries(DSETU): " << *zone;
+  if (!zone) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDSET: find unexpected type\n"));
+    zone.reset(new ClarisWksStruct::DSET(dset));
+    f << "Entries(DSETU): " << *zone;
 
-  int data0Length = (int) zone->m_dataSz;
-  int N = (int) zone->m_numData;
+    int data0Length = (int) zone->m_dataSz;
+    int N = (int) zone->m_numData;
 
-  ascFile.addDelimiter(input->tell(), '|');
-  ascFile.addPos(pos);
-  ascFile.addNote(f.str().c_str());
-
-  if (sz-12 != data0Length*N + zone->m_headerSz) {
-    MWAW_DEBUG_MSG(("ClarisDrawParser::readDSET: unexpected size for zone definition, try to continue\n"));
+    ascFile.addDelimiter(input->tell(), '|');
     ascFile.addPos(pos);
-    ascFile.addNote("###");
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    return zone;
-  }
-
-  long debPos = endPos-N*data0Length;
-  for (int i = 0; i < zone->m_numData; i++) {
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    f.str("");
-    f << "DSETU-" << i << ":";
-
-    long actPos = input->tell();
-    if (actPos != debPos && actPos != debPos+data0Length)
-      ascFile.addDelimiter(input->tell(),'|');
-    ascFile.addPos(debPos);
     ascFile.addNote(f.str().c_str());
-    debPos += data0Length;
+
+    if (sz-12 != data0Length*N + zone->m_headerSz) {
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readDSET: unexpected size for zone definition, try to continue\n"));
+      ascFile.addPos(pos);
+      ascFile.addNote("###");
+      input->seek(endPos, librevenge::RVNG_SEEK_SET);
+      return zone;
+    }
+
+    long debPos = endPos-N*data0Length;
+    for (int i = 0; i < zone->m_numData; i++) {
+      input->seek(debPos, librevenge::RVNG_SEEK_SET);
+      f.str("");
+      f << "DSETU-" << i << ":";
+
+      long actPos = input->tell();
+      if (actPos != debPos && actPos != debPos+data0Length)
+        ascFile.addDelimiter(input->tell(),'|');
+      ascFile.addPos(debPos);
+      ascFile.addNote(f.str().c_str());
+      debPos += data0Length;
+    }
+
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
   }
 
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
+  if (!zone)
+    return zone;
+  if (m_state->m_zonesMap.find(zone->m_id) != m_state->m_zonesMap.end()) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDSET: zone %d already exists!!!!\n",
+                    zone->m_id));
+  }
+  else {
+    m_state->m_zonesMap[zone->m_id] = zone;
+    m_state->m_zoneIdToFileTypeMap[zone->m_id] = dset.m_fileType;
+  }
   return zone;
 }
 
