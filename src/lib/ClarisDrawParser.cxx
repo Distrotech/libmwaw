@@ -78,8 +78,8 @@ struct Layer {
 //! Internal: the state of a ClarisDrawParser
 struct State {
   //! constructor
-  State() : m_version(0), m_isLibrary(false), m_numDSET(0),
-    m_actualLayer(1), m_numLayers(1), m_numHiddenLayers(0), m_numVisibleLayers(0), m_createMasterPage(false), m_layerList(),
+  State() : m_version(0), m_isLibrary(false), m_numDSET(0), m_EOF(-1),
+    m_actualLayer(1), m_numLayers(1),  m_createMasterPage(false), m_displayAsSlide(false), m_layerList(),
     m_pageSpanSet(false), m_headerId(0), m_footerId(0), m_pages(1,1), m_zonesMap(), m_zoneIdToFileTypeMap()
   {
   }
@@ -89,16 +89,16 @@ struct State {
   bool m_isLibrary;
   //! the number of DSET+FNTM
   int m_numDSET;
+  //! the last data zone size
+  long m_EOF;
   //! the actual layer
   int m_actualLayer;
   //! the number of layer
   int m_numLayers;
-  //! the number of hidden layer
-  int m_numHiddenLayers;
-  //! the number of visible layer
-  int m_numVisibleLayers;
   //! flag to know if we need or not to create a master
   bool m_createMasterPage;
+  //! flag to know if we need to display data as slide
+  bool m_displayAsSlide;
   //! the layer list
   std::vector<Layer> m_layerList;
   //! flag to know if the page has been set
@@ -156,6 +156,12 @@ bool ClarisDrawParser::sendTextZone(int number, int subZone)
   return m_textParser->sendZone(number, subZone);
 }
 
+MWAWVec2f ClarisDrawParser::getPageLeftTop()
+{
+  return MWAWVec2f(float(getParserState()->m_pageSpan.getMarginLeft()),
+                   float(getParserState()->m_pageSpan.getMarginTop()));
+}
+
 ////////////////////////////////////////////////////////////
 // the parser
 ////////////////////////////////////////////////////////////
@@ -171,6 +177,18 @@ void ClarisDrawParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
+      if (m_state->m_isLibrary) {
+        MWAWListenerPtr listener=getGraphicListener();
+        MWAWVec2f leftTop=72.0f*getPageLeftTop();
+        MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
+        pos.setRelativePosition(MWAWPosition::Page);
+
+        for (int i=0; i<(int) m_state->m_layerList.size(); ++i) {
+          if (i>0)
+            listener->insertBreak(MWAWListener::PageBreak);
+          m_graphParser->sendMainGroupChild(i, pos);
+        }
+      }
       m_graphParser->flushExtra();
     }
     ascii().reset();
@@ -195,14 +213,26 @@ void ClarisDrawParser::createDocument(librevenge::RVNGDrawingInterface *document
     return;
   }
 
-  m_graphParser->updateGroup();
+  m_graphParser->updateGroup(m_state->m_isLibrary);
+
+  m_state->m_createMasterPage=!m_state->m_isLibrary && !m_state->m_layerList.empty() &&
+                              !m_graphParser->isEmptyGroup(m_state->m_layerList[0].m_groupId);
   // create the page list
+  int numPages=m_state->m_isLibrary ? (int) m_state->m_layerList.size() : 1;
+  if (numPages<=0) numPages=1;
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(1);
-  std::vector<MWAWPageSpan> pageList(1,ps);
+  std::vector<MWAWPageSpan> pageList;
+  for (int i=0; i<numPages; ++i) {
+    MWAWPageSpan page(ps);
+    if (m_state->m_isLibrary && i<=(int) m_state->m_layerList.size())
+      page.setPageName(m_state->m_layerList[size_t(i)].m_name);
+    pageList.push_back(page);
+  }
   MWAWGraphicListenerPtr listen(new MWAWGraphicListener(*getParserState(), pageList, documentInterface));
   setGraphicListener(listen);
   listen->startDocument();
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -217,6 +247,8 @@ bool ClarisDrawParser::createZones()
       (!m_state->m_isLibrary && !readDocHeader()))
     return false;
 
+  if (m_state->m_EOF>0)
+    input->pushLimit(m_state->m_EOF);
   while (readZone());
   if (!input->isEnd()) {
     ascii().addPos(input->tell());
@@ -243,6 +275,8 @@ bool ClarisDrawParser::createZones()
     ascii().addPos(input->tell());
     ascii().addNote("Entries(BAD):###");
   }
+  if (m_state->m_EOF>0)
+    input->popLimit();
   return true;
 }
 
@@ -310,11 +344,19 @@ bool ClarisDrawParser::readDocHeader()
   f << "dim?=" << dim[1] << "x" << dim[0] << ",";
   int margin[6];
   f << "margin?=[";
+  bool hasMargins=false;
   for (int i = 0; i < 6; i++) {
     margin[i] = (int) input->readLong(2);
-    f << margin[i] << ",";
+    if (margin[i]) {
+      hasMargins=true;
+      f << margin[i] << ",";
+    }
+    else
+      f << "_,";
   }
   f << "],";
+  // seems a good indication that slide mode is choosen
+  m_state->m_displayAsSlide=!hasMargins;
   if (dim[0] > 0 && dim[1] > 0 &&
       margin[0] >= 0 && margin[1] >= 0 && margin[2] >= 0 && margin[3] >= 0 &&
       dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
@@ -388,9 +430,61 @@ bool ClarisDrawParser::readDocHeader()
     return false;
 
   pos=input->tell();
-  input->seek(pos+124, librevenge::RVNG_SEEK_SET);
+  f.str("");
+  f << "DocHeader-2:";
+  for (int i=0; i<5; ++i) {
+    val=(int) input->readULong(2);
+    static int const(expected[])= {0,1,2,2,0};
+    if (val!=expected[i])
+      f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i<8; ++i) {
+    val=(int) input->readULong(1);
+    static int const(expected[])= {1/*or 16*/,0,0,0,0,1,1, 0};
+    if (val!=expected[i])
+      f << "f" << i+5 << "=" << val << ",";
+  }
+  for (int i=0; i<4; ++i) {
+    val=(int) input->readULong(2);
+    static int const(expected[])= {1,1,0x2d,0};
+    if (val!=expected[i])
+      f << "f" << i+13 << "=" << val << ",";
+  }
+  f << "fl=[";
+  for (int i=0; i<13; ++i) {
+    val=(int) input->readULong(1);
+    if (val==1) f << "*,";
+    else if (val) f << val << ",";
+    else f << "_,";
+  }
+  f << "],";
+  for (int i=0; i<16; ++i) { // always 0
+    val=(int) input->readULong(2);
+    if (val)
+      f << "g" << i << "=" << val << ",";
+  }
+  for (int i=0; i<5; ++i) {
+    val=(int) input->readULong(2);
+    static int const(expected[])= {0,1,0,0x600,0x504};
+    if (val!=expected[i])
+      f << "h" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  val=(int) input->readULong(1); // always 0
+  if (val) f << "h5=" << val << ",";
+  int num[3];
+  for (int i=0; i<3; ++i) {
+    num[i]=(int) input->readULong(2);
+    if (!num[i])
+      continue;
+    static char const *(wh[])= {"color", "unkn1", "gradient"};
+    f << "num[" << wh[i] << "]=" << num[i] << ",";
+  }
+  m_styleManager->setDefaultNumbers(num[0], num[2]);
+
+  ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
-  ascii().addNote("DocHeader-2");
+  ascii().addNote(f.str().c_str());
+  input->seek(pos+124, librevenge::RVNG_SEEK_SET);
 
   pos=input->tell();
   f.str("");
@@ -450,9 +544,17 @@ bool ClarisDrawParser::readDocHeader()
   ascii().addNote("DocHeader-7");
 
   pos=input->tell();
+  f.str("");
+  f << "DocHeader-8:";
+  input->seek(pos+52, librevenge::RVNG_SEEK_SET);
+  val=(int) input->readLong(2);
+  if (val==0)
+    f << "g0*,";
+  else if (val!=1)
+    f << "g0=" << val << ",";
   input->seek(pos+150, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
-  ascii().addNote("DocHeader-8");
+  ascii().addNote(f.str().c_str());
 
   pos=input->tell();
   input->seek(pos+130, librevenge::RVNG_SEEK_SET);
@@ -787,6 +889,125 @@ bool ClarisDrawParser::readLibraryHeader()
   ascii().addNote(f.str().c_str());
 
   input->seek(846, librevenge::RVNG_SEEK_SET);
+  // the style are coded after the DSET zones, let try to find them
+  input->seek(-44, librevenge::RVNG_SEEK_END);
+  while (input->tell()>=846) {
+    pos=input->tell();
+    int c=(int) input->readULong(1);
+    bool find=false;
+    switch (c) {
+    case 0x44:
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      if (readDSET(pos==846))
+        find=true;
+      else
+        input->seek(pos-4, librevenge::RVNG_SEEK_SET);
+      break;
+    case 0x53:
+      input->seek(pos-1, librevenge::RVNG_SEEK_SET);
+      break;
+    case 0x45:
+      input->seek(pos-2, librevenge::RVNG_SEEK_SET);
+      break;
+    case 0x54:
+      input->seek(pos-3, librevenge::RVNG_SEEK_SET);
+      break;
+    default:
+      input->seek(pos-4, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    if (!find)
+      continue;
+    m_state->m_EOF=input->tell();
+    // clean storage
+    m_graphParser->resetState();
+    m_textParser->resetState();
+    m_state->m_zonesMap.clear();
+    m_state->m_zoneIdToFileTypeMap.clear();
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (input->readULong(4)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      ascii().addPos(pos);
+      ascii().addNote("_");
+    }
+    pos=input->tell();
+    bool ok=true;
+    if (!m_textParser->readParagraphs()) {
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryHeader: can not read the paragraph style\n"));
+      ascii().addPos(pos);
+      ascii().addNote("Entries(RULR):###");
+      ok=false;
+    }
+    for (int i=0; ok && i<20; ++i) {
+      pos=input->tell();
+      long dSz=(long) input->readULong(4);
+      if (!dSz) {
+        ascii().addPos(pos);
+        ascii().addNote("_");
+        continue;
+      }
+      if (!input->checkPosition(pos+4+dSz)) {
+        MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryHeader: can not find style zone %d\n", i+1));
+        ascii().addPos(pos);
+        ascii().addNote("###");
+        break;
+      }
+      bool done=false;
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      switch (i+1) {
+      case 1:
+        done=m_styleManager->readArrows();
+        break;
+      case 2:
+        done=m_styleManager->readDashs();
+        break;
+      case 3:
+        done=m_styleManager->readPatternList();
+        break;
+      case 4:
+        done=m_styleManager->readGradientList();
+        break;
+      case 5:
+        done = m_graphParser->readTransformations();
+        break;
+      case 6:
+        done = m_styleManager->readRulers();
+        break;
+      case 7: // two zones: pos and names
+        done = readLibraryNames();
+        break;
+      case 8:
+        done = m_styleManager->readColorList();
+        break;
+      case 9: // maybe zone 24
+        done = ClarisWksStruct::readStructZone(*getParserState(), "Style10A", false);
+        break;
+      case 10: // maybe zone 25
+        done = ClarisWksStruct::readStructZone(*getParserState(), "Style11A", false);
+        break;
+      case 11: // maybe readfontnames without header
+        done = ClarisWksStruct::readStructZone(*getParserState(), "Style12A", false);
+        break;
+      default:
+        break;
+      }
+      if (done) continue;
+      f.str("");
+      f << "Entries(Style" << i+1 << "A):";
+      ascii().addPos(pos);
+      ascii().addNote(f.str().c_str());
+      input->seek(pos+4+dSz, librevenge::RVNG_SEEK_SET);
+    }
+    break;
+  }
+  input->seek(846, librevenge::RVNG_SEEK_SET);
+  if (!readDSET(true)) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryHeader:can not read main group\n"));
+    input->seek(846, librevenge::RVNG_SEEK_SET);
+  }
   return true;
 }
 
@@ -947,6 +1168,139 @@ bool ClarisDrawParser::readLayouts()
   }
   return true;
 }
+
+bool ClarisDrawParser::readLibraryNames()
+{
+  MWAWInputStreamPtr input = getInput();
+  long pos=input->tell();
+  if (!input->checkPosition(pos+8)) return false;
+  libmwaw::DebugFile &ascFile = ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(LibraryName):";
+  long sz = (long) input->readULong(4);
+  if (sz==0) {
+    ascFile.addPos(pos);
+    ascFile.addNote("_");
+    pos=input->tell();
+    sz = (long) input->readULong(4);
+    if (!input->checkPosition(pos+4+sz)) {
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: the name size seems bad\n"));
+      f << "###";
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      return false;
+    }
+    if (!sz) {
+      ascFile.addPos(pos);
+      ascFile.addNote("_");
+      return true;
+    }
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: find a string but no position\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+    return true;
+  }
+
+  long endPos=pos+4+sz;
+  if (!input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: the data size seems bad\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  int N = (int) input->readLong(2);
+  f << "N=" << N << ",";
+  int type = (int) input->readLong(2);
+  if (type != -1)
+    f << "#type=" << type << ",";
+  int val = (int) input->readLong(2);
+  if (val) f << "#unkn=" << val << ",";
+  int fSz = (int) input->readULong(2);
+  int hSz = (int) input->readULong(2);
+  if (!fSz || N*fSz+hSz+12 != sz) {
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: unexpected field/header size\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  if (long(input->tell()) != pos+4+12+hSz) {
+    ascFile.addDelimiter(input->tell(), '|');
+    input->seek(pos+4+12+hSz, librevenge::RVNG_SEEK_SET);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  if (fSz!=4) {
+    input->seek(endPos, librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: no sure how to read the position\n"));
+    ascFile.addPos(pos);
+    ascFile.addNote("LibraryName:###");
+    return true;
+  }
+
+  pos=input->tell();
+  f.str("");
+  f << "LibraryName-pos:";
+  std::vector<int> positions, lengths;
+  for (int i=0; i<N; ++i) {
+    int sSz=(int) input->readULong(2);
+    int position=(int) input->readULong(2);
+    f << position << ":" << sSz << ",";
+    positions.push_back(position);
+    lengths.push_back(sSz);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+
+  pos=input->tell();
+  f.str("");
+  f << "LibraryName-name:";
+  sz = (long) input->readULong(4);
+  if (sz==0 || !input->checkPosition(pos+4+sz)) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: can not find the name\n"));
+    f << "###";
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    return false;
+  }
+
+  for (size_t i=0; i<positions.size(); ++i) {
+    ClarisDrawParserInternal::Layer layer;
+    if (positions[i]+lengths[i]>sz) {
+      MWAW_DEBUG_MSG(("ClarisDrawParser::readLibraryNames: the name %d seems bad\n", int(i)));
+      f << "###,";
+      m_state->m_layerList.push_back(layer);
+      continue;
+    }
+    input->seek(pos+4+positions[i], librevenge::RVNG_SEEK_SET);
+    librevenge::RVNGString name("");
+    for (int c=0; c<lengths[i]; ++c) {
+      char ch=(char) input->readULong(1);
+      if (!ch) continue;
+      f << ch;
+      int unicode= getParserState()->m_fontConverter->unicode(3, (unsigned char) ch);
+      if (unicode==-1)
+        name.append(ch);
+      else
+        libmwaw::appendUnicode((uint32_t) unicode, name);
+    }
+    f << ",";
+    layer.m_name = name;
+    m_state->m_layerList.push_back(layer);
+  }
+  ascFile.addPos(pos);
+  ascFile.addNote(f.str().c_str());
+  input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+  return true;
+}
 ////////////////////////////////////////////////////////////
 // read the document information
 ////////////////////////////////////////////////////////////
@@ -1056,7 +1410,7 @@ bool ClarisDrawParser::readPrintInfo()
 ////////////////////////////////////////////////////////////
 // read the document main part
 ////////////////////////////////////////////////////////////
-shared_ptr<ClarisWksStruct::DSET> ClarisDrawParser::readDSET()
+shared_ptr<ClarisWksStruct::DSET> ClarisDrawParser::readDSET(bool isLibHeader)
 {
   MWAWInputStreamPtr input = getInput();
   long pos = input->tell();
@@ -1105,7 +1459,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawParser::readDSET()
   shared_ptr<ClarisWksStruct::DSET> zone;
   switch (dset.m_fileType)  {
   case 0:
-    zone=m_graphParser->readGroupZone(dset, entry);
+    zone=m_graphParser->readGroupZone(dset, entry, isLibHeader);
     break;
   case 1:
     zone=m_textParser->readDSETZone(dset, entry);

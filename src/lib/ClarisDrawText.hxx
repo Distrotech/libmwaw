@@ -81,7 +81,8 @@ public:
 
   /** returns the file version */
   int version() const;
-
+  /** resets the current state */
+  void resetState();
   /** returns the number of pages */
   int numPages() const;
 

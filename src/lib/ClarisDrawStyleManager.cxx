@@ -169,8 +169,8 @@ bool Gradient::update(MWAWGraphicStyle &style) const
 struct State {
   //! constructor
   State() : m_documentSize(),
-    m_numColors(8), m_numBWPatterns(0), m_numPatternsInTool(0),
-    m_colorList(), m_displayColorList(), m_dashList(),
+    m_numColors(0), m_numBWPatterns(0), m_numGradients(0),
+    m_colorList(), m_dashList(),
     m_fontList(), m_paragraphList(),
     m_BWPatternList(), m_gradientList()
   {
@@ -192,13 +192,10 @@ struct State {
   int m_numColors;
   //! the number of BW pattern
   int m_numBWPatterns;
-  //! the number of pattern in tool list
-  int m_numPatternsInTool;
-
+  //! the number of gradient
+  int m_numGradients;
   //! the color list
   std::vector<MWAWColor> m_colorList;
-  //! the display color list
-  std::vector<MWAWColor> m_displayColorList;
   //! the list of dash
   std::vector< std::vector<float> > m_dashList;
   //! the list of font
@@ -215,33 +212,37 @@ struct State {
 void State::initColors()
 {
   if (!m_colorList.empty()) return;
-  /* there also exist a 81 color palettes
-
-     and a Paint 168 color palettes
-     0xffffff,0x000000,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
-     0x660099,0x0000dd,0x0099ff,0x00ee00,0x006600,0x663300,0x996633,0xbbbbbb,
-     0x0c0c0c,0x191919,0x262626,0x333333,0x404040,0x4c4c4c,0x595959,0x666666,
-     0x737373,0x808080,0x8c8c8c,0x999999,0xa6a6a6,0xb3b3b3,0xbfbfbf,0xcccccc,
-     0xd9d9d9,0xe6e6e6,0xf3f3f3,0x660000,0x661900,0x663300,0x664c00,0x665900,
-     0x666600,0x336600,0x006600,0x006633,0x00664c,0x006666,0x005966,0x004c66,
-     0x004066,0x003366,0x001f66,0x000066,0x330066,0x660066,0x660044,0x66002a,
-     0x990000,0x992600,0x994c00,0x997300,0x998600,0x999900,0x4c9900,0x009900,
-     0x00994c,0x009973,0x009999,0x008699,0x007399,0x006099,0x004c99,0x002e99,
-     0x000099,0x4c0099,0x990099,0x990066,0x990040,0xcc0000,0xcc3300,0xcc6600,
-     0xcc9900,0xccb300,0xcccc00,0x66cc00,0x00cc00,0x00cc66,0x00cc99,0x00cccc,
-     0x00b3cc,0x0099cc,0x007fcc,0x0066cc,0x003ecc,0x0000cc,0x6600cc,0xcc00cc,
-     0xcc0088,0xcc0055,0xff0000,0xff4000,0xff7f00,0xffc000,0xffdf00,0xffff00,
-     0x80ff00,0x00ff00,0x00ff7f,0x00ffc0,0x00ffff,0x00e0ff,0x00c0ff,0x00a0ff,
-     0x0080ff,0x004eff,0x0000ff,0x7f00ff,0xff00ff,0xff00aa,0xff006a,0xff4c4c,
-     0xff794c,0xffa64c,0xffd34c,0xffe94c,0xffff4c,0xa6ff4c,0x4cff4c,0x4cffa6,
-     0x4cffd3,0x4cffff,0x4ce9ff,0x4cd3ff,0x4cbcff,0x4ca6ff,0x4c83ff,0x4c4cff,
-     0xa64cff,0xff4cff,0xff4cc4,0xff4c97,0xff9999,0xffb399,0xffcc99,0xffe699,
-     0xfff399,0xffff99,0xccff99,0x99ff99,0x99ffcc,0x99ffe6,0x99ffff,0x99f3ff,
-     0x99e6ff,0x99d9ff,0x99ccff,0x99b8ff,0x9999ff,0xcc99ff,0xff99ff,0xff99dd,
-     0xff99c4,0xffcccc,0xffd9cc,0xffe6cc,0xfff3cc,0xfff9cc,0xffffcc,0xe6ffcc,
-     0xccffcc,0xccffe6,0xccfff3,0xccffff,0xccf9ff,0xccf3ff,0xccecff,0xcce6ff,
-     0xccdcff,0xccccff,0xe6ccff,0xffccff,0xffccee,0xffcce2,0x000000,0x000000,
-   */
+  if (m_numColors==168) { // the 168 palettes has more than 168 colors...
+    uint32_t const defCol[186] = {
+      0xffffff,0x000000,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
+      0x660099,0x0000dd,0x0099ff,0x00ee00,0x006600,0x663300,0x996633,0xbbbbbb,
+      0x0c0c0c,0x191919,0x262626,0x333333,0x404040,0x4c4c4c,0x595959,0x666666,
+      0x737373,0x808080,0x8c8c8c,0x999999,0xa6a6a6,0xb3b3b3,0xbfbfbf,0xcccccc,
+      0xd9d9d9,0xe6e6e6,0xf3f3f3,0x660000,0x661900,0x663300,0x664c00,0x665900,
+      0x666600,0x336600,0x006600,0x006633,0x00664c,0x006666,0x005966,0x004c66,
+      0x004066,0x003366,0x001f66,0x000066,0x330066,0x660066,0x660044,0x66002a,
+      0x990000,0x992600,0x994c00,0x997300,0x998600,0x999900,0x4c9900,0x009900,
+      0x00994c,0x009973,0x009999,0x008699,0x007399,0x006099,0x004c99,0x002e99,
+      0x000099,0x4c0099,0x990099,0x990066,0x990040,0xcc0000,0xcc3300,0xcc6600,
+      0xcc9900,0xccb300,0xcccc00,0x66cc00,0x00cc00,0x00cc66,0x00cc99,0x00cccc,
+      0x00b3cc,0x0099cc,0x007fcc,0x0066cc,0x003ecc,0x0000cc,0x6600cc,0xcc00cc,
+      0xcc0088,0xcc0055,0xff0000,0xff4000,0xff7f00,0xffc000,0xffdf00,0xffff00,
+      0x80ff00,0x00ff00,0x00ff7f,0x00ffc0,0x00ffff,0x00e0ff,0x00c0ff,0x00a0ff,
+      0x0080ff,0x004eff,0x0000ff,0x7f00ff,0xff00ff,0xff00aa,0xff006a,0xff4c4c,
+      0xff794c,0xffa64c,0xffd34c,0xffe94c,0xffff4c,0xa6ff4c,0x4cff4c,0x4cffa6,
+      0x4cffd3,0x4cffff,0x4ce9ff,0x4cd3ff,0x4cbcff,0x4ca6ff,0x4c83ff,0x4c4cff,
+      0xa64cff,0xff4cff,0xff4cc4,0xff4c97,0xff9999,0xffb399,0xffcc99,0xffe699,
+      0xfff399,0xffff99,0xccff99,0x99ff99,0x99ffcc,0x99ffe6,0x99ffff,0x99f3ff,
+      0x99e6ff,0x99d9ff,0x99ccff,0x99b8ff,0x9999ff,0xcc99ff,0xff99ff,0xff99dd,
+      0xff99c4,0xffcccc,0xffd9cc,0xffe6cc,0xfff3cc,0xfff9cc,0xffffcc,0xe6ffcc,
+      0xccffcc,0xccffe6,0xccfff3,0xccffff,0xccf9ff,0xccf3ff,0xccecff,0xcce6ff,
+      0xccdcff,0xccccff,0xe6ccff,0xffccff,0xffccee,0xffcce2,0x000000,0x000000,
+    };
+    m_colorList.resize(186);
+    for (size_t i = 0; i < 186; i++)
+      m_colorList[i] = defCol[i];
+    return;
+  }
   uint32_t const defCol[256] = {
     0xffffff,0x000000,0x777777,0x555555,0xffff00,0xff6600,0xdd0000,0xff0099,
     0x660099,0x0000dd,0x0099ff,0x00ee00,0x006600,0x663300,0x996633,0xbbbbbb,
@@ -276,6 +277,12 @@ void State::initColors()
     0x0000ee,0x0000bb,0x0000aa,0x000088,0x000077,0x000055,0x000044,0x000022,
     0x000011,0xeeeeee,0xdddddd,0xaaaaaa,0x888888,0x444444,0x222222,0x111111,
   };
+  if (m_numColors==0)
+    m_numColors=256;
+  else if (m_numColors!=256) {
+    /* there also exist a 81 color palettes  */
+    MWAW_DEBUG_MSG(("ClarisDrawStyleManager::initColors: unimplemented number of color %d\n", m_numColors));
+  }
   m_colorList.resize(256);
   for (size_t i = 0; i < 256; i++)
     m_colorList[i] = defCol[i];
@@ -312,6 +319,167 @@ void State::initGradients()
 {
   if (!m_gradientList.empty()) return;
   Gradient grad;
+  if (m_numGradients==32) { // checkme
+    // grad0
+    grad=Gradient(0,2,0,1);
+    m_gradientList.push_back(grad);
+    // grad1
+    grad=Gradient(0,2,180,1);
+    m_gradientList.push_back(grad);
+    // grad2
+    grad=Gradient(0,2,90,0);
+    m_gradientList.push_back(grad);
+    // grad3
+    grad=Gradient(0,2,315,1);
+    m_gradientList.push_back(grad);
+    // grad4
+    grad=Gradient(0,2,225,1);
+    m_gradientList.push_back(grad);
+    // grad5
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(79,80),MWAWVec2i(79,80));
+    m_gradientList.push_back(grad);
+    // grad6
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(81,20),MWAWVec2i(81,20));
+    m_gradientList.push_back(grad);
+    // grad7
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(50,50),MWAWVec2i(50,50));
+    m_gradientList.push_back(grad);
+    // grad8
+    grad=Gradient(0,2,90,1);
+    m_gradientList.push_back(grad);
+    // grad9
+    grad=Gradient(0,2,270,0.979172f);
+    m_gradientList.push_back(grad);
+    // grad10
+    grad=Gradient(0,2,0,0);
+    m_gradientList.push_back(grad);
+    // grad11
+    grad=Gradient(0,2,45,1);
+    m_gradientList.push_back(grad);
+    // grad12
+    grad=Gradient(0,2,135,1);
+    m_gradientList.push_back(grad);
+    // grad13
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(22,77),MWAWVec2i(23,77));
+    m_gradientList.push_back(grad);
+    // grad14
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(22,22),MWAWVec2i(22,22));
+    m_gradientList.push_back(grad);
+    // grad15
+    grad=Gradient(1,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(51,50),MWAWVec2i(51,50));
+    m_gradientList.push_back(grad);
+    // grad16
+    grad=Gradient(2,3,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(79,15),MWAWVec2i(86,22));
+    grad.m_colors[1]=MWAWColor(0xaa0000);
+    grad.m_colors[2]=MWAWColor(0xcc3300);
+    m_gradientList.push_back(grad);
+    // grad17
+    grad=Gradient(0,4,0,1);
+    grad.m_colors[0]=MWAWColor(0xff33cc);
+    grad.m_colors[1]=MWAWColor(0xdd0000);
+    grad.m_colors[2]=MWAWColor(0xdd0000);
+    grad.m_colors[3]=MWAWColor(0x000000);
+    m_gradientList.push_back(grad);
+    // grad18
+    grad=Gradient(0,3,112,0.80835f);
+    grad.m_colors[0]=MWAWColor(0x0000dd);
+    grad.m_colors[1]=MWAWColor(0x000077);
+    grad.m_colors[2]=MWAWColor(0xff3333);
+    m_gradientList.push_back(grad);
+    // grad19
+    grad=Gradient(1,4,332,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(77,71),MWAWVec2i(77,71));
+    grad.m_colors[0]=MWAWColor(0xffff00);
+    grad.m_colors[1]=MWAWColor(0xff3300);
+    grad.m_colors[2]=MWAWColor(0x9900cc);
+    grad.m_colors[3]=MWAWColor(0x0000dd);
+    m_gradientList.push_back(grad);
+    // grad20
+    grad=Gradient(0,3,270,0.625f);
+    grad.m_colors[1]=MWAWColor(0x0000dd);
+    grad.m_colors[2]=MWAWColor(0x00cccc);
+    m_gradientList.push_back(grad);
+    // grad21
+    grad=Gradient(0,2,270,0.229172f);
+    grad.m_colors[0]=MWAWColor(0x0000aa);
+    grad.m_colors[1]=MWAWColor(0xdddddd);
+    m_gradientList.push_back(grad);
+    // grad22
+    grad=Gradient(0,3,90,0.729172f);
+    grad.m_colors[0]=MWAWColor(0xffffff);
+    grad.m_colors[2]=MWAWColor(0x9999ff);
+    m_gradientList.push_back(grad);
+    // grad23
+    grad=Gradient(2,4,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(41,40),MWAWVec2i(62,62));
+    grad.m_colors[0]=MWAWColor(0xffffff);
+    grad.m_colors[1]=MWAWColor(0xccffff);
+    grad.m_colors[2]=MWAWColor(0x99ffff);
+    grad.m_colors[3]=MWAWColor(0x66ffff);
+    m_gradientList.push_back(grad);
+    // grad24
+    grad=Gradient(0,3,90,0.854172f);
+    grad.m_colors[1]=MWAWColor(0xdd0000);
+    grad.m_colors[2]=MWAWColor(0xffcc00);
+    m_gradientList.push_back(grad);
+    // grad25
+    grad=Gradient(0,4,315,0.633453f);
+    grad.m_colors[0]=MWAWColor(0xcc3300);
+    grad.m_colors[1]=MWAWColor(0xff6600);
+    grad.m_colors[2]=MWAWColor(0xffcc00);
+    grad.m_colors[3]=MWAWColor(0xffff00);
+    m_gradientList.push_back(grad);
+    // grad26
+    grad=Gradient(0,3,45,0.721832f);
+    grad.m_colors[1]=MWAWColor(0x0000dd);
+    grad.m_colors[2]=MWAWColor(0xff0099);
+    m_gradientList.push_back(grad);
+    // grad27
+    grad=Gradient(0,3,180,1);
+    grad.m_colors[1]=MWAWColor(0x0000dd);
+    grad.m_colors[2]=MWAWColor(0x9900cc);
+    m_gradientList.push_back(grad);
+    // grad28
+    grad=Gradient(0,4,90,0.81987f);
+    grad.m_colors[1]=MWAWColor(0x9900cc);
+    grad.m_colors[2]=MWAWColor(0x9933ff);
+    grad.m_colors[3]=MWAWColor(0x66ffff);
+    m_gradientList.push_back(grad);
+    // grad29
+    grad=Gradient(0,4,270,0.916672f);
+    grad.m_colors[0]=MWAWColor(0x0066ff);
+    grad.m_colors[1]=MWAWColor(0x00ccff);
+    grad.m_colors[2]=MWAWColor(0xffffcc);
+    grad.m_colors[3]=MWAWColor(0xff6633);
+    m_gradientList.push_back(grad);
+    // grad30
+    grad=Gradient(2,2,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(0,88),MWAWVec2i(12,100));
+    grad.m_colors[0]=MWAWColor(0xff6600);
+    grad.m_colors[1]=MWAWColor(0xffff00);
+    m_gradientList.push_back(grad);
+    // grad31
+    grad=Gradient(2,4,0,0);
+    grad.m_box=MWAWBox2i(MWAWVec2i(99,52),MWAWVec2i(100,54));
+    grad.m_colors[0]=MWAWColor(0xffffff);
+    grad.m_colors[1]=MWAWColor(0xffffcc);
+    grad.m_colors[2]=MWAWColor(0xffff66);
+    grad.m_colors[3]=MWAWColor(0xffcc00);
+    m_gradientList.push_back(grad);
+    return;
+  }
+  if (m_numGradients==0)
+    m_numGradients=64;
+  if (m_numGradients!=64) {
+    MWAW_DEBUG_MSG(("ClarisDrawStyleManager::initGradients: unimplemented number of color %d\n", m_numGradients));
+  }
 // grad0
   grad=Gradient(0,2,0,0);
   grad.m_colors[0]=MWAWColor(0xffffff);
@@ -758,6 +926,22 @@ ClarisDrawStyleManager::~ClarisDrawStyleManager()
 {
 }
 
+void ClarisDrawStyleManager::setDefaultNumbers(int nColors, int nGradients)
+{
+  if (nColors==81||nColors==168||nColors==256) {
+    m_state->m_numColors=nColors;
+    // reset the color, as default font can have create some font
+    m_state->m_colorList.clear();
+  }
+  else if (nColors) {
+    MWAW_DEBUG_MSG(("ClarisDrawStyleManager::setDefaultNumbers: the number of colors seems bad\n"));
+  }
+  if (nGradients==32||nGradients==64)
+    m_state->m_numGradients=nGradients;
+  else if (nGradients) {
+    MWAW_DEBUG_MSG(("ClarisDrawStyleManager::setDefaultNumbers: the number of gradient seems bad\n"));
+  }
+}
 ////////////////////////////////////////////////////////////
 //
 // Interface
@@ -1266,13 +1450,17 @@ bool ClarisDrawStyleManager::readColorList()
     ascFile.addDelimiter(input->tell(),'|');
   }
   else {
-    m_state->m_colorList.clear();
+    // only set color if the color numbering is unknown: ie. something this set is not the final set...
+    bool setColor=m_state->m_numColors==0;
+    if (setColor)
+      m_state->m_colorList.clear();
     for (int i=0; i < N; ++i) {
       unsigned char color[3];
       for (int c=0; c < 3; c++) color[c] = (unsigned char)(input->readULong(2)/256);
       MWAWColor col(color[0], color[1],color[2]);
-      m_state->m_colorList.push_back(col);
       f << col << ",";
+      if (setColor)
+        m_state->m_colorList.push_back(col);
     }
   }
   ascFile.addPos(pos);
@@ -1376,8 +1564,8 @@ bool ClarisDrawStyleManager::readGradientList()
     }
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
   }
-  int const numDefGrad=64;
-  if (12+2*numDefGrad+40*N!=sz) {
+  int const numDefGrad=int(sz-12-40*N)/2;
+  if (12+2*numDefGrad+40*N!=sz || (numDefGrad!=32 && numDefGrad!=64)) {
     f << "###";
     MWAW_DEBUG_MSG(("ClarisDrawStyleManager::readGradientList: unexpected pattern size\n"));
     ascFile.addDelimiter(input->tell(),'|');
@@ -1394,6 +1582,7 @@ bool ClarisDrawStyleManager::readGradientList()
 
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
+  m_state->m_numGradients=numDefGrad;
   m_state->initGradients();
   for (int i=0; i < N; ++i) {
     pos=input->tell();

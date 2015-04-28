@@ -128,7 +128,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
     }
     else if (creator=="CDrw") { // CHANGEME: ClarisDraw
-      if (type=="dDrw" || type=="iLib") {
+      if (type=="dDrw" || type=="dDst" || type=="iLib") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }

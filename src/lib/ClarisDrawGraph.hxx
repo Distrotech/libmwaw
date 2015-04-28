@@ -84,18 +84,22 @@ public:
 
   /** returns the file version */
   int version() const;
-
+  /** resets the current state */
+  void resetState();
   /** returns the number of pages */
   int numPages() const;
 
   //! reads the zone Group DSET
-  shared_ptr<ClarisWksStruct::DSET> readGroupZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry);
+  shared_ptr<ClarisWksStruct::DSET> readGroupZone
+  (ClarisWksStruct::DSET const &zone, MWAWEntry const &entry, bool isLibHeader=false);
   //! reads the zone Bitmap DSET
   shared_ptr<ClarisWksStruct::DSET> readBitmapZone(ClarisWksStruct::DSET const &zone, MWAWEntry const &entry);
   //! read the transformations
   bool readTransformations();
   //! update the group: ie. remove empty group child
-  void updateGroup();
+  void updateGroup(bool isLibrary);
+  //! returns true if a group does not exist or is empty
+  bool isEmptyGroup(int gId) const;
 
   //! return the surface color which corresponds to some ids (if possible)
   bool getSurfaceColor(ClarisDrawGraphInternal::Style const &style, MWAWColor &col) const;
@@ -104,6 +108,8 @@ protected:
   bool sendBitmap(int number, MWAWPosition const &pos=MWAWPosition());
   //! sends the zone data to the listener (if it exists )
   bool sendGroup(int number, MWAWPosition const &pos=MWAWPosition());
+  //! sends the ith child of the root (if it exists )
+  bool sendMainGroupChild(int childId, MWAWPosition const &pos=MWAWPosition());
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 
@@ -121,7 +127,7 @@ protected:
   /* read the group data.
 
      \note \a beginGroupPos is only used to help debugging */
-  bool readGroupData(ClarisDrawGraphInternal::Group &group, long beginGroupPos);
+  bool readGroupData(ClarisDrawGraphInternal::Group &group, long beginGroupPos, bool isLibHeader);
 
   /* read a simple graphic zone */
   bool readShape(MWAWEntry const &entry,
@@ -136,6 +142,7 @@ protected:
 
   /* try to read the bitmap  */
   bool readBitmapData(ClarisDrawGraphInternal::Bitmap &zone);
+
   //
   // low level
   //

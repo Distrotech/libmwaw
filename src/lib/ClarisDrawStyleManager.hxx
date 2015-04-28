@@ -64,7 +64,8 @@ public:
   ClarisDrawStyleManager(ClarisDrawParser &parser);
   //! destructor
   virtual ~ClarisDrawStyleManager();
-
+  //! set the default number of color, ...
+  void setDefaultNumbers(int nColors, int nGradients);
   // Intermediate level
 
   //! tries to return the color corresponding to an id

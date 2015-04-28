@@ -78,6 +78,8 @@ public:
 
   //! returns the file type corresponding to a zone id
   int getFileType(int zoneId) const;
+  //! returns the page left top point ( in inches)
+  MWAWVec2f getPageLeftTop();
   //! sends a text zone
   bool sendTextZone(int number, int subZone=-1);
 
@@ -101,7 +103,7 @@ protected:
   //! try to read the library header
   bool readLibraryHeader();
   //! try to read a DSET structure
-  shared_ptr<ClarisWksStruct::DSET> readDSET();
+  shared_ptr<ClarisWksStruct::DSET> readDSET(bool isLibHeader=false);
 
   //! try to read the print info zone
   bool readPrintInfo();
@@ -109,6 +111,8 @@ protected:
   bool readDocInfo();
   //! try to read the layout
   bool readLayouts();
+  //! try to read the library names(two zone)
+  bool readLibraryNames();
 
   //
   // low level

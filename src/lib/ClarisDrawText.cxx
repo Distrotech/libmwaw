@@ -448,6 +448,11 @@ int ClarisDrawText::version() const
   return m_state->m_version;
 }
 
+void ClarisDrawText::resetState()
+{
+  m_state.reset(new ClarisDrawTextInternal::State);
+}
+
 int ClarisDrawText::numPages() const
 {
   // to do
