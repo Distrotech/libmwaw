@@ -86,4 +86,6 @@ typedef __int64 int64_t;
 #  endif
 
 #endif
+
+#endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
