@@ -311,9 +311,8 @@ bool ClarisDrawParser::createZones()
     ascii().addPos(input->tell());
     ascii().addNote("Entries(BAD)");
   }
-  long pos;
   while (!input->isEnd()) {
-    pos=input->tell();
+    long pos=input->tell();
     if (input->readULong(4)!=0x44534554) {
       input->seek(pos+1, librevenge::RVNG_SEEK_SET);
       continue;

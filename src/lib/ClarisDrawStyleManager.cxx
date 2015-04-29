@@ -1365,14 +1365,13 @@ bool ClarisDrawStyleManager::readRulers()
   }
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
-  long val;
-  static long const expectedVal[]= {-1,0,0x1c,0,2}; // type, ?, fSz, ?, ?
   for (int i=0; i<5; ++i) {
-    val= input->readLong(2);
+    long val= input->readLong(2);
     if (i==2 && val!=28) { // fSz
       input->seek(pos,librevenge::RVNG_SEEK_SET);
       return false;
     }
+    static long const expectedVal[]= {-1,0,0x1c,0,2}; // type, ?, fSz, ?, ?
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
   }
   if (12+28*N!=sz) {
@@ -1434,14 +1433,13 @@ bool ClarisDrawStyleManager::readColorList()
   }
   int N=(int) input->readLong(2);
   f << "N=" << N << ",";
-  long val;
-  static long const expectedVal[]= {-1,0,6,0,1}; // type, ?, fSz, ?, ?
   for (int i=0; i<5; ++i) {
-    val= input->readLong(2);
+    long val= input->readLong(2);
     if (i==2 && val!=6) {
       input->seek(pos,librevenge::RVNG_SEEK_SET);
       return false;
     }
+    static long const expectedVal[]= {-1,0,6,0,1}; // type, ?, fSz, ?, ?
     if (val!=expectedVal[i]) f << "f" << i << "=" << val << ",";
   }
   if (12+6*N!=sz) {
