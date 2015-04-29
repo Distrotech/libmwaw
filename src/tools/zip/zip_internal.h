@@ -54,5 +54,36 @@ using std::shared_ptr;
 using boost::shared_ptr;
 #endif
 
+#if defined(_MSC_VER) || defined(__DJGPP__)
+
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+typedef unsigned __int64 uint64_t;
+typedef __int64 int64_t;
+
+#else /* !_MSC_VER && !__DJGPP__*/
+
+#  ifdef HAVE_CONFIG_H
+
+#    include <config.h>
+#    ifdef HAVE_STDINT_H
+#      include <stdint.h>
+#    endif
+#    ifdef HAVE_INTTYPES_H
+#      include <inttypes.h>
+#    endif
+
+#  else
+
+// assume that the headers are there inside LibreOffice build when no HAVE_CONFIG_H is defined
+#    include <stdint.h>
+#    include <inttypes.h>
+
+#  endif
+
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:
