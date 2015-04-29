@@ -274,7 +274,8 @@ bool File::readFileInformation()
     checkFInfoType("RagTime 5");
   }
   else if (m_fInfoCreator=="CDrw") {
-    checkFInfoType("dDrw", "ClarisDraw") || checkFInfoType("iLib", "ClarisDraw[library]") || checkFInfoType("ClarisDraw");
+    checkFInfoType("dDrw", "ClarisDraw") || checkFInfoType("dDst", "ClarisDraw[stationary]") ||
+    checkFInfoType("iLib", "ClarisDraw[library]") || checkFInfoType("ClarisDraw");
   }
   else if (m_fInfoCreator=="DkmR") {
     checkFInfoType("TEXT","Basic text(created by DOCMaker)") || checkFInfoType("DOCMaker");

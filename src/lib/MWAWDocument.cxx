@@ -511,9 +511,7 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       parser.reset(new SuperPaintParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_RESERVED1:
-#ifdef DEBUG
       parser.reset(new ClarisDrawParser(input, rsrcParser, header));
-#endif
       break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:

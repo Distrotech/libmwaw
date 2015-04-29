@@ -5,6 +5,7 @@
 
 - Acta*         : parser of Acta documents
 - BeagleWks*    : parser of BeagleWorks and WordPerfect Works documents
+- ClarisDraw*   : parser of ClarisDraw documents
 - ClarisWks*    : parser of ClarisWorks and AppleWorks documents
 - DocMkr*       : parser of DOCMaker documents
 - EDoc*         : parser of eDOC documents
@@ -119,8 +120,8 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------------------
----  Acta/BeagleWks/ClarisWks/DocMkr/EDoc/FullWrt                    ---
----  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacDraw/MacPaint/MacWrt/  ---
+---  Acta/BeagleWks/ClarisDraw/ClarisWks/DocMkr/EDoc/FullWrt         ---
+---  GreatWks/HanMacWrd/LightWayTxt/MacDoc/MacDraw/MacPaint/MacWrt   ---
 ---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/RagTime            ---
 ---  SuperPaint/TeachTxt/Wingz/WriteNow/WriterPls/ZWrt               ---
 ------------------------------------------------------------------------
@@ -139,6 +140,12 @@ BeagleWksDRParser: vector graphic document parser of BeagleWorks v1.0 and WordPe
 BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 -   BeagleWksText : class which reads the text in a word document
 -   BeagleWksStructManager : class to read structure partaged between different type of document
+
+ClarisDrawParser : word parser of ClarisDraw document
+-   ClarisDrawGraph : class which reads the graphics and zone dispositions ...
+-   ClarisDrawStruct : class which stores the main zone structures
+-   ClarisDrawStyleManager : class which reads/stores many styles
+-   ClarisDrawText : class which reads the text and its structures
 
 ClarisWksParser : word parser of ClarisWorks/AppleWorks document (or draw)
 ClarisWksBMParser: bitmap parser of ClarisWorks/AppleWorks painting document

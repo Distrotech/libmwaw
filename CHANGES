@@ -1,9 +1,12 @@
 CHANGES:
 
+4/29/2015:
+- add a parser for ClarisDraw Document
+
 4/18/2015:
 - RagTime v5-v6 parser(not functional): continue to works on this filter,
   try to find the different kinds of cluster and how to parse them, ...
-- AppleWorksClarisWorks parser[spreadsheet]: do not remove first empty row/columns.
+- AppleWorks/ClarisWorks parser[spreadsheet]: do not remove first empty row/columns.
 - remove all assert calls
 - rename Box2,Vec2,... in MWAWBox2, MWAWVec2,... to avoid potential name's conflict
 

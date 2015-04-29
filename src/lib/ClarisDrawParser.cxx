@@ -177,19 +177,44 @@ void ClarisDrawParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     ok = createZones();
     if (ok) {
       createDocument(docInterface);
-      if (m_state->m_isLibrary) {
-        MWAWListenerPtr listener=getGraphicListener();
-        MWAWVec2f leftTop=72.0f*getPageLeftTop();
-        MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
-        pos.setRelativePosition(MWAWPosition::Page);
+      MWAWVec2f leftTop=72.0f*getPageLeftTop();
+      MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
+      pos.setRelativePosition(MWAWPosition::Page);
+      MWAWGraphicListenerPtr listener=getGraphicListener();
 
+      if (m_state->m_isLibrary) {
         for (int i=0; i<(int) m_state->m_layerList.size(); ++i) {
           if (i>0)
             listener->insertBreak(MWAWListener::PageBreak);
           m_graphParser->sendMainGroupChild(i, pos);
         }
       }
+      else if (m_state->m_displayAsSlide) {
+        bool first=true;
+        for (size_t i=1; i< m_state->m_layerList.size(); ++i) {
+          if (m_graphParser->isEmptyGroup(m_state->m_layerList[i].m_groupId))
+            continue;
+          if (!first)
+            listener->insertBreak(MWAWListener::PageBreak);
+          first=false;
+          m_graphParser->sendGroup(m_state->m_layerList[i].m_groupId, pos);
+        }
+      }
+      else {
+        for (size_t i=1; i< m_state->m_layerList.size(); ++i) {
+          if (m_graphParser->isEmptyGroup(m_state->m_layerList[i].m_groupId))
+            continue;
+          bool openLayer=false;
+          if (!m_state->m_layerList[i].m_name.empty())
+            openLayer=listener->openLayer(m_state->m_layerList[i].m_name);
+          m_graphParser->sendGroup(m_state->m_layerList[i].m_groupId, pos);
+          if (openLayer)
+            listener->closeLayer();
+        }
+      }
+#ifdef DEBUG
       m_graphParser->flushExtra();
+#endif
     }
     ascii().reset();
   }
@@ -215,24 +240,56 @@ void ClarisDrawParser::createDocument(librevenge::RVNGDrawingInterface *document
 
   m_graphParser->updateGroup(m_state->m_isLibrary);
 
-  m_state->m_createMasterPage=!m_state->m_isLibrary && !m_state->m_layerList.empty() &&
-                              !m_graphParser->isEmptyGroup(m_state->m_layerList[0].m_groupId);
+
   // create the page list
-  int numPages=m_state->m_isLibrary ? (int) m_state->m_layerList.size() : 1;
-  if (numPages<=0) numPages=1;
+  int numPages=1;
   MWAWPageSpan ps(getPageSpan());
   ps.setPageSpan(1);
+  std::vector<librevenge::RVNGString> listNames;
+  if (m_state->m_isLibrary) {
+    numPages=(int) m_state->m_layerList.size();
+    if (numPages<1) numPages=1;
+  }
+  else {
+    m_state->m_createMasterPage=!m_state->m_layerList.empty() &&
+                                !m_graphParser->isEmptyGroup(m_state->m_layerList[0].m_groupId);
+    if (m_state->m_createMasterPage)
+      ps.setMasterPageName("Master");
+    for (size_t i=1; i<m_state->m_layerList.size(); ++i) {
+      if (!m_graphParser->isEmptyGroup(m_state->m_layerList[i].m_groupId))
+        listNames.push_back(m_state->m_layerList[i].m_name);
+    }
+    if (m_state->m_displayAsSlide && !listNames.empty())
+      numPages=(int) listNames.size();
+  }
   std::vector<MWAWPageSpan> pageList;
   for (int i=0; i<numPages; ++i) {
     MWAWPageSpan page(ps);
-    if (m_state->m_isLibrary && i<=(int) m_state->m_layerList.size())
+    if (m_state->m_isLibrary && i<(int) m_state->m_layerList.size())
       page.setPageName(m_state->m_layerList[size_t(i)].m_name);
+    else if (m_state->m_displayAsSlide && i<(int) listNames.size())
+      page.setPageName(listNames[size_t(i)]);
     pageList.push_back(page);
   }
   MWAWGraphicListenerPtr listen(new MWAWGraphicListener(*getParserState(), pageList, documentInterface));
   setGraphicListener(listen);
   listen->startDocument();
 
+
+  if (!m_state->m_createMasterPage)
+    return;
+
+  // we need to send the master page
+  if (!listen->openMasterPage(ps)) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::createDocument: can not create the master page\n"));
+    m_state->m_createMasterPage=false;
+    return;
+  }
+  MWAWVec2f leftTop=72.0f*getPageLeftTop();
+  MWAWPosition pos(leftTop,MWAWVec2f(0,0),librevenge::RVNG_POINT);
+  pos.setRelativePosition(MWAWPosition::Page);
+  m_graphParser->sendGroup(m_state->m_layerList[0].m_groupId, pos);
+  listen->closeMasterPage();
 }
 
 ////////////////////////////////////////////////////////////
@@ -344,19 +401,15 @@ bool ClarisDrawParser::readDocHeader()
   f << "dim?=" << dim[1] << "x" << dim[0] << ",";
   int margin[6];
   f << "margin?=[";
-  bool hasMargins=false;
   for (int i = 0; i < 6; i++) {
     margin[i] = (int) input->readLong(2);
-    if (margin[i]) {
-      hasMargins=true;
+    if (margin[i])
       f << margin[i] << ",";
-    }
     else
       f << "_,";
   }
   f << "],";
   // seems a good indication that slide mode is choosen
-  m_state->m_displayAsSlide=!hasMargins;
   if (dim[0] > 0 && dim[1] > 0 &&
       margin[0] >= 0 && margin[1] >= 0 && margin[2] >= 0 && margin[3] >= 0 &&
       dim[0] > margin[0]+margin[2] && dim[1] > margin[1]+margin[3]) {
@@ -546,12 +599,16 @@ bool ClarisDrawParser::readDocHeader()
   pos=input->tell();
   f.str("");
   f << "DocHeader-8:";
-  input->seek(pos+52, librevenge::RVNG_SEEK_SET);
-  val=(int) input->readLong(2);
-  if (val==0)
-    f << "g0*,";
-  else if (val!=1)
-    f << "g0=" << val << ",";
+  input->seek(pos+111, librevenge::RVNG_SEEK_SET);
+  val=(int) input->readLong(1);
+  if (val==1) {
+    f << "slide,";
+    m_state->m_displayAsSlide=true;
+  }
+  else if (val) {
+    MWAW_DEBUG_MSG(("ClarisDrawParser::readDocHeader: pb reading the viewer style\n"));
+    f << "###slide=" << val << ",";
+  }
   input->seek(pos+150, librevenge::RVNG_SEEK_SET);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -716,6 +773,8 @@ bool ClarisDrawParser::readDocHeader()
       break;
     case 12:// never seens data: fieldData=32, headerSize=0
       done = ClarisWksStruct::readStructZone(*getParserState(), "ZoneB12A", false);
+      break;
+    default:
       break;
     }
     if (done) continue;

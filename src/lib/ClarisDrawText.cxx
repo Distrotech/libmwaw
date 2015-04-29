@@ -771,7 +771,7 @@ bool ClarisDrawText::readFont(int id, int &posC, MWAWFont &font)
   }
   font.setSize((float) input->readULong(2));
   int colId = (int) input->readULong(1);
-  if (colId) f << "###backColor=" << colId << ",";
+  if (colId) f << "#backColor=" << colId << ",";
   colId = (int) input->readULong(1);
   if (colId!=1) {
     MWAWColor col;

@@ -155,7 +155,7 @@ public:
     MWAW_T_ZWRITE /** Z-Write (v1.3)*/,
     MWAW_T_4DIMENSION /* 4th Dimension: TODO*/,
 
-    MWAW_T_RESERVED1 /** Used for ClarisDraw v1 file: TODO */,
+    MWAW_T_RESERVED1 /** Used for ClarisDraw v1 file: v1.0.1-v1.0.3 */,
     MWAW_T_RESERVED2 /** Used for Apple's Pict file: TODO */,
     MWAW_T_RESERVED3 /** Reserved for future use*/,
     MWAW_T_RESERVED4 /** Reserved for future use*/,

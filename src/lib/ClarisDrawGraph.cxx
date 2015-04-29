@@ -195,10 +195,11 @@ struct Zone {
               T_Line, T_Rect, T_RectOval, T_Oval, T_Arc, T_Poly, T_Connector
             };
   //! constructor
-  Zone() : m_zoneType(0), m_page(-1), m_box(), m_ordering(-1), m_style() {}
+  Zone() : m_zoneType(0), m_flag(0), m_page(-1), m_box(), m_ordering(-1), m_style() {}
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone)
   {
+    if (zone.m_flag) o << "fl=" << std::hex << zone.m_flag << std::dec << ",";
     if (zone.m_page >= 0) o << "pg=" << zone.m_page << ",";
     o << "box=" << zone.m_box << ",";
     if (zone.m_ordering>0) o << "ordering=" << zone.m_ordering << ",";
@@ -266,6 +267,8 @@ struct Zone {
   }
   //! the zone type
   int m_zoneType;
+  //! the zone main flag
+  int m_flag;
   //! the page (checkme: or frame linked )
   int m_page;
   //! the bdbox
@@ -401,7 +404,7 @@ struct ZoneZone : public Zone {
   //! return true if the zone is a note
   bool isANote() const
   {
-    return m_flags[4]==1;
+    return m_flags[5]==1;
   }
   /** check if we need to send the frame is linked to another frmae */
   bool isLinked() const
@@ -978,10 +981,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawGraph::readGroupZone
   }
 
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
-  if (!readGroupData(*group, entry.begin(), isLibHeader)) {
-    ascFile.addPos(entry.begin());
-    ascFile.addNote("###");
-  }
+  readGroupData(*group, entry.begin(), isLibHeader);
 
   group->m_childs.resize(group->m_zones.size());
   for (size_t i = 0; i < group->m_zones.size(); ++i) {
@@ -1172,16 +1172,14 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
     f << "###typeId=" << typeId << ",";
     break;
   }
-  int val = (int) input->readULong(1);
-  style.m_wrapping = (val & 3);
-  if (val>>2) f << "unk=" << (val>>2) << ","; // 0 or 8
+  zone.m_flag = (int) input->readULong(1);
+  style.m_wrapping=(zone.m_flag&3);
   zone.m_zoneType = (int) input->readULong(1);
   if (zone.m_zoneType & 0x40) style.m_arrows[0]=true;
   if (zone.m_zoneType & 0x80) style.m_arrows[1]=true;
   zone.m_zoneType &= 0x3F;
-  val = (int) input->readULong(1);
+  int val = (int) input->readULong(1);
   if (val) f << "f0=" << std::hex << val << std::dec << ",";
-
   float dim[4];
   for (int j = 0; j < 4; j++) {
     dim[j] = float(input->readLong(4))/256.f;
@@ -1331,129 +1329,146 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
   int numError = 0;
   int numConnectors=0;
   for (size_t i = 0; i < numChilds; i++) {
+    pos=input->tell();
     shared_ptr<ClarisDrawGraphInternal::Zone> z = group.m_zones[i];
     int numZoneExpected = z ? z->getNumData() : 0;
-
     if (isLibHeader || z->getSubType()==ClarisDrawGraphInternal::Zone::T_Connector) {
       ++numConnectors;
       if (!ClarisWksStruct::readStructZone(*m_parserState, "ConnectorData", false)) {
         MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve connector data\n"));
+        ascFile.addPos(pos);
+        ascFile.addNote("###");
         return false;
       }
     }
-
-    if (numZoneExpected) {
+    if (!numZoneExpected)
+      continue;
+    /* Argh, zones with linked text can also begin with a
+       ConnectorData group, so we must look for extra such groups */
+    while (!input->isEnd()) {
+      pos=input->tell();
+      input->seek(6, librevenge::RVNG_SEEK_CUR);
+      if (input->readLong(2)==-1 && input->readULong(4)==8 && input->readULong(2)==0x1c) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        if (ClarisWksStruct::readStructZone(*m_parserState, "ConnectorData", false)) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find unexpected connector\n"));
+          ++numConnectors;
+          ascFile.addPos(pos);
+          ascFile.addNote("###");
+          continue;
+        }
+      }
+      break;
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    sz = (long) input->readULong(4);
+    f.str("");
+    if (sz == 0) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a nop zone for type: %d\n",
+                      z->getSubType()));
+      ascFile.addPos(pos);
+      ascFile.addNote("GroupDef-before:###");
+      if (!numError++) {
+        ascFile.addPos(beginGroupPos);
+        ascFile.addNote("###");
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: too many errors, zone parsing STOPS\n"));
+        return false;
+      }
       pos = input->tell();
       sz = (long) input->readULong(4);
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+    bool parsed = true;
+    switch (z->getSubType()) {
+    case ClarisDrawGraphInternal::Zone::T_Poly:
+    case ClarisDrawGraphInternal::Zone::T_Connector:
+      if (z->getNumData() && !readPolygonData(z)) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve polygon child\n"));
+        return false;
+      }
+      break;
+    case ClarisDrawGraphInternal::Zone::T_Pict: {
+      if (!input->checkPosition(pos+4+sz)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone for picture\n"));
+        return false;
+      }
+      ClarisDrawGraphInternal::ZonePict *pict=dynamic_cast<ClarisDrawGraphInternal::ZonePict *>(z.get());
       f.str("");
-      if (sz == 0) {
-        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a nop zone for type: %d\n",
-                        z->getSubType()));
-        ascFile.addPos(pos);
-        ascFile.addNote("GroupDef-before:###");
-        if (!numError++) {
-          ascFile.addPos(beginGroupPos);
-          ascFile.addNote("###");
-        }
-        else {
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: too many errors, zone parsing STOPS\n"));
-          return false;
-        }
-        pos = input->tell();
-        sz = (long) input->readULong(4);
+      f << "Entries(PictData):";
+      if (!pict) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: oops can not find the picture\n"));
       }
+      else {
+        pict->m_entries[0].setBegin(pos+4);
+        pict->m_entries[0].setLength(sz);
+      }
+      if (sz)
+        ascFile.skipZone(pos+4, pos+4+sz-1);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+
+      pos = input->tell();
+      sz = (long) input->readULong(4);
+      if (!sz) {
+        ascFile.addPos(pos);
+        ascFile.addNote("_");
+        break;
+      }
+      if (!input->checkPosition(pos+4+sz)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone2 for picture\n"));
+        return false;
+      }
+      if (pict) {
+        pict->m_entries[1].setBegin(pos+4);
+        pict->m_entries[1].setLength(sz);
+      }
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a zone2 for picture\n"));
+      ascFile.addPos(pos);
+      ascFile.addNote("PictData-B:###");
+      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+      break;
+    }
+    case ClarisDrawGraphInternal::Zone::T_Line:
+    case ClarisDrawGraphInternal::Zone::T_Rect:
+    case ClarisDrawGraphInternal::Zone::T_RectOval:
+    case ClarisDrawGraphInternal::Zone::T_Oval:
+    case ClarisDrawGraphInternal::Zone::T_Arc:
+    case ClarisDrawGraphInternal::Zone::T_Zone:
+    case ClarisDrawGraphInternal::Zone::T_Shape:
+    case ClarisDrawGraphInternal::Zone::T_Unknown:
+    default:
+      parsed = false;
+      break;
+    }
+
+    if (parsed) continue;
+    if (!input->checkPosition(pos+4+sz)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
-      bool parsed = true;
-      switch (z->getSubType()) {
-      case ClarisDrawGraphInternal::Zone::T_Poly:
-      case ClarisDrawGraphInternal::Zone::T_Connector:
-        if (z->getNumData() && !readPolygonData(z)) {
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: can not retrieve polygon child\n"));
-          return false;
-        }
-        break;
-      case ClarisDrawGraphInternal::Zone::T_Pict: {
-        if (!input->checkPosition(pos+4+sz)) {
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone for picture\n"));
-          return false;
-        }
-        ClarisDrawGraphInternal::ZonePict *pict=dynamic_cast<ClarisDrawGraphInternal::ZonePict *>(z.get());
-        f.str("");
-        f << "Entries(PictData):";
-        if (!pict) {
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: oops can not find the picture\n"));
-        }
-        else {
-          pict->m_entries[0].setBegin(pos+4);
-          pict->m_entries[0].setLength(sz);
-        }
-        if (sz)
-          ascFile.skipZone(pos+4, pos+4+sz-1);
-        ascFile.addPos(pos);
-        ascFile.addNote(f.str().c_str());
-        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-
-        pos = input->tell();
-        sz = (long) input->readULong(4);
-        if (!sz) {
-          ascFile.addPos(pos);
-          ascFile.addNote("_");
-          break;
-        }
-        if (!input->checkPosition(pos+4+sz)) {
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone2 for picture\n"));
-          return false;
-        }
-        if (pict) {
-          pict->m_entries[1].setBegin(pos+4);
-          pict->m_entries[1].setLength(sz);
-        }
-        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a zone2 for picture\n"));
-        ascFile.addPos(pos);
-        ascFile.addNote("PictData-B:###");
-        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-        break;
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone for type: %d\n",
+                      z->getSubType()));
+      return false;
+    }
+    f.str("");
+    f << "Entries(UnknownDATA)-" << z->getSubType();
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+    input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
+    if (numZoneExpected==2) {
+      pos = input->tell();
+      sz = (long) input->readULong(4);
+      if (sz) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: two zones is not implemented for zone: %d\n",
+                        z->getSubType()));
+        return false;
       }
-      case ClarisDrawGraphInternal::Zone::T_Line:
-      case ClarisDrawGraphInternal::Zone::T_Rect:
-      case ClarisDrawGraphInternal::Zone::T_RectOval:
-      case ClarisDrawGraphInternal::Zone::T_Oval:
-      case ClarisDrawGraphInternal::Zone::T_Arc:
-      case ClarisDrawGraphInternal::Zone::T_Zone:
-      case ClarisDrawGraphInternal::Zone::T_Shape:
-      case ClarisDrawGraphInternal::Zone::T_Unknown:
-      default:
-        parsed = false;
-        break;
-      }
-
-      if (!parsed) {
-        if (!input->checkPosition(pos+4+sz)) {
-          input->seek(pos, librevenge::RVNG_SEEK_SET);
-          MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: find a odd zone for type: %d\n",
-                          z->getSubType()));
-          return false;
-        }
-        f.str("");
-        f << "Entries(UnknownDATA)-" << z->getSubType();
-        ascFile.addPos(pos);
-        ascFile.addNote(f.str().c_str());
-        input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-        if (numZoneExpected==2) {
-          pos = input->tell();
-          sz = (long) input->readULong(4);
-          if (sz) {
-            input->seek(pos, librevenge::RVNG_SEEK_SET);
-            MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: two zones is not implemented for zone: %d\n",
-                            z->getSubType()));
-            return false;
-          }
-          ascFile.addPos(pos);
-          ascFile.addNote("NOP");
-        }
-      }
+      ascFile.addPos(pos);
+      ascFile.addNote("NOP");
     }
   }
 
@@ -1463,9 +1478,11 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
   if (numConnectors) {
     int n=(int) input->readULong(2);
     if (n>numConnectors+1) {
-      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexcepted connector data\n"));
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexpected connector data\n"));
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       n=0;
+      ascFile.addPos(pos);
+      ascFile.addNote("###");
     }
     else {
       f.str("");
@@ -1476,8 +1493,10 @@ bool ClarisDrawGraph::readGroupData(ClarisDrawGraphInternal::Group &group, long 
     for (int i=1; i<n; ++i) {
       pos=input->tell();
       if (!ClarisWksStruct::readStructZone(*m_parserState, "ConnectorDef", false)) {
-        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexcepted connector data\n"));
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupData: unexpected connector data\n"));
         input->seek(pos, librevenge::RVNG_SEEK_SET);
+        ascFile.addPos(pos);
+        ascFile.addNote("###");
         break;
       }
     }
@@ -2243,8 +2262,11 @@ bool ClarisDrawGraph::sendGroup(int number, MWAWPosition const &position)
           cStyle.m_shadowOffset=MWAWVec2i(3,3);
           cStyle.setShadowColor(MWAWColor(0x80,0x80,0x80));
         }
+        else if (cStyle.m_surfaceColor.isWhite()) // fixme: not normal, but often better
+          cStyle.m_surfaceOpacity=0;
         if (cZone->m_transformationId>=0 && cZone->m_transformationId<(int) m_state->m_transformations.size())
           cStyle.m_rotate=m_state->m_transformations[size_t(cZone->m_transformationId)].m_rotate;
+
         /* if we can link text frame, use:
         cZone->addFrameName(cStyle);
         shared_ptr<MWAWSubDocument> doc;
