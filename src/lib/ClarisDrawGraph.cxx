@@ -941,8 +941,8 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawGraph::readGroupZone
   // read the last part
   long data0Length = zone.m_dataSz;
   long N = zone.m_numData;
-  if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
-    if (data0Length == 0 && N) {
+  if (zone.m_headerSz<0 || data0Length<0 || entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
+    if (zone.m_headerSz<0 || data0Length<0 || (data0Length==0 && N) || 8+12+data0Length*N + zone.m_headerSz>entry.length()) {
       MWAW_DEBUG_MSG(("ClarisDrawGraph::readGroupZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
       return shared_ptr<ClarisWksStruct::DSET>();
@@ -1019,16 +1019,15 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawGraph::readBitmapZone(ClarisWksStruc
   // read the last part
   long data0Length = zone.m_dataSz;
   long N = zone.m_numData;
-  if (entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
-    if (data0Length == 0 && N) {
+  if (zone.m_headerSz<0 || data0Length<0 || entry.length() -8-12 != data0Length*N + zone.m_headerSz) {
+    if (zone.m_headerSz<0 || data0Length<0 || (data0Length==0 && N) || 8+12+data0Length*N + zone.m_headerSz>entry.length()) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraph::readBitmapZone: unexpected size for zone definition\n"));
+      f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
-
-      MWAW_DEBUG_MSG(("ClarisDrawGraph::readBitmapZone: can not find definition size\n"));
       input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
       return shared_ptr<ClarisWksStruct::DSET>();
     }
-
     MWAW_DEBUG_MSG(("ClarisDrawGraph::readBitmapZone: unexpected size for zone definition, try to continue\n"));
   }
 
@@ -2160,7 +2159,11 @@ bool ClarisDrawGraph::sendMainGroupChild(int childId, MWAWPosition const &positi
       break;
     case 1: {
       ClarisDrawGraphInternal::ZoneZone *cZone=dynamic_cast<ClarisDrawGraphInternal::ZoneZone *>(child.get());
-      if (cZone && cZone->isANote()) {
+      if (!cZone) {
+        MWAW_DEBUG_MSG(("ClarisDrawGraph::sendMainGroupChild: can not find text sub zone\n"));
+        break;
+      }
+      if (cZone->isANote()) {
         cStyle.m_lineWidth=1;
 
         MWAWBorder border;
@@ -2247,7 +2250,11 @@ bool ClarisDrawGraph::sendGroup(int number, MWAWPosition const &position)
         break;
       case 1: {
         ClarisDrawGraphInternal::ZoneZone *cZone=dynamic_cast<ClarisDrawGraphInternal::ZoneZone *>(child.get());
-        if (cZone && cZone->isANote()) {
+        if (!cZone) {
+          MWAW_DEBUG_MSG(("ClarisDrawGraph::sendGroup: can not find text sub zone\n"));
+          break;
+        }
+        if (cZone->isANote()) {
           cStyle.m_lineWidth=1;
 
           MWAWBorder border;

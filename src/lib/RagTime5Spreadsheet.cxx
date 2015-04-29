@@ -1600,7 +1600,7 @@ protected:
         val=(int) input->readULong(2);
         if (val) f << "f" << i+4 << "=" << val << ",";
       }
-      if (fSz==45) {
+      if (fSz==40) {
         for (int i=0; i<5; ++i) { // always 0
           val=(int) input->readULong(1);
           if (val) f << "f" << i+7 << "=" << val << ",";
@@ -1642,7 +1642,6 @@ protected:
         return true;
       }
       m_fieldName="content";
-      long expectedFileType1=-1;
       if (m_link.m_fieldSize==8) {
         // fileType2 probably defined the series
         m_link.m_name="ChartSerieDouble";
@@ -1655,10 +1654,6 @@ protected:
       else {
         MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseDataZone: find unknown link\n"));
         f << "###unknown,";
-      }
-      if (expectedFileType1>=0 && (m_link.m_fileType[1]&0xFFD7)!=expectedFileType1) {
-        MWAW_DEBUG_MSG(("RagTime5SpreadsheetInternal::ChartCParser::parseDataZone[settings]: find unexpected file type 1\n"));
-        f << "###fileType1=" << std::hex << m_link.m_fileType[1] << std::dec << ",";
       }
       f << m_link << "," << mess;
       val=(int) input->readULong(4);

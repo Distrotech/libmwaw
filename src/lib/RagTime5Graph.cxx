@@ -1047,6 +1047,7 @@ bool RagTime5Graph::readPicture(RagTime5Zone &zone)
     }
     extension="wmf";
     break;
+  // coverity[dead_error_line : FALSE]: intended, needed for avoiding compiler warning
   case RagTime5GraphInternal::State::P_Unknown:
   default:
     ok=false;
@@ -1558,6 +1559,7 @@ struct GraphicCParser : public RagTime5ClusterManager::ClusterParser {
       break;
     case 6:
       m_cluster->m_dimensionLinks.push_back(m_link);
+      break;
     default:
       if (m_what==0) {
         if (m_cluster->m_dataLink.empty())

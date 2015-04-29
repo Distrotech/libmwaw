@@ -1494,9 +1494,10 @@ bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
         linkZone=m_mainParser.getDataZone(cluster->m_clusterLink[i].m_ids[0]);
       if (!linkZone || (linkZone->m_entry.length()%12) ||
           linkZone->getKindLastPart(linkZone->m_kinds[1].empty())!="ItemData") {
-        MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readSpreadsheetCluster: the cluster2 zone seems bad\n"));
+        MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: the cluster2 zone seems bad\n"));
       }
-      cluster->m_clusterLink[i].m_N=int(linkZone->m_entry.length()/12);
+      else
+        cluster->m_clusterLink[i].m_N=int(linkZone->m_entry.length()/12);
       m_mainParser.readFixedSizeZone(cluster->m_clusterLink[i], linkParser);
     }
     m_mainParser.checkClusterList(linkParser.m_clusterList);

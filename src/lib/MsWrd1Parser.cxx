@@ -455,7 +455,8 @@ bool MsWrd1Parser::createZones()
   for (int z = 5; z >= 0; z--) {
     if (m_state->m_fileZonesLimit[z] == m_state->m_fileZonesLimit[z+1])
       continue;
-    if (!input->checkPosition(m_state->m_fileZonesLimit[z+1]*0x80)) {
+    if (!input->checkPosition(m_state->m_fileZonesLimit[z+1]*0x80) ||
+        m_state->m_fileZonesLimit[z] > m_state->m_fileZonesLimit[z+1]) {
       f.str("");
       f << "Entries(Zone" << z << "):###";
       MWAW_DEBUG_MSG(("MsWrd1Parser::createZones: zone %d is too long\n",z));

@@ -526,7 +526,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawText::readDSETZone(ClarisWksStruct::
   int const data0Length = 28;
 
   int N = int(zone.m_numData);
-  if (long(input->tell())+N*data0Length > entry.end()) {
+  if (data0Length<0 || N<0 || long(input->tell())+N*data0Length > entry.end()) {
     MWAW_DEBUG_MSG(("ClarisDrawText::readDSETZone: file is too short\n"));
     return shared_ptr<ClarisWksStruct::DSET>();
   }
@@ -588,6 +588,12 @@ shared_ptr<ClarisWksStruct::DSET> ClarisDrawText::readDSETZone(ClarisWksStruct::
   bool ok=true;
   for (int z = 0; z < 4+textZone->m_numTextZone; z++) {
     pos = input->tell();
+    if (input->isEnd()) {
+      MWAW_DEBUG_MSG(("ClarisDrawText::readDSETZone: can not find some zone\n"));
+      if (z > 4)
+        break;
+      return textZone;
+    }
     long sz = (long) input->readULong(4);
     if (!sz) {
       f.str("");
