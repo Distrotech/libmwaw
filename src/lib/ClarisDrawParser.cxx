@@ -346,7 +346,7 @@ bool ClarisDrawParser::readZone()
   std::string what("Unknown");
   if (fSz==0x44534554) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
-    return readDSET();
+    return readDSET().get()!=0;
   }
   else if (fSz==0x464e544d) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -560,7 +560,8 @@ bool ClarisDrawParser::readDocHeader()
     f << "colsS=[";
     for (int i = 0; i < numCols-1; i++) {
       val = (int) input->readULong(2);
-      f << input->readULong(2) << ",";
+      f << input->readULong(2);
+      if (val) f << ":" << val << ",";
     }
     f << "],";
   }
