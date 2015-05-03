@@ -201,9 +201,23 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-    else if (creator=="MDRW") {
+    else if (creator=="MACD") { // v2?
       if (type=="DRWG") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 2, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
+#ifdef DEBUG
+    else if (creator=="MD40") {
+      if (type=="MDDC") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 5, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
+#endif
+    else if (creator=="MDFT") {
+      if (type=="DRWG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
@@ -214,6 +228,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
       if (type=="STAT") { // stationery
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+    }
+    else if (creator=="MDRW") {
+      if (type=="DRWG") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
@@ -460,8 +480,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
 
   input->seek(0, librevenge::RVNG_SEEK_SET);
-  int val[4];
-  for (int i = 0; i < 4; i++)
+  int val[5];
+  for (int i = 0; i < 5; i++)
     val[i] = int(input->readULong(2));
 
   // ----------- clearly discriminant ------------------
@@ -580,8 +600,8 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
-#ifndef DEBUG
-  // we need the resource fork to find the colors, patterns, ... ; so...
+#ifdef DEBUG
+  // we need the resource fork to find the colors, patterns, ... ; so not active in normal mode
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
@@ -593,6 +613,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
 #endif
+  if (val[0]==2 && val[1]==0 && val[2]==2 && val[3]==0x262 && val[4]==0x262) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraft file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 1, MWAWDocument::MWAW_K_DRAW));
+    return res;
+  }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDK, 1));

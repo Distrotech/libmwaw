@@ -332,14 +332,20 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   }
-  else if (m_fInfoCreator=="MACD") {
-    checkFInfoType("DRWG","MacDraft") || checkFInfoType("MacDraft");
+  else if (m_fInfoCreator=="MACD") { // check version
+    checkFInfoType("DRWG","MacDraft 2.0") || checkFInfoType("MacDraft 2.0");
+  }
+  else if (m_fInfoCreator=="MD40") {
+    checkFInfoType("MDDC","MacDraft 5.0") || checkFInfoType("MacDraft 5.0");
   }
   else if (m_fInfoCreator=="MDsr") {
     checkFInfoType("APPL","MacDoc(appli)");
   }
   else if (m_fInfoCreator=="MDvr") {
     checkFInfoType("MDdc","MacDoc") || checkFInfoType("MacDoc");
+  }
+  else if (m_fInfoCreator=="MDFT") {
+    checkFInfoType("DRWG","MacDraft 1.0") || checkFInfoType("MacDraft 1.0");
   }
   else if (m_fInfoCreator=="MDRW") {
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
@@ -581,6 +587,10 @@ bool File::readDataInformation()
   }
   if (val[0]==6 && val[1]==0x4d4f && val[2]==0x5233 && val[3]==0x80) {
     m_dataResult.push_back("More 3");
+    return true;
+  }
+  if (val[0]==2 && val[1]==0 && val[2]==2 && val[3]==0x262 && val[4]==0x262) {
+    m_dataResult.push_back("MacDraft");
     return true;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {

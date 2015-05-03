@@ -122,6 +122,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	LightWayTxtText.hxx		\
 	MacDocParser.cxx		\
 	MacDocParser.hxx		\
+	MacDraftParser.cxx		\
+	MacDraftParser.hxx		\
 	MacDrawParser.cxx		\
 	MacDrawParser.hxx		\
 	MacDrawProParser.cxx		\
