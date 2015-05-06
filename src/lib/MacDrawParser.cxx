@@ -657,13 +657,23 @@ int MacDrawParser::readObject()
         fileAngle[1]*=-1;
       }
       int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
-      while (angle[1] > 360) {
-        angle[0]-=360;
-        angle[1]-=360;
+      if (angle[1]>360) {
+        int numLoop=int(angle[1]/360)-1;
+        angle[0]-=numLoop*360;
+        angle[1]-=numLoop*360;
+        while (angle[1] > 360) {
+          angle[0]-=360;
+          angle[1]-=360;
+        }
       }
-      while (angle[0] < -360) {
-        angle[0]+=360;
-        angle[1]+=360;
+      if (angle[0] < -360) {
+        int numLoop=int(angle[0]/360)+1;
+        angle[0]-=numLoop*360;
+        angle[1]-=numLoop*360;
+        while (angle[0] < -360) {
+          angle[0]+=360;
+          angle[1]+=360;
+        }
       }
 
       MWAWVec2f axis = 0.5*MWAWVec2f(box.size());

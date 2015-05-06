@@ -301,10 +301,11 @@ bool RagTimeText::readFontNames(MWAWEntry &entry)
       f << "###";
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
+      continue;
     }
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     std::string name("");
-    long nextPos=(pIt==posSet.end()) ? endPos : *pIt;
+    long nextPos=*pIt;
     while (!input->isEnd() && input->tell()<nextPos) {
       char c=(char) input->readULong(1);
       if (c=='\0') break;
