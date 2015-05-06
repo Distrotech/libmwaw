@@ -100,8 +100,6 @@ protected:
 
   //! try to send a shape
   bool send(MacDraftParserInternal::Shape const &shape);
-  //! try to send a bitmap to the listener
-  bool sendBitmap(MacDraftParserInternal::Shape const &shape, MWAWPosition const &pos);
   //! try to send a text zone to the listener
   bool sendText(int zoneId);
 
