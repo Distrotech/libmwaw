@@ -332,8 +332,8 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="MACA") {
     checkFInfoType("WORD","MacWrite") || checkFInfoType("MacWrite");
   }
-  else if (m_fInfoCreator=="MACD") { // check version
-    checkFInfoType("DRWG","MacDraft 2.0") || checkFInfoType("MacDraft 2.0");
+  else if (m_fInfoCreator=="MACD") {
+    checkFInfoType("DRWG","MacDraft 1.0") || checkFInfoType("MacDraft 1.0");
   }
   else if (m_fInfoCreator=="MD40") {
     checkFInfoType("MDDC","MacDraft 5.0") || checkFInfoType("MacDraft 5.0");
@@ -345,7 +345,7 @@ bool File::readFileInformation()
     checkFInfoType("MDdc","MacDoc") || checkFInfoType("MacDoc");
   }
   else if (m_fInfoCreator=="MDFT") {
-    checkFInfoType("DRWG","MacDraft 1.0") || checkFInfoType("MacDraft 1.0");
+    checkFInfoType("DRWG","MacDraft 1.2") || checkFInfoType("MacDraft 1.2");
   }
   else if (m_fInfoCreator=="MDRW") {
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");

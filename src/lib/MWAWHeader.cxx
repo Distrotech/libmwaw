@@ -201,9 +201,9 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-    else if (creator=="MACD") { // v2?
+    else if (creator=="MACD") { // v1.0
       if (type=="DRWG") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 2, MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
@@ -215,7 +215,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       }
     }
 #endif
-    else if (creator=="MDFT") {
+    else if (creator=="MDFT") { // v1.2
       if (type=="DRWG") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 1, MWAWDocument::MWAW_K_DRAW));
         return res;

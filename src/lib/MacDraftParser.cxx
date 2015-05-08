@@ -61,8 +61,8 @@ struct Shape {
   enum Type { Basic, Group, Label, Text, Unknown };
 
   //! constructor
-  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1),
-    m_font(), m_paragraph(), m_textEntry(), m_childList(), m_isSent(false)
+  Shape() : m_type(Unknown), m_box(), m_origin(), m_style(), m_patternId(-1), m_shape(), m_isLine(false), m_id(-1), m_nextId(-1),
+    m_font(), m_paragraph(), m_textEntry(), m_labelWidth(0), m_childList(), m_isSent(false)
   {
   }
 
@@ -71,14 +71,77 @@ struct Shape {
   {
     return m_type==Basic ? m_shape.getBdBox() : m_box;
   }
+  //! translate a shape
+  void translate(MWAWVec2f const &dir)
+  {
+    if (m_type==Basic)
+      m_shape.translate(dir);
+    m_box=MWAWBox2f(m_box[0]+dir, m_box[1]+dir);
+    m_origin=m_origin+dir;
+  }
+  //! transform a shape
+  void transform(float rotate, bool flipX, MWAWVec2f const &center)
+  {
+    if (rotate<0 || rotate>0) {
+      if (m_type==Basic) {
+        m_shape=m_shape.rotate(rotate, center);
+        m_box=m_shape.getBdBox();
+      }
+      else {
+        if (m_type==Text) // the textbox is the rotated textbox, so first compute the normal box
+          m_box=rotateBox(m_box, -m_style.m_rotate*float(M_PI/180.), m_box.center());
+        if (m_type!=Label) // the label seems always horizontal
+          m_style.m_rotate+=rotate;
+        float angle=rotate*float(M_PI/180.);
+        m_box=rotateBox(m_box, angle, center);
+        MWAWVec2f decal=center-MWAWVec2f(std::cos(angle)*center[0]-std::sin(angle)*center[1],
+                                         std::sin(angle)*center[0]+std::cos(angle)*center[1]);
+        m_origin=MWAWVec2f(std::cos(angle)*m_origin[0]-std::sin(angle)*m_origin[1],
+                           std::sin(angle)*m_origin[0]+std::cos(angle)*m_origin[1])+decal;
+        if (m_type==Text) // now, we can compute the final rotated textbox
+          m_box=rotateBox(m_box, m_style.m_rotate*float(M_PI/180.), m_box.center());
+      }
+    }
+    if (flipX) {
+      if (m_type==Basic) {
+        m_shape.scale(MWAWVec2f(-1,1));
+        m_shape.translate(MWAWVec2f(2*center[0],0));
+      }
+      m_style.m_flip[0]=!m_style.m_flip[0];
+      m_box=MWAWBox2f(MWAWVec2f(2*center[0]-m_box[1][0],m_box[0][1]), MWAWVec2f(2*center[0]-m_box[0][0],m_box[1][1]));
+      m_origin=MWAWVec2f(2*center[0]-m_origin[0],m_origin[1]);
+    }
+  }
+  //! returns the rotation of a box
+  static MWAWBox2f rotateBox(MWAWBox2f const &box, float angle, MWAWVec2f const &center)
+  {
+    MWAWVec2f decal=center-MWAWVec2f(std::cos(angle)*center[0]-std::sin(angle)*center[1],
+                                     std::sin(angle)*center[0]+std::cos(angle)*center[1]);
+    MWAWBox2f fBox;
+    for (int i=0; i < 4; ++i) {
+      MWAWVec2f pt=MWAWVec2f(box[i%2][0],box[i/2][1]);
+      pt = MWAWVec2f(std::cos(angle)*pt[0]-std::sin(angle)*pt[1],
+                     std::sin(angle)*pt[0]+std::cos(angle)*pt[1])+decal;
+      if (i==0) fBox=MWAWBox2f(pt,pt);
+      else fBox=fBox.getUnion(MWAWBox2f(pt,pt));
+    }
+
+    return fBox;
+  }
   //! the graphic type
   Type m_type;
   //! the shape bdbox
   MWAWBox2f m_box;
+  //! the shape origin
+  MWAWVec2f m_origin;
   //! the graphic style
   MWAWGraphicStyle m_style;
+  //! the pattern id
+  int m_patternId;
   //! the graphic shape ( for basic geometric form )
   MWAWGraphicShape m_shape;
+  //! flag to know if the shape is a line
+  bool m_isLine;
   //! the shape id
   int m_id;
   //! the following id (if set)
@@ -89,6 +152,8 @@ struct Shape {
   MWAWParagraph m_paragraph;
   //! the textbox entry (main text)
   MWAWEntry m_textEntry;
+  //! the 1D label width in point
+  float m_labelWidth;
   //! the child list ( for a group )
   std::vector<size_t> m_childList;
   //! a flag used to know if the object is sent to the listener or not
@@ -302,11 +367,28 @@ bool MacDraftParser::createZones()
   if (!readDocHeader())
     return false;
   MWAWInputStreamPtr input = getInput();
+
+  // first the list of patterns (often empty)
+  while (readPattern()) {
+  }
+  long pos=input->tell();
+  long fSz=(long) input->readULong(2);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("Patterns[end]:");
+  }
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: can not find end patterns zone\n"));
+    ascii().addPos(pos);
+    ascii().addNote("###");
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+  }
+
   while (readObject()) {
   }
   while (!input->isEnd()) {
-    long pos=input->tell();
-    long fSz=(long) input->readULong(2);
+    pos=input->tell();
+    fSz=(long) input->readULong(2);
     if (!input->checkPosition(pos+2+fSz)) {
       input->seek(pos,librevenge::RVNG_SEEK_SET);
       break;
@@ -365,53 +447,11 @@ bool MacDraftParser::readObject()
     val=(int) input->readULong(4);
     if (val) f << "id" << i << "=" << std::hex << val << std::dec << ",";
   }
+  size_t shapeId= m_state->m_shapeList.size();
   MacDraftParserInternal::Shape shape;
+  shape.m_id=(int) shapeId;
+  shape.m_nextId=shape.m_id+1; // default value
   unsigned long flag=input->readULong(4);
-#if 0
-  int type=(flag>>26)&0x1f;
-  switch (type) { // checkme
-  case 0:
-    f << "poly,";
-    break;
-  case 1: // checkme
-    f << "circle1,";
-    break;
-  case 3:
-    f << "textbox,";
-    break;
-  case 5:
-    f << "rectangle,";
-    break;
-  case 6:
-    f << "rectOval,";
-    break;
-  case 7:
-    f << "ellipse,";
-    break;
-  case 10:
-    f << "circle,";
-    break;
-  case 12:
-    f << "pie,";
-    break;
-  case 14:
-    f << "line/poly,";
-    break;
-  case 16:
-    f << "group,";
-    break;
-  case 17:
-    f << "line[h],";
-    break;
-  case 18:
-    f << "line[v],";
-    break;
-  default:
-    MWAW_DEBUG_MSG(("MacDraftParser::readObject: find unknown type\n"));
-    f << "###type=" << type << ",";
-    break;
-  }
-#endif
   switch ((flag>>3)&7) {
   case 0:
     break;
@@ -446,19 +486,9 @@ bool MacDraftParser::readObject()
   default:
     f << "line[pos]=##3,";
   }
-  if ((flag>>11)&0x3f) {
-    f << "pat=" << ((flag>>11)&0x3f) << ",";
-    MWAWGraphicStyle::Pattern pat;
-    if (m_state->getPattern((flag>>11)&0x3f, pat)) {
-      MWAWColor col;
-      if (pat.getUniqueColor(col))
-        shape.m_style.setSurfaceColor(col);
-      else
-        shape.m_style.m_pattern=pat;
-    }
-    else
-      f << "###surf[pat],";
-  }
+  shape.m_patternId=(flag>>11)&0x3f;
+  if (shape.m_patternId)
+    f << "pat=" << shape.m_patternId << ",";
   else
     shape.m_style.m_surfaceOpacity=0;
   if (flag&0x40) {
@@ -466,7 +496,7 @@ bool MacDraftParser::readObject()
     f << "hairline,";
   }
   else {
-    shape.m_style.m_lineWidth=((flag>>23)&7)+1;
+    shape.m_style.m_lineWidth=float((flag>>23)&7)+1;
     f << "width=" << ((flag>>23)&7)+1 << ",";
   }
   if (flag&0x80000000)
@@ -482,12 +512,17 @@ bool MacDraftParser::readObject()
   if (val) f << "fl1=" << std::hex << val << std::dec << ",";
 
   val=(int) input->readULong(2);
-  if (val&0xf000) {
-    f << "rot[h]=" << (val>>12) << ",";
-    val &=0x0fff;
+  bool flipX=false;
+  float rotate=0;
+  if (val&0xfc00)
+    f << "rot[h]=" << std::hex << (val>>10) << std::dec << ",";
+  if (val&0x200) {
+    flipX=true;
+    f << "flipX,";
   }
+  val &=0x1ff;
   if (val) {
-    shape.m_style.m_rotate=float(val);
+    rotate=float(val);
     f << "rot=" << val << ",";
   }
   float dim[4];
@@ -495,20 +530,18 @@ bool MacDraftParser::readObject()
   shape.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
   f << "dim=" << shape.m_box << ",";
   for (int i=0; i<2; ++i) dim[i]=float(input->readLong(2))/8.f;
-  MWAWVec2f orig(dim[1],dim[0]);
-  f << "orig=" << orig << ",";
+  MWAWVec2f origin=MWAWVec2f(dim[1],dim[0]);
+  f << "orig=" << origin << ",";
   switch (fSz) {
   case 0x28:
   case 0x2c:
   case 0x30:
   case 0x38: {
     shape.m_type=MacDraftParserInternal::Shape::Basic;
-    for (int i=0; i<2; ++i) { // 0
-      val=(int) input->readULong(2);
-      if (val) f << "f" << i << "=" << std::hex << val << std::dec << ",";
-    }
+    val=(int) input->readULong(4);
+    if (val) f << "id?=" << std::hex << val << std::dec << ",";
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
-    MWAWBox2f box(orig+MWAWVec2f(dim[1],dim[0]), orig+MWAWVec2f(dim[3],dim[2]));
+    MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     f << "dim1=" << box << ",";
     if (fSz==0x28) {
       if (flag&0x8000000) {
@@ -589,7 +622,7 @@ bool MacDraftParser::readObject()
       MWAWBox2f realBox(MWAWVec2f(center[0]+minVal[0],center[1]+minVal[1]),
                         MWAWVec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
       shape.m_box=MWAWBox2f(MWAWVec2f(shape.m_box[0])+realBox[0],MWAWVec2f(shape.m_box[0])+realBox[1]);
-      if (shape.m_style.hasSurface())
+      if (shape.m_patternId!=0)
         shape.m_shape = MWAWGraphicShape::pie(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
       else
         shape.m_shape = MWAWGraphicShape::arc(realBox, box, MWAWVec2f(float(angle[0]),float(angle[1])));
@@ -603,9 +636,45 @@ bool MacDraftParser::readObject()
     }
     for (int i=0; i<2; ++i) dim[i]=float(input->readLong(2))/8.f;
     if (fSz==0x2c)
-      shape.m_shape.m_cornerWidth=MWAWVec2f(dim[1],dim[0]);
+      shape.m_shape.m_cornerWidth=MWAWVec2f(dim[1]/2.f,dim[0]/2.f);
     f << "corner=" << MWAWVec2f(dim[1],dim[0]) << ",";
-    break;
+    if (shape.m_type!=MacDraftParserInternal::Shape::Group)
+      break;
+    if (input->tell()!=endPos)
+      ascii().addDelimiter(input->tell(),'|');
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(endPos,librevenge::RVNG_SEEK_SET);
+
+    m_state->m_shapeList.push_back(shape);
+    while (!input->isEnd()) {
+      pos=input->tell();
+      if (input->readULong(2)==0) {
+        ascii().addPos(pos);
+        ascii().addNote("Object[endGroup]");
+        break;
+      }
+      input->seek(pos, librevenge::RVNG_SEEK_SET);
+      size_t cId=m_state->m_shapeList.size();
+      if (!readObject()) {
+        MWAW_DEBUG_MSG(("MacDraftParser::readObject: can not find end of group\n"));
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      m_state->m_shapeList[shapeId].m_childList.push_back(size_t(cId));
+    }
+    m_state->m_shapeList[shapeId].m_nextId=(int) m_state->m_shapeList.size();
+    // times to apply transformation on child
+    if (origin!=MWAWVec2f(0,0)) {
+      for (int i=m_state->m_shapeList[shapeId].m_id+1; i<m_state->m_shapeList[shapeId].m_nextId; ++i)
+        m_state->m_shapeList[size_t(i)].translate(origin);
+    }
+    if (rotate<0 || rotate>0 || flipX) {
+      MWAWVec2f center=origin+box.center();
+      for (int i=m_state->m_shapeList[shapeId].m_id+1; i<m_state->m_shapeList[shapeId].m_nextId; ++i)
+        m_state->m_shapeList[size_t(i)].transform(rotate,flipX,center);
+    }
+    return true;
   }
   case 0x32: {
     f << "line,";
@@ -622,10 +691,11 @@ bool MacDraftParser::readObject()
     if (val != 1)
       f << "f2=" << val << ",";
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
-    MWAWBox2f box(orig+MWAWVec2f(dim[1],dim[0]), orig+MWAWVec2f(dim[3],dim[2]));
+    MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
     f << "line=" << box << ",";
     shape.m_type=MacDraftParserInternal::Shape::Basic;
     shape.m_shape=MWAWGraphicShape::line(box[0], box[1]);
+    shape.m_isLine=true;
     break;
   }
   default: {
@@ -640,7 +710,7 @@ bool MacDraftParser::readObject()
           f << "f" << i << "=" << val << ",";
       }
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
-      MWAWBox2f box(orig+MWAWVec2f(dim[1],dim[0]), orig+MWAWVec2f(dim[3],dim[2]));
+      MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
       shape.m_box=box;
       f << "box=" << box << ",";
       f << "unkn=[";
@@ -750,28 +820,35 @@ bool MacDraftParser::readObject()
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
     int N=(int) input->readULong(2);
     if (N*4+46==fSz) {
-      MWAWBox2f box(orig+MWAWVec2f(dim[1],dim[0]), orig+MWAWVec2f(dim[3],dim[2]));
-      f << "poly, box=" << box << ",";
+      f << "poly, box=" << MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2])) << ",";
       shape.m_type=MacDraftParserInternal::Shape::Basic;
       shape.m_shape.m_type = MWAWGraphicShape::Polygon;
-      shape.m_shape.m_bdBox=box;
       std::vector<MWAWVec2f> &vertices=shape.m_shape.m_vertices;
+      MWAWBox2f box;
       f << "pts=[";
       for (int i=0; i<N; ++i) {
         for (int j=0; j<2; ++j) dim[j]=float(input->readLong(2))/8.f;
-        MWAWVec2f point(dim[1],dim[0]);
-        vertices.push_back(orig+point);
+        MWAWVec2f point=MWAWVec2f(dim[1],dim[0]);
+        vertices.push_back(point);
+        if (i==0)
+          box=MWAWBox2f(point, point);
+        else
+          box=box.getUnion(MWAWBox2f(point, point));
         f << point << ",";
       }
+      shape.m_shape.m_bdBox=shape.m_shape.m_formBox=box;
       f << "],";
       break;
     }
     input->seek(-10, librevenge::RVNG_SEEK_CUR);
-    f << "UNKN,";
+    // happens in a converted file: a quite horrible file
+    MWAW_DEBUG_MSG(("MacDraftParser::readObject: find unknown data\n"));
+    f << "UNKN###,";
     break;
   }
   }
-  shape.m_id=(int) m_state->m_shapeList.size();
+  shape.transform(rotate, flipX, shape.getBdBox().center());
+  shape.translate(origin);
   m_state->m_shapeList.push_back(shape);
   if (input->tell()!=endPos)
     ascii().addDelimiter(input->tell(),'|');
@@ -800,8 +877,15 @@ bool MacDraftParser::readPattern()
   f << "Entries(Pattern):";
   long val=(long) input->readULong(4);
   if (val) f << "id=" << std::hex << val << std::dec << ",";
-  val=(long) input->readULong(2); // 4|8|18|f0
-  if (val) f << "fl=" << std::hex << val << std::dec << ",";
+  int id=(int) input->readULong(2);
+  if (id==0xf0)
+    f << "default,";
+  else if (id<64)
+    f << "id=" << id << ",";
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::readPattern: find odd id\n"));
+    f << "##id=" << id << ",";
+  }
   val=(long) input->readULong(4);
   if (val) f << "id[prev?]=" << std::hex << val << std::dec << ",";
   for (int i=0; i<2; ++i) { //3,3 | 4,4 | 5,5
@@ -815,15 +899,14 @@ bool MacDraftParser::readPattern()
   pat.m_colors[1]=MWAWColor::black();
 
   for (size_t i=0; i<8; ++i) pat.m_data[i]=uint8_t(input->readULong(1));
-  f << pat << ",";
-  f << "unkn=[";
-  for (int i=0; i<4; ++i) { // either a series of 0 or -1
-    val=input->readLong(2);
-    if (val==-1) f << "*,";
-    else if (val==0) f << "_,";
-    else f << val << ",";
+  f << "orig=" << pat << ",";
+  for (size_t i=0; i<8; ++i) pat.m_data[i]=uint8_t(input->readULong(1));
+  f << "final=" << pat << ",";
+  if (id>=0 && id<64) {
+    m_state->initPatterns();
+    if (id<(int) m_state->m_patternList.size())
+      m_state->m_patternList[size_t(id)]=pat;
   }
-  f << "],";
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
@@ -844,6 +927,13 @@ bool MacDraftParser::readLabel()
     input->seek(pos,librevenge::RVNG_SEEK_SET);
     return false;
   }
+  size_t shapeId= m_state->m_shapeList.size();
+  MacDraftParserInternal::Shape shape;
+  shape.m_id=(int) shapeId;
+  shape.m_nextId=shape.m_id+1;
+  shape.m_type=MacDraftParserInternal::Shape::Label;
+  shape.m_style.m_lineWidth=0;
+  shape.m_style.setSurfaceColor(MWAWColor::white());
   libmwaw::DebugStream f;
   f << "Entries(Label):";
   int val;
@@ -852,42 +942,48 @@ bool MacDraftParser::readLabel()
     if (val) f << "id" << i << "=" << std::hex << val << std::dec << ",";
   }
   unsigned long flag=input->readULong(4);
-  flag &= 0x7ffffff;
-
-  f << "font[sz]=" << (flag & 0x7F) << ",";
-  f << "font[id]=" << ((flag>>8) & 0xFF) << ",";
-  if (flag&0x1000000) f << "b:";
-  if (flag&0x2000000) f << "it:";
-  if (flag&0x4000000) f << "underline:";
-  if (flag&0x8000000) f << "emboss:";
-  if (flag&0x10000000) f << "shadow:";
-  if (flag&0x80000000) f << "select,";
-  flag &= 0x7E0FF0080;
+  MWAWFont &font=shape.m_font;
+  if ((flag & 0x7F))
+    font.setSize(float(flag & 0x7F));
+  font.setId((flag>>8) & 0xFF);
+  uint32_t flags=0;
+  if (flag&0x1000000) flags |= MWAWFont::boldBit;
+  if (flag&0x2000000) flags |= MWAWFont::italicBit;
+  if (flag&0x4000000) font.setUnderlineStyle(MWAWFont::Line::Simple);
+  if (flag&0x8000000) flags |= MWAWFont::embossBit;
+  if (flag&0x10000000) flags |= MWAWFont::shadowBit;
+  if (flag&(unsigned long)(0x80000000)) f << "select,";
+  flag &= (unsigned long)(0x60FF0080);
   if (flag>>16) f << "fl0[h]=" << std::hex << (flag>>16) << std::dec << ",";
   if (flag&0xFFFF) f << "fl0[l]=" << std::hex << (flag&0xFFFF) << std::dec << ",";
 
   flag=input->readULong(4);
   switch (flag&3) {
   case 1:
-    f << "upper,";
+    flags |= MWAWFont::allCapsBit;
     break;
   case 2:
-    f << "lower,";
+    flags |= MWAWFont::lowercaseBit;
     break;
   case 3:
     f << "title,";
+    flags |= MWAWFont::smallCapsBit;
     break;
   case 0:
   default:
     break;
   }
+  font.setFlags(flags);
+  f << "font=[" << font.getDebugString(getParserState()->m_fontConverter) << "],";
   switch ((flag>>8)&3) {
   case 0:
     break;
   case 1:
+    shape.m_paragraph.setInterline(1.5, librevenge::RVNG_PERCENT);
     f << "interline=150%,";
     break;
   case 2:
+    shape.m_paragraph.setInterline(200, librevenge::RVNG_PERCENT);
     f << "interline=200%,";
     break;
   default:
@@ -899,9 +995,11 @@ bool MacDraftParser::readLabel()
   case 0:
     break;
   case 0xff:
+    shape.m_paragraph.m_justify = MWAWParagraph::JustificationRight;
     f << "right,";
     break;
   case 1:
+    shape.m_paragraph.m_justify = MWAWParagraph::JustificationCenter;
     f << "center,";
     break;
   default:
@@ -916,10 +1014,12 @@ bool MacDraftParser::readLabel()
 
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
-  f << MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2])) << ",";
+  shape.m_box=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
+  f << shape.m_box << ",";
   val=(int) input->readULong(2);
   if (val!=0x204)
     f << "fl2=" << std::hex << val << std::dec << ",";
+  m_state->m_shapeList.push_back(shape);
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
@@ -1179,9 +1279,24 @@ bool MacDraftParser::send(MacDraftParserInternal::Shape const &shape)
   MWAWBox2f box=shape.getBdBox();
   MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
   pos.m_anchorTo = MWAWPosition::Page;
+
+  MWAWGraphicStyle style=shape.m_style;
+  if (shape.m_patternId>0) {
+    MWAWGraphicStyle::Pattern pat;
+    if (m_state->getPattern(shape.m_patternId, pat)) {
+      MWAWColor col;
+      if (pat.getUniqueColor(col))
+        style.setSurfaceColor(col);
+      else
+        style.m_pattern=pat;
+    }
+    else {
+      MWAW_DEBUG_MSG(("MacDraftParser::send: can not find pattern %d\n", shape.m_patternId));
+    }
+  }
   switch (shape.m_type) {
   case MacDraftParserInternal::Shape::Basic:
-    listener->insertPicture(pos, shape.m_shape, shape.m_style);
+    listener->insertPicture(pos, shape.m_shape, style);
     break;
   case MacDraftParserInternal::Shape::Group: {
     size_t numShapes=m_state->m_shapeList.size();
@@ -1202,10 +1317,32 @@ bool MacDraftParser::send(MacDraftParserInternal::Shape const &shape)
     listener->closeGroup();
     break;
   }
-  case MacDraftParserInternal::Shape::Label:
+  case MacDraftParserInternal::Shape::Label: {
+    /* either a 1d label or a 2d label, so check if we can print it,
+       ie. if the previous object is a line
+     */
+    if (shape.m_id<=0 || shape.m_id>=(int) m_state->m_shapeList.size()) {
+      MWAW_DEBUG_MSG(("MacDraftParser::send: problem finding the shape\n"));
+      break;
+    }
+    MacDraftParserInternal::Shape const &obj=m_state->m_shapeList[size_t(shape.m_id-1)];
+    if (obj.m_type!=MacDraftParserInternal::Shape::Basic || !obj.m_isLine) {
+      MWAW_DEBUG_MSG(("MacDraftParser::send: can only retrieve line label\n"));
+      break;
+    }
+    // update the label width and recenter the label box
+    MWAWVec2f lineSz=obj.m_shape.getBdBox().size();
+    MacDraftParserInternal::Shape &label=m_state->m_shapeList[size_t(shape.m_id)];
+    label.m_labelWidth=std::sqrt(lineSz[0]*lineSz[0]+lineSz[1]*lineSz[1]);
+    MWAWVec2f decal=obj.m_shape.getBdBox().center()-box.center();
+    pos.setOrigin(box[0]+decal);
+    shared_ptr<MWAWSubDocument> doc(new MacDraftParserInternal::SubDocument(*this, getInput(), shape.m_id));
+    listener->insertTextBox(pos, doc, style);
+    return true;
+  }
   case MacDraftParserInternal::Shape::Text: {
     shared_ptr<MWAWSubDocument> doc(new MacDraftParserInternal::SubDocument(*this, getInput(), shape.m_id));
-    listener->insertTextBox(pos, doc, shape.m_style);
+    listener->insertTextBox(pos, doc, style);
     return true;
   }
   case MacDraftParserInternal::Shape::Unknown:
@@ -1222,19 +1359,27 @@ bool MacDraftParser::sendText(int zId)
     MWAW_DEBUG_MSG(("MacDraftParser::sendText: can not find the listener\n"));
     return false;
   }
-  if (zId<0||zId>=(int) m_state->m_shapeList.size() ||
-      m_state->m_shapeList[size_t(zId)].m_type != MacDraftParserInternal::Shape::Text) {
+  if (zId<0||zId>=(int) m_state->m_shapeList.size()) {
     MWAW_DEBUG_MSG(("MacDraftParser::sendText: can not find the text shape\n"));
     return false;
   }
   MacDraftParserInternal::Shape const &shape=m_state->m_shapeList[size_t(zId)];
   shape.m_isSent = true;
-  if (!shape.m_textEntry.valid())
-    return true;
 
   listener->setParagraph(shape.m_paragraph);
   listener->setFont(shape.m_font);
-
+  if (shape.m_type == MacDraftParserInternal::Shape::Label) {
+    std::stringstream s;
+    s << std::setprecision(0) << std::fixed << shape.m_labelWidth << " pt";
+    listener->insertUnicodeString(s.str().c_str());
+    return true;
+  }
+  if (shape.m_type != MacDraftParserInternal::Shape::Text) {
+    MWAW_DEBUG_MSG(("MacDraftParser::sendText: can not find the text shape\n"));
+    return false;
+  }
+  if (!shape.m_textEntry.valid())
+    return true;
   MWAWInputStreamPtr input=getInput();
   input->seek(shape.m_textEntry.begin(), librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
