@@ -1,5 +1,8 @@
 CHANGES:
 
+5/10/2015:
+- add a parser for MacDraft v1 Document
+
 4/29/2015:
 - add a parser for ClarisDraw Document
 

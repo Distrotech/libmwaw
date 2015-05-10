@@ -89,6 +89,12 @@ protected:
   bool readLabel();
   //! try to read a pattern
   bool readPattern();
+  //! try to read bitmap definition
+  bool readBitmapDefinition(MacDraftParserInternal::Shape &bitmap);
+  //! try to read bitmap data
+  bool readBitmapData();
+  //! try to a unknown zone
+  bool readZone();
   //! try to read the print info zone
   bool readPrintInfo();
   //! try to the doc header zone ( mainly unknown )
@@ -100,6 +106,8 @@ protected:
 
   //! try to send a shape
   bool send(MacDraftParserInternal::Shape const &shape);
+  //! try to send a bitmap
+  bool sendBitmap(MacDraftParserInternal::Shape const &bitmap, MWAWPosition const &position);
   //! try to send a text zone to the listener
   bool sendText(int zoneId);
 

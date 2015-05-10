@@ -55,14 +55,38 @@
 /** Internal: the structures of a MacDraftParser */
 namespace MacDraftParserInternal
 {
-// generic class used to store shape in MWAWDraftParser
+//! low level: bitmap file position in a MacDraft file
+struct BitmapFileData {
+  //! constructor
+  BitmapFileData() : m_id(0), m_rowSize(0), m_dimension(), m_entry()
+  {
+  }
+  //! check is the entry is coherent
+  bool ok() const
+  {
+    return m_dimension.size()[0]>=0 && m_dimension.size()[1]>=0 &&
+           m_rowSize>=0 && m_rowSize*8>=m_dimension.size()[1] &&
+           m_rowSize*m_dimension.size()[1]<=m_entry.length();
+  }
+  //! the bitmap id
+  unsigned long m_id;
+  //! the row size
+  int m_rowSize;
+  //! the bitmap dimension
+  MWAWBox2i m_dimension;
+  //! the data position
+  MWAWEntry m_entry;
+};
+
+//! generic class used to store shape in MWAWDraftParser
 struct Shape {
   //! the different shape
-  enum Type { Basic, Group, Label, Text, Unknown };
+  enum Type { Basic, Bitmap, Group, Label, Text, Unknown };
 
   //! constructor
   Shape() : m_type(Unknown), m_box(), m_origin(), m_style(), m_patternId(-1), m_shape(), m_isLine(false), m_id(-1), m_nextId(-1),
-    m_font(), m_paragraph(), m_textEntry(), m_labelWidth(0), m_childList(), m_isSent(false)
+    m_font(), m_paragraph(), m_textEntry(), m_labelWidth(0), m_childList(),
+    m_bitmapIdList(), m_bitmapDimensionList(), m_isSent(false)
   {
   }
 
@@ -156,6 +180,10 @@ struct Shape {
   float m_labelWidth;
   //! the child list ( for a group )
   std::vector<size_t> m_childList;
+  //! the list of bitmap id ( for a bitmap)
+  std::vector<unsigned long> m_bitmapIdList;
+  //! the list of bitmap dimension ( for a bitmap)
+  std::vector<MWAWBox2i> m_bitmapDimensionList;
   //! a flag used to know if the object is sent to the listener or not
   mutable bool m_isSent;
 };
@@ -164,7 +192,7 @@ struct Shape {
 //! Internal: the state of a MacDraftParser
 struct State {
   //! constructor
-  State() : m_version(0), m_patternList(), m_shapeList()
+  State() : m_version(0), m_patternList(), m_shapeList(), m_idToBitmapMap()
   {
   }
   //! returns a pattern if posible
@@ -187,6 +215,8 @@ struct State {
   std::vector<MWAWGraphicStyle::Pattern> m_patternList;
   //! the shapes list
   std::vector<Shape> m_shapeList;
+  //! map id to bitmap file data
+  std::map<unsigned long, BitmapFileData> m_idToBitmapMap;
 };
 
 void State::initPatterns()
@@ -383,32 +413,155 @@ bool MacDraftParser::createZones()
     ascii().addNote("###");
     input->seek(pos,librevenge::RVNG_SEEK_SET);
   }
-
-  while (readObject()) {
-  }
-  while (!input->isEnd()) {
+  // bitmap data
+  if (m_state->m_version==1) {
+    while (readBitmapData()) {
+    }
     pos=input->tell();
     fSz=(long) input->readULong(2);
-    if (!input->checkPosition(pos+2+fSz)) {
-      input->seek(pos,librevenge::RVNG_SEEK_SET);
-      break;
-    }
     if (fSz==0) {
       ascii().addPos(pos);
-      ascii().addNote("_");
+      ascii().addNote("BitmapData[end]:");
     }
     else {
+      MWAW_DEBUG_MSG(("MacDraftParser::createZones: can not find end bitmap data zone\n"));
       ascii().addPos(pos);
-      ascii().addNote("Entries(UnknZone):");
-      input->seek(pos+2+fSz,librevenge::RVNG_SEEK_SET);
+      ascii().addNote("###");
+      input->seek(pos,librevenge::RVNG_SEEK_SET);
     }
   }
-  if (!input->isEnd()) {
-    MWAW_DEBUG_MSG(("MacDraftParser::createZones: find extra data\n"));
-    ascii().addPos(input->tell());
-    ascii().addNote("Entries(BAD):##");
+
+  // second the list of objects (can be empty)
+  while (readObject()) {
   }
-  return !m_state->m_shapeList.empty();
+
+  pos=input->tell();
+  fSz=(long) input->readULong(2);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("Object[end]:");
+  }
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: can not find end object zone\n"));
+    ascii().addPos(pos);
+    ascii().addNote("###");
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+  }
+
+  // never seems
+  for (int i=0; i<2; ++i) {
+    while (!input->isEnd()) {
+      pos=input->tell();
+      fSz=(long) input->readULong(2);
+      if (!input->checkPosition(pos+2+fSz)) {
+        input->seek(pos,librevenge::RVNG_SEEK_SET);
+        break;
+      }
+      if (fSz==0) {
+        ascii().addPos(pos);
+        ascii().addNote("_");
+        break;
+      }
+      else {
+        MWAW_DEBUG_MSG(("MacDraftParser::createZones: find some unknown zone\n"));
+        ascii().addPos(pos);
+        ascii().addNote(i==0 ? "Entries(ZoneA):" : "Entries(ZoneB):");
+        input->seek(pos+2+fSz,librevenge::RVNG_SEEK_SET);
+      }
+    }
+  }
+  if (m_state->m_version==1) {
+    if (input->isEnd())
+      return true;
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: find some extra zone\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(Extra):###");
+    return !m_state->m_shapeList.empty();
+  }
+  // bitmap data
+  while (readBitmapData()) {
+  }
+  pos=input->tell();
+  fSz=(long) input->readULong(2);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("BitmapData[end]:");
+  }
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: can not find end bitmap data zone\n"));
+    ascii().addPos(pos);
+    ascii().addNote("###");
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+  }
+
+  // modified patterns list
+  while (readPattern()) {
+  }
+  pos=input->tell();
+  fSz=(long) input->readULong(2);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("Patterns[end]:");
+  }
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: can not find end of pattern zone\n"));
+    ascii().addPos(pos);
+    ascii().addNote("Entries(Extra):###");
+    return !m_state->m_shapeList.empty();
+  }
+
+  if (input->isEnd())
+    return !m_state->m_shapeList.empty();
+  pos=input->tell();
+  fSz=(long) input->readULong(2);
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  else if (fSz==0x78) {
+    if (!readPrintInfo()) {
+      ascii().addPos(pos);
+      ascii().addNote("Entries(PrintInfo):#");
+    }
+    input->seek(pos+2+fSz,librevenge::RVNG_SEEK_SET);
+  }
+
+  if (!input->isEnd()) {
+    MWAW_DEBUG_MSG(("MacDraftParser::createZones: find some extra zone\n"));
+    ascii().addPos(input->tell());
+    ascii().addNote("Entries(Extra):###");
+  }
+  return true;
+}
+
+bool MacDraftParser::readZone()
+{
+  MWAWInputStreamPtr input = getInput();
+  if (input->isEnd())
+    return false;
+  long pos=input->tell();
+  long fSz=(long) input->readULong(2);
+  if (fSz==0) {
+    ascii().addPos(pos);
+    ascii().addNote("_");
+    return true;
+  }
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
+  if (fSz==0x1e)
+    return readPattern();
+  if (fSz==0x78 && readPrintInfo())
+    return true;
+  if (!input->checkPosition(pos+2+fSz)) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  ascii().addPos(pos);
+  ascii().addNote("Entries(UnknZone):");
+  input->seek(pos+2+fSz,librevenge::RVNG_SEEK_SET);
+
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -421,27 +574,17 @@ bool MacDraftParser::readObject()
     return false;
   long pos=input->tell();
   long fSz=(long) input->readULong(2);
-  if (fSz==0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
   if (fSz==0x1a) {
     input->seek(pos,librevenge::RVNG_SEEK_SET);
     return readLabel();
   }
-  if (fSz==0x1e) {
-    input->seek(pos,librevenge::RVNG_SEEK_SET);
-    return readPattern();
-  }
   long endPos=pos+2+fSz;
-  if (fSz<0x1a || fSz==0x78 || !input->checkPosition(endPos)) {
+  if (fSz<0x20 || !input->checkPosition(endPos)) {
     input->seek(pos,librevenge::RVNG_SEEK_SET);
     return false;
   }
   libmwaw::DebugStream f;
   f << "Entries(Object):";
-  if (fSz==0x1e) f << "pattern,";
   int val;
   for (int i=0; i<2; ++i) {
     val=(int) input->readULong(4);
@@ -559,17 +702,29 @@ bool MacDraftParser::readObject()
       f << "rectOval,";
     }
     else if (fSz==0x30) {
-      if (flag&0x8000000) {
+      if ((flag&0x28000000)==0x28000000) {
         shape.m_shape=MWAWGraphicShape::circle(box);
         f << "circle,";
+      }
+      else if ((flag&0x8000000)==0x8000000) {
+        shape.m_type=MacDraftParserInternal::Shape::Bitmap;
+        f << "bitmap,";
       }
       else {
         shape.m_type=MacDraftParserInternal::Shape::Group;
         f << "group,";
       }
     }
-    else
+    else if (fSz==0x38)
       f << "pie,";
+    else {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("MacDraftParser::readObject: find some bitmap\n"));
+        first=false;
+      }
+      f << "Bitmap###,";
+    }
     if (fSz==0x30) {
       val=(int) input->readULong(4);
       if (val)
@@ -638,13 +793,34 @@ bool MacDraftParser::readObject()
     if (fSz==0x2c)
       shape.m_shape.m_cornerWidth=MWAWVec2f(dim[1]/2.f,dim[0]/2.f);
     f << "corner=" << MWAWVec2f(dim[1],dim[0]) << ",";
-    if (shape.m_type!=MacDraftParserInternal::Shape::Group)
+    if (shape.m_type!=MacDraftParserInternal::Shape::Group && shape.m_type!=MacDraftParserInternal::Shape::Bitmap)
       break;
     if (input->tell()!=endPos)
       ascii().addDelimiter(input->tell(),'|');
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
     input->seek(endPos,librevenge::RVNG_SEEK_SET);
+
+    if (shape.m_type==MacDraftParserInternal::Shape::Bitmap) {
+      while (!input->isEnd()) {
+        pos=input->tell();
+        if (input->readULong(2)==0) {
+          ascii().addPos(pos);
+          ascii().addNote("Bitmap[end]");
+          break;
+        }
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        if (!readBitmapDefinition(shape)) {
+          MWAW_DEBUG_MSG(("MacDraftParser::readObject: can not find end of bitmap\n"));
+          input->seek(pos, librevenge::RVNG_SEEK_SET);
+          ascii().addPos(pos);
+          ascii().addNote("Bitmap###");
+          break;
+        }
+      }
+      m_state->m_shapeList.push_back(shape);
+      return true;
+    }
 
     m_state->m_shapeList.push_back(shape);
     while (!input->isEnd()) {
@@ -859,7 +1035,135 @@ bool MacDraftParser::readObject()
 }
 
 ////////////////////////////////////////////////////////////
-// read an label
+// read a bitmap
+////////////////////////////////////////////////////////////
+
+bool MacDraftParser::readBitmapData()
+{
+  MWAWInputStreamPtr input = getInput();
+  if (input->isEnd())
+    return false;
+  long pos=input->tell();
+  long fSz=(long) input->readULong(2);
+  long endPos=pos+2+fSz;
+  if (fSz<28 || !input->checkPosition(endPos)) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  MacDraftParserInternal::BitmapFileData data;
+  libmwaw::DebugStream f;
+  f << "Entries(BitmapData):";
+  long val=(long) input->readULong(4);
+  if (val)
+    f << "id[next]=" << std::hex << val << std::dec << ",";
+  val=(long) input->readULong(2);
+  if (val) f << "fl="  << std::hex << val << std::dec << ",";
+  data.m_id=input->readULong(4);
+  f << "id=" << std::hex << data.m_id << std::dec << ",";
+  val=input->readLong(2); // 1 or 2
+  if (val) f << "f0=" << val << ",";
+  val=input->readLong(2); // 0
+  if (val)  f << "f1=" << val << ",";
+  f << "id2=" << std::hex << input->readULong(4) << std::dec << ","; // 80000000+id
+  data.m_rowSize=(int) input->readULong(2); // 2|4|72 : number of bytes by row
+  if (data.m_rowSize) f << "row[size]=" << data.m_rowSize << ",";
+  int dim[4];
+  for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+  data.m_dimension=MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2]));
+  f << "dim=" << data.m_dimension << ",";
+  data.m_entry.setBegin(input->tell());
+  data.m_entry.setEnd(endPos);
+  if (!data.ok()) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  if (data.m_rowSize*data.m_dimension.size()[1]+28!=fSz) {
+    MWAW_DEBUG_MSG(("MacDraftParser::readBitmapData: the bitmap size seems odd\n"));
+    f << "###sz,";
+  }
+  if (m_state->m_idToBitmapMap.find(data.m_id)!=m_state->m_idToBitmapMap.end()) {
+    MWAW_DEBUG_MSG(("MacDraftParser::readBitmapData: the id is already defined\n"));
+    f << "###id,";
+  }
+  else
+    m_state->m_idToBitmapMap[data.m_id]=data;
+  if (data.m_entry.length())
+    ascii().skipZone(data.m_entry.begin(), data.m_entry.end()-1);
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+bool MacDraftParser::readBitmapDefinition(MacDraftParserInternal::Shape &bitmap)
+{
+  MWAWInputStreamPtr input = getInput();
+  if (input->isEnd())
+    return false;
+  long pos=input->tell();
+  long fSz=(long) input->readULong(2);
+  long endPos=pos+2+fSz;
+  if (fSz!=0x3e || !input->checkPosition(endPos)) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+  libmwaw::DebugStream f;
+  f << "Entries(BitmapDef):";
+  int val;
+  for (int i=0; i<2; ++i) {
+    val=(int) input->readULong(4);
+    if (val) f << "id" << i << "=" << std::hex << val << std::dec << ",";
+  }
+  unsigned long flag=input->readULong(4);
+  if (flag>>16) f << "fl0[h]=" << std::hex << (flag>>16) << std::dec << ",";
+  if (flag&0xFFFF) f << "fl0[l]=" << std::hex << (flag&0xFFFF) << std::dec << ",";
+
+  val=(int) input->readULong(2);
+  if (val&0x8000) f << "lock,";
+  val &= 0x7fff;
+  if (val) f << "fl1=" << std::hex << val << std::dec << ",";
+
+  val=(int) input->readULong(2);
+  if (val&0xfc00)
+    f << "rot[h]=" << std::hex << (val>>10) << std::dec << ",";
+  if (val&0x200) {
+    f << "flipX,";
+  }
+  val &=0x1ff;
+  if (val)
+    f << "rot=" << float(val) << ",";
+  float dim[4];
+  for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
+  f << "dim=" << MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2])) << ",";
+  for (int i=0; i<2; ++i) dim[i]=float(input->readLong(2))/8.f;
+  f << "orig=" << MWAWVec2f(dim[1],dim[0]) << ",";
+
+  val=(int) input->readULong(4);
+  if (val) f << "id?=" << std::hex << val << std::dec << ",";
+  for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2))/8.f;
+  f << "dim1=" << MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2])) << ",";
+  unsigned long id=input->readULong(4);
+  bitmap.m_bitmapIdList.push_back(id);
+  f << "id[data]=" << std::hex << id << std::dec << ",";
+  val=(int) input->readLong(2); // 0|1
+  if (val) f << "g0=" << val << ",";
+  for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2));
+  MWAWBox2f box(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
+  bitmap.m_bitmapDimensionList.push_back(box);
+  f << "dim2=" << box << ",";
+  for (int i=0; i<4; ++i) dim[i]=float(input->readLong(2));
+  f << "dim3=" << MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2])) << ",";
+
+  if (input->tell()!=endPos)
+    ascii().addDelimiter(input->tell(),'|');
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// read a pattern
 ////////////////////////////////////////////////////////////
 bool MacDraftParser::readPattern()
 {
@@ -1042,7 +1346,7 @@ bool MacDraftParser::checkHeader(MWAWHeader *header, bool strict)
   if (input->readULong(2)!=2 || input->readULong(2)!=0 || input->readULong(2)!=2 ||
       input->readULong(2)!=0x262 || input->readULong(2)!=0x262)
     return false;
-  int vers=1;
+  int const vers=1;
   int val=(int) input->readULong(2);
   if (val)
     f << "f0=" << val << ",";
@@ -1086,6 +1390,19 @@ bool MacDraftParser::checkHeader(MWAWHeader *header, bool strict)
 
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());
+  if (strict) {
+    input->seek(0x270,librevenge::RVNG_SEEK_SET);
+    for (int i=0; i<10; ++i) {
+      if (input->isEnd())
+        break;
+      long pos=input->tell();
+      long fSz=(int) input->readULong(2);
+      if (!input->checkPosition(pos+2+fSz))
+        return false;
+      input->seek(pos+2+fSz, librevenge::RVNG_SEEK_SET);
+    }
+    input->seek(84, librevenge::RVNG_SEEK_SET);
+  }
   setVersion(vers);
   m_state->m_version=vers;
   if (header)
@@ -1144,6 +1461,11 @@ bool MacDraftParser::readDocHeader()
     f << "###";
     N=0;
   }
+  // FIXME: find a better way to determine v1.0 and/or v1.2 file
+  if (N==4)
+    m_state->m_version=1;
+  else
+    m_state->m_version=2;
   f << "N=" << N << ",unk=[";
   for (int i=0; i<=N; ++i) {
     val=(int) input->readULong(2);
@@ -1195,9 +1517,73 @@ bool MacDraftParser::readDocHeader()
   pos=input->tell();
   f.str("");
   f << "DocHeader-5:";
+  for (int i=0; i<2; ++i) { // fl0=0|1, fl1=1
+    val=(int) input->readLong(1);
+    if (val==1)
+      f << "fl" << i << ",";
+    else if (val)
+      f << "fl" << i << "=" << val << ",";
+  }
+  for (int i=0; i<2; ++i) { // f0=3, f1=32|100
+    val=(int) input->readLong(2);
+    if (val)
+      f << "f" << i << "=" << val << ",";
+  }
+  for (int i=0; i<4; ++i) { // fl2=1, fl4=0|1
+    val=(int) input->readLong(1);
+    if (val==1)
+      f << "fl" << i+2 << ",";
+    else if (val)
+      f << "fl" << i+2 << "=" << val << ",";
+  }
+  f << "unkn=[";
+  for (int i=0; i<6; ++i) { // small number
+    val=(int) input->readLong(2);
+    if (val)
+      f << val << ",";
+    else
+      f << "_,";
+  }
+  f << "],";
+  float dim[2];
+  for (int i=0; i<2; ++i) dim[i]=float(input->readLong(2))/8.f;
+  f << "dim?=" << MWAWVec2f(dim[1],dim[0]) << ",";
+  for (int i=0; i<7; ++i) { // f2=0|256, f5=256
+    val=(int) input->readLong(2);
+    if (val)
+      f << "f" << i+2 << "=" << val << ",";
+  }
+  int numPages[2];
+  for (int i=0; i<2; ++i) numPages[i]=(int) input->readLong(2);
+  if (numPages[0]!=1 || numPages[1]!=1)
+    f << "numPages=" << MWAWVec2i(numPages[0], numPages[1]) << ",";
+  if (numPages[0]<=0 || numPages[0]>50) {
+    MWAW_DEBUG_MSG(("MacDraftParser::readDocHeader: num horizontal pages seems bad, reset it to 1\n"));
+    numPages[0]=1;
+    f << "###hori,";
+  }
+  if (numPages[1]<=0 || numPages[1]>100) {
+    MWAW_DEBUG_MSG(("MacDraftParser::readDocHeader: num vertical pages seems bad, reset it to 1\n"));
+    numPages[1]=1;
+    f << "###verti,";
+  }
+  int pageDim[2];
+  for (int i=0; i<2; ++i) pageDim[i]=(int) input->readLong(2);
+  f << "page[dim]=" << MWAWVec2i(pageDim[1],pageDim[0]) << ",";
+  if (pageDim[0]>=50 && pageDim[0]<=2000)
+    getPageSpan().setFormLength(double(pageDim[0]*numPages[1])/72.);
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::readDocHeader: page height seems bad, use default\n"));
+  }
+  if (pageDim[1]>=50 && pageDim[1]<=2000)
+    getPageSpan().setFormWidth(double(pageDim[1]*numPages[0])/72.);
+  else {
+    MWAW_DEBUG_MSG(("MacDraftParser::readDocHeader: page width seems bad, use default\n"));
+  }
+
+  ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  // ascii().addDelimiter(input->tell(),'|');
 
   input->seek(0x270,librevenge::RVNG_SEEK_SET);
   return true;
@@ -1210,8 +1596,9 @@ bool MacDraftParser::readPrintInfo()
 {
   MWAWInputStreamPtr input = getInput();
   long pos=input->tell();
-  long endPos=pos+120;
-  if (!input->checkPosition(endPos)) {
+  long fSz=(long) input->readULong(2);
+  long endPos=pos+2+120;
+  if (fSz!=120 || !input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("MacDraftParser::readPrintInfo: file seems too short\n"));
     return false;
   }
@@ -1253,8 +1640,7 @@ bool MacDraftParser::readPrintInfo()
   getPageSpan().setMarginBottom(botMarg/72.0);
   getPageSpan().setMarginLeft(lTopMargin.x()/72.0);
   getPageSpan().setMarginRight(rightMarg/72.0);
-  getPageSpan().setFormLength(paperSize.y()/72.);
-  getPageSpan().setFormWidth(paperSize.x()/72.);
+  // do not set page height/width as this is done by readDocHeader
 
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
@@ -1345,10 +1731,91 @@ bool MacDraftParser::send(MacDraftParserInternal::Shape const &shape)
     listener->insertTextBox(pos, doc, style);
     return true;
   }
+  case MacDraftParserInternal::Shape::Bitmap:
+    sendBitmap(shape, pos);
+    break;
   case MacDraftParserInternal::Shape::Unknown:
   default:
     return false;
   }
+  return true;
+}
+
+bool MacDraftParser::sendBitmap(MacDraftParserInternal::Shape const &bitmap, MWAWPosition const &position)
+{
+  MWAWGraphicListenerPtr listener=getGraphicListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("MacDraftParser::sendBitmap: can not find the listener\n"));
+    return false;
+  }
+  bitmap.m_isSent=true;
+
+  if (bitmap.m_bitmapIdList.empty() || bitmap.m_bitmapDimensionList.size()!=bitmap.m_bitmapIdList.size()) {
+    MWAW_DEBUG_MSG(("MacDraftParser::sendBitmap: the bitmap seems bad\n"));
+    return false;
+  }
+  MWAWBox2i bitmapBox=bitmap.m_bitmapDimensionList[0];
+  for (size_t i=1; i<bitmap.m_bitmapDimensionList.size(); ++i)
+    bitmapBox=bitmapBox.getUnion(bitmap.m_bitmapDimensionList[i]);
+  MWAWVec2i bitmapDim=bitmapBox.size();
+  if (bitmapDim[0]<=0||bitmapDim[1]<=0||bitmapDim[0]*bitmapDim[1]>10000000) {
+    MWAW_DEBUG_MSG(("MacDraftParser::sendBitmap: can not compute the bitmap bdbox\n"));
+    return false;
+  }
+
+  MWAWInputStreamPtr input = getInput();
+  MWAWPictBitmapColor pict(bitmapDim, true);
+  MWAWColor transparent(255,255,255,0);
+  MWAWColor black(MWAWColor::black());
+  std::vector<MWAWColor> colors;
+  colors.resize(size_t(bitmapDim[0]), transparent);
+  for (int r=0; r<bitmapDim[1]; ++r)  pict.setRow(r, &colors[0]);
+
+  for (size_t i=0; i<bitmap.m_bitmapIdList.size(); ++i) {
+    if (m_state->m_idToBitmapMap.find(bitmap.m_bitmapIdList[i])==m_state->m_idToBitmapMap.end()) {
+      MWAW_DEBUG_MSG(("MacDraftParser::sendBitmap: can not find bitmap data %lx\n", bitmap.m_bitmapIdList[i]));
+      continue;
+    }
+    MWAWBox2i dataBox=bitmap.m_bitmapDimensionList[i];
+    MacDraftParserInternal::BitmapFileData const &data=m_state->m_idToBitmapMap.find(bitmap.m_bitmapIdList[i])->second;
+    if (!data.ok() || data.m_dimension[0]!=dataBox[0] || data.m_dimension.size()[0]<dataBox.size()[0] ||
+        data.m_dimension.size()[1]<dataBox.size()[1]) {
+      MWAW_DEBUG_MSG(("MacDraftParser::sendBitmap: bitmap data %lx seems bad\n", bitmap.m_bitmapIdList[i]));
+      continue;
+    }
+
+    long pos=input->tell();
+    input->seek(data.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+    for (int r=dataBox[0][1]; r<dataBox[1][1]; ++r) {
+      long debRow=input->tell();
+      if (r>=bitmapBox[1][1])
+        break;
+      int row=r-bitmapBox[0][1];
+      int wPos=dataBox[0][0]-bitmapBox[0][0];
+      for (int col=dataBox[0][0]; col<dataBox[1][0];) {
+        unsigned char c=(unsigned char) input->readULong(1);
+        for (int j=0, bit=0x80; j<8 ; ++j, bit>>=1) {
+          if (wPos>=bitmapDim[0] || ++col>dataBox[1][0]) break;
+          pict.set(wPos++, row, (c&bit) ? black : transparent);
+        }
+      }
+      input->seek(debRow+data.m_rowSize, librevenge::RVNG_SEEK_SET);
+    }
+    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  }
+
+  librevenge::RVNGBinaryData binary;
+  std::string type;
+  if (!pict.getBinary(binary,type)) return false;
+#ifdef DEBUG_WITH_FILES
+  static int volatile pictName = 0;
+  libmwaw::DebugStream f;
+  f << "PICT-" << ++pictName << ".bmp";
+  libmwaw::Debug::dumpFile(binary, f.str().c_str());
+#endif
+
+  listener->insertPicture(position, binary, type);
+
   return true;
 }
 
