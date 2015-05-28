@@ -129,7 +129,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     }
     else if (creator=="CDrw") { // CHANGEME: ClarisDraw
       if (type=="dDrw" || type=="dDst" || type=="iLib") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1, MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISDRAW, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
@@ -470,6 +470,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (type=="PICT") {
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_APPLEPICT, 1, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    }
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: unknown finder info: type=%s[%s]\n", type.c_str(), creator.c_str()));
 
   }
@@ -637,7 +641,7 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     return res;
   }
   if ((val[0]==0x100||val[0]==0x200) && val[2]==0x4558 && val[3]==0x5057) { // CHANGEME: ClarisDraw
-    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RESERVED1, 1, MWAWDocument::MWAW_K_DRAW));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISDRAW, 1, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
 
@@ -800,6 +804,24 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_SUPERPAINT, 1, MWAWDocument::MWAW_K_PAINT));
     else if (value==2)
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_SUPERPAINT, 1, MWAWDocument::MWAW_K_DRAW));
+  }
+
+  //
+  // check for pict
+  //
+  for (int st=0; st<2; ++st) {
+    if (!input->checkPosition(512*st+13))
+      break;
+    input->seek(512*st+10, librevenge::RVNG_SEEK_SET);
+    int value=(int) input->readULong(2);
+    if (value==0x1101) {
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_APPLEPICT, 1, MWAWDocument::MWAW_K_DRAW));
+      break;
+    }
+    else if (value==0x11 && input->readULong(2)==0x2ff && input->readULong(2) == 0xC00) {
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_APPLEPICT, 2, MWAWDocument::MWAW_K_DRAW));
+      break;
+    }
   }
   //
   // middle of file

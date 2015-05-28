@@ -768,7 +768,7 @@ bool WriterPlsParser::createZones()
 ////////////////////////////////////////////////////////////
 // read the header
 ////////////////////////////////////////////////////////////
-bool WriterPlsParser::checkHeader(MWAWHeader *header, bool strict)
+bool WriterPlsParser::checkHeader(MWAWHeader *header, bool /*strict*/)
 {
   *m_state = WriterPlsParserInternal::State();
 
@@ -787,16 +787,13 @@ bool WriterPlsParser::checkHeader(MWAWHeader *header, bool strict)
   ascii().addPos(0);
   ascii().addNote("FileHeader");
 
-  bool ok = true;
-  if (strict) {
-    ok=readWindowsInfo(0);
-    input->seek(2,librevenge::RVNG_SEEK_SET);
-  }
-
+  if (!readWindowsInfo(0) || !readPrintInfo())
+    return false;
+  input->seek(2,librevenge::RVNG_SEEK_SET);
   if (header)
     header->reset(MWAWDocument::MWAW_T_WRITERPLUS, 1);
 
-  return ok;
+  return true;
 }
 
 bool WriterPlsParser::readWindowsInfo(int zone)
@@ -808,15 +805,12 @@ bool WriterPlsParser::readWindowsInfo(int zone)
   MWAWInputStreamPtr input = getInput();
 
   long debPos = input->tell();
-  input->seek(debPos+0xf4,librevenge::RVNG_SEEK_SET);
-  if (int(input->tell()) != debPos+0xf4) {
+  if (!input->checkPosition(debPos+0xf4)) {
     MWAW_DEBUG_MSG(("WriterPlsParser::readWindowsInfo: file is too short\n"));
     return false;
   }
 
   WriterPlsParserInternal::WindowsInfo info;
-
-  input->seek(debPos, librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(WindowsZone)";
   switch (zone) {

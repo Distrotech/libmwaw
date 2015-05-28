@@ -1,5 +1,11 @@
 CHANGES:
 
+5/28/2015:
+- add a minimal parser for ApplePict v1.v2,
+  ie. no clipping, do not take in account the copy mode: srcCopy, srcOr, ...
+
+-------- version 0.3.5 (start)  -------------
+
 5/10/2015:
 - add a parser for MacDraft v1 Document
 

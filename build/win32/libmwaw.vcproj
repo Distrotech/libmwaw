@@ -180,6 +180,10 @@
 				RelativePath="..\..\src\lib\ActaText.cxx"
 				>
 			<File
+				RelativePath="..\..\src\lib\ApplePictParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\BeagleWksParser.cxx"
 				>
 			</File>
@@ -734,6 +738,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ActaText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ApplePictParser.hxx"
 				>
 			</File>
 			<File

@@ -1101,7 +1101,7 @@ bool ClarisDrawParser::checkHeader(MWAWHeader *header, bool /*strict*/)
   setVersion(vers);
   m_state->m_version=vers;
   if (header)
-    header->reset(MWAWDocument::MWAW_T_RESERVED1, vers, MWAWDocument::MWAW_K_DRAW);
+    header->reset(MWAWDocument::MWAW_T_CLARISDRAW, vers, MWAWDocument::MWAW_K_DRAW);
   input->seek(8,librevenge::RVNG_SEEK_SET);
   ascii().addPos(0);
   ascii().addNote(f.str().c_str());

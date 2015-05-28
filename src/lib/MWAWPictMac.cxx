@@ -170,50 +170,36 @@ public:
 
     // the region size
     int sz = (int)input.readULong(2);
-    if ((sz%2) != 0) {
+    if ((sz%2) != 0 || sz<10 || !input.checkPosition(actualPos+sz)) {
       MWAW_DEBUG_MSG(("Pict1:Region: read odd size: %d\n", sz));
       return false;
     }
     sz /= 2;
-    if (sz < 5) {
-      MWAW_DEBUG_MSG(("Pict1:Region: read size is too short: %d\n", sz*2));
-      return false;
-    }
     int val[4];
     for (int i = 0; i < 4; i++) val[i] = (int) input.readLong(2);
-    m_box.set(MWAWVec2i(val[0], val[1]), MWAWVec2i(val[2], val[3]));
+    m_box.set(MWAWVec2i(val[1], val[0]), MWAWVec2i(val[3], val[2]));
     sz -= 5;
     m_points.resize(0);
     if (sz == 0) return true;
-    if (actualPos+10 != long(input.tell())) {
-      MWAW_DEBUG_MSG(("Pict1:Region: rect EOF\n"));
-      return false;
-    }
     // une liste de point dans la box: x1, y1, .. yn 0x7fff, x2, ... 0x7fff
-    input.seek(actualPos+10+2*sz, librevenge::RVNG_SEEK_SET);
-    if (actualPos+10+2*sz != long(input.tell())) {
-      MWAW_DEBUG_MSG(("Pict1:Region: pixels EOF\n"));
-      return false;
-    }
-    input.seek(actualPos+10, librevenge::RVNG_SEEK_SET);
     while (sz > 0) {
-      int x = (int)input.readLong(2);
+      int y = (int)input.readLong(2);
       sz--;
-      if (x == 0x7fff) break;
-      if (x < m_box[0].x() || x > m_box[1].x()) {
-        MWAW_DEBUG_MSG(("Pict1:Region: found eroneous x value: %d\n", x));
+      if (y == 0x7fff) break;
+      if (y < m_box[0].y() || y > m_box[1].y()) {
+        MWAW_DEBUG_MSG(("Pict1:Region: found eroneous y value: %d\n", y));
         return false;
       }
       bool endF = false;
       while (sz > 0) {
-        int y = (int)input.readLong(2);
+        int x = (int)input.readLong(2);
         sz--;
-        if (y == 0x7fff) {
+        if (x == 0x7fff) {
           endF = true;
           break;
         }
-        if (y < m_box[0].y() || y > m_box[1].y()) {
-          MWAW_DEBUG_MSG(("Pict1:Region: found eroneous y value\n"));
+        if (x < m_box[0].x() || x > m_box[1].x()) {
+          MWAW_DEBUG_MSG(("Pict1:Region: found eroneous x value %d\n", x));
           return false;
         }
         m_points.push_back(MWAWVec2i(x,y));

@@ -22,6 +22,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ActaParser.hxx			\
 	ActaText.cxx			\
 	ActaText.hxx			\
+	ApplePictParser.cxx		\
+	ApplePictParser.hxx		\
 	BeagleWksParser.cxx		\
 	BeagleWksParser.hxx		\
 	BeagleWksBMParser.cxx		\

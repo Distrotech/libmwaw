@@ -95,6 +95,10 @@ SOURCE=..\..\src\lib\ActaText.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ApplePictParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\BeagleWksParser.cxx
 # End Source File
 # Begin Source File
@@ -648,6 +652,10 @@ SOURCE=..\..\src\lib\ActaParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\ActaText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ApplePictParser.hxx
 # End Source File
 # Begin Source File
 

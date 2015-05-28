@@ -45,6 +45,7 @@
 #include <libmwaw/libmwaw.hxx>
 
 #include "ActaParser.hxx"
+#include "ApplePictParser.hxx"
 #include "BeagleWksParser.hxx"
 #include "BeagleWksBMParser.hxx"
 #include "BeagleWksDBParser.hxx"
@@ -134,7 +135,9 @@ try
 
   switch (type) {
   case MWAW_T_ACTA:
+  case MWAW_T_APPLEPICT:
   case MWAW_T_BEAGLEWORKS:
+  case MWAW_T_CLARISDRAW:
   case MWAW_T_CLARISRESOLVE:
   case MWAW_T_CLARISWORKS:
   case MWAW_T_DOCMAKER:
@@ -165,8 +168,6 @@ try
   case MWAW_T_WRITENOW:
   case MWAW_T_WRITERPLUS:
   case MWAW_T_ZWRITE:
-
-  case MWAW_T_RESERVED1:
     confidence = MWAW_C_EXCELLENT;
     break;
 
@@ -191,7 +192,6 @@ try
   case MWAW_T_XPRESS:
   case MWAW_T_4DIMENSION:
 
-  case MWAW_T_RESERVED2:
   case MWAW_T_RESERVED3:
   case MWAW_T_RESERVED4:
   case MWAW_T_RESERVED5:
@@ -337,7 +337,7 @@ catch (...)
   return MWAW_R_UNKNOWN_ERROR;
 }
 
-MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const */*password*/)
+MWAWDocument::Result MWAWDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, char const * /*password*/)
 try
 {
   if (!input)
@@ -480,11 +480,17 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
 
   try {
     switch (header->getType()) {
+    case MWAWDocument::MWAW_T_APPLEPICT:
+      parser.reset(new ApplePictParser(input, rsrcParser, header));
+      break;
     case MWAWDocument::MWAW_T_BEAGLEWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
         parser.reset(new BeagleWksBMParser(input, rsrcParser, header));
       else
         parser.reset(new BeagleWksDRParser(input, rsrcParser, header));
+      break;
+    case MWAWDocument::MWAW_T_CLARISDRAW:
+      parser.reset(new ClarisDrawParser(input, rsrcParser, header));
       break;
     case MWAWDocument::MWAW_T_CLARISWORKS:
       if (header->getKind()==MWAWDocument::MWAW_K_PAINT)
@@ -514,9 +520,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
       break;
     case MWAWDocument::MWAW_T_SUPERPAINT:
       parser.reset(new SuperPaintParser(input, rsrcParser, header));
-      break;
-    case MWAWDocument::MWAW_T_RESERVED1:
-      parser.reset(new ClarisDrawParser(input, rsrcParser, header));
       break;
     // TODO: first separate graphic format to other formats, then implement parser...
     case MWAWDocument::MWAW_T_ACTA:
@@ -563,7 +566,6 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_ZWRITE:
     case MWAWDocument::MWAW_T_4DIMENSION:
 
-    case MWAWDocument::MWAW_T_RESERVED2:
     case MWAWDocument::MWAW_T_RESERVED3:
     case MWAWDocument::MWAW_T_RESERVED4:
     case MWAWDocument::MWAW_T_RESERVED5:

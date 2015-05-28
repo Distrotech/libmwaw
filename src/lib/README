@@ -4,6 +4,7 @@
 - MWAW*, libmwaw* : internal core part of libmwaw (ie. classes used by all the parser )
 
 - Acta*         : parser of Acta documents
+- ApplePict*    : parser of Apple picture (.pct)
 - BeagleWks*    : parser of BeagleWorks and WordPerfect Works documents
 - ClarisDraw*   : parser of ClarisDraw documents
 - ClarisWks*    : parser of ClarisWorks and AppleWorks documents
@@ -121,8 +122,8 @@ These files defined basic structures which must be used by the parsers :
 	a helper to reconstruct a table structure from a list of cell
 
 ------------------------------------------------------------------------
----  Acta/BeagleWks/ClarisDraw/ClarisWks/DocMkr/EDoc/FullWrt         ---
----  GreatWks/HanMacWrd/LightWayTxt                                  ---
+---  Acta/ApplePict/BeagleWks/ClarisDraw/ClarisWks/DocMkr/EDoc       ---
+---  FullWrt/GreatWks/HanMacWrd/LightWayTxt                          ---
 ---  MacDoc/MacDraft/MacDraw/MacPaint/MacWrt                         ---
 ---  MarinerWrt/MindWrt/More/MsWks/MsWrd/NisusWrt/RagTime            ---
 ---  SuperPaint/TeachTxt/Wingz/WriteNow/WriterPls/ZWrt               ---
@@ -134,6 +135,8 @@ Specific files which depends on the type of file which is converted
 
 ActaParser: parser of Acta : v2 and Classic v1
 -   ActaText : class which reads the text
+
+ActaPictParser: parser of Apple pict : v1 and v2
 
 BeagleWksParser: word document parser of BeagleWorks v1.0 and WordPerfect Works v1.2
 BeagleWksBMParser: paint document parser of BeagleWorks v1.0 and WordPerfect Works v1.2

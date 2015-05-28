@@ -110,6 +110,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\ApplePictParser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\BeagleWksParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -660,6 +664,7 @@
     <ClInclude Include="..\..\inc\libmwaw\MWAWDocument.hxx" />
     <ClInclude Include="..\..\src\lib\ActaParser.hxx" />
     <ClInclude Include="..\..\src\lib\ActaText.hxx" />
+    <ClInclude Include="..\..\src\lib\ApplePictParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksBMParser.hxx" />
     <ClInclude Include="..\..\src\lib\BeagleWksDBParser.hxx" />
