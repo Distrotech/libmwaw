@@ -100,16 +100,6 @@ public:
   //! convert a Pict1.0 in Pict2.0, if possible
   static bool convertPict1To2(librevenge::RVNGBinaryData const &orig, librevenge::RVNGBinaryData &result);
 
-  /** \brief tries to parse a Pict1.0 and dump the file
-   * Actually mainly used for debugging, but will be a first step,
-   * if we want convert such a Pict in a Odg picture */
-  static void parsePict1(librevenge::RVNGBinaryData const &orig, std::string const &fname);
-
-  /** \brief tries to parse a Pict2. and dump the file
-   * Actually mainly used for debugging, but will be a first step,
-   * if we want convert such a Pict in a Odg picture */
-  static void parsePict2(librevenge::RVNGBinaryData const &orig, std::string const &fname);
-
 protected:
   //! protected constructor: use check to construct a picture
   MWAWPictMac(MWAWBox2f box) : MWAWPictData(box), m_version(-1), m_subVersion(-1)
