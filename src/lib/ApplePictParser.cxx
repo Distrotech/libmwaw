@@ -955,7 +955,6 @@ bool ApplePictParser::readZone()
     if (!input->checkPosition(actPos+2))
       return false;
     val=(int) input->readULong(4);
-    bool ok=true;
     MWAWColor color;
     if (opCode==0xe)
       f << "Entries(Color)[fore]:";
@@ -990,8 +989,6 @@ bool ApplePictParser::readZone()
       MWAW_DEBUG_MSG(("ApplePictParser::readZone: find unknown color\n"));
       break;
     }
-    if (!ok)
-      break;
     f << color;
     if (opCode==0xe)
       m_state->m_foreColor=color;
@@ -1478,9 +1475,9 @@ bool ApplePictParser::readZone()
     break;
 
   default: {
-    if (opCode<=0xcf)
-      return false;
-    if (opCode<=100) dSz=4+(long) input->readULong(4);
+    if (opCode<=0xaf) dSz=2+(int) input->readULong(2);
+    else if (opCode<=0xcf) dSz=0;
+    else if (opCode<=0x100) dSz=4+(long) input->readULong(4);
     else if (opCode<=0x01ff) dSz=2;
     else if (opCode<=0x0bfe) dSz=4;
     else if (opCode<=0x0bff) dSz=22;
