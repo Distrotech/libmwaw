@@ -1995,10 +1995,10 @@ bool ApplePictParser::checkHeader(MWAWHeader *header, bool strict)
       if (!input->checkPosition(pos+40))
         break;
       if (input->readULong(2) != 0x2ff || input->readULong(2) != 0xC00) break;
-      int version = -int(input->readLong(2));
+      int fileVersion = -int(input->readLong(2));
       int subvers = -int(input->readLong(2));
       float dim2[4];
-      switch (version)
+      switch (fileVersion)
       case 1: {
       f << "pict2[1:" << subvers << "],";
       for (int i=0; i<4; ++i) dim2[i]=float(input->readLong(4))/65536.f;
