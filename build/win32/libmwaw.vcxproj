@@ -318,6 +318,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\MacDraft5Parser.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\MacDrawParser.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -716,6 +720,7 @@
     <ClInclude Include="..\..\src\lib\LightWayTxtText.hxx" />
     <ClInclude Include="..\..\src\lib\MacDocParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDraftParser.hxx" />
+    <ClInclude Include="..\..\src\lib\MacDraft5Parser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDrawParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDrawProParser.hxx" />
     <ClInclude Include="..\..\src\lib\MacDrawProStyleManager.hxx" />

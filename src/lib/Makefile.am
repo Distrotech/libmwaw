@@ -126,6 +126,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MacDocParser.hxx		\
 	MacDraftParser.cxx		\
 	MacDraftParser.hxx		\
+	MacDraft5Parser.cxx		\
+	MacDraft5Parser.hxx		\
 	MacDrawParser.cxx		\
 	MacDrawParser.hxx		\
 	MacDrawProParser.cxx		\

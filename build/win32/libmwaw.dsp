@@ -307,6 +307,10 @@ SOURCE=..\..\src\lib\MacDraftParser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MacDraft5Parser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MacDrawParser.cxx
 # End Source File
 # Begin Source File
@@ -868,6 +872,10 @@ SOURCE=..\..\src\lib\MacDocParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDraftParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDraft5Parser.hxx
 # End Source File
 # Begin Source File
 

@@ -207,14 +207,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-#ifdef DEBUG
     else if (creator=="MD40") {
-      if (type=="MDDC") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 5, MWAWDocument::MWAW_K_DRAW));
+      if (type=="MDDC" || type=="MSYM") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 4, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
-#endif
     else if (creator=="MDFT") { // v1.2
       if (type=="DRWG") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 1, MWAWDocument::MWAW_K_DRAW));
@@ -663,6 +661,15 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       return res;
     }
     // maybe we can also add outline: if (val[1]==0x5a4f && val[2]==0x4c4e)
+  }
+  if (val[3]==6 && val[4]<6) {
+    if (val[0]==0x4d44 && val[1]==0x4443 && val[2]==0x3230) {
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 4, MWAWDocument::MWAW_K_DRAW));
+      return res;
+    }
+    // can be a library file, this will be test in the parser
+    if (input->size()>=30)
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAFT, 4, MWAWDocument::MWAW_K_DRAW));
   }
   // magic ole header
   if (val[0]==0xd0cf && val[1]==0x11e0 && val[2]==0xa1b1 && val[3]==0x1ae1 && input->isStructured()) {

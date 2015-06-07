@@ -321,6 +321,9 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="L123") {
     checkFInfoType("LWKS","Lotus123") || checkFInfoType("Lotus123");
   }
+  else if (m_fInfoCreator=="LibW") {
+    checkFInfoType("Chnk","Microspot Media Assistant") || checkFInfoType("Microspot Media Assistant");
+  }
   else if (m_fInfoCreator=="LWTE") {
     checkFInfoType("TEXT","LightWayText") || checkFInfoType("MACR","LightWayText[MACR]") ||
     checkFInfoType("pref","LightWayText[Preferences]") ||
@@ -336,7 +339,8 @@ bool File::readFileInformation()
     checkFInfoType("DRWG","MacDraft 1.0") || checkFInfoType("MacDraft 1.0");
   }
   else if (m_fInfoCreator=="MD40") {
-    checkFInfoType("MDDC","MacDraft 5.0") || checkFInfoType("MacDraft 5.0");
+    checkFInfoType("MDDC","MacDraft 4-5") || checkFInfoType("MSYM","MacDraft 4-5[lib]") ||
+    checkFInfoType("MacDraft 4-5");
   }
   else if (m_fInfoCreator=="MDsr") {
     checkFInfoType("APPL","MacDoc(appli)");
@@ -590,7 +594,7 @@ bool File::readDataInformation()
     return true;
   }
   if (val[0]==2 && val[1]==0 && val[2]==2 && val[3]==0x262 && val[4]==0x262) {
-    m_dataResult.push_back("MacDraft");
+    m_dataResult.push_back("MacDraft 1");
     return true;
   }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
@@ -662,6 +666,17 @@ bool File::readDataInformation()
   if (val[0]==0x8950 && val[1]==0x4e47 && val[2]==0x0d0a && val[3]==0x1a0a) {
     m_dataResult.push_back("PNG");
     return true;
+  }
+  if (val[3]==6 && val[4]==3 && input.length()>30) {
+    input.seek(10, InputStream::SK_SET);
+    if (val[0]==0x4d44 && val[1]==0x4443 && val[2]==0x3230) {
+      m_dataResult.push_back("MacDraft 4-5");
+      return true;
+    }
+    else if (input.readU16()==0 && input.readU16()==0x48 && input.readU16()==0x48) {
+      m_dataResult.push_back("MacDraft 4-5[lib]");
+      return true;
+    }
   }
   if (val[0]==0xffd8 &&
       ((val[1]==0xffe0 && val[3]==0x4a46 && val[4] == 0x4946) ||

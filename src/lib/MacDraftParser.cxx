@@ -1291,7 +1291,7 @@ bool MacDraftParser::readLabel()
     f << "interline=200%,";
     break;
   default:
-    MWAW_DEBUG_MSG(("MacDraftParser::readObject: find unknown interline\n"));
+    MWAW_DEBUG_MSG(("MacDraftParser::readLabel: find unknown interline\n"));
     f << "##interline=3,";
     break;
   }
@@ -1307,7 +1307,7 @@ bool MacDraftParser::readLabel()
     f << "center,";
     break;
   default:
-    MWAW_DEBUG_MSG(("MacDraftParser::readObject: find unknown align\n"));
+    MWAW_DEBUG_MSG(("MacDraftParser::readLabel: find unknown align\n"));
     f << "##align=" << (flag>>24) << ",";
     break;
   }

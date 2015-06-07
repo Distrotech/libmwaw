@@ -250,14 +250,14 @@ struct Pixmap {
     m_compSize(0), m_planeBytes(0), m_colorTable(), m_src(), m_dst(),
     m_region(), m_indices(), m_colors(), m_mode(0)
   {
-    m_Res[0] = m_Res[1] = 0;
+    m_resolution[0] = m_resolution[1] = 0;
   }
 
   //! operator<< for Pixmap
   friend std::ostream &operator<< (std::ostream &o, Pixmap const &f)
   {
     o << "rDim=" << f.m_rowBytes << ", " << f.m_rect << ", " << f.m_src << ", " << f.m_dst;
-    o << ", resol=" << f.m_Res[0] << "x" << f.m_Res[1];
+    o << ", resol=" << f.m_resolution[0] << "x" << f.m_resolution[1];
     if (f.m_colorTable.get()) o << ", " << *f.m_colorTable;
     if (f.m_region.get()) o << ", " << *f.m_region;
     return o;
@@ -494,7 +494,7 @@ struct Pixmap {
   int m_version /** the pixmap version */;
   int m_packType /** the packing format */;
   long m_packSize /** size of data in the packed state */;
-  int m_Res[2] /** horizontal/vertical definition */;
+  int m_resolution[2] /** horizontal/vertical definition */;
   int m_pixelType /** format of pixel image */;
   int m_pixelSize /** physical bit by image */;
   int m_compCount /** logical components per pixels */;
@@ -1777,7 +1777,7 @@ bool ApplePictParser::readPixmap(ApplePictParserInternal::Pixmap &pixmap, bool p
   pixmap.m_packType = (int) input->readLong(2);
   pixmap.m_packSize = (int) input->readLong(4);
   for (int c = 0; c < 2; c++) {
-    pixmap.m_Res[c] = (int) input->readLong(2);
+    pixmap.m_resolution[c] = (int) input->readLong(2);
     input->readLong(2);
   }
   pixmap.m_pixelType = (int) input->readLong(2);
