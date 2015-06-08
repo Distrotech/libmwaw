@@ -60,7 +60,7 @@ namespace MacDraft5ParserInternal
 //!  Internal and low level: a class used to store layout definition of a MacDraf5Parser
 struct Layout {
   //! constructor
-  Layout() : m_entry(), m_N(0), m_name(""), m_extra("")
+  Layout() : m_entry(), m_N(0), m_objectId(0), m_name(""), m_extra(""), m_lastPos(-1)
   {
   }
   //! operator<<
@@ -75,10 +75,14 @@ struct Layout {
   MWAWEntry m_entry;
   //! the number of elements
   int m_N;
+  //! the object number
+  int m_objectId;
   //! the layout name
   std::string m_name;
   //! extra data
   std::string m_extra;
+  // removeme
+  long m_lastPos;
 };
 //!  Internal and low level: a class used to read pack/unpack color pixmap of a MacDraf5Parser
 struct Pixmap {
@@ -556,48 +560,51 @@ bool MacDraft5Parser::createZones()
   long pos=input->tell();
   readResources();
   readLastZones();
-  if (m_state->m_layoutList.empty()) {
-    if (!m_state->m_isLibrary) {
-      MWAW_DEBUG_MSG(("MacDraft5Parser::createZones: the layout is empty, create a false entry\n"));
-    }
-    MacDraft5ParserInternal::Layout layout;
-    layout.m_entry.setBegin(pos);
-    if (m_state->m_dataEnd>0)
-      layout.m_entry.setEnd(m_state->m_dataEnd);
-    else
-      layout.m_entry.setEnd(input->size());
-    m_state->m_layoutList.push_back(layout);
-  }
+
   if (m_state->m_dataEnd>0)
     input->pushLimit(m_state->m_dataEnd);
   input->seek(pos, librevenge::RVNG_SEEK_SET);
-  for (size_t i=0; i<m_state->m_layoutList.size(); ++i)
-    readLayout(m_state->m_layoutList[i]);
+  long lastPosSeen=pos;
+  if (m_state->m_layoutList.empty()) {
+    if (!m_state->m_isLibrary) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::createZones: the layout is empty, try to continue\n"));
+    }
+
+    while (!input->isEnd()) {
+      pos=input->tell();
+      MacDraft5ParserInternal::Layout layout;
+      layout.m_entry.setBegin(pos);
+      if (m_state->m_dataEnd>0)
+        layout.m_entry.setEnd(m_state->m_dataEnd);
+      else
+        layout.m_entry.setEnd(input->size());
+      if (!readLayout(layout))
+        break;
+      lastPosSeen=pos=input->tell();
+      if (input->isEnd())
+        break;
+      // check if there is another layout
+      int newN=(int)input->readULong(4);
+      if (newN<=0 || pos+newN*10>layout.m_entry.end() ||
+          (!m_state->m_isLibrary && pos+130>=layout.m_entry.end()))
+        break;
+      input->seek(-4, librevenge::RVNG_SEEK_CUR);
+    }
+  }
+  else {
+    for (size_t i=0; i<m_state->m_layoutList.size(); ++i) {
+      if (!m_state->m_layoutList[i].m_entry.valid())
+        continue;
+      if (m_state->m_layoutList[i].m_entry.end()>lastPosSeen)
+        lastPosSeen=m_state->m_layoutList[i].m_entry.end();
+      readLayout(m_state->m_layoutList[i]);
+    }
+  }
+  input->seek(lastPosSeen, librevenge::RVNG_SEEK_SET);
   if (!m_state->m_isLibrary)
     readDocFooter();
-  int n=0;
-  while (!input->isEnd()) {
-    pos=input->tell();
-    long fSz=(long) input->readULong(4);
-    if (fSz==0) {
-      ascii().addPos(pos);
-      ascii().addNote("_");
-      continue;
-    }
-    long endPos=pos+fSz+4;
-    if (fSz<0 || !input->checkPosition(endPos)) {
-      input->seek(pos,librevenge::RVNG_SEEK_SET);
-      ascii().addPos(pos);
-      break;
-    }
-    libmwaw::DebugStream f;
-    f << "Entries(UnknZone)[Z" << ++n << "]";
-    ascii().addPos(pos);
-    ascii().addNote(f.str().c_str());
-    if (fSz>1020)
-      ascii().skipZone(pos+1000, endPos-1);
-    input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  }
+  else
+    readLibraryFooter();
 
   if (!input->isEnd()) {
     MWAW_DEBUG_MSG(("MacDraft5Parser::createZones: find some extra zone\n"));
@@ -779,7 +786,7 @@ bool MacDraft5Parser::readDocHeader()
   val=(int) input->readLong(2); // 0|1
   if (val) f << "f0=" << val << ",";
   for (int i=0; i<2; ++i) dim[i]=(int) input->readLong(2);
-  if (dim[0]||dim[1]) f << "dim=" << MWAWVec2f(dim[1],dim[0]) << ",";
+  if (dim[0]||dim[1]) f << "dim=" << MWAWVec2i(dim[1],dim[0]) << ",";
   for (int i=0; i<4; ++i) { // always 0
     val=(int) input->readULong(2);
     if (val) f << "f" << i+1 << "=" << val << ",";
@@ -818,6 +825,41 @@ bool MacDraft5Parser::readDocHeader()
   return true;
 }
 
+bool MacDraft5Parser::readDocFooter()
+{
+  MWAWInputStreamPtr input = getInput();
+  if (input->isEnd())
+    return false;
+  long pos=input->tell();
+  long endPos=pos+128;
+  if (!input->checkPosition(endPos)) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    return false;
+  }
+
+  for (int i=0; i<4; ++i) {
+    pos=input->tell();
+    libmwaw::DebugStream f;
+    if (i==0)
+      f << "Entries(DocFooter):";
+    else
+      f << "DocFooter-" << i << ":";
+    int sSz=(int) input->readULong(1);
+    if (sSz>31) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readDocFooter: string size seems bad\n"));
+      f << "#sSz=" << sSz << ",";
+      sSz=0;
+    }
+    std::string name("");
+    for (int c=0; c<sSz; ++c) name+=(char) input->readULong(1);
+    f << name << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+32,librevenge::RVNG_SEEK_SET);
+  }
+  return true;
+}
+
 bool MacDraft5Parser::readLibraryHeader()
 {
   MWAWInputStreamPtr input = getInput();
@@ -849,10 +891,82 @@ bool MacDraft5Parser::readLibraryHeader()
   return true;
 }
 
+bool MacDraft5Parser::readLibraryFooter()
+{
+  MWAWInputStreamPtr input = getInput();
+  if (input->isEnd())
+    return false;
+  long pos=input->tell();
+  long fSz=(long) input->readULong(4);
+  long endPos=pos+4+fSz;
+  if (!fSz || !input->checkPosition(endPos)|| fSz<30 || (fSz%34)<30 || (fSz%34)>31) {
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readLibraryFooter: the zone size seems bad\n"));
+    return false;
+  }
+
+  libmwaw::DebugStream f;
+  f << "Entries(LibFooter):";
+  int val;
+  for (int i=0; i<3; ++i) { // always 0
+    val=(int) input->readLong(2);
+    if (val) f << "f" << i << "=" << val << ",";
+  }
+  int N=(int) input->readULong(2);
+  if (30+34*N!=fSz && 31+34*N!=fSz) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readLibFooter:N seems bad\n"));
+    f << "##N=" << N << ",";
+    if (30+34*N>fSz)
+      N=int((fSz-30)/34);
+  }
+  val=(int) input->readLong(2); // always 0 ?
+  if (val) f << "f3=" << val << ",";
+  val=(int) input->readLong(2); // always c
+  if (val!=34) f << "#fSz=" << val << ",";
+  long dataSz=input->readLong(4);
+  if (dataSz && dataSz!=34*N) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readLibFooter:dataSize seems bad\n"));
+    f << "##dataSz=" << dataSz << ",";
+  }
+  for (int i=0; i<7; ++i) {
+    val=(int) input->readLong(2);
+    static int const expected[]= {0,0x22,0,4,0,0,0};
+    if (val!=expected[i]) f << "f" << i+4 << "=" << val << ",";
+  }
+
+  ascii().addPos(pos);
+  ascii().addNote(f.str().c_str());
+
+  for (long i=0; i<N; ++i) {
+    pos=input->tell();
+    f.str("");
+    f << "LibFooter-" << i << ":";
+    f << "ID=" << std::hex << input->readULong(4) << std::dec << ",";
+    int sSz=(int) input->readULong(1);
+    if (sSz>25) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readLibFooter:stringSize seems bad\n"));
+      f << "##sSz=" << sSz << ",";
+      sSz=0;
+    }
+    std::string text("");
+    for (int c=0; c<sSz; ++c) text+=(char) input->readULong(1);
+    f << text << ",";
+    input->seek(pos+30, librevenge::RVNG_SEEK_SET);
+    val=(int) input->readLong(2); // constant in a zone: 6|d
+    if (val) f << "f0=" << val << ",";
+    val=(int) input->readLong(2); // 0|1
+    if (val) f << "f1=" << val << ",";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+  }
+  input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  return true;
+}
+
 ////////////////////////////////////////////////////////////
 // read an object
 ////////////////////////////////////////////////////////////
-bool MacDraft5Parser::readObject()
+bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
 {
   MWAWInputStreamPtr input = getInput();
   if (input->isEnd())
@@ -864,91 +978,75 @@ bool MacDraft5Parser::readObject()
     if (readLabel())
       return true;
   }
-  if (fSz<0x2e) {
-    input->seek(pos,librevenge::RVNG_SEEK_SET);
-    return readStringList();
+  input->seek(pos,librevenge::RVNG_SEEK_SET);
+  if (readStringList()) {
+    if (layout.m_lastPos>0) {
+      ascii().addPos(layout.m_lastPos);
+      ascii().addNote("hasString,");
+    }
+    return true;
   }
-  if (fSz==0x246) {
-    input->seek(pos,librevenge::RVNG_SEEK_SET);
-    return readDocFooter();
-  }
+  else if (fSz<0x2e)
+    return false;
   long endPos=pos+2+fSz;
   if (fSz<0x2e || !input->checkPosition(endPos)) {
     input->seek(pos,librevenge::RVNG_SEEK_SET);
     return false;
   }
+  input->seek(pos+2,librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Object):";
   if (input->tell()!=endPos)
     ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
+  layout.m_lastPos=pos;
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
+  ++layout.m_objectId;
   if (fSz!=0x64)
     return true;
   if (!readLabel())
     input->seek(endPos,librevenge::RVNG_SEEK_SET);
   pos=input->tell();
-  if (!input->checkPosition(pos+24)) {
-    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: can not read label\n"));
-    ascii().addPos(pos);
-    ascii().addNote("###");
-    return true;
+  f.str("");
+  f << "Entries(Text):";
+  bool ok=input->checkPosition(pos+24);
+  int tSz=0;
+  if (ok) {
+    for (int i=0; i<2; ++i) {
+      int dim[4];
+      for (int j=0; j<4; ++j) dim[j]=(int) input->readLong(2);
+      f << "dim" << i << "=" << MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2])) << ",";
+    }
+    tSz=(int) input->readULong(2);
+    ok=(tSz<20000 && input->checkPosition(pos+24+tSz));
   }
-  input->seek(pos+16, librevenge::RVNG_SEEK_SET);
-  int tSz=(int) input->readULong(2);
-  input->seek(4+tSz, librevenge::RVNG_SEEK_CUR);
-  int nData=(int) input->readULong(2);
+  int nData=0;
+  if (ok) {
+    f << "f0=" << input->readULong(4) << ",";
+    std::string text("");
+    for (int i=0; i<tSz; ++i) text+=(char) input->readULong(1);
+    f << text << ",";
+    nData=(int) input->readULong(2);
+  }
   endPos=pos+24+tSz+nData*20;
-  if (tSz>20000 || nData>100 || !input->checkPosition(endPos)) {
-    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: can not read label\n"));
+  if (!ok || nData>100 || !input->checkPosition(endPos)) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: can not read text\n"));
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     ascii().addPos(pos);
-    ascii().addNote("###");
+    ascii().addNote("###Text");
     return true;
   }
   ascii().addPos(pos);
-  ascii().addNote("Entries(Unknown):");
-  input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  return true;
-}
-
-////////////////////////////////////////////////////////////
-// read an last data zone
-////////////////////////////////////////////////////////////
-bool MacDraft5Parser::readDocFooter()
-{
-  MWAWInputStreamPtr input = getInput();
-  if (input->isEnd())
-    return false;
-  long pos=input->tell();
-  long fSz=(long) input->readULong(2);
-  long endPos=pos+128;
-  if (fSz!=0x246 || !input->checkPosition(endPos)) {
-    input->seek(pos,librevenge::RVNG_SEEK_SET);
-    return false;
-  }
-  for (int i=0; i<3; ++i) {
-    input->seek(30,librevenge::RVNG_SEEK_CUR);
-    if (input->readULong(2)!=0x246) {
-      input->seek(pos,librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-  }
-  input->seek(pos,librevenge::RVNG_SEEK_SET);
-  libmwaw::DebugStream f;
-  f << "Entries(DocFooter):";
-  ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  input->seek(pos+32,librevenge::RVNG_SEEK_SET);
 
-  for (int i=0; i<3; ++i) {
+  for (int i=0; i<nData; ++i) {
     pos=input->tell();
     f.str("");
-    f << "DocFooter-" << i << ":";
+    f << "Text-C" << i << ":";
     ascii().addPos(pos);
     ascii().addNote(f.str().c_str());
-    input->seek(pos+32,librevenge::RVNG_SEEK_SET);
+    input->seek(pos+20, librevenge::RVNG_SEEK_SET);
   }
   return true;
 }
@@ -1023,9 +1121,15 @@ bool MacDraft5Parser::readStringList()
   int val;
   for (int i=0; i<2; ++i) { // always 1,1
     val=(int) input->readLong(2);
-    if (val!=1) f << "f" << i << "=" << val << ",";
+    if (val==1)
+      continue;
+    if (fSz>=0x2e) {
+      input->seek(pos,librevenge::RVNG_SEEK_SET);
+      return false;
+    }
+    f << "f" << i << "=" << val << ",";
   }
-  for (int i=0; i<10; ++i) {
+  for (int i=0; i<10; ++i) { // find s0, s2, s4
     int sSz=(int) input->readULong(1);
     if (input->tell()+sSz>endPos) {
       input->seek(pos,librevenge::RVNG_SEEK_SET);
@@ -1036,6 +1140,8 @@ bool MacDraft5Parser::readStringList()
     for (int j=0; j<sSz; ++j) text += (char) input->readULong(1);
     f << "s" << i << "=" << text << ",";
   }
+  if (input->tell()!=endPos)
+    ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
@@ -1114,20 +1220,29 @@ bool MacDraft5Parser::readLayout(MacDraft5ParserInternal::Layout &layout)
   libmwaw::DebugStream f;
   f << "Layout[def]:";
   int val=(int) input->readULong(4);
-  if (m_state->m_isLibrary)
+  bool checkN=false;
+  if (m_state->m_isLibrary) {
     layout.m_N=val;
+    checkN=true;
+  }
   else if (val!=layout.m_N) {
     MWAW_DEBUG_MSG(("MacDraft5Parser::readLayout: N seems bad\n"));
     f << "###";
+    if (layout.m_N==0) {
+      layout.m_N=val;
+      checkN=true;
+    }
   }
   f << "N=" << val << ",";
   ascii().addPos(entry.begin());
   ascii().addNote(f.str().c_str());
   while (!input->isEnd()) {
+    if (checkN && layout.m_N==layout.m_objectId)
+      return true;
     long pos=input->tell();
     if (pos>=entry.end())
       break;
-    if (!readObject()) {
+    if (!readObject(layout)) {
       input->seek(pos, librevenge::RVNG_SEEK_SET);
       break;
     }
@@ -1630,14 +1745,11 @@ bool MacDraft5Parser::readBitmap(MWAWEntry const &entry)
     MWAW_DEBUG_MSG(("MacDraft5Parser::readBitmap: zone size seems bad\n"));
     f << "#sz[entry]=" << fSz << ",";
   }
-  long endPos=entry.end();
   fSz=(long) input->readULong(4);
   if (fSz+8>entry.length()) {
     MWAW_DEBUG_MSG(("MacDraft5Parser::readBitmap: data size seems bad\n"));
     f << "#sz[data]=" << fSz << ",";
   }
-  else
-    endPos=entry.begin()+8+fSz;
   // now the pixmap
   MacDraft5ParserInternal::Pixmap pixmap;
   pixmap.m_rowBytes = (int) input->readULong(2);

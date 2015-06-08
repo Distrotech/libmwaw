@@ -92,13 +92,15 @@ protected:
   bool readDocFooter();
   //! try to read the library header zone ( mainly unknown )
   bool readLibraryHeader();
+  //! try to read last library zone
+  bool readLibraryFooter();
 
   //
   // low level
   //
 
   //! try to read an object
-  bool readObject();
+  bool readObject(MacDraft5ParserInternal::Layout &layout);
   //! try to read a label
   bool readLabel();
   //! try to read a list of strings
