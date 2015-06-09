@@ -1787,7 +1787,7 @@ void MsWrdParser::sendPicture(long fPos, int cPos, MWAWPosition::AnchorTo anchor
     return;
   }
   if (m_state->m_picturesMap.find(fPos)==m_state->m_picturesMap.end()) {
-    MWAW_DEBUG_MSG(("MsWrdParser::sendPicture: can not find picture for pos %lx\n", fPos));
+    MWAW_DEBUG_MSG(("MsWrdParser::sendPicture: can not find picture for pos %lx\n", (long unsigned int) fPos));
     return;
   }
   MsWrdParserInternal::Picture const &pict= m_state->m_picturesMap.find(fPos)->second;

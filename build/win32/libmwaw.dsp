@@ -151,6 +151,10 @@ SOURCE=..\..\src\lib\ClarisWksPresentation.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\ClarisWksPRParser.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\ClarisWksSpreadsheet.cxx
 # End Source File
 # Begin Source File
@@ -280,6 +284,14 @@ SOURCE=..\..\src\lib\MacDocParser.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDrawParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDrawProParser.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDrawProStyleManager.cxx
 # End Source File
 # Begin Source File
 
@@ -459,6 +471,10 @@ SOURCE=..\..\src\lib\MWAWPictMac.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWPresentationListener.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWPrinter.cxx
 # End Source File
 # Begin Source File
@@ -544,6 +560,10 @@ SOURCE=..\..\src\lib\RagTimeStruct.cxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTimeText.cxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTime5Parser.cxx
 # End Source File
 # Begin Source File
 
@@ -644,6 +664,10 @@ SOURCE=..\..\src\lib\ClarisWksParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\ClarisWksPresentation.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\ClarisWksPRParser.hxx
 # End Source File
 # Begin Source File
 
@@ -780,6 +804,14 @@ SOURCE=..\..\src\lib\MacDocParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDrawParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDrawProParser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDrawProStyleManager.hxx
 # End Source File
 # Begin Source File
 
@@ -975,6 +1007,10 @@ SOURCE=..\..\src\lib\MWAWPosition.hxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MWAWPresentationListener.hxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MWAWPrinter.hxx
 # End Source File
 # Begin Source File
@@ -1060,6 +1096,10 @@ SOURCE=..\..\src\lib\RagTimeStruct.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTimeText.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTime5Parser.hxx
 # End Source File
 # Begin Source File
 

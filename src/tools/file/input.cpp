@@ -181,7 +181,11 @@ unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &num
 #if 0
     MWAW_DEBUG_MSG(("FileStream::read called with %ld[%ld]: read %ld bytes\n", m_offset, numBytes, numToRead));
 #endif
-    fseek(m_file, m_offset, SEEK_SET);
+    if (fseek(m_file, m_offset, SEEK_SET)==-1) {
+      MWAW_DEBUG_MSG(("FileStream::read get error when doing a seek\n"));
+      m_buffer.clear();
+      return 0;
+    }
     size_t nRead = fread(&(m_buffer[0]), 1, numToRead, m_file);
     if (nRead != numToRead) {
       MWAW_DEBUG_MSG(("FileStream::read get error when reading data\n"));
@@ -203,7 +207,10 @@ unsigned char const *FileStream::read(unsigned long numBytes, unsigned long &num
 long FileStream::length()
 {
   if (!m_isOk || !m_file) return 0;
-  fseek(m_file, 0, SEEK_END);
+  if (fseek(m_file, 0, SEEK_END)==-1) {
+    MWAW_DEBUG_MSG(("FileStream::length get error when reading data\n"));
+    return 0;
+  }
   return long(ftell(m_file));
 }
 }

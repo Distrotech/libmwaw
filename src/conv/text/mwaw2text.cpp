@@ -103,7 +103,14 @@ int main(int argc, char *argv[])
 
   MWAWDocument::Type type;
   MWAWDocument::Kind kind;
-  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  MWAWDocument::Confidence confidence = MWAWDocument::MWAW_C_NONE;
+  try {
+    MWAWDocument::isFileFormatSupported(&input, type, kind);
+  }
+  catch (...) {
+    confidence = MWAWDocument::MWAW_C_NONE;
+  }
+
   if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
     printf("ERROR: Unsupported file format!\n");
     return 1;
@@ -136,6 +143,19 @@ int main(int argc, char *argv[])
       error=MWAWDocument::parse(&input, &documentGenerator);
       if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
         printf("ERROR: find no sheets!\n");
+        return 1;
+      }
+      useStringVector=true;
+    }
+    else if (kind == MWAWDocument::MWAW_K_PRESENTATION) {
+      if (isInfo) {
+        printf("ERROR: can not print info concerning a presentation document!\n");
+        return 1;
+      }
+      librevenge::RVNGTextPresentationGenerator documentGenerator(pages);
+      error=MWAWDocument::parse(&input, &documentGenerator);
+      if (error == MWAWDocument::MWAW_R_OK && !pages.size()) {
+        printf("ERROR: find no slides!\n");
         return 1;
       }
       useStringVector=true;

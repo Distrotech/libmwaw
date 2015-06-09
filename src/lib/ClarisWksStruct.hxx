@@ -52,7 +52,10 @@ struct DSET {
   struct Child;
 
   //! the zone position
-  enum Position { P_Main=0, P_Header, P_Footer, P_Frame, P_Footnote, P_Table, P_Slide, P_Unknown};
+  enum Position { P_Main=0, P_Header, P_Footer, P_Frame, P_Footnote, P_Table,
+                  P_GraphicMaster,
+                  P_Slide, P_SlideNote, P_SlideThumbnail, P_SlideMaster, P_Unknown
+                };
   /** the different types of zone child */
   enum ChildType { C_Zone, C_SubText, C_Graphic, C_Unknown };
 
@@ -75,6 +78,11 @@ struct DSET {
     return m_position==P_Header||m_position==P_Footer;
   }
 
+  //! test if the zone is a slide
+  bool isSlide() const
+  {
+    return m_position==P_Slide || m_position==P_SlideNote || m_position==P_SlideThumbnail || m_position==P_SlideMaster;
+  }
   //! return the zone bdbox
   Box2f getBdBox() const
   {
@@ -107,7 +115,9 @@ struct DSET {
   //! virtual function to remove a child from a list
   virtual void removeChild(int cId);
   //! try to update the child page and bounding box
-  void updateChildPositions(Vec2f const &pageDim, int numHorizontalPages=1);
+  void updateChildPositions(Vec2f const &pageDim, float formLength, int numHorizontalPages=1);
+  //! find forbidden page break
+  void findForbiddenPagesBreaking(float pageDim, float formDim, int dim, std::set<int> &forbiddenPageBreak) const;
   //! returns the child box (ie. the union of the childs box)
   Box2i getUnionChildBox() const;
 

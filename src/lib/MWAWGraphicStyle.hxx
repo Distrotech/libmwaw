@@ -146,6 +146,7 @@ public:
       if (m_picture.size() > a.m_picture.size()) return -1;
       const unsigned char *ptr=m_picture.getDataBuffer();
       const unsigned char *aPtr=a.m_picture.getDataBuffer();
+      if (!ptr || !aPtr) return 0; // must only appear if the two buffers are empty
       for (unsigned long h=0; h < m_picture.size(); ++h, ++ptr, ++aPtr) {
         if (*ptr < *aPtr) return 1;
         if (*ptr > *aPtr) return -1;
@@ -237,7 +238,7 @@ public:
   //! returns true if the gradient is defined
   bool hasGradient(bool complex=false) const
   {
-    return m_gradientType != G_None && m_gradientStopList.size() >= (complex ? 3 : 2);
+    return m_gradientType != G_None && (int) m_gradientStopList.size() >= (complex ? 3 : 2);
   }
   //! returns true if the interior surface is defined
   bool hasSurface() const

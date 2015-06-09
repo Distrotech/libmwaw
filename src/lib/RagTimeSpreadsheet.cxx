@@ -880,6 +880,13 @@ bool RagTimeSpreadsheet::readResource(MWAWEntry &entry)
       std::string data=f.str();
       f.str("");
       f << entry.type() << "-" << i << ":" << data;
+      if (input->tell()>pos+zone.m_dataSize) {
+        MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readResource: can not find the entry size seems bad\n"));
+        f << "###";
+        ascFile.addPos(pos);
+        ascFile.addNote(f.str().c_str());
+        return false;
+      }
       input->seek(pos+zone.m_dataSize, librevenge::RVNG_SEEK_SET);
       ascFile.addPos(pos);
       ascFile.addNote(f.str().c_str());
@@ -1744,7 +1751,7 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
       continue;
     }
 
-    int row=contentZone.m_data[0]-1, prevActiveRow=-1, rowType=1;
+    int row=contentZone.m_data[0]-1, prevActiveRow=-1;
     for (size_t i=0; i<posList.size(); ++i) {
       f.str("");
       int col=int(i)%numCellsByRows;
@@ -1756,11 +1763,7 @@ bool RagTimeSpreadsheet::readSpreadsheetComplexStructure(MWAWEntry const &entry,
             break;
           }
           if (!block.m_intList[size_t(row)]) continue;
-          if (rowType==2) --row;
-          if (rowType!=1 && rowType!=2) {
-            MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readSpreadsheetComplexStructure: find unknown row type\n"));
-            f << "###";
-          }
+          // checkme: do we need to check the other block.m_intList[size_t(row)] values
           break;
         }
         prevActiveRow=int(i)/numCellsByRows;
@@ -2846,6 +2849,7 @@ bool RagTimeSpreadsheet::readCellInFormulaV2(Vec2i const &cellPos, bool canBeLis
       if (frame>=0) s << "F" << frame;
       instr.m_sheet=s.str();
     }
+    // coverity[dead_error_line : FALSE]: intended as sanity check
     else {
       f << "##marker=" << what << ",";
       MWAW_DEBUG_MSG(("RagTimeSpreadsheet::readCellInFormulaV2: find unexpected marker %d\n", what));

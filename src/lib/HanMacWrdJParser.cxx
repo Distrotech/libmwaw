@@ -438,7 +438,7 @@ bool HanMacWrdJParser::checkEntry(MWAWEntry &entry)
     "TextZone", "Picture", "Table", "GraphData", "GroupData",
     "ZoneA", "ZoneB", "Section", "FtnDef", "ZoneE", "FontsName"
   };
-  if (type <= 15)
+  if (type>=0 && type <= 15)
     entry.setName(what[type]);
   else {
     std::stringstream s;
@@ -1199,7 +1199,7 @@ bool HanMacWrdJParser::decodeZone(MWAWEntry const &entry, librevenge::RVNGBinary
     do {  /* once for each bit on path */
       if (bitcounter == 0) {
         if (input->isEnd() || input->tell() >= entry.end()) {
-          MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: find some uncomplete data for zone%lx\n", entry.begin()));
+          MWAW_DEBUG_MSG(("HanMacWrdJParser::decodeZone: find some uncomplete data for zone %lx\n", (long unsigned int) entry.begin()));
           dt.append((unsigned char)a);
           ok = false;
           break;

@@ -708,7 +708,7 @@ bool ClarisWksDbaseContent::readRecordSS(Vec2i const &id, long pos, ClarisWksDba
   int val= (int) input->readULong(1); // 0-46
   if (val) f << "format=" << std::hex << val << std::dec << ",";
   record.m_style=(int) input->readLong(2);
-  if (record.m_style) f << "style" << record.m_style << ",";
+  if (record.m_style) f << "Style-" << record.m_style << ",";
 
   int fileFormat=0;
   ClarisWksStyleManager::Style style;
@@ -960,7 +960,7 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
   case 0: {
     f << "string,";
     if ((m_version<=3&&!input->checkPosition(pos+2+val)) ||
-        (m_version>3 && val+2!=sz && val+3!=sz)) {
+        (m_version>3 && (val+2>sz || val+4<sz))) {
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: the string(II) seems bad\n"));
       f << "###";
       break;
@@ -974,7 +974,18 @@ bool ClarisWksDbaseContent::readRecordDB(Vec2i const &id, long pos, ClarisWksDba
     break;
   }
   case 4:
-    if (val) f << "unkn=" << std::hex << val << std::dec << ",";
+    // find also some string here when val is not null so let test
+    if (val && m_version>3 && val+2<=sz && val+4>=sz) {
+      content.m_contentType=MWAWCellContent::C_TEXT;
+      content.m_textEntry.setBegin(input->tell());
+      content.m_textEntry.setLength((long) val);
+      std::string data("");
+      for (int c=0; c < val; ++c) data+=(char) input->readULong(1);
+      f << data << ",";
+      break;
+    }
+    if (val)
+      f << "unkn=" << std::hex << val << std::dec << ",";
     f << "int,";
     if ((m_version<=3&&!input->checkPosition(pos+2)) || (m_version>3 && sz!=2)) {
       MWAW_DEBUG_MSG(("ClarisWksDbaseContent::readRecordDB: unexpected size for a int\n"));
@@ -1220,7 +1231,15 @@ bool ClarisWksDbaseContent::readFormula(Vec2i const &cPos, long endPos, std::vec
       break;
     }
     instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
-    instr.m_longValue=(int) input->readLong(2);
+    instr.m_longValue=(double) input->readLong(2);
+    break;
+  case 0x11:
+    if (pos+1+4>endPos) {
+      ok=false;
+      break;
+    }
+    instr.m_type=MWAWCellContent::FormulaInstruction::F_Long;
+    instr.m_longValue=(double) input->readLong(4);
     break;
   case 0x12: {
     double value;

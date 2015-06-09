@@ -186,27 +186,27 @@ public:
   //! set the page left margin
   void setMarginLeft(const double marginLeft)
   {
-    m_margins[libmwaw::Left] = (marginLeft > 0) ? marginLeft : 0.01;
+    m_margins[libmwaw::Left] = (marginLeft >= 0) ? marginLeft : 0.01;
   }
   //! set the page right margin
   void setMarginRight(const double marginRight)
   {
-    m_margins[libmwaw::Right] = (marginRight > 0) ? marginRight : 0.01;
+    m_margins[libmwaw::Right] = (marginRight >= 0) ? marginRight : 0.01;
   }
   //! set the page top margin
   void setMarginTop(const double marginTop)
   {
-    m_margins[libmwaw::Top] =(marginTop > 0) ? marginTop : 0.01;
+    m_margins[libmwaw::Top] =(marginTop >= 0) ? marginTop : 0.01;
   }
   //! set the page bottom margin
   void setMarginBottom(const double marginBottom)
   {
-    m_margins[libmwaw::Bottom] = (marginBottom > 0) ? marginBottom : 0.01;
+    m_margins[libmwaw::Bottom] = (marginBottom >= 0) ? marginBottom : 0.01;
   }
   //! set all the margins
   void setMargins(double margin, int wh=libmwaw::LeftBit|libmwaw::RightBit|libmwaw::TopBit|libmwaw::BottomBit)
   {
-    if (margin <= 0.0) margin = 0.01;
+    if (margin < 0.0) margin = 0.01;
     if (wh&libmwaw::LeftBit)
       m_margins[libmwaw::Left]=margin;
     if (wh&libmwaw::RightBit)
@@ -218,6 +218,36 @@ public:
   }
   //! check if the page margins are consistent with the page dimension, if not update them
   void checkMargins();
+  //! set the page name
+  void setPageName(librevenge::RVNGString const &name)
+  {
+    m_name=name;
+  }
+  //! return true if the page has a name
+  bool hasPageName() const
+  {
+    return !m_name.empty();
+  }
+  //! return the page name
+  librevenge::RVNGString const &getPageName() const
+  {
+    return m_name;
+  }
+  //! set the page master name
+  void setMasterPageName(librevenge::RVNGString const &name)
+  {
+    m_masterName=name;
+  }
+  //! return true if the masterPage has a name
+  bool hasMasterPageName() const
+  {
+    return !m_masterName.empty();
+  }
+  //! return the page master name
+  librevenge::RVNGString const &getMasterPageName() const
+  {
+    return m_masterName;
+  }
   //! set the background color
   void setBackgroundColor(MWAWColor color=MWAWColor::white())
   {
@@ -262,6 +292,10 @@ private:
   FormOrientation m_formOrientation;
   /** the margins: libmwaw::Left, ... */
   double m_margins[4];
+  //! the page name
+  librevenge::RVNGString m_name;
+  //! the page master name
+  librevenge::RVNGString m_masterName;
   /** the page background color: default white */
   MWAWColor m_backgroundColor;
   //! the page number ( or -1)

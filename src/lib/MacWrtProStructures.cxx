@@ -1142,11 +1142,6 @@ bool MacWrtProStructures::readFontsName()
     return false;
   }
   m_input->seek(pos+4, librevenge::RVNG_SEEK_SET);
-  if (sz == 0) {
-    ascii().addPos(pos);
-    ascii().addNote("_");
-    return true;
-  }
   f << "Entries(FontsName):";
   int N=(int) m_input->readULong(2);
   if (3*N+2 > sz) {
@@ -1881,12 +1876,15 @@ shared_ptr<MacWrtProStructuresInternal::Block>  MacWrtProStructures::readBlockV2
     if (val) f<< "unkn=" << val << ",";
     int what = (int) m_input->readULong(1);
     switch (what &0xF0) {
-    case 0x40:
+    case 0x40: // a header zone
       res->m_isHeader = true;
-    case 0x80:
       res->m_type = 6;
       break;
-    case 0xc0:
+    case 0x80: // a footer zone
+      res->m_isHeader = false;
+      res->m_type = 6;
+      break;
+    case 0xc0: // a footnote zone
       res->m_type = 7;
       break;
     default:
@@ -2426,13 +2424,11 @@ bool MacWrtProStructures::readString(MWAWInputStreamPtr input, std::string &res)
     MWAW_DEBUG_MSG(("MacWrtProStructures::readString: odd value for size\n"));
     return false;
   }
-  input->seek(pos+sz+2, librevenge::RVNG_SEEK_SET);
-  if (long(input->tell())!=pos+sz+2) {
+  if (!input->checkPosition(pos+sz+2)) {
     input->seek(pos, librevenge::RVNG_SEEK_SET);
     MWAW_DEBUG_MSG(("MacWrtProStructures::readString: file is too short\n"));
     return false;
   }
-  input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   for (int i= 0; i < sz; ++i) {
     char c = (char) input->readULong(1);
     if (c) {
@@ -2465,13 +2461,11 @@ bool MacWrtProStructures::readStructB()
 
   // CHECKME: find N=2 only one time ( and across a checksum zone ...)
   long endPos = pos+N*10+6;
-  m_input->seek(endPos, librevenge::RVNG_SEEK_SET);
-  if (long(m_input->tell()) != endPos) {
+  if (!m_input->checkPosition(endPos)) {
     MWAW_DEBUG_MSG(("MacWrtProStructures::readZonB: file is too short\n"));
     m_input->seek(pos, librevenge::RVNG_SEEK_SET);
     return false;
   }
-  m_input->seek(pos+2, librevenge::RVNG_SEEK_SET);
   int val = (int) m_input->readULong(2);
   if (val != 0x2af8)
     f << "f0=" << std::hex << val << std::dec << ",";

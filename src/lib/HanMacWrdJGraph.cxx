@@ -1009,7 +1009,7 @@ std::map<long,int> HanMacWrdJGraph::getTextFrameInformations() const
     if (mapIdType.find(zId) == mapIdType.end())
       mapIdType[zId] = frame.m_type;
     else if (mapIdType.find(zId)->second != frame.m_type) {
-      MWAW_DEBUG_MSG(("HanMacWrdJGraph::getTextFrameInformations: id %lx already set\n", zId));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::getTextFrameInformations: id %lx already set\n", (long unsigned int) zId));
     }
   }
   return mapIdType;
@@ -1914,12 +1914,12 @@ bool HanMacWrdJGraph::sendFrame(long frameId, MWAWPosition pos)
   std::map<long, int >::const_iterator fIt=
     m_state->m_framesMap.find(frameId);
   if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= int(m_state->m_framesList.size())) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: can not find frame %lx\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: can not find frame %lx\n", (long unsigned int) frameId));
     return false;
   }
   shared_ptr<HanMacWrdJGraphInternal::Frame> frame = m_state->m_framesList[size_t(fIt->second)];
   if (!frame || !frame->valid()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: frame %lx is not initialized\n", frameId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendFrame: frame %lx is not initialized\n", (long unsigned int) frameId));
     return false;
   }
   return sendFrame(*frame, pos);
@@ -2082,7 +2082,7 @@ bool HanMacWrdJGraph::sendTableUnformatted(long fId)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx\n", (long unsigned int) fId));
     return false;
   }
   int id = fIt->second;
@@ -2090,7 +2090,7 @@ bool HanMacWrdJGraph::sendTableUnformatted(long fId)
     return false;
   HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 9) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx(II)\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendTableUnformatted: can not find the table frame %lx(II)\n", (long unsigned int) fId));
     return false;
   }
   HanMacWrdJGraphInternal::TableFrame &tableFrame = static_cast<HanMacWrdJGraphInternal::TableFrame &>(frame);
@@ -2513,12 +2513,14 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
   }
   else {
     switch (graphType) {
+    // case 0: already treated in isLine block
     case 1:
       shape.m_type = MWAWGraphicShape::Rectangle;
       break;
     case 2:
       shape.m_type = MWAWGraphicShape::Circle;
       break;
+    // case 3: already treated in isLine block
     case 4:
       shape.m_type = MWAWGraphicShape::Rectangle;
       for (int c=0; c < 2; ++c) {
@@ -2557,8 +2559,6 @@ shared_ptr<HanMacWrdJGraphInternal::ShapeGraph> HanMacWrdJGraph::readShapeGraph(
     case 6:
       shape.m_type = MWAWGraphicShape::Polygon;
       break;
-    case 0:
-    case 3:
     default:
       break;
     }
@@ -2625,7 +2625,7 @@ void HanMacWrdJGraph::prepareStructures()
         static_cast<HanMacWrdJGraphInternal::TextboxFrame &>(*m_state->m_framesList[size_t(id)]);
       if (nCharTextMap.find(text.m_cPos)!=nCharTextMap.end()) {
         MWAW_DEBUG_MSG(("HanMacWrdJGraph::prepareStructures: pos %ld already exist for textZone %lx\n",
-                        text.m_cPos, textId));
+                        text.m_cPos, (long unsigned int) textId));
         ok=false;
       }
       else
@@ -2694,7 +2694,7 @@ bool HanMacWrdJGraph::sendGroup(long fId, MWAWPosition pos)
     return true;
   std::map<long, int>::const_iterator fIt = m_state->m_framesMap.find(fId);
   if (fIt == m_state->m_framesMap.end()) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx\n", (long unsigned int) fId));
     return false;
   }
   int id = fIt->second;
@@ -2702,7 +2702,7 @@ bool HanMacWrdJGraph::sendGroup(long fId, MWAWPosition pos)
     return false;
   HanMacWrdJGraphInternal::Frame &frame = *m_state->m_framesList[size_t(id)];
   if (!frame.valid() || frame.m_type != 11) {
-    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx(II)\n", fId));
+    MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find table %lx(II)\n", (long unsigned int) fId));
     return false;
   }
   return sendGroup(static_cast<HanMacWrdJGraphInternal::Group &>(frame), pos);
@@ -2819,7 +2819,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
     fIt=m_state->m_framesMap.find(fId);
     if (fIt == m_state->m_framesMap.end()  || fIt->second < 0 || fIt->second >= numFrames ||
         !m_state->m_framesList[size_t(fIt->second)]) {
-      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: can not find child %lx\n", fId));
+      MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroupChild: can not find child %lx\n", (long unsigned int) fId));
       continue;
     }
     HanMacWrdJGraphInternal::Frame const &frame=*m_state->m_framesList[size_t(fIt->second)];
@@ -2920,7 +2920,7 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
       fIt=m_state->m_framesMap.find(localFId);
       if (fIt == m_state->m_framesMap.end() || fIt->second < 0 || fIt->second >= numFrames ||
           !m_state->m_framesList[size_t(fIt->second)]) {
-        MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find child %lx\n", localFId));
+        MWAW_DEBUG_MSG(("HanMacWrdJGraph::sendGroup: can not find child %lx\n", (long unsigned int) localFId));
         continue;
       }
       HanMacWrdJGraphInternal::Frame const &childFrame=*m_state->m_framesList[size_t(fIt->second)];

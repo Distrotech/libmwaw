@@ -38,6 +38,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include <librevenge/librevenge.h>
 #include <librevenge-generators/librevenge-generators.h>
@@ -55,13 +56,17 @@
 
 int printUsage()
 {
-  printf("Usage: mwaw2svg [OPTION] <Mac Graphic Document>\n");
+  printf("Usage: mwaw2svg [-h] [-v] [-t] [-b body | -o file.svg] <Mac Graphic/Presentation Document>\n");
   printf("\n");
   printf("Options:\n");
-  printf(" -h                Shows this help message\n");
-  printf(" -o file.svg       Define the output[default stdout]\n");
-  printf(" -v:               Output mwaw2svg version \n");
+  printf(" -h                Shows this help message.\n");
+  printf(" -b body           Defines the file's body name, the different drawings/slides will be stored in body0.svg, body1.svg, ...\n");
+  printf(" -o file.svg       Stores the first drawing/slide in file.svg. Further drawing/slide are not saved.\n");
+  printf(" -t                If set, all drawings/slides are send to file.svg or stdout. This option is only intended for debug/regression test.\n");
+  printf(" -v:               Outputs mwaw2svg version. \n");
   printf("\n");
+  printf("Note:\n");
+  printf("\t the content of the first drawing/slide is sent to stdout if neither -b nor -o options are given.\n");
   return -1;
 }
 
@@ -77,13 +82,23 @@ int main(int argc, char *argv[])
     return printUsage();
 
   char const *output = 0;
+  char const *body = 0;
+  bool sendAll=false;
   bool printHelp=false;
-  int ch;
+  int ch, numOutput=0;
 
-  while ((ch = getopt(argc, argv, "ho:v")) != -1) {
+  while ((ch = getopt(argc, argv, "hb:o:tv")) != -1) {
     switch (ch) {
+    case 'b':
+      body=optarg;
+      ++numOutput;
+      break;
     case 'o':
       output=optarg;
+      ++numOutput;
+      break;
+    case 't':
+      sendAll=true;
       break;
     case 'v':
       printVersion();
@@ -95,7 +110,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  if (argc != 1+optind || printHelp) {
+  if (argc != 1+optind || printHelp || numOutput>1) {
     printUsage();
     return -1;
   }
@@ -103,7 +118,13 @@ int main(int argc, char *argv[])
 
   MWAWDocument::Type type;
   MWAWDocument::Kind kind;
-  MWAWDocument::Confidence confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  MWAWDocument::Confidence confidence = MWAWDocument::MWAW_C_NONE;
+  try {
+    confidence = MWAWDocument::isFileFormatSupported(&input, type, kind);
+  }
+  catch (...) {
+    confidence = MWAWDocument::MWAW_C_NONE;
+  }
   if (confidence != MWAWDocument::MWAW_C_EXCELLENT) {
     printf("ERROR: Unsupported file format!\n");
     return 1;
@@ -112,16 +133,22 @@ int main(int argc, char *argv[])
     printf("ERROR: can not determine the type of file!\n");
     return 1;
   }
-  if (kind != MWAWDocument::MWAW_K_DRAW && kind != MWAWDocument::MWAW_K_PAINT) {
-    fprintf(stderr,"ERROR: not a graphic document!\n");
-    return 1;
-  }
   MWAWDocument::Result error=MWAWDocument::MWAW_R_OK;
   librevenge::RVNGStringVector vec;
 
   try {
-    librevenge::RVNGSVGDrawingGenerator listener(vec, "");
-    error = MWAWDocument::parse(&input, &listener);
+    if (kind == MWAWDocument::MWAW_K_DRAW || kind == MWAWDocument::MWAW_K_PAINT) {
+      librevenge::RVNGSVGDrawingGenerator listener(vec, "");
+      error = MWAWDocument::parse(&input, &listener);
+    }
+    else if (kind == MWAWDocument::MWAW_K_PRESENTATION) {
+      librevenge::RVNGSVGPresentationGenerator listener(vec);
+      error = MWAWDocument::parse(&input, &listener);
+    }
+    else {
+      fprintf(stderr,"ERROR: not a graphic/presentation document!\n");
+      return 1;
+    }
     if (error==MWAWDocument::MWAW_R_OK && (vec.empty() || vec[0].empty()))
       error = MWAWDocument::MWAW_R_UNKNOWN_ERROR;
   }
@@ -143,18 +170,35 @@ int main(int argc, char *argv[])
   if (error != MWAWDocument::MWAW_R_OK)
     return 1;
 
-  if (!output) {
-    std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
-    std::cout << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
-    std::cout << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
-    std::cout << vec[0].cstr() << std::endl;
+  if (body) {
+    for (unsigned i=0; i<vec.size(); ++i) {
+      std::stringstream s;
+      s << body << (int) i << ".svg";
+      std::ofstream out(s.str().c_str());
+      out << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+      out << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
+      out << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+      out << vec[i].cstr() << std::endl;
+    }
+  }
+  else if (output) {
+    std::ofstream out(output);
+    for (unsigned i=0; i<vec.size(); ++i) {
+      out << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+      out << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
+      out << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+      out << vec[i].cstr() << std::endl;
+      if (!sendAll) break;
+    }
   }
   else {
-    std::ofstream out(output);
-    out << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
-    out << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
-    out << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
-    out << vec[0].cstr() << std::endl;
+    for (unsigned i=0; i<vec.size(); ++i) {
+      std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+      std::cout << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"";
+      std::cout << " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+      std::cout << vec[i].cstr() << std::endl;
+      if (!sendAll) break;
+    }
   }
   return 0;
 }

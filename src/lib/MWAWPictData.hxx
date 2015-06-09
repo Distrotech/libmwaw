@@ -137,6 +137,7 @@ public:
       return -1;
     unsigned char const *data=m_data.getDataBuffer();
     unsigned char const *aData=m_data.getDataBuffer();
+    if (!data || !aData) return 0; // must only appear if the two buffers are empty
     for (unsigned long c=0; c < m_data.size(); c++, data++, aData++) {
       if (*data < *aData) return -1;
       if (*data > *aData) return 1;

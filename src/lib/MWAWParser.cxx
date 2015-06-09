@@ -35,6 +35,7 @@
 #include "MWAWGraphicListener.hxx"
 #include "MWAWGraphicStyle.hxx"
 #include "MWAWList.hxx"
+#include "MWAWPresentationListener.hxx"
 #include "MWAWSpreadsheetListener.hxx"
 #include "MWAWTextListener.hxx"
 
@@ -43,7 +44,7 @@
 MWAWParserState::MWAWParserState(MWAWParserState::Type type, MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
   m_type(type), m_kind(MWAWDocument::MWAW_K_TEXT), m_version(0), m_input(input), m_header(header),
   m_rsrcParser(rsrcParser), m_pageSpan(), m_fontConverter(),
-  m_graphicListener(), m_listManager(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
+  m_graphicListener(), m_listManager(), m_presentationListener(), m_spreadsheetListener(), m_textListener(), m_asciiFile(input)
 {
   if (header) {
     m_version=header->getMajorVersion();
@@ -78,6 +79,8 @@ MWAWListenerPtr MWAWParserState::getMainListener()
   switch (m_type) {
   case Graphic:
     return m_graphicListener;
+  case Presentation:
+    return m_presentationListener;
   case Spreadsheet:
     return m_spreadsheetListener;
   case Text:
@@ -117,6 +120,17 @@ void MWAWParser::resetGraphicListener()
 {
   if (getGraphicListener()) getGraphicListener()->endDocument();
   m_parserState->m_graphicListener.reset();
+}
+
+void MWAWParser::setPresentationListener(MWAWPresentationListenerPtr &listener)
+{
+  m_parserState->m_presentationListener=listener;
+}
+
+void MWAWParser::resetPresentationListener()
+{
+  if (getPresentationListener()) getPresentationListener()->endDocument();
+  m_parserState->m_presentationListener.reset();
 }
 
 void MWAWParser::setSpreadsheetListener(MWAWSpreadsheetListenerPtr &listener)

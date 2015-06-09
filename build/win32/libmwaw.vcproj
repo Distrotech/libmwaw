@@ -236,6 +236,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\ClarisWksPRParser.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\ClarisWksSpreadsheet.cxx"
 				>
 			</File>
@@ -365,6 +369,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MacDrawParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawProParser.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawProStyleManager.cxx"
 				>
 			</File>
 			<File
@@ -544,6 +556,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWPresentationListener.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWPrinter.cxx"
 				>
 			</File>
@@ -629,6 +645,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTimeText.cxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTime5Parser.cxx"
 				>
 			</File>
 			<File
@@ -730,6 +750,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\ClarisWksPresentation.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\ClarisWksPRParser.hxx"
 				>
 			</File>
 			<File
@@ -866,6 +890,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\MacDrawParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawProParser.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\MacDrawProStyleManager.hxx"
 				>
 			</File>
 			<File
@@ -1061,6 +1093,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\MWAWPresentationListener.hxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\MWAWPrinter.hxx"
 				>
 			</File>
@@ -1146,6 +1182,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTimeText.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTime5Parser.hxx"
 				>
 			</File>
 			<File

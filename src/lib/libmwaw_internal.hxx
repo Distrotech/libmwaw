@@ -38,6 +38,7 @@
 #include <stdio.h>
 #endif
 
+#include <cmath>
 #include <map>
 #include <ostream>
 #include <string>
@@ -179,6 +180,33 @@ struct MWAWColor {
     m_value = argb;
     return *this;
   }
+  //! return a color from a cmyk color ( basic)
+  static MWAWColor colorFromCMYK(unsigned char c, unsigned char m,  unsigned char y, unsigned char k)
+  {
+    double w=1.-double(k)/255.;
+    return MWAWColor
+           ((unsigned char)(255 * (1-double(c)/255) * w),
+            (unsigned char)(255 * (1-double(m)/255) * w),
+            (unsigned char)(255 * (1-double(y)/255) * w)
+           );
+  }
+  //! return a color from a hsl color (basic)
+  static MWAWColor colorFromHSL(unsigned char H, unsigned char S,  unsigned char L)
+  {
+    double c=(1-((L>=128) ? (2*double(L)-255) : (255-2*double(L)))/255)*
+             double(S)/255;
+    double tmp=std::fmod((double(H)*6/255),2)-1;
+    double x=c*(1-(tmp>0 ? tmp : -tmp));
+    unsigned char C=(unsigned char)(255*c);
+    unsigned char M=(unsigned char)(double(L)-255*c/2);
+    unsigned char X=(unsigned char)(255*x);
+    if (H<=42) return MWAWColor((unsigned char)(M+C),(unsigned char)(M+X),(unsigned char)M);
+    if (H<=85) return MWAWColor((unsigned char)(M+X),(unsigned char)(M+C),(unsigned char)M);
+    if (H<=127) return MWAWColor((unsigned char)M,(unsigned char)(M+C),(unsigned char)(M+X));
+    if (H<=170) return MWAWColor((unsigned char)M,(unsigned char)(M+X),(unsigned char)(M+C));
+    if (H<=212) return MWAWColor((unsigned char)(M+X),(unsigned char)M,(unsigned char)(M+C));
+    return MWAWColor((unsigned char)(M+C),(unsigned char)(M),(unsigned char)(M+X));
+  }
   //! return the back color
   static MWAWColor black()
   {
@@ -197,6 +225,26 @@ struct MWAWColor {
   uint32_t value() const
   {
     return m_value;
+  }
+  //! returns the alpha value
+  unsigned char getAlpha() const
+  {
+    return (unsigned char)((m_value>>24)&0xFF);
+  }
+  //! returns the green value
+  unsigned char getBlue() const
+  {
+    return (unsigned char)(m_value&0xFF);
+  }
+  //! returns the red value
+  unsigned char getRed() const
+  {
+    return (unsigned char)((m_value>>16)&0xFF);
+  }
+  //! returns the green value
+  unsigned char getGreen() const
+  {
+    return (unsigned char)((m_value>>8)&0xFF);
   }
   //! return true if the color is black
   bool isBlack() const
@@ -368,6 +416,7 @@ class MWAWInputStream;
 class MWAWListener;
 class MWAWListManager;
 class MWAWParserState;
+class MWAWPresentationListener;
 class MWAWRSRCParser;
 class MWAWSpreadsheetListener;
 class MWAWSubDocument;
@@ -384,6 +433,8 @@ typedef shared_ptr<MWAWListener> MWAWListenerPtr;
 typedef shared_ptr<MWAWListManager> MWAWListManagerPtr;
 //! a smart pointer of MWAWParserState
 typedef shared_ptr<MWAWParserState> MWAWParserStatePtr;
+//! a smart pointer of MWAWPresentationListener
+typedef shared_ptr<MWAWPresentationListener> MWAWPresentationListenerPtr;
 //! a smart pointer of MWAWRSRCParser
 typedef shared_ptr<MWAWRSRCParser> MWAWRSRCParserPtr;
 //! a smart pointer of MWAWSpreadsheetListener
@@ -875,8 +926,7 @@ public:
     return m_pt[1];
   }
   /*! \brief the two extremum points which defined the box
-   * \param c value 0 means the minimum
-   * \param c value 1 means the maximum
+   * \param c 0 means the minimum and 1 the maximum
    */
   Vec2<T> const &operator[](int c) const
   {

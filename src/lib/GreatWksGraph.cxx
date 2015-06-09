@@ -1172,7 +1172,8 @@ bool GreatWksGraph::readPageFrames()
     pos = input->tell();
     f.str("");
     f << "GFrame[head]-F" << i+1 << ":";
-    shared_ptr<GreatWksGraphInternal::Frame> zone=readFrameHeader();
+    shared_ptr<GreatWksGraphInternal::Frame> zone;
+    if (pos+0x36<=zoneEnd) zone=readFrameHeader();
     if (!zone) {
       MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: oops graphic detection is probably bad\n"));
       f << "###";
@@ -1207,7 +1208,7 @@ bool GreatWksGraph::readPageFrames()
     f.str("");
     f << "GStyle-S" << i+1 << ":";
     MWAWGraphicStyle style;
-    if (!readStyle(style))
+    if (pos+gDataSize>zoneEnd || !readStyle(style))
       f << "###";
     else
       f << style;
@@ -1261,6 +1262,11 @@ bool GreatWksGraph::readPageFrames()
   f.str("");
   f << "GFrame[roots]: N=" << nRoots << ",roots=[";
   for (int i=0; i < nRoots; ++i) {
+    if (input->tell()+2>zoneEnd) {
+      MWAW_DEBUG_MSG(("GreatWksGraph::readPageFrames: can not read some roots\n"));
+      f << "###";
+      break;
+    }
     int val = (int) input->readLong(2);
     if (val==0) {
       f << "_,";
@@ -1543,13 +1549,23 @@ shared_ptr<GreatWksGraphInternal::Frame> GreatWksGraph::readFrameHeader()
     }
     else if (fileAngle[1]==360)
       angle[0]=int(90-fileAngle[0]-359);
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
+    if (angle[1]>360) {
+      int numLoop=int(angle[1]/360)-1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[1] > 360) {
+        angle[0]-=360;
+        angle[1]-=360;
+      }
     }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
+    if (angle[0] < -360) {
+      int numLoop=int(angle[0]/360)+1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[0] < -360) {
+        angle[0]+=360;
+        angle[1]+=360;
+      }
     }
     // we must compute the real bd box
     float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };

@@ -108,7 +108,7 @@ bool getPPMData(MWAWPictBitmapContainer<T> const &orig, librevenge::RVNGBinaryDa
 namespace MWAWPictBitmapInternal
 {
 //! Internal: helper function to create a PPM for a color bitmap
-bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
+static bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;
@@ -133,13 +133,13 @@ bool getPPMData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNG
 //
 // functions used by getPBMData (freely inspired from libpwg::WPGBitmap.cpp)
 //
-void writeU16(unsigned char *buffer, unsigned &position, const unsigned value)
+static void writeU16(unsigned char *buffer, unsigned &position, const unsigned value)
 {
   buffer[position++] = (unsigned char)(value & 0xFF);
   buffer[position++] = (unsigned char)((value >> 8) & 0xFF);
 }
 
-void writeU32(unsigned char *buffer, unsigned &position, const unsigned value)
+static void writeU32(unsigned char *buffer, unsigned &position, const unsigned value)
 {
   buffer[position++] = (unsigned char)(value & 0xFF);
   buffer[position++] = (unsigned char)((value >> 8) & 0xFF);
@@ -148,7 +148,7 @@ void writeU32(unsigned char *buffer, unsigned &position, const unsigned value)
 }
 
 //! Internal: helper function to create a BMP for a color bitmap (freely inspired from libpwg::WPGBitmap.cpp)
-bool getBMPData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
+static bool getBMPData(MWAWPictBitmapContainer<MWAWColor> const &orig, librevenge::RVNGBinaryData &data)
 {
   Vec2i sz = orig.size();
   if (sz[0] <= 0 || sz[1] <= 0) return false;

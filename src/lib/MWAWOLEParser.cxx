@@ -652,9 +652,7 @@ bool MWAWOLEParser::readCompObj(MWAWInputStreamPtr ip, std::string const &oleNam
     long sz = ip->readLong(4);
     bool waitNumber = sz == -1;
     if (waitNumber || sz == -2) sz = 4;
-    if (sz < 0 || ip->seek(actPos+4+sz,librevenge::RVNG_SEEK_SET) != 0 ||
-        ip->tell() != actPos+4+sz) return false;
-    ip->seek(actPos+4,librevenge::RVNG_SEEK_SET);
+    if (sz < 0 || !ip->checkPosition(actPos+4+sz)) return false;
 
     std::string st;
     if (waitNumber) {
@@ -788,41 +786,40 @@ bool MWAWOLEParser::readOlePres(MWAWInputStreamPtr ip, librevenge::RVNGBinaryDat
   ascii.addNote(f.str().c_str());
 
   long endHPos = actPos+hSize;
-  if (hSize > 4) { // CHECKME
-    bool ok = true;
-    f.str("");
-    f << "@@OlePress(headerA): ";
-    if (hSize < 14) ok = false;
-    else {
-      // 12,21,32|48,0
-      for (int i = 0; i < 4; i++) f << ip->readLong(2) << ",";
-      // 3 name of creator
-      for (int ch=0; ch < 3; ch++) {
-        std::string str;
-        bool find = false;
-        while (ip->tell() < endHPos) {
-          unsigned char c = (unsigned char)ip->readULong(1);
-          if (c == 0) {
-            find = true;
-            break;
-          }
-          str += (char) c;
-        }
-        if (!find) {
-          ok = false;
+  if (!ip->checkPosition(endHPos+28)) return false;
+  bool ok = true;
+  f.str("");
+  f << "@@OlePress(headerA): ";
+  if (hSize < 14) ok = false;
+  else {
+    // 12,21,32|48,0
+    for (int i = 0; i < 4; i++) f << ip->readLong(2) << ",";
+    // 3 name of creator
+    for (int ch=0; ch < 3; ch++) {
+      std::string str;
+      bool find = false;
+      while (ip->tell() < endHPos) {
+        unsigned char c = (unsigned char)ip->readULong(1);
+        if (c == 0) {
+          find = true;
           break;
         }
-        f << ", name" <<  ch << "=" << str;
+        str += (char) c;
       }
-      if (ok) ok = ip->tell() == endHPos;
+      if (!find) {
+        ok = false;
+        break;
+      }
+      f << ", name" <<  ch << "=" << str;
     }
-    // FIXME, normally they remain only a few bits (size unknown)
-    if (!ok) f << "###";
-    ascii.addPos(actPos);
-    ascii.addNote(f.str().c_str());
+    if (ok) ok = ip->tell() == endHPos;
   }
-  if (ip->seek(endHPos+28, librevenge::RVNG_SEEK_SET) != 0
-      || ip->tell() != endHPos+28)
+  // FIXME, normally they remain only a few bits (size unknown)
+  if (!ok) f << "###";
+  ascii.addPos(actPos);
+  ascii.addNote(f.str().c_str());
+
+  if (ip->seek(endHPos+28, librevenge::RVNG_SEEK_SET) != 0)
     return false;
 
   ip->seek(endHPos, librevenge::RVNG_SEEK_SET);

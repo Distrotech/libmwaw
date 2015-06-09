@@ -61,9 +61,12 @@ struct Shape {
   enum Type { Basic, Bitmap, Group, GroupEnd, Text, Unknown };
 
   //! constructor
-  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1), m_font(), m_paragraph(), m_textEntry(), m_childList(), m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
+  Shape() : m_type(Unknown), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1),
+    m_font(), m_paragraph(), m_textEntry(), m_childList(),
+    m_numBytesByRow(0), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_isSent(false)
   {
   }
+
   //! return the shape bdbox
   Box2f getBdBox() const
   {
@@ -232,7 +235,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
     return;
   }
   MacDrawParser *parser=dynamic_cast<MacDrawParser *>(m_parser);
-  if (!m_parser) {
+  if (!parser) {
     MWAW_DEBUG_MSG(("MacDrawParserInternal::SubDocument::parse: no parser\n"));
     return;
   }
@@ -331,28 +334,19 @@ void MacDrawParser::createDocument(librevenge::RVNGDrawingInterface *documentInt
 bool MacDrawParser::createZones()
 {
   MWAWInputStreamPtr input = getInput();
-  int const vers=version();
   readPrefs();
   input->seek(512,librevenge::RVNG_SEEK_SET);
   long pos=input->tell();
-  if (vers<2) {
-    while (!input->isEnd()) {
-      if (readObject()<0)
-        break;
-      pos=input->tell();
-    }
-    input->seek(pos, librevenge::RVNG_SEEK_SET);
+  while (!input->isEnd()) {
+    if (readObject()<0)
+      break;
+    pos=input->tell();
   }
-  else {
-    MWAW_DEBUG_MSG(("MacDrawParser::createDocument: reading version 2 files is not implemented\n"));
-    ascii().addPos(pos);
-    ascii().addNote("Entries(Data):##");
-    return false;
-  }
+  input->seek(pos, librevenge::RVNG_SEEK_SET);
 
   if (!input->isEnd()) {
     pos=input->tell();
-    MWAW_DEBUG_MSG(("MacDrawParser::createDocument: find extra data\n"));
+    MWAW_DEBUG_MSG(("MacDrawParser::createZones: find extra data\n"));
     ascii().addPos(pos);
     ascii().addNote("Entries(Data):##");
   }
@@ -362,7 +356,7 @@ bool MacDrawParser::createZones()
 int MacDrawParser::readObject()
 {
   MWAWInputStreamPtr input = getInput();
-  if (input->isEnd()) return false;
+  if (input->isEnd()) return -1;
   long pos=input->tell();
   libmwaw::DebugStream f;
   f << "Entries(Object):";
@@ -674,7 +668,6 @@ int MacDrawParser::readObject()
         angle[1]+=360;
       }
 
-      Vec2f center = box.center();
       Vec2f axis = 0.5*Vec2f(box.size());
       // we must compute the real bd box
       float minVal[2] = { 0, 0 }, maxVal[2] = { 0, 0 };
@@ -691,6 +684,7 @@ int MacDrawParser::readObject()
         if (actVal[1] < minVal[1]) minVal[1] = actVal[1];
         else if (actVal[1] > maxVal[1]) maxVal[1] = actVal[1];
       }
+      Vec2f center = box.center();
       Box2f realBox(Vec2f(center[0]+minVal[0],center[1]+minVal[1]),
                     Vec2f(center[0]+maxVal[0],center[1]+maxVal[1]));
       shape.m_box=Box2f(Vec2f(shape.m_box[0])+realBox[0],Vec2f(shape.m_box[0])+realBox[1]);
@@ -802,12 +796,16 @@ int MacDrawParser::readObject()
         MWAW_DEBUG_MSG(("MacDrawParser::readObject: can not find a child\n"));
         return int(shapeId);
       }
-      // do not use childList as the vector can have grown
+      // do not use shape's childList as the vector can have grown
       m_state->m_shapeList[shapeId].m_childList.push_back(size_t(cId));
     }
     int cId=readObject(); // read end group
-    if (cId<0)
+    int nextId=int(m_state->m_shapeList.size());
+    if (cId<0) {
+      m_state->m_shapeList[shapeId].m_nextId=nextId;
       return int(shapeId);
+    }
+    m_state->m_shapeList[shapeId].m_nextId=nextId-1;
     if (m_state->m_shapeList[size_t(cId)].m_type!=MacDrawParserInternal::Shape::GroupEnd) {
       MWAW_DEBUG_MSG(("MacDrawParser::readObject: oops, can not find the end group data\n"));
       ascii().addPos(pos);
@@ -815,7 +813,6 @@ int MacDrawParser::readObject()
     }
     else
       m_state->m_shapeList.pop_back();
-    m_state->m_shapeList[size_t(cId)].m_nextId=int(m_state->m_shapeList.size());
     return int(shapeId);
   }
   case 11: {
@@ -895,9 +892,6 @@ bool MacDrawParser::checkHeader(MWAWHeader *header, bool strict)
     if (input->readULong(2)!=0x5747) return false;
     val=(int) input->readULong(2);
     if (val==0x4d44) vers=1;
-#ifdef DEBUG
-    else if (val==0x4432) vers=2;
-#endif
     else {
       MWAW_DEBUG_MSG(("MacDrawParser::checkHeader: find unexpected header\n"));
       return false;
@@ -925,6 +919,20 @@ bool MacDrawParser::checkHeader(MWAWHeader *header, bool strict)
       if (input->readLong(2)) return false;
   }
 
+  if (strict && vers >= 1) {
+    // we must check that this is not a basic pict file
+    input->seek(512+2, librevenge::RVNG_SEEK_SET);
+    int dim[4];
+    for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+    val=(int) input->readLong(2);
+    if (dim[0]<dim[2] && dim[1]<dim[3] && (val==0x1101 || (val==0x11 && input->readLong(2)==0x2ff))) {
+      // posible
+      input->seek(512, librevenge::RVNG_SEEK_SET);
+      Box2f box;
+      if (MWAWPictData::check(input, (int)(input->size()-512), box) != MWAWPict::MWAW_R_BAD)
+        return false;
+    }
+  }
   if (strict) {
     // check also the beginning list of shape
     input->seek(512, librevenge::RVNG_SEEK_SET);
@@ -1082,7 +1090,7 @@ bool MacDrawParser::send(MacDrawParserInternal::Shape const &shape)
   case MacDrawParserInternal::Shape::Group: {
     size_t numShapes=m_state->m_shapeList.size();
     if (!numShapes) break;
-    listener->openLayer(pos);
+    listener->openGroup(pos);
     for (size_t i=0; i<shape.m_childList.size(); ++i) {
       if (shape.m_childList[i]>=numShapes) {
         MWAW_DEBUG_MSG(("MacDrawParser::send: can not find a child\n"));
@@ -1095,7 +1103,7 @@ bool MacDrawParser::send(MacDrawParserInternal::Shape const &shape)
       }
       send(child);
     }
-    listener->closeLayer();
+    listener->closeGroup();
     break;
   }
   case MacDrawParserInternal::Shape::GroupEnd:
@@ -1121,7 +1129,9 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
   }
   if (!shape.m_bitmapEntry.valid()) return false;
   int const numBytesByRow=shape.m_numBytesByRow;
+  Vec2i pictDim=shape.m_bitmapDim.size();
   if (shape.m_type!=MacDrawParserInternal::Shape::Bitmap || numBytesByRow<=0 ||
+      pictDim[0]<0 || pictDim[1]<0 ||
       numBytesByRow*shape.m_bitmapFileDim.size()[1]<shape.m_bitmapEntry.length() ||
       shape.m_bitmapDim[0][0]<0 || shape.m_bitmapDim[0][1]<0 ||
       shape.m_bitmapDim[0][0]<shape.m_bitmapFileDim[0][0] ||
@@ -1131,13 +1141,14 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
     return false;
   }
   // change: implement indexed transparent color, replaced this code
-  MWAWPictBitmapColor pict(shape.m_bitmapDim[1], true);
+  MWAWPictBitmapColor pict(pictDim, true);
   MWAWColor transparent(255,255,255,0);
   MWAWColor black(MWAWColor::black());
-  std::vector<MWAWColor> data(size_t(shape.m_bitmapDim[1][0]), transparent);
+  std::vector<MWAWColor> data;
+  data.resize(size_t(pictDim[0]), transparent);
   // first set unseen row to zero (even if this must not appear)
-  for (int r=shape.m_bitmapDim[0][1]; r<shape.m_bitmapFileDim[0][1]; ++r) pict.setRow(r, &data[0]);
-  for (int r=shape.m_bitmapFileDim[1][1]; r<shape.m_bitmapDim[1][1]; ++r) pict.setRow(r, &data[0]);
+  for (int r=shape.m_bitmapDim[0][1]; r<shape.m_bitmapFileDim[0][1]; ++r) pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
+  for (int r=shape.m_bitmapFileDim[1][1]; r<shape.m_bitmapDim[1][1]; ++r) pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
 
   MWAWInputStreamPtr input=getInput();
   input->seek(shape.m_bitmapEntry.begin(), librevenge::RVNG_SEEK_SET);
@@ -1147,15 +1158,15 @@ bool MacDrawParser::sendBitmap(MacDrawParserInternal::Shape const &shape, MWAWPo
       input->seek(pos+numBytesByRow, librevenge::RVNG_SEEK_SET);
       continue;
     }
-    int wPos=shape.m_bitmapFileDim[0][0];
+    int wPos=shape.m_bitmapDim[0][0]-shape.m_bitmapFileDim[0][0];
     for (int col=shape.m_bitmapFileDim[0][0]; col<shape.m_bitmapFileDim[1][0]; ++col) {
       unsigned char c=(unsigned char) input->readULong(1);
       for (int j=0, bit=0x80; j<8 ; ++j, bit>>=1) {
-        if (wPos>=shape.m_bitmapDim[1][0]) break;
+        if (wPos>=pictDim[0]) break;
         data[size_t(wPos++)]=(c&bit) ? black : transparent;
       }
     }
-    pict.setRow(r, &data[0]);
+    pict.setRow(r-shape.m_bitmapDim[0][1], &data[0]);
     input->seek(pos+numBytesByRow, librevenge::RVNG_SEEK_SET);
   }
 

@@ -424,24 +424,9 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksDatabase::readDatabaseZone
     ok = m_document.readStructZone("DatabaseUnkn5", false);
   }
   if (ok && vers>=4) {
-    // version 4 can contains more block
+    // version 4 can contains more block: list of int+flag?
     pos=input->tell();
-    long sz=(long) input->readULong(4);
-    if (input->checkPosition(pos+4+sz)) {
-      input->seek(pos+4+sz, librevenge::RVNG_SEEK_SET);
-      ascFile.addPos(pos);
-      if (sz) {
-        MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn6 block\n"));
-        ascFile.addNote("Entries(DatabaseListUnkn6):");
-      }
-      else
-        ascFile.addNote("_");
-    }
-    else {
-      ok=false;
-      MWAW_DEBUG_MSG(("ClarisWksDatabase::readDatabaseZone: find a Unkn6 block does not know how to read it\n"));
-      input->seek(pos, librevenge::RVNG_SEEK_SET);
-    }
+    ok = m_document.readStructZone("DatabaseUnkn6", false);
   }
   // now the following seems to be different
   if (!ok)
@@ -906,7 +891,9 @@ bool ClarisWksDatabase::sendDatabase(int zId, MWAWListenerPtr listener)
         long endPos = rec.m_content.m_textEntry.end();
         while (!input->isEnd() && input->tell() < endPos) {
           unsigned char ch=(unsigned char) input->readULong(1);
-          if (ch==0xd)
+          if (ch==9)
+            sheetListener->insertTab();
+          else if (ch==0xd)
             sheetListener->insertEOL();
           else
             sheetListener->insertCharacter(ch, input, endPos);

@@ -45,8 +45,12 @@
 #  else
 #    define MWAWLIB _declspec(dllimport)
 #  endif
-#else
-#  define MWAWLIB
+#else // !DLL_EXPORT
+#  ifdef LIBMWAW_VISIBILITY
+#    define MWAWLIB __attribute__((visibility("default")))
+#  else
+#    define MWAWLIB
+#  endif
 #endif
 
 namespace librevenge
@@ -98,7 +102,7 @@ public:
     MWAW_T_ADOBEILLUSTRATOR /** Adobe Illustrator: TODO */,
     MWAW_T_BEAGLEWORKS /**BeagleWorks (v1.0)/WordPerfect Works (v1.2): export database(as spreadsheet), draw, paint, spreadsheet and text files.*/,
     MWAW_T_CLARISRESOLVE /**Claris Resolve (v1.1)*/,
-    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export text, draw(as text), paint, spreadsheet/database (as spreadsheet) document*/,
+    MWAW_T_CLARISWORKS /**ClarisWorks/AppleWorks: all versions, export database (as spreadsheet), draw(as text), paint, presentation, spreadsheet, text document*/,
     MWAW_T_DBASE /** DBase: TODO*/,
     MWAW_T_DOCMAKER /** DocMaker (v4)*/,
     MWAW_T_EDOC /** eDOC (v2)*/,
@@ -118,7 +122,7 @@ public:
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
     MWAW_T_MACDRAFT /** MacDraft: TODO*/,
     MWAW_T_MACDRAW /** MacDraw: v0-v1 */,
-    MWAW_T_MACDRAWPRO /** MacDraw II/Pro: TODO*/,
+    MWAW_T_MACDRAWPRO /** MacDraw II: v1.0-v1.1, MacDraw Pro: v1*/,
     MWAW_T_MACPAINT /** MacPaint: v1-v2 */,
     MWAW_T_MARINERWRITE /** Mariner Write (only v1.6-v3.5 Mac Classic) */,
     MWAW_T_MINDWRITE /** MindWrite */,

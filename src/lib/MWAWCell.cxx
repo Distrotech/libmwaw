@@ -781,7 +781,7 @@ librevenge::RVNGPropertyList MWAWCellContent::FormulaInstruction::getPropertyLis
       int unicode=fontConverter.unicode(fontId,(unsigned char)c);
       if (unicode==-1) {
         if (c < 0x20 && c!=9) {
-          MWAW_DEBUG_MSG(("MWAWCellContent::FormulaInstruction: Find odd char %x\n", int(c)));
+          MWAW_DEBUG_MSG(("MWAWCellContent::FormulaInstruction: Find odd char %x\n", (unsigned int)c));
         }
         else
           finalStr.append(char(c));

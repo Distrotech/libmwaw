@@ -621,7 +621,8 @@ int ClarisWksText::numPages() const
 
 bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList)
 {
-  if (m_state->m_zoneMap.find(1)==m_state->m_zoneMap.end() || !m_state->m_zoneMap.find(1)->second)
+  if (m_state->m_zoneMap.find(1)==m_state->m_zoneMap.end() || !m_state->m_zoneMap.find(1)->second
+      || m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION)
     return false;
   ClarisWksTextInternal::Zone const &zone=*m_state->m_zoneMap.find(1)->second;
   size_t numSection=zone.m_sectionList.size();
@@ -666,9 +667,9 @@ bool ClarisWksText::updatePageSpanList(MWAWPageSpan const &page, std::vector<MWA
         int zId=sec.m_HFId[j];
         if (!zId) continue;
         if ((j%2)==1 && zId==sec.m_HFId[j-1]) continue;
-        // try to retrieve the father group zone
-        if (m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() && m_state->m_zoneMap.find(zId)->second &&
-            m_state->m_zoneMap.find(zId)->second->m_fatherId)
+        /* try to retrieve the father group zone */
+        if (m_state->m_zoneMap.find(zId)!=m_state->m_zoneMap.end() &&
+            m_state->m_zoneMap.find(zId)->second && m_state->m_zoneMap.find(zId)->second->m_fatherId)
           zId=m_state->m_zoneMap.find(zId)->second->m_fatherId;
         MWAWHeaderFooter hF(j<2 ? MWAWHeaderFooter::HEADER : MWAWHeaderFooter::FOOTER,
                             (j%2) ? MWAWHeaderFooter::EVEN : sec.m_HFId[j]==sec.m_HFId[j+1] ?
@@ -742,6 +743,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
     f << "#position="<< (textZone->m_textType >> 4) << ",";
     break;
   }
+  // find 2,3,6,a,b,e,f
   if (textZone->m_textType != ClarisWksStruct::DSET::P_Unknown)
     textZone->m_textType &= 0xF;
   f << *textZone << ",";
@@ -848,8 +850,7 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksText::readDSETZone(ClarisWksStruct::D
     zEntry.setBegin(pos);
     zEntry.setLength(sz+4);
 
-    input->seek(zEntry.end(), librevenge::RVNG_SEEK_SET);
-    if (long(input->tell()) !=  zEntry.end()) {
+    if (!input->checkPosition(zEntry.end())) {
       MWAW_DEBUG_MSG(("ClarisWksText::readDSETZone: entry for %d zone is too short\n", z));
       ascFile.addPos(pos);
       ascFile.addNote("###");
@@ -1138,18 +1139,8 @@ bool ClarisWksText::readParagraphs(MWAWEntry const &entry, ClarisWksTextInternal
 {
   long pos = entry.begin();
 
-  int styleSize = 0;
   int const vers = version();
-  switch (vers) {
-  case 1:
-    styleSize = 6;
-    break;
-  default:
-    styleSize = 8;
-    break;
-  }
-  if (styleSize == 0)
-    return false;
+  int styleSize = vers==1 ? 6 : 8;
   if ((entry.length()%styleSize) != 4)
     return false;
 
@@ -1709,6 +1700,10 @@ bool ClarisWksText::sendText(ClarisWksTextInternal::Zone const &zone, MWAWListen
               MWAW_DEBUG_MSG(("ClarisWksText::sendText: can not send graphic in a paint file\n"));
               f << "###";
               break;
+            }
+            if (m_parserState->m_kind==MWAWDocument::MWAW_K_PRESENTATION) {
+              MWAW_DEBUG_MSG(("ClarisWksText::sendText: find a graphic in text zone, may cause some problem\n"));
+              f << "#";
             }
             if (token.m_zoneId>0) {
               // fixme

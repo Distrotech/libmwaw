@@ -52,7 +52,7 @@ struct State;
 class SubDocument;
 }
 
-/** \brief the main class to read a MacDraw v1, II file
+/** \brief the main class to read a MacDraw v0,v1 file
  *
  */
 class MacDrawParser : public MWAWGraphicParser
@@ -92,7 +92,7 @@ protected:
   // low level
   //
 
-  //! try to read an object (v0-v1). \return the object index or -1 if some error happens
+  //! try to read an object. \return the object index or -1 if some error happens
   int readObject();
 
   //! try to send a shape

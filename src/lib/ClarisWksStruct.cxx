@@ -91,10 +91,12 @@ void DSET::removeChild(int cId, bool normalChild)
 }
 
 
-void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
+void DSET::updateChildPositions(Vec2f const &pageDim, float formLength, int numHorizontalPages)
 {
   float const &textWidth=pageDim[0];
-  float const &textHeight=pageDim[1];
+  float textHeight=pageDim[1];
+  if (float(m_pageDimension[1])>0.5f*formLength && float(m_pageDimension[1])<formLength)
+    textHeight=float(m_pageDimension[1]);
   if (textHeight<=0) {
     MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::updateChildPositions: the height can not be null\n"));
     return;
@@ -191,6 +193,47 @@ void DSET::updateChildPositions(Vec2f const &pageDim, int numHorizontalPages)
   }
 }
 
+void DSET::findForbiddenPagesBreaking(float pageDim, float formDim, int dim, std::set<int> &forbiddenPageBreak) const
+{
+  if (isHeaderFooter() || m_position==P_Frame)
+    return;
+
+  if (dim<0||dim>1) {
+    MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::findForbiddenPagesBreaking: the height can not be null\n"));
+    return;
+  }
+  float length=pageDim;
+  if (float(m_pageDimension[dim])>0.5f*formDim && float(m_pageDimension[dim])<formDim)
+    length=float(m_pageDimension[dim]);
+  if (length<=0) {
+    MWAW_DEBUG_MSG(("ClarisWksStruct::DSET::findForbiddenPagesBreaking: the length can not be null\n"));
+    return;
+  }
+  float const eps=0.1f*length;
+  for (size_t i=0; i < m_childs.size(); i++) {
+    Child const &child=m_childs[i];
+    Box2f childBdBox=child.getBdBox();
+    // as the recomputation of page position is not accurate, just ignore the small size
+    if (childBdBox.size()[dim]<=length)
+      continue;
+    int pageMax=int(float(childBdBox[1][dim])/length);
+    if (pageMax <= 0)
+      continue;
+    float diff = child.m_box[1][dim]-float(pageMax)*length;
+    if (diff <= eps)
+      --pageMax;
+    int pageMin=int(float(childBdBox[0][dim])/length);
+    if (pageMin<0) pageMin=0;
+    else {
+      diff = child.m_box[0][dim]-float(pageMin)*length;
+      if (diff >= length-eps)
+        ++pageMin;
+    }
+    for (int j=pageMin+1; j<=pageMax; ++j)
+      forbiddenPageBreak.insert(j);
+  }
+}
+
 std::ostream &operator<<(std::ostream &o, DSET const &doc)
 {
   switch (doc.m_position) {
@@ -211,8 +254,20 @@ std::ostream &operator<<(std::ostream &o, DSET const &doc)
   case DSET::P_Main:
     o << "main,";
     break;
+  case DSET::P_GraphicMaster:
+    o << "graphic[master],";
+    break;
   case DSET::P_Slide:
     o << "slide,";
+    break;
+  case DSET::P_SlideMaster:
+    o << "slide[master],";
+    break;
+  case DSET::P_SlideNote:
+    o << "slide[note],";
+    break;
+  case DSET::P_SlideThumbnail:
+    o << "slide[thumbnail],";
     break;
   case DSET::P_Table:
     o << "table,";

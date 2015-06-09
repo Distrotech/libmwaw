@@ -92,8 +92,14 @@ public:
   /** returns the number of pages */
   int numPages() const;
 
+  //! returns the page dimension if known (in point)
+  bool getPageDimension(Vec2f &dim) const;
+
   //! compute the pages position
   void computePositions() const;
+
+  //! find the master zone to the content zones in a graphic document
+  void findMasterPage() const;
 
   //! reads the zone Group DSET
   shared_ptr<ClarisWksStruct::DSET> readGroupZone
@@ -110,6 +116,8 @@ protected:
   bool canSendGroupAsGraphic(int number) const;
   //! sends the page element
   bool sendPageGraphics(int groupId);
+  //! sends the master zone (ie. the background zone in a graphic document)
+  bool sendMaster(int pg);
   //! sends the zone data to the listener (if it exists )
   bool sendGroup(int number, MWAWListenerPtr listener, MWAWPosition const &pos=MWAWPosition());
   //! check if we can send a group as graphic
@@ -135,8 +143,8 @@ protected:
   bool canSendAsGraphic(ClarisWksGraphInternal::Group &group) const;
   //! send a group
   bool sendGroup(ClarisWksGraphInternal::Group &group, MWAWPosition const &position);
-  //! send a group as graphic
-  bool sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener);
+  //! send a child group as graphic or as presentation
+  bool sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, Vec2f const &leftTop);
   //! send a group child
   bool sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> zone, MWAWPosition position);
   //! send the child element corresponding to some page

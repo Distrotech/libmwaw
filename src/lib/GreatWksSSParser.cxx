@@ -711,7 +711,7 @@ bool GreatWksSSParser::readSpreadsheet()
     if (!ok && type>=7) {
       // try to use the default value
       input->seek(pos+2, librevenge::RVNG_SEEK_SET);
-      long sz=type==0x14 ? 0 : (long) input->readULong(4);
+      long sz= (long) input->readULong(4);
       endPos=pos+6+sz;
       ok=input->checkPosition(endPos);
     }

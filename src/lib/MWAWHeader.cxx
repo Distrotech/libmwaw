@@ -127,6 +127,12 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
+    else if (creator=="C#+A") { // solo
+      if (type=="C#+D" || type=="C#+F") {
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
+        return res;
+      }
+    }
     else if (creator=="Dc@P" || creator=="Dk@P") {
       if (type=="APPL") {
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_DOCMAKER, 1));
@@ -195,15 +201,16 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         return res;
       }
     }
-#ifdef DEBUG
-    //fixme: decide if we want to call the MacDraw parser or the MacDraw Pro parser
     else if (creator=="MDPL") { // MacDraw II
       if (type=="DRWG") {
-        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 2, MWAWDocument::MWAW_K_DRAW));
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
+      if (type=="STAT") { // stationery
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
     }
-#endif
     else if (creator=="MDsr") {
       if (type=="APPL") { // auto content
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDOC, 1));
@@ -404,6 +411,10 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
         res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
         return res;
       }
+      if (type=="dLib") { // macdraw pro slide/library
+        res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+        return res;
+      }
     }
     else if (creator=="eDcR") {
       if (type=="eDoc") {
@@ -509,6 +520,11 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_CLARISRESOLVE, 1, MWAWDocument::MWAW_K_SPREADSHEET));
     return res;
   }
+  if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a RagTime 5-6 file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_RAGTIME, 5));
+    return res;
+  }
   if (val[0]==0x4646 && val[1]==0x4646 && val[2]==0x3030 && val[3]==0x3030) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a Mariner Write file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MARINERWRITE, 1));
@@ -547,20 +563,30 @@ std::vector<MWAWHeader> MWAWHeader::constructHeader
       res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 1, MWAWDocument::MWAW_K_DRAW));
       return res;
     }
-#ifdef DEBUG
-    //fixme: decide if we want to call the MacDraw parser or the MacDraw Pro parser
-    if (val[2]==0x4432) { // D2
+    if (val[2]==0 || val[2]==0x4432) { // D2
       MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw II file\n"));
-      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAW, 2, MWAWDocument::MWAW_K_DRAW));
+      res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
       return res;
     }
-#endif
   }
+  if (val[0]==0x5354 && val[1]==0x4154 && (val[2]==0 || val[2]==0x4432)) {
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw II template file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 0, MWAWDocument::MWAW_K_DRAW));
+    return res;
+  }
+#ifndef DEBUG
+  // we need the resource fork to find the colors, patterns, ... ; so...
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
     return res;
   }
+  if (val[0]==0x644c && val[1]==0x6962 && val[2]==0x4432) { // dLibD2
+    MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a MacDraw Pro template file\n"));
+    res.push_back(MWAWHeader(MWAWDocument::MWAW_T_MACDRAWPRO, 1, MWAWDocument::MWAW_K_DRAW));
+    return res;
+  }
+#endif
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
     MWAW_DEBUG_MSG(("MWAWHeader::constructHeader: find a HanMac Word-K file\n"));
     res.push_back(MWAWHeader(MWAWDocument::MWAW_T_HANMACWORDK, 1));

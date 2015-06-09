@@ -50,6 +50,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ClarisWksParser.hxx		\
 	ClarisWksPresentation.cxx	\
 	ClarisWksPresentation.hxx	\
+	ClarisWksPRParser.cxx		\
+	ClarisWksPRParser.hxx		\
 	ClarisWksSpreadsheet.cxx	\
 	ClarisWksSpreadsheet.hxx	\
 	ClarisWksSSParser.cxx		\
@@ -114,6 +116,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MacDocParser.hxx		\
 	MacDrawParser.cxx		\
 	MacDrawParser.hxx		\
+	MacDrawProParser.cxx		\
+	MacDrawProParser.hxx		\
+	MacDrawProStyleManager.cxx	\
+	MacDrawProStyleManager.hxx	\
 	MacPaintParser.cxx		\
 	MacPaintParser.hxx		\
 	MacWrtParser.cxx		\
@@ -211,6 +217,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPictMac.cxx			\
 	MWAWPictMac.hxx			\
 	MWAWPosition.hxx		\
+	MWAWPresentationListener.cxx	\
+	MWAWPresentationListener.hxx	\
 	MWAWPrinter.cxx			\
 	MWAWPrinter.hxx			\
 	MWAWPropertyHandler.cxx		\
@@ -249,6 +257,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTimeStruct.hxx		\
 	RagTimeText.cxx			\
 	RagTimeText.hxx			\
+	RagTime5Parser.cxx		\
+	RagTime5Parser.hxx		\
 	SuperPaintParser.cxx		\
 	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\

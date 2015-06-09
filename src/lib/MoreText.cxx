@@ -215,9 +215,9 @@ struct OutlineMod {
     case 4:
       return 2;
     default:
-      return 3;
+      break;
     }
-    return 2;
+    return 3;
   }
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, OutlineMod const &head)

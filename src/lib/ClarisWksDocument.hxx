@@ -57,6 +57,7 @@ struct State;
 
 class ClarisWksParser;
 class ClarisWksBMParser;
+class ClarisWksPRParser;
 class ClarisWksSSParser;
 
 class ClarisWksDatabase;
@@ -73,6 +74,7 @@ class ClarisWksDocument
 public:
   friend class ClarisWksParser;
   friend class ClarisWksBMParser;
+  friend class ClarisWksPRParser;
   friend class ClarisWksSSParser;
   friend class ClarisWksDocumentInternal::SubDocument;
   //! constructor
@@ -96,6 +98,8 @@ public:
   Vec2f getPageLeftTop() const;
   /** updates the page span list */
   void updatePageSpanList(std::vector<MWAWPageSpan> &spanList);
+  /** updates the page span list (and returns a master page)*/
+  void updatePageSpanList(std::vector<MWAWPageSpan> &spanList, MWAWPageSpan &master);
 
   //! returns the main document section
   MWAWSection getMainSection() const;
@@ -228,6 +232,8 @@ public:
 
 
 protected:
+  //! returns the final page span to use for the document
+  MWAWPageSpan getFinalPageSpan() const;
   //! the state
   shared_ptr<ClarisWksDocumentInternal::State> m_state;
 public:

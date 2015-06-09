@@ -84,6 +84,8 @@ protected:
   void flushExtra();
   //! update the text zone type with map id->type
   void updateTextZoneTypes(std::map<long,int> const &idTypeMap);
+  //! compute the number of pages present in a zone
+  int computeNumPages(HanMacWrdKZone const &zone) const;
   //! returns the list of zoneId which corresponds to the token
   std::vector<long> const &getTokenIdList() const;
   //! return sthe header/footer id
@@ -111,15 +113,15 @@ protected:
   // low level
   //
   /** try to read a font in a text zone */
-  bool readFont(HanMacWrdKZone &zone, MWAWFont &font);
+  bool readFont(HanMacWrdKZone const &zone, MWAWFont &font) const;
 
   /** try to read a paragraph in a text zone */
-  bool readParagraph(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Paragraph &para);
+  bool readParagraph(HanMacWrdKZone const &zone, HanMacWrdKTextInternal::Paragraph &para) const;
   /** send the ruler properties */
   void setProperty(HanMacWrdKTextInternal::Paragraph const &para, float width);
 
   /** try to read an token in a text zone */
-  bool readToken(HanMacWrdKZone &zone, HanMacWrdKTextInternal::Token &token);
+  bool readToken(HanMacWrdKZone const &zone, HanMacWrdKTextInternal::Token &token) const;
 
 private:
   HanMacWrdKText(HanMacWrdKText const &orig);

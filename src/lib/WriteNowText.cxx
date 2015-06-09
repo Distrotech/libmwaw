@@ -423,6 +423,7 @@ std::ostream &operator<<(std::ostream &o, ContentZone const &z)
     break;
   case 0x10:
     o << "break,";
+    break;
   default:
     o << "type=#" << z.m_type << ",";
     break;
@@ -907,7 +908,7 @@ shared_ptr<WriteNowTextInternal::ContentZones> WriteNowText::parseContent(WriteN
         }
       }
       if ((type == 0xb || type == 0xd) && numChar != 1) {
-        MWAW_DEBUG_MSG(("WriteNowText::parseContent: find odd size for type %x entry\n", type));
+        MWAW_DEBUG_MSG(("WriteNowText::parseContent: find odd size for type %x entry\n", (unsigned int) type));
         ascFile.addPos(pos);
         ascFile.addNote("TextData:##");
 
@@ -2004,7 +2005,7 @@ bool WriteNowText::send(std::vector<WriteNowTextInternal::ContentZone> &listZone
       break;
     }
     default:
-      MWAW_DEBUG_MSG(("WriteNowText::send: find keyword %x\n",zone.m_type));
+      MWAW_DEBUG_MSG(("WriteNowText::send: find keyword %x\n",(unsigned int) zone.m_type));
       break;
     }
 

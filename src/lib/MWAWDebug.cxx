@@ -45,10 +45,9 @@ namespace libmwaw
 {
 bool DebugFile::open(std::string const &filename)
 {
-  std::string name=Debug::flattenFileName(filename);
-  name += ".ascii";
-  m_file.open(name.c_str());
-  return m_on = m_file.is_open();
+  m_on=true;
+  m_fileName=filename;
+  return true;
 }
 
 void DebugFile::addPos(long pos)
@@ -114,6 +113,11 @@ void DebugFile::write()
 {
   if (!m_on || m_input.get() == 0) return;
 
+  std::string name=Debug::flattenFileName(m_fileName);
+  if (name.empty()) return;
+  name += ".ascii";
+  m_file.open(name.c_str());
+  if (!m_file.is_open()) return;
   sort();
 
   long readPos = m_input->tell();

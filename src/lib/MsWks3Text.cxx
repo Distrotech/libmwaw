@@ -545,7 +545,7 @@ bool MsWks3Text::sendText(MsWks3TextInternal::LineZone &zone, int zoneId)
       else if (c <= 0x1f) {
         f << "#" << std::hex << c << std::dec << "]";
         ascFile.addDelimiter(pos,'#');
-        MWAW_DEBUG_MSG(("MsWks3Text::sendText: find char=%x\n",int(c)));
+        MWAW_DEBUG_MSG(("MsWks3Text::sendText: find char=%x\n", (unsigned int)c));
       }
       else
         listener->insertCharacter((unsigned char)c, input, zone.m_pos.end());
@@ -697,7 +697,7 @@ bool MsWks3Text::readParagraph(MsWks3TextInternal::LineZone &zone, MWAWParagraph
     break;
   default:
     f << "#align=" << std::hex << fl[0] << ",";
-    MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: unknown alignment %x\n", fl[0]));
+    MWAW_DEBUG_MSG(("MsWks3Text::readParagraph: unknown alignment %x\n", (unsigned int) fl[0]));
     break;
   }
   fl[1] = (int) input->readULong(1);

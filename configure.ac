@@ -7,7 +7,7 @@ AC_PREREQ([2.60])
 # ====================
 m4_define([libmwaw_version_major],[0])
 m4_define([libmwaw_version_minor],[3])
-m4_define([libmwaw_version_micro],[2])
+m4_define([libmwaw_version_micro],[4])
 m4_define([libmwaw_version],[libmwaw_version_major.libmwaw_version_minor.libmwaw_version_micro])
 
 # =============
@@ -101,6 +101,25 @@ AS_CASE([$host],
 )
 AC_MSG_RESULT([$platform_win32])
 AM_CONDITIONAL([PLATFORM_WIN32], [test "x$platform_win32" = "xyes"])
+
+AS_IF([test "x$platform_win32" == "xyes"],
+    [],
+    [
+        AC_MSG_CHECKING([for -fvisibility=hidden compiler flag])
+        saved_CXXFLAGS="$CXXFLAGS"
+        CXXFLAGS="$CXXFLAGS -fvisibility=hidden"
+        AC_TRY_COMPILE([], [],
+            [
+                AC_MSG_RESULT([yes])
+                CXXFLAGS="$CXXFLAGS -DLIBMWAW_VISIBILITY"
+            ],
+            [
+                AC_MSG_RESULT([no])
+                CXXFLAGS="$saved_CXXFLAGS"
+            ]
+        )
+    ]
+)
 
 AC_ARG_ENABLE([def-files],
 	[AS_HELP_STRING([--enable-def-files], [Enable use of def files to define exported symbols on win32])],

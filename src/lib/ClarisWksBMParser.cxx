@@ -132,10 +132,7 @@ void ClarisWksBMParser::parse(librevenge::RVNGDrawingInterface *docInterface)
     // check that we have at least read the main zone
     if (ok) {
       shared_ptr<ClarisWksStruct::DSET> zMap = m_document->getZone(1);
-      if (!zMap)
-        ok = false;
-      else if (getParserState()->m_kind==MWAWDocument::MWAW_K_PAINT)
-        ok = zMap->m_fileType==4;
+      ok = zMap && zMap->m_fileType==4;
     }
     if (ok) {
       createDocument(docInterface);

@@ -15,6 +15,7 @@
 - LightWayTxt*  : parser of LightWay Text documents
 - MacDoc*       : parser of MacDoc documents
 - MacDraw*      : parser of MacDraw documents
+- MacDrawPro*   : parser of MacDraw II, MacDraw Pro documents
 - MacWrt*       : parser of MacWrite documents
 - MacWrtPro*    : parser of MacWrite II, MacWrite Pro documents
 - MarinerWrt*   : parser of Mariner Write documents
@@ -53,12 +54,13 @@ These files defined basic tools which must be used by the parsers :
 ## generic tools
 
 - MWAWDebug.hxx : class to store parsed data in an intermediate file
-- MWAWFontConverter.hxx : read and convert in unicode Apple© char fonts
+- MWAWFontConverter.hxx : reads and convert in unicode Apple© char fonts
      MWAWFontSJISConverter.hxx : read S-JIS encoding fonts
-- MWAWPrinter.hxx : read the mac printer information
-- MWAWOLEParser.hxx : read some classic ole structure
+- MWAWPrinter.hxx : reads the mac printer information
+- MWAWOLEParser.hxx : reads some classic ole structures
 - MWAWPropertyHandler.hxx : some classes which keep a list of tag and RVNGPropertyList,
 	store/unstore then in order to be reread by writerperfect 
+- MWAWStringStream.hxx: creates a RVNGInputStream given a unsigned char's pointer
 
 ## specific tool for graphics:
 - MWAWPict.hxx : generic pict
@@ -138,9 +140,10 @@ BeagleWksSSParser: spreadsheet document parser of BeagleWorks v1.0 and WordPerfe
 -   BeagleWksText : class which reads the text in a word document
 -   BeagleWksStructManager : class to read structure partaged between different type of document
 
-ClarisWksParser : word parser of ClarisWorks/AppleWorks document (or draw/paint)
-ClarisWksBMParser: bitmap parser of ClarisWorks/AppleWorks text document
-ClarisWksSSParser: spreadsheet parser of ClarisWorks/AppleWorks text document
+ClarisWksParser : word parser of ClarisWorks/AppleWorks document (or draw)
+ClarisWksBMParser: bitmap parser of ClarisWorks/AppleWorks painting document
+ClarisWksPRParser: presentation parser of ClarisWorks/AppleWorks presentation document
+ClarisWksSSParser: spreadsheet parser of ClarisWorks/AppleWorks spreadsheet document
 -   ClarisWksDocument: main class which keeps trace of the input and defines shared general functions
 -   ClarisWksGraph : class which reads the graphics and zone dispositions ...
 -   ClarisWksDbaseContent: class which reads the main structure of a database/spreadsheet
@@ -187,6 +190,9 @@ MacDocParser : parser of MacDoc document: v1.3
 
 MacDrawParser : parser of MacDraw document: v0-v1
 
+MacDrawProParser : parser of MacDraw II and MacDraw Pro document
+-   MacDrawProStyleManager : class which read the styles either in the data fork or in the resource fork
+
 MacPaintParser: parser of MacPaint v1-2 files (ie. of PNTG mac file)
 
 MacWrtParser : parser of MacWrite document : v1.0-5.01
@@ -226,10 +232,12 @@ NisusWrtParser : parser of a Nisus Writer document : v4.0
 -   NisusWrtStruct : class which defines the different structures used by the parsed
 -   NisusWrtText : class which reads the text
 
-RagTimeParser : parser of RagTime : v2-3, in preparation, ie not functional
+RagTimeParser : parser of RagTime : v2-3
 -   RagTimeSpreadsheet: class which reads the spreadsheet's zones
 -   RagTimeStruct: small classes which define some file's basic structures
 -   RagTimeText: class which reads the text's zones
+
+RagTime5Parser : parser of RagTime : v5-6 ; only try find the main structures of the document, ie not functional
 
 SuperPaintParser: parser of drawing and paint SuperPaint files : v1 
 

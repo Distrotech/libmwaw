@@ -52,10 +52,9 @@ struct GraphicState;
 struct State;
 }
 
-/** This class contains the minimal code needed to write a Graphic sub document.
+/** This class contains the code needed to create Graphic document.
 
-    \note it will be probably be enhanced in some near/far futur...
-    All units are specicified in librevenge::RVNG_POINT
+    \note All units are specified in librevenge::RVNG_POINT
  */
 class MWAWGraphicListener : public MWAWListener
 {
@@ -101,12 +100,23 @@ public:
   bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** close a frame */
   void closeFrame();
+  /** open a group */
+  bool openGroup(MWAWPosition const &pos);
+  /** close a group */
+  void closeGroup();
   /** open a layer */
-  bool openLayer(MWAWPosition const &pos);
+  bool openLayer(librevenge::RVNGString const &name);
   /** close a layer */
   void closeLayer();
 
   // ------ page --------
+  /** opens a master page */
+  bool openMasterPage(MWAWPageSpan &masterPage);
+  /** close a master page */
+  void closeMasterPage()
+  {
+    _closePageSpan(true);
+  }
   /** returns true if a page is opened */
   bool isPageSpanOpened() const;
   /** returns the current page span
@@ -237,7 +247,7 @@ protected:
   //! does open a new page (low level)
   void _openPageSpan(bool sendHeaderFooters=true);
   //! does close a page (low level)
-  void _closePageSpan();
+  void _closePageSpan(bool masterPage=false);
 
   void _startSubDocument();
   void _endSubDocument();

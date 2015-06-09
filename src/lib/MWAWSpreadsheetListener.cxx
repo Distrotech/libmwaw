@@ -76,7 +76,7 @@ enum { PageBreakBit=0x1, ColumnBreakBit=0x2 };
 struct DocumentState {
   //! constructor
   DocumentState(std::vector<MWAWPageSpan> const &pageList) :
-    m_pageList(pageList), m_metaData(), m_footNoteNumber(0), m_smallPictureNumber(0),
+    m_pageList(pageList), m_pageSpan(), m_metaData(), m_footNoteNumber(0), m_smallPictureNumber(0),
     m_isDocumentStarted(false), m_isSheetOpened(false), m_isSheetRowOpened(false),
     m_sentListMarkers(), m_numberingIdMap(),
     m_subDocuments()
@@ -89,6 +89,8 @@ struct DocumentState {
 
   //! the pages definition
   std::vector<MWAWPageSpan> m_pageList;
+  //! the current page span
+  MWAWPageSpan m_pageSpan;
   //! the document meta data
   librevenge::RVNGPropertyList m_metaData;
 
@@ -155,7 +157,6 @@ struct State {
   bool m_isTableColumnOpened;
   bool m_isTableCellOpened;
 
-  MWAWPageSpan m_pageSpan;
   unsigned m_currentPage;
   int m_numPagesRemainingInSpan;
   int m_currentPageNumber;
@@ -196,7 +197,7 @@ State::State() :
   m_isTableOpened(false), m_isTableRowOpened(false), m_isTableColumnOpened(false),
   m_isTableCellOpened(false),
 
-  m_pageSpan(), m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
+  m_currentPage(0), m_numPagesRemainingInSpan(0), m_currentPageNumber(1),
 
   m_listOrderedLevels(),
 
@@ -261,7 +262,7 @@ void MWAWSpreadsheetListener::insertCharacter(unsigned char c)
   int unicode = m_parserState.m_fontConverter->unicode(m_ps->m_font.id(), c);
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", (unsigned int)c));
     }
     else
       MWAWSpreadsheetListener::insertChar((uint8_t) c);
@@ -295,7 +296,7 @@ int MWAWSpreadsheetListener::insertCharacter(unsigned char c, MWAWInputStreamPtr
   }
   if (unicode == -1) {
     if (c < 0x20) {
-      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::insertCharacter: Find odd char %x\n", (unsigned int)c));
     }
     else
       MWAWSpreadsheetListener::insertChar((uint8_t) c);
@@ -586,7 +587,7 @@ MWAWPageSpan const &MWAWSpreadsheetListener::getPageSpan()
 {
   if (!m_ps->m_isPageSpanOpened)
     _openPageSpan();
-  return m_ps->m_pageSpan;
+  return m_ds->m_pageSpan;
 }
 
 
@@ -625,7 +626,7 @@ void MWAWSpreadsheetListener::_openPageSpan(bool sendHeaderFooters)
     m_documentInterface->openPageSpan(propList);
 
   m_ps->m_isPageSpanOpened = true;
-  m_ps->m_pageSpan = currentPage;
+  m_ds->m_pageSpan = currentPage;
 
   // we insert the header footer
   if (sendHeaderFooters)
@@ -1286,7 +1287,7 @@ void MWAWSpreadsheetListener::_handleFrameParameters
     propList.insert("text:anchor-type", what.c_str());
     propList.insert("style:vertical-rel", what.c_str());
     propList.insert("style:horizontal-rel", what.c_str());
-    double w = m_ps->m_pageSpan.getPageWidth() - m_ps->m_paragraph.getMarginsWidth();
+    double w = m_ds->m_pageSpan.getPageWidth() - m_ps->m_paragraph.getMarginsWidth();
     w *= inchFactor;
     switch (pos.m_xPos) {
     case MWAWPosition::XRight:
@@ -1330,8 +1331,8 @@ void MWAWSpreadsheetListener::_handleFrameParameters
     // Page position seems to do not use the page margin...
     propList.insert("text:anchor-type", "page");
     if (pos.page() > 0) propList.insert("text:anchor-page-number", pos.page());
-    double w = m_ps->m_pageSpan.getFormWidth();
-    double h = m_ps->m_pageSpan.getFormLength();
+    double w = m_ds->m_pageSpan.getFormWidth();
+    double h = m_ds->m_pageSpan.getFormLength();
     w *= inchFactor;
     h *= inchFactor;
 
@@ -1465,7 +1466,7 @@ void MWAWSpreadsheetListener::handleSubDocument(MWAWSubDocumentPtr subDocument, 
   switch (subDocumentType) {
   case libmwaw::DOC_TEXT_BOX:
     m_ps->m_isTextboxOpened = true;
-    m_ps->m_pageSpan.setMargins(0.0);
+    m_ds->m_pageSpan.setMargins(0.0);
     break;
   case libmwaw::DOC_HEADER_FOOTER:
     m_ps->m_isHeaderFooterWithoutParagraph = true;
@@ -1918,9 +1919,6 @@ shared_ptr<MWAWSpreadsheetListenerInternal::State> MWAWSpreadsheetListener::_pus
   shared_ptr<MWAWSpreadsheetListenerInternal::State> actual = m_ps;
   m_psStack.push_back(actual);
   m_ps.reset(new MWAWSpreadsheetListenerInternal::State);
-
-  // BEGIN: copy page properties into the new parsing state
-  m_ps->m_pageSpan = actual->m_pageSpan;
 
   m_ps->m_isNote = actual->m_isNote;
 

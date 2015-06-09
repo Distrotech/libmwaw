@@ -1490,6 +1490,8 @@ int MsWksGraph::getEntryPicture(int zoneId, MWAWEntry &zone, bool autoSend, int 
     else if (val) f << "#smooth=" << val << ",";
     int numPt = (int) input->readLong(2);
     long ptr = (long) input->readULong(4);
+    if (!input->checkPosition(input->tell()+8*numPt))
+      return -1;
     f << std::hex << "ptr2=" << ptr << std::dec << ",";
     std::vector<Vec2f> vertices;
     for (int i = 0; i < numPt; i++) {
@@ -2099,7 +2101,7 @@ void MsWksGraph::checkTextBoxLinks(MsWksGraphInternal::RBZone &rbZone)
       continue;
     static_cast<MsWksGraphInternal::TextBoxv4 &>(*zone).m_frame = fName;
     if (textIds.find(zone->m_ids[0]) != textIds.end()) {
-      MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks: id %lX already exists\n", zone->m_ids[0]));
+      MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks: id %lX already exists\n", (long unsigned int) zone->m_ids[0]));
       ok = false;
       break;
     }
@@ -2114,7 +2116,7 @@ void MsWksGraph::checkTextBoxLinks(MsWksGraphInternal::RBZone &rbZone)
        link!=nextLinks.end(); ++link) {
     if (prevLinks.find(link->second)==prevLinks.end() ||
         prevLinks.find(link->second)->second!=link->first) {
-      MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks: can not find prevLinks: %lX<->%lX already exists\n", link->first, link->second));
+      MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks: can not find prevLinks: %lX<->%lX already exists\n", (long unsigned int) link->first, (long unsigned int) link->second));
       ok = false;
       break;
     }
@@ -2126,7 +2128,7 @@ void MsWksGraph::checkTextBoxLinks(MsWksGraphInternal::RBZone &rbZone)
         break;
       actText = nextLinks.find(actText)->second;
       if (w++ > numLinks) {
-        MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks:find a loop for id %lX\n", link->first));
+        MWAW_DEBUG_MSG(("MsWksGraph::checkTextBoxLinks:find a loop for id %lX\n", (long unsigned int) link->first));
         ok = false;
         break;
       }

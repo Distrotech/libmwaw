@@ -525,7 +525,6 @@ bool MacWrtProParser::getFreeZoneList(int blockId, std::vector<int> &blockLists)
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
     if (long(input->tell()) != endPos) break;
 
-
     long act = last;
     long val = input->readLong(4);
     if (val == 0) break;

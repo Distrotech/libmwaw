@@ -675,7 +675,7 @@ bool DocMkrText::readStyles(MWAWEntry const &entry)
     font.setColor(MWAWColor(col[0],col[1],col[2]));
     font.m_extra=f.str();
     if (zone.m_posFontMap.find(cPos) != zone.m_posFontMap.end()) {
-      MWAW_DEBUG_MSG(("DocMkrText::readStyles: a style for pos=%lx already exist\n", cPos));
+      MWAW_DEBUG_MSG(("DocMkrText::readStyles: a style for pos=%lx already exist\n", (long unsigned int) cPos));
     }
     else
       zone.m_posFontMap[cPos] = font;

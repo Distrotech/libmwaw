@@ -443,7 +443,7 @@ struct ColorTable {
     input.seek(4, librevenge::RVNG_SEEK_CUR); // ignore seed
     m_flags = (int) input.readULong(2);
     int n = (int) input.readLong(2)+1;
-    if (n < 0) return false;
+    if (n < 0 || !input.checkPosition(actPos+8+8*n)) return false;
     m_colors.resize(size_t(n));
     for (size_t i = 0; i < size_t(n); i++) {
       input.readULong(2); // indexId: ignored
@@ -1044,7 +1044,11 @@ struct OpCode {
    *
    * \param id is the code of the opcode in the file
    * \param nm is the short name of the opcode
-   * \param type1 \param type2 \param type3 \param type4 \param type5 the type of the first, second, third arguments (if they exist)
+   * \param type1 type of the first component
+   * \param type2 type of the second component (if it exists)
+   * \param type3 type of the third component (if it exists)
+   * \param type4 type of the fourst component (if it exists)
+   * \param type5 type of the fifth component (if it exists)
    */
   OpCode(int id, char const *nm, DataType type1=WP_NONE, DataType type2=WP_NONE, DataType type3=WP_NONE, DataType type4=WP_NONE, DataType type5=WP_NONE)
     : m_id(id), m_name(nm), m_types()
@@ -1303,7 +1307,7 @@ protected:
       // can not guess, so we read the pixmap...
       bool hasRgn = type ==WP_CRBITMAP;
       shared_ptr<Pixmap> pxmap(new Pixmap);
-      if (!pxmap->read(input, false, false, true, hasRgn)) return -1;
+      if (!pxmap->read(input, false, false, true, hasRgn)) return false;
       val.m_type = WP_CBITMAP;
       val.m_pixmap = pxmap;
       return true;
@@ -1626,13 +1630,14 @@ protected:
 
     long actualPos = input.tell();
     res = "";
+    if (!input.checkPosition(actualPos+sz)) {
+      MWAW_DEBUG_MSG(("Pict1:OpCode: readText: find EOF\n"));
+      return false;
+    }
+
     for (int i = 0; i < sz; i++) {
       char c = (char) input.readULong(1);
       res += c;
-    }
-    if (actualPos+sz != input.tell()) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode: readText: find EOF\n"));
-      return false;
     }
     return true;
   }
@@ -1768,7 +1773,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict can not find opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -1777,7 +1782,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     OpCode const &opCode = *(it->second);
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
-      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict error for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:OpCode:parsePict error for opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -1856,7 +1861,7 @@ bool PictParser::convertToPict2(librevenge::RVNGBinaryData const &orig, libreven
     int code = (int) input->readULong(1);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not find opCode 0x%x\n", (unsigned int) code));
       delete [] res;
       return false;
     }
@@ -1864,7 +1869,7 @@ bool PictParser::convertToPict2(librevenge::RVNGBinaryData const &orig, libreven
     OpCode const &opCode = *(it->second);
     sz = 0;
     if (!opCode.computeSize(*input, sz)) {
-      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict1:convertToPict2 can not compute size for opCode 0x%x\n", (unsigned int) code));
       delete [] res;
       return false;
     }
@@ -1915,47 +1920,6 @@ namespace libmwaw_applepict2
 {
 using namespace libmwaw_applepict1;
 
-//! Internal and low level: a class used to read and store all possible value
-struct Value : public libmwaw_applepict1::Value {
-};
-
-//! Internal and low level: a class to define each opcode and their arguments and read their data
-struct OpCode : public libmwaw_applepict1::OpCode {
-  typedef libmwaw_applepict1::OpCode parent;
-  /** constructor
-   *
-   * \param id is the code of the opcode in the file
-   * \param nm is the short name of the opcode
-   * \param type1 \param type2 \param type3 \param type4 \param type5 the type of the first, second, third arguments (if they exist)
-   */
-  OpCode(int id, char const *nm, DataType type1=WP_NONE, DataType type2=WP_NONE, DataType type3=WP_NONE, DataType type4=WP_NONE, DataType type5=WP_NONE) :
-    parent(id, nm, type1, type2, type3, type4, type5) {}
-
-  /** tries to read the data in the file
-   *
-   * If the read is succefull, fills listValue with the read argument */
-  bool readData(MWAWInputStream &input, std::vector<Value> &listValue) const
-  {
-    size_t numTypes = m_types.size();
-    listValue.resize(numTypes);
-    Value newVal;
-    long debPos = input.tell();
-    for (size_t i = 0; i < numTypes; i++) {
-      long actualPos = input.tell();
-      if (readValue(input, m_types[i], newVal)) {
-        listValue[i] = newVal;
-        continue;
-      }
-      input.seek(actualPos, librevenge::RVNG_SEEK_SET);
-      return false;
-    }
-    long actualPos = input.tell();
-    // we must check alignment
-    if ((actualPos - debPos)%2 == 1) input.seek(1, librevenge::RVNG_SEEK_CUR);
-    return true;
-  }
-};
-
 /** internal and low level: list of new opcodes */
 static OpCode const s_listCodes[] = {
   OpCode(0x12,"BackCPat",WP_CPATTERN), OpCode(0x13,"PenCPat",WP_CPATTERN), OpCode(0x14,"FillCPat",WP_CPATTERN),
@@ -1978,9 +1942,9 @@ public:
   //! the constructor
   PictParser() : m_mapIdOp()
   {
-    size_t numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(libmwaw_applepict1::OpCode);
+    size_t numCodes = sizeof(libmwaw_applepict1::s_listCodes)/sizeof(OpCode);
     for (size_t i = 0; i < numCodes; i++)
-      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = static_cast<OpCode const *>(&(libmwaw_applepict1::s_listCodes[i]));
+      m_mapIdOp[libmwaw_applepict1::s_listCodes[i].m_id] = &(libmwaw_applepict1::s_listCodes[i]);
     numCodes = sizeof(s_listCodes)/sizeof(OpCode);
     for (size_t i = 0; i < numCodes; i++)
       m_mapIdOp[s_listCodes[i].m_id] = &(s_listCodes[i]);
@@ -2094,7 +2058,7 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     int code = (int)input->readULong(2);
     std::map<int,OpCode const *>::iterator it = m_mapIdOp.find(code);
     if (it == m_mapIdOp.end() || it->second == 0L) {
-      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict can not find opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
@@ -2103,11 +2067,15 @@ void PictParser::parse(MWAWInputStreamPtr input, libmwaw::DebugFile &dFile)
     OpCode const &opCode = *(it->second);
     std::vector<Value> readData;
     if (!opCode.readData(*input, readData)) {
-      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict error for opCode 0x%x\n", code));
+      MWAW_DEBUG_MSG(("Pict2:OpCode:parsePict error for opCode 0x%x\n", (unsigned int) code));
       input->seek(actPos, librevenge::RVNG_SEEK_SET);
       ok = false;
       break;
     }
+    // we must check alignment
+    if ((input->tell() - actPos)%2 == 1)
+      input->seek(1, librevenge::RVNG_SEEK_CUR);
+
     s.str("");
     s << opCode.m_name << ":";
     for (size_t i = 0; i < readData.size(); i++) {

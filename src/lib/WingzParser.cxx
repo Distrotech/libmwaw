@@ -151,6 +151,7 @@ protected:
 
 void Spreadsheet::update(Cell &cell) const
 {
+  // checkme: is cell.m_formula==0 really a cell with a formula ?
   if (cell.m_formula < 0 || m_formulaMap.find(cell.m_formula)==m_formulaMap.end())
     return;
   // first, we need to update the relative position
@@ -169,7 +170,9 @@ void Spreadsheet::update(Cell &cell) const
         if (instr.m_positionRelative[j][c])
           instr.m_position[j][c]+=cPos[c];
         if (instr.m_position[j][c]<0) {
-          MWAW_DEBUG_MSG(("WingzParserInternal::Spreadsheet::update: find some bad cell position\n"));
+          if (cell.m_formula!=0) {
+            MWAW_DEBUG_MSG(("WingzParserInternal::Spreadsheet::update: find some bad cell position\n"));
+          }
           return;
         }
       }
@@ -909,6 +912,7 @@ bool WingzParser::readSpreadsheetCellList()
     f << "format=[" << format << "],";
     if (type!=1) {
       cell.m_formula=(int) input->readLong(2);
+      // checkme: does cell.m_formula==0 means also no formula ?
       if (cell.m_formula!=-1)
         f << "formula=" << cell.m_formula << ",";
     }
@@ -1556,8 +1560,6 @@ bool WingzParser::readFormula()
     if (arity==1) {
       instr.m_type=MWAWCellContent::FormulaInstruction::F_Operator;
       stack[numElt-1].insert(stack[numElt-1].begin(), instr);
-      if (wh==0x3 && pos+2==endPos)
-        break;
       continue;
     }
     if (arity==2) {

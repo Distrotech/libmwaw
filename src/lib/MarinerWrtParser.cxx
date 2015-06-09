@@ -1410,7 +1410,7 @@ bool MarinerWrtParser::readNumbersString(int num, std::vector<long> &res)
     else if (c >= 'A' && c <= 'F')
       val += (long(c+10-'A')<<(4*nBytes));
     else {
-      MWAW_DEBUG_MSG(("MarinerWrtParser::readNumbersString find odd char %x\n", int(c)));
+      MWAW_DEBUG_MSG(("MarinerWrtParser::readNumbersString find odd char %x\n", (unsigned int)c));
       break;
     }
     nBytes++;

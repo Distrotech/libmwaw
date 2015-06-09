@@ -47,7 +47,7 @@ namespace libmwaw_tools
 {
 InputStream *XAttr::getStream(const char *attr) const
 {
-  if (m_fName.length()==0 || !attr)
+  if (m_fName.empty() || !attr)
     return 0;
 #if WITH_EXTENDED_FS==1
 #  define MWAW_EXTENDED_FS , 0, XATTR_SHOWCOMPRESSION
@@ -87,7 +87,7 @@ InputStream *XAttr::getStream(const char *attr) const
 
 InputStream *XAttr::getAuxillarInput() const
 {
-  if (m_fName.length()==0)
+  if (m_fName.empty())
     return 0;
 
   /** look for file ._NAME or __MACOSX/._NAME
@@ -107,7 +107,6 @@ InputStream *XAttr::getAuxillarInput() const
     ;
   else {
     name=folder+"__MACOSX/._"+file;
-    stat(name.c_str(), &status);
     if (stat(name.c_str(), &status) || !S_ISREG(status.st_mode))
       return 0;
   }
@@ -124,7 +123,7 @@ InputStream *XAttr::getAuxillarInput() const
 /* os9 way to save resource on a Fat,... disk */
 InputStream *XAttr::getUsingFinderDat(char const *what) const
 {
-  if (m_fName.length()==0)
+  if (m_fName.empty())
     return 0;
 
   bool lookForResourceFork=true;
@@ -243,7 +242,7 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       return 0;
     long version = (long) inp->readU32();
     if (version != 0x20000) {
-      MWAW_DEBUG_MSG(("XAttr::unMacMIME: unknown version: %lx\n", version));
+      MWAW_DEBUG_MSG(("XAttr::unMacMIME: unknown version: %lx\n", (long unsigned int) version));
       return 0;
     }
     inp->seek(16, InputStream::SK_CUR); // filename
@@ -277,13 +276,13 @@ InputStream *XAttr::unMacMIME(InputStream *inp, char const *what) const
       /* try to read the data */
       inp->seek(entryPos, InputStream::SK_SET);
       if (inp->tell() != entryPos) {
-        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not seek entry pos %lx\n", entryPos));
+        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not seek entry pos %lx\n", (long unsigned int) entryPos));
         return 0;
       }
       unsigned long numBytesRead = 0;
       const unsigned char *data = inp->read(entrySize, numBytesRead);
       if (numBytesRead != entrySize || !data) {
-        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not read %lX byte\n", entryPos));
+        MWAW_DEBUG_MSG(("XAttr::unMacMIME: can not read %lX byte\n", (long unsigned int) entryPos));
         return 0;
       }
       return new StringStream(data,(unsigned long) entrySize);

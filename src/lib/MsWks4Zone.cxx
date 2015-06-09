@@ -309,7 +309,7 @@ bool MsWks4Zone::parseHeaderIndexEntry(MWAWInputStreamPtr &input)
     if (name[i] != 0 && name[i] != 0x20 &&
         (41 > (uint8_t)name[i] || (uint8_t)name[i] > 90)) {
       MWAW_DEBUG_MSG(("MsWks4Zone:parseHeaderIndexEntry: bad character=%u (0x%02x) in name in header index\n",
-                      (uint8_t)name[i], (uint8_t)name[i]));
+                      (unsigned int)name[i], (unsigned int)name[i]));
       m_document->ascii().addNote("###IndexEntry bad name(ignored)");
 
       input->seek(pos + cch, librevenge::RVNG_SEEK_SET);
@@ -944,7 +944,6 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
       long pos = input->tell();
 
       int sz = 0;
-      int szChaine = 0;
       bool done = true;
       switch (val) {
       case 0x2e: // x
@@ -1043,21 +1042,13 @@ bool MsWks4Zone::readFRAM(MWAWInputStreamPtr input, MWAWEntry const &entry)
       if (!ok) break;
       if (done) continue;
 
-      if ((sz == 0 && szChaine == 0) ||
-          (pos + sz + szChaine > endPos)) {
+      if (sz == 0 || pos + sz > endPos) {
         input->seek(-1, librevenge::RVNG_SEEK_CUR);
         ok = false;
         break;
       }
 
       f << std::hex << val << "=" << std::dec;
-
-      if (szChaine) {
-        std::string s;
-        for (int j = 0; j < szChaine; j++)
-          s += (char) input->readULong(1);
-        f << s << ",";
-      }
       if (sz) {
         int v2 = (int) input->readLong(sz);
         f << v2;

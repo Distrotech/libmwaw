@@ -906,7 +906,7 @@ bool NisusWrtText::readFonts(MWAWEntry const &entry)
 
     static const uint32_t colors[] =
     { 0, 0xFF0000, 0x00FF00, 0x0000FF, 0x00FFFF, 0xFF00FF, 0xFFFF00, 0xFFFFFF };
-    if (color < 8)
+    if (color >= 0 && color < 8)
       font.m_font.setColor(MWAWColor(colors[color]));
     else if (color != 0xFF00)
       f << "#color=" << color << ",";

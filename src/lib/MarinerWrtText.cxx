@@ -229,6 +229,7 @@ MWAWBorder Paragraph::BorderFill::getBorder(int i) const
     break;
   case 1: // single[w=0.5]
     res.m_width = 0.5f;
+  // fall-through intended
   case 2:
     res.m_style = MWAWBorder::Simple;
     break;
@@ -1766,6 +1767,7 @@ bool MarinerWrtText::readRulers(MarinerWrtEntry const &entry, int zoneId)
         }
         else if (j>=51&&j<=53)   // table foreground color
           debInd=51;
+        // coverity[dead_error_line : FALSE]: intended as sanity check
         else {
           MWAW_DEBUG_MSG(("MarinerWrtText::readRulers: find unknown color idx\n"));
           f << "#col[debIndex=" << j << ",";

@@ -51,6 +51,7 @@
 #include "MWAWPictBitmap.hxx"
 #include "MWAWPictMac.hxx"
 #include "MWAWPosition.hxx"
+#include "MWAWPresentationListener.hxx"
 #include "MWAWSpreadsheetEncoder.hxx"
 #include "MWAWSpreadsheetListener.hxx"
 #include "MWAWSubDocument.hxx"
@@ -108,7 +109,7 @@ struct CurvePoint {
 //! Internal: the structure used to store a style of a ClarisWksGraph
 struct Style : public MWAWGraphicStyle {
   //! constructor
-  Style(): MWAWGraphicStyle(), m_wrapping(0), m_lineFlags(0), m_surfacePatternType(0)
+  Style(): MWAWGraphicStyle(), m_wrapping(0), m_surfacePatternType(0)
   {
   }
   //! returns the wrapping
@@ -153,16 +154,10 @@ struct Style : public MWAWGraphicStyle {
     default:
       o << "pattType=" << st.m_surfacePatternType << ",";
     }
-    if (st.m_lineFlags & 0x10)
-      o << "useSurfGradient";
-    if (st.m_lineFlags & 0x2F)
-      o << "lineFlags(?)=" << std::hex << int(st.m_lineFlags & 0x2F) << std::dec << ",";
     return o;
   }
   //! the wrap type
   int m_wrapping;
-  //! the line flags
-  int m_lineFlags;
   //! the surface pattern type
   int m_surfacePatternType;
 };
@@ -177,13 +172,28 @@ struct Zone {
               T_Pict, T_QTim, T_Movie
             };
   //! constructor
-  Zone() : m_page(-1), m_box(), m_ordering(-1), m_style() {}
+  Zone() : m_zoneType(0), m_page(-1), m_box(), m_ordering(-1), m_style() {}
   //! operator<<
   friend std::ostream &operator<<(std::ostream &o, Zone const &zone)
   {
     if (zone.m_page >= 0) o << "pg=" << zone.m_page << ",";
     o << "box=" << zone.m_box << ",";
     if (zone.m_ordering>0) o << "ordering=" << zone.m_ordering << ",";
+    switch (zone.m_zoneType&0xF) {
+    case 0:
+      break;
+    case 4:
+      o << "header/footer,";
+      break;
+    case 0xa:
+      o << "master,";
+      break;
+    default:
+      o << "zoneType=" << (zone.m_zoneType&0xF) << ",";
+      break;
+    }
+    if (zone.m_zoneType&0x20)
+      o << "zoneType[0x20],";
     zone.print(o);
     o << "style=[" << zone.m_style << "],";
     return o;
@@ -239,6 +249,8 @@ struct Zone {
            type==ClarisWksGraphInternal::Zone::T_DataBox || type==ClarisWksGraphInternal::Zone::T_Chart ||
            type==ClarisWksGraphInternal::Zone::T_Unknown;
   }
+  //! the zone type
+  int m_zoneType;
   //! the page (checkme: or frame linked )
   int m_page;
   //! the bdbox
@@ -640,7 +652,7 @@ struct Group : public ClarisWksStruct::DSET {
 //! Internal: the state of a ClarisWksGraph
 struct State {
   //! constructor
-  State() : m_numPages(0), m_groupMap(), m_bitmapMap(), m_frameId(0), m_positionsComputed(false), m_ordering(0) { }
+  State() : m_numPages(0), m_pageDimensions(0,0), m_masterId(-1), m_groupMap(), m_bitmapMap(), m_frameId(0), m_positionsComputed(false), m_ordering(0) { }
   /** returns a new ordering.
 
       \note: the shapes seem to appear in increasing ordering, so we can use this function.
@@ -651,6 +663,10 @@ struct State {
   }
   //! the number of pages
   int m_numPages;
+  //! the page dimension if known (in point)
+  Vec2f m_pageDimensions;
+  //! the master group id ( in a draw file )
+  int m_masterId;
   //! a map zoneId -> group
   std::map<int, shared_ptr<Group> > m_groupMap;
   //! a map zoneId -> group
@@ -743,7 +759,7 @@ void ClarisWksGraph::computePositions() const
   std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter;
   for (iter=m_state->m_groupMap.begin() ; iter != m_state->m_groupMap.end() ; ++iter) {
     shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
-    if (!group || group->m_position == ClarisWksStruct::DSET::P_Slide) continue;
+    if (!group) continue;
     updateGroup(*group);
   }
 }
@@ -763,6 +779,12 @@ int ClarisWksGraph::numPages() const
   }
   m_state->m_numPages=nPages;
   return nPages;
+}
+
+bool ClarisWksGraph::getPageDimension(Vec2f &dim) const
+{
+  dim=m_state->m_pageDimensions;
+  return dim[0]>0 && dim[1]>0;
 }
 
 void ClarisWksGraph::askToSend(int number, MWAWListenerPtr listener, MWAWPosition const &pos)
@@ -1003,6 +1025,51 @@ shared_ptr<ClarisWksStruct::DSET> ClarisWksGraph::readBitmapZone
 ////////////////////////////////////////////////////////////
 // definition of an element of a group
 ////////////////////////////////////////////////////////////
+void ClarisWksGraph::findMasterPage() const
+{
+  // master page does not seems to exist in v1-v2 documents
+  if (m_parserState->m_kind != MWAWDocument::MWAW_K_DRAW || version() <= 3)
+    return;
+  shared_ptr<ClarisWksStruct::DSET> main=m_document.getZone(1);
+  if (m_state->m_groupMap.find(1)== m_state->m_groupMap.end())
+    return;
+  shared_ptr<ClarisWksGraphInternal::Group> mainGroup=m_state->m_groupMap.find(1)->second;
+  if (!main || !mainGroup)
+    return;
+  // search for the master block
+  int masterBlockId=-1;
+  Vec2f pageDim(0,0);
+  for (size_t i=0; i<mainGroup->m_zones.size(); ++i) {
+    if (!mainGroup->m_zones[i] || mainGroup->m_zones[i]->getType()!=ClarisWksGraphInternal::Zone::T_Zone ||
+        (mainGroup->m_zones[i]->m_zoneType&0xF)!=0xa)
+      continue;
+    if (masterBlockId!=-1) {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::findMasterPage: a master block is already found\n"));
+      return;
+    }
+    Box2f box=mainGroup->m_zones[i]->getBdBox();
+    if (box[0][0]<=0 && box[0][0]>=0 && box[0][1]<=0 && box[0][1]>=0)
+      pageDim=box.size();
+    else {
+      MWAW_DEBUG_MSG(("ClarisWksGraph::findMasterPage: the page dimension seems odd\n"));
+    }
+    masterBlockId=static_cast<ClarisWksGraphInternal::ZoneZone const &>(*mainGroup->m_zones[i]).m_id;
+  }
+  if (masterBlockId==-1) return;
+  m_state->m_pageDimensions=pageDim;
+  shared_ptr<ClarisWksStruct::DSET> master=m_document.getZone(masterBlockId);
+  if (!master || master->m_fathersList.size()!=1 || *master->m_fathersList.begin()!=1  ||
+      m_state->m_groupMap.find(masterBlockId)==m_state->m_groupMap.end() || !m_state->m_groupMap.find(masterBlockId)->second) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::findMasterPage: can not find the master zone\n"));
+    return;
+  }
+  m_state->m_masterId=masterBlockId;
+  master->m_position=ClarisWksStruct::DSET::P_GraphicMaster;
+}
+
+////////////////////////////////////////////////////////////
+// definition of an element of a group
+////////////////////////////////////////////////////////////
 shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry const &entry)
 {
   shared_ptr<ClarisWksGraphInternal::Zone> res;
@@ -1120,9 +1187,10 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
     style.m_surfacePatternType = (val >> 2);
   else if (val>>2)
     f << "g0=" << (val>>2) << ",";
-  style.m_lineFlags = (int) input->readULong(1);
-  if (style.m_lineFlags & 0x40) style.m_arrows[0]=true;
-  if (style.m_lineFlags & 0x80) style.m_arrows[1]=true;
+  zone.m_zoneType = (int) input->readULong(1);
+  if (zone.m_zoneType & 0x40) style.m_arrows[0]=true;
+  if (zone.m_zoneType & 0x80) style.m_arrows[1]=true;
+  zone.m_zoneType &= 0x3F;
   val = (int) input->readULong(1);
   if (val) f << "f0=" << val << ",";
 
@@ -1159,13 +1227,15 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
         if (!m_document.getStyleManager()->updateWallPaper(pat, style))
           f << "##wallId=" << pat << ",";
       }
-      else {
-        f << "###surfaceType=" << style.m_surfacePatternType << ",";
-        MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: unknown surface type!!!\n"));
+      else { // find one time 2 associtated with a picture
+        f << "###surf[patternType]=" << style.m_surfacePatternType << ",";
+        MWAW_DEBUG_MSG(("ClarisWksGraph::readGroupDef: unknown surface pattern type!!!\n"));
       }
       continue;
     }
-    if (j==1 && (style.m_lineFlags & 0x10)) {
+    if (j==1 && (zone.m_zoneType & 0x10)) {
+      f << "hasGrad,";
+      zone.m_zoneType &= 0xEF;
       m_document.getStyleManager()->updateGradient(pat, style);
       continue;
     }
@@ -1490,7 +1560,7 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
   libmwaw::DebugStream f;
   switch (zone.getSubType()) {
   case ClarisWksGraphInternal::Zone::T_Line: {
-    int yDeb=(zone.m_style.m_lineFlags&1)?1:0;
+    int yDeb=(zone.m_zoneType&1)?1:0;
     shape = MWAWGraphicShape::line(Vec2f(zone.m_box[0][0],zone.m_box[yDeb][1]),
                                    Vec2f(zone.m_box[1][0],zone.m_box[1-yDeb][1]));
     break;
@@ -1516,13 +1586,23 @@ bool ClarisWksGraph::readShape(MWAWEntry const &entry, ClarisWksGraphInternal::Z
     if (val==1) f<< "show[axis],";
     else if (val) f << "#show[axis]=" << val << ",";
     int angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
-    while (angle[1] > 360) {
-      angle[0]-=360;
-      angle[1]-=360;
+    if (angle[1]>360) {
+      int numLoop=int(angle[1]/360)-1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[1] > 360) {
+        angle[0]-=360;
+        angle[1]-=360;
+      }
     }
-    while (angle[0] < -360) {
-      angle[0]+=360;
-      angle[1]+=360;
+    if (angle[0] < -360) {
+      int numLoop=int(angle[0]/360)+1;
+      angle[0]-=numLoop*360;
+      angle[1]-=numLoop*360;
+      while (angle[0] < -360) {
+        angle[0]+=360;
+        angle[1]+=360;
+      }
     }
     Vec2f center = box.center();
     Vec2f axis = 0.5*Vec2f(box.size());
@@ -1858,7 +1938,7 @@ bool ClarisWksGraph::readPolygonData(shared_ptr<ClarisWksGraphInternal::Zone> zo
   }
   input->seek(endPos, librevenge::RVNG_SEEK_SET);
   if (!isSpline) {
-    // if (m_style.m_lineFlags & 1) : we must close the polygon ?
+    // if (zone.m_zoneType & 1) : we must close the polygon ?
     for (size_t i = 0; i < size_t(N); ++i)
       shape.m_vertices.push_back(vertices[i].m_pos);
     return true;
@@ -2346,7 +2426,7 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
   /* update the list of zone to be send (ie. remove remaining header/footer zone in not footer zone )
      + create a map to find linked zone: list of zone sharing the same text zone
    */
-  bool isHeaderFooterBlock=group.isHeaderFooter();
+  bool isHeaderFooterBlock=group.isHeaderFooter() || group.m_position==ClarisWksStruct::DSET::P_SlideMaster;
   std::map<int, std::map<int, size_t> > idSIdCIdMap;
   for (size_t g = 0; g < group.m_zones.size(); g++) {
     shared_ptr<ClarisWksGraphInternal::Zone> child = group.m_zones[g];
@@ -2402,10 +2482,10 @@ void ClarisWksGraph::updateGroup(ClarisWksGraphInternal::Group &group) const
 ////////////////////////////////////////////////////////////
 // send data to the listener
 ////////////////////////////////////////////////////////////
-bool ClarisWksGraph::sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWGraphicListenerPtr listener)
+bool ClarisWksGraph::sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInternal::Zone> > const &lChild, MWAWListenerPtr listener, Vec2f const &leftTop)
 {
   if (!listener) {
-    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener!!!\n"));
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: can not find the listener!!!\n"));
     return false;
   }
   size_t numZones = lChild.size();
@@ -2413,21 +2493,41 @@ bool ClarisWksGraph::sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zo
     shared_ptr<ClarisWksGraphInternal::Zone> child = lChild[g];
     if (!child) continue;
     Box2f box=child->getBdBox();
+    box=Box2f(box[0]+leftTop, box[1]+leftTop);
     ClarisWksGraphInternal::Zone::Type type=child->getType();
     MWAWPosition pos(box[0], box.size(), librevenge::RVNG_POINT);
     pos.m_anchorTo=MWAWPosition::Page;
     if (type==ClarisWksGraphInternal::Zone::T_Zone) {
       int zId=child->getZoneId();
       shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(zId);
-      if (dset && dset->m_fileType==4) {
+      if (!dset) continue;
+      if (dset->m_fileType==4) {
         sendBitmap(zId, listener, pos);
         continue;
       }
       shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
-      if (dset && dset->m_fileType==1)
+      if (dset->m_fileType==1) // text box
         listener->insertTextBox(pos, doc, child->m_style);
-      else
-        listener->insertGroup(box, doc);
+      else if (dset->m_fileType==2 || dset->m_fileType==6) { // spreadsheet/table
+        bool createFrame=listener->openFrame(pos, child->m_style);
+        m_document.sendZone(zId, listener, pos);
+        if (createFrame)
+          listener->closeFrame();
+        return true;
+      }
+      else if (dset->m_fileType==0) {
+        if (listener->getType()==MWAWListener::Graphic)
+          static_cast<MWAWGraphicListener *>(listener.get())->insertGroup(box, doc);
+        else if (listener->getType()==MWAWListener::Presentation)
+          static_cast<MWAWPresentationListener *>(listener.get())->insertGroup(box, doc);
+        else {
+          MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: do not known how to send a group data!!!\n"));
+        }
+      }
+      else {
+        MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: find unexpected zone type!!!\n"));
+      }
+      continue;
     }
     else if (type==ClarisWksGraphInternal::Zone::T_Shape) {
       ClarisWksGraphInternal::ZoneShape const &shape=
@@ -2438,7 +2538,7 @@ bool ClarisWksGraph::sendGroup(std::vector<shared_ptr<ClarisWksGraphInternal::Zo
       listener->insertPicture(pos, shape.m_shape, style);
     }
     else if (type!=ClarisWksGraphInternal::Zone::T_DataBox) {
-      MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: find unexpected type!!!\n"));
+      MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroupChild: find unexpected type!!!\n"));
     }
   }
   return true;
@@ -2483,8 +2583,8 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
     return false;
   }
   updateGroup(group);
-  bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main;
-  bool isSlide = group.m_position == ClarisWksStruct::DSET::P_Slide;
+  bool isSlide=group.isSlide() || group.m_position == ClarisWksStruct::DSET::P_GraphicMaster;
+  bool mainGroup = group.m_position == ClarisWksStruct::DSET::P_Main || isSlide;
   Vec2f leftTop(0,0);
   float textHeight = 0.0;
   if (mainGroup)
@@ -2495,61 +2595,67 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   if (!listener->isSubDocumentOpened(inDocType))
     inDocType = libmwaw::DOC_NONE;
   MWAWPosition::AnchorTo suggestedAnchor = MWAWPosition::Char;
-  switch (inDocType) {
-  case libmwaw::DOC_TEXT_BOX:
-    suggestedAnchor=MWAWPosition::Char;
-    break;
-  case libmwaw::DOC_CHART:
-  case libmwaw::DOC_CHART_ZONE:
-  case libmwaw::DOC_HEADER_FOOTER:
-  case libmwaw::DOC_NOTE:
-    suggestedAnchor=MWAWPosition::Frame;
-    break;
-  case libmwaw::DOC_SHEET:
-  case libmwaw::DOC_TABLE:
-  case libmwaw::DOC_COMMENT_ANNOTATION:
-    suggestedAnchor=MWAWPosition::Char;
-    break;
-  case libmwaw::DOC_GRAPHIC_GROUP:
-    suggestedAnchor=MWAWPosition::Page;
-    break;
-  default:
-  case libmwaw::DOC_NONE:
-    suggestedAnchor= (mainGroup || isSlide) ? MWAWPosition::Page : MWAWPosition::Char;
-    break;
+  if (isSlide)
+    suggestedAnchor = MWAWPosition::Page;
+  else {
+    switch (inDocType) {
+    case libmwaw::DOC_TEXT_BOX:
+      suggestedAnchor=MWAWPosition::Char;
+      break;
+    case libmwaw::DOC_CHART:
+    case libmwaw::DOC_CHART_ZONE:
+    case libmwaw::DOC_HEADER_FOOTER:
+    case libmwaw::DOC_NOTE:
+      suggestedAnchor=MWAWPosition::Frame;
+      break;
+    case libmwaw::DOC_SHEET:
+    case libmwaw::DOC_TABLE:
+    case libmwaw::DOC_COMMENT_ANNOTATION:
+      suggestedAnchor=MWAWPosition::Char;
+      break;
+    case libmwaw::DOC_GRAPHIC_GROUP:
+      suggestedAnchor=MWAWPosition::Page;
+      break;
+    default:
+    case libmwaw::DOC_NONE:
+      suggestedAnchor= mainGroup ? MWAWPosition::Page : MWAWPosition::Char;
+      break;
+    }
   }
+#if 0
   // CHECKME
   if (0 && position.m_anchorTo==MWAWPosition::Unknown) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: position is not set\n"));
   }
+#endif
   if (!mainGroup && canSendAsGraphic(group)) {
     Box2f box=group.m_box;
     MWAWGraphicEncoder graphicEncoder;
     MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
     graphicListener->startDocument();
-    sendGroup(group.m_zonesToSend, graphicListener);
+    sendGroupChild(group.m_zonesToSend, graphicListener, leftTop);
     graphicListener->endDocument();
     librevenge::RVNGBinaryData data;
     std::string type;
-    if (graphicEncoder.getBinaryResult(data,type)) {
-      MWAWPosition pos(position);
-      //pos.setOrigin(box[0]);
-      if (pos.size()[0]<=0 || pos.size()[1]<=0)
-        pos.setSize(box.size());
-      pos.m_wrapping =  MWAWPosition::WBackground;
-      if (pos.m_anchorTo==MWAWPosition::Unknown) {
-        pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
-        pos.setRelativePosition(suggestedAnchor);
-        if (suggestedAnchor == MWAWPosition::Page) {
-          int pg = isSlide ? 0 : group.m_page > 0 ? group.m_page : 1;
-          Vec2f orig = pos.origin()+leftTop;
-          pos.setPagePos(pg, orig);
-        }
-        else if (suggestedAnchor == MWAWPosition::Char)
-          pos.setOrigin(Vec2f(0,0));
+    if (!graphicEncoder.getBinaryResult(data,type))
+      return true;
+    MWAWPosition pos(position);
+    //pos.setOrigin(box[0]);
+    if (pos.size()[0]<=0 || pos.size()[1]<=0)
+      pos.setSize(box.size());
+    pos.m_wrapping =  MWAWPosition::WBackground;
+    if (pos.m_anchorTo==MWAWPosition::Unknown) {
+      pos=MWAWPosition(box[0], box.size(), librevenge::RVNG_POINT);
+      pos.setRelativePosition(suggestedAnchor);
+      if (suggestedAnchor == MWAWPosition::Page) {
+        int pg = group.m_page > 0 ? group.m_page : 1;
+        Vec2f orig = pos.origin()+leftTop;
+        pos.setPagePos(pg, orig);
       }
-      listener->insertPicture(pos, data, type);
+      else if (suggestedAnchor == MWAWPosition::Char)
+        pos.setOrigin(Vec2f(0,0));
     }
+    listener->insertPicture(pos, data, type);
     return true;
   }
   if (group.m_zonesToSend.size() > 1 &&
@@ -2590,9 +2696,9 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
   }
   for (int st = 0; st < 2; st++) {
     if (st == 1) {
-      suggestedAnchor = MWAWPosition::Char;
       if (group.m_hasMainZone)
         m_document.sendZone(1);
+      suggestedAnchor = MWAWPosition::Page;
     }
     size_t numJobs=listJobs[st].size();
     for (size_t g = 0; g < numJobs; g++) {
@@ -2646,15 +2752,26 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         else if (st==1 || suggestedAnchor == MWAWPosition::Char)
           pos.setOrigin(Vec2f(0,0));
       }
+      else if (isSlide && pos.m_anchorTo==MWAWPosition::Page) {
+        int pg = page > 0 ? page : 1;
+        Vec2f orig = pos.origin()+leftTop;
+        pos.setPagePos(pg, orig);
+      }
       // groupList can not be empty
       if (groupList.size() <= 1) {
+        libmwaw::SubDocumentType subDocType;
+        if (pos.m_anchorTo==MWAWPosition::Paragraph && group.m_position == ClarisWksStruct::DSET::P_Frame &&
+            groupList[0]->getType()!=ClarisWksGraphInternal::Zone::T_Zone && listener->isSubDocumentOpened(subDocType))
+          pos.m_anchorTo=MWAWPosition::Frame;
         sendGroupChild(groupList[0], pos);
         continue;
       }
+      g=lastOk;
+
       MWAWGraphicEncoder graphicEncoder;
       MWAWGraphicListenerPtr graphicListener(new MWAWGraphicListener(*m_parserState, box, &graphicEncoder));
       graphicListener->startDocument();
-      sendGroup(groupList, graphicListener);
+      sendGroupChild(groupList, graphicListener, leftTop);
       graphicListener->endDocument();
       librevenge::RVNGBinaryData data;
       std::string type;
@@ -2663,7 +2780,6 @@ bool ClarisWksGraph::sendGroup(ClarisWksGraphInternal::Group &group, MWAWPositio
         style.m_backgroundOpacity=0;
         listener->insertPicture(pos, data, type, style);
       }
-      g=lastOk;
     }
   }
   return true;
@@ -2749,7 +2865,9 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
   }
   else
     style.m_backgroundOpacity=0;
-  if (createFrame) {
+  bool isPresentation=listener->getType()==MWAWListener::Presentation;
+  if ((createFrame && !isPresentation) ||
+      (isPresentation && dset && dset->m_fileType==1)) {
     childZone.addFrameName(style);
     shared_ptr<MWAWSubDocument> doc;
     if (!isLinked || childZone.m_subId==0) {
@@ -2781,6 +2899,18 @@ bool ClarisWksGraph::sendGroupChild(shared_ptr<ClarisWksGraphInternal::Zone> chi
       listener->insertPicture(pos, data, mime);
     return true;
   }
+  if (isPresentation && dset && dset->m_fileType==6) { // table
+    createFrame=listener->openFrame(pos, style);
+    m_document.sendZone(zId, listener, pos);
+    if (createFrame)
+      listener->closeFrame();
+    return true;
+  }
+  if (isPresentation && createFrame) {
+    shared_ptr<MWAWSubDocument> doc(new ClarisWksGraphInternal::SubDocument(*this, m_parserState->m_input, zId));
+    static_cast<MWAWPresentationListener *>(listener.get())->insertGroup(childZone.m_box, doc);
+    return true;
+  }
   return m_document.sendZone(zId, listener, pos);
 }
 
@@ -2805,6 +2935,8 @@ bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosi
 
 bool ClarisWksGraph::canSendBitmapAsGraphic(int number) const
 {
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
+    return false;
   std::map<int, shared_ptr<ClarisWksGraphInternal::Bitmap> >::iterator iter
     = m_state->m_bitmapMap.find(number);
   if (iter == m_state->m_bitmapMap.end() || !iter->second) {
@@ -2916,7 +3048,7 @@ bool ClarisWksGraph::sendBitmap(ClarisWksGraphInternal::Bitmap &bitmap, MWAWList
                         0.9f*float(m_mainParser->getPageLength())));
     else {
       MWAW_DEBUG_MSG(("ClarisWksGraph::sendBitmap: can not find bitmap size\n"));
-      pos.setSize(Vec2f(1,1));
+      pos.setSize(Vec2f(70,70));
     }
   }
   if (pos.m_anchorTo==MWAWPosition::Unknown) {
@@ -3014,6 +3146,8 @@ bool ClarisWksGraph::canSendGroupAsGraphic(int number) const
 
 bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) const
 {
+  if (m_parserState->m_kind == MWAWDocument::MWAW_K_PRESENTATION)
+    return false;
   updateGroup(group);
   if ((group.m_position != ClarisWksStruct::DSET::P_Frame && group.m_position != ClarisWksStruct::DSET::P_Unknown)
       || group.m_page <= 0)
@@ -3030,15 +3164,43 @@ bool ClarisWksGraph::canSendAsGraphic(ClarisWksGraphInternal::Group &group) cons
   return true;
 }
 
+bool ClarisWksGraph::sendMaster(int pg)
+{
+  if (m_parserState->m_kind != MWAWDocument::MWAW_K_DRAW || m_state->m_masterId<=0)
+    return true;
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter = m_state->m_groupMap.find(m_state->m_masterId);
+  if (iter == m_state->m_groupMap.end() || !iter->second) {
+    MWAW_DEBUG_MSG(("ClarisWksGraph::sendMaster: can not find the group %d\n", m_state->m_masterId));
+    return false;
+  }
+  shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
+  group->m_parsed=true;
+  // time to update the child page
+  for (size_t g = 0; g < group->m_zones.size(); g++) {
+    shared_ptr<ClarisWksGraphInternal::Zone> child = group->m_zones[g];
+    if (!child) continue;
+    if (child->getType() == ClarisWksGraphInternal::Zone::T_Zone) {
+      shared_ptr<ClarisWksStruct::DSET> dset=m_document.getZone(child->getZoneId());
+      if (dset && dset->isHeaderFooter()) {
+        group->m_zones[g].reset();
+        MWAW_DEBUG_MSG(("ClarisWksGraph::sendMaster: remove some header footer from master\n"));
+        continue;
+      }
+    }
+    child->m_page = pg+1;
+  }
+  return sendPageChild(*group);
+}
+
 bool ClarisWksGraph::sendPageGraphics(int groupId)
 {
-  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter
-    = m_state->m_groupMap.find(groupId);
+  std::map<int, shared_ptr<ClarisWksGraphInternal::Group> >::iterator iter = m_state->m_groupMap.find(groupId);
   if (iter == m_state->m_groupMap.end() || !iter->second) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendPageGraphics: can not find the group %d\n", groupId));
     return false;
   }
   shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
+  if (group->m_position==ClarisWksStruct::DSET::P_GraphicMaster) return true;
   group->m_parsed=true;
   return sendPageChild(*group);
 }
@@ -3051,10 +3213,11 @@ bool ClarisWksGraph::sendGroup(int number, MWAWListenerPtr listener, MWAWPositio
     return false;
   shared_ptr<ClarisWksGraphInternal::Group> group = iter->second;
   group->m_parsed=true;
-  MWAWGraphicListener *graphicListener=dynamic_cast<MWAWGraphicListener *>(listener.get());
-  if (graphicListener) {
-    shared_ptr<MWAWGraphicListener> ptr(graphicListener, MWAW_shared_ptr_noop_deleter<MWAWGraphicListener>());
-    return sendGroup(group->m_zonesToSend, ptr);
+  if (listener && (listener->getType()==MWAWListener::Graphic || listener->getType()==MWAWListener::Presentation)) {
+    Vec2f leftTop(0,0);
+    if (group->isSlide())
+      leftTop = 72.0f*m_document.getPageLeftTop();
+    return sendGroupChild(group->m_zonesToSend, listener, leftTop);
   }
   if (!m_parserState->getMainListener()) {
     MWAW_DEBUG_MSG(("ClarisWksGraph::sendGroup: can not find the listener\n"));

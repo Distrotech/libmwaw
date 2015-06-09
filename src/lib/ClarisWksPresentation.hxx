@@ -54,9 +54,12 @@ namespace ClarisWksPresentationInternal
 {
 struct Presentation;
 struct State;
+
+class SubDocument;
 }
 
-class ClarisWksParser;
+class ClarisWksPRParser;
+
 class ClarisWksDocument;
 
 /** \brief the main class to read the text part of Claris Works file
@@ -67,7 +70,8 @@ class ClarisWksDocument;
 class ClarisWksPresentation
 {
   friend class ClarisWksDocument;
-  friend class ClarisWksParser;
+  friend class ClarisWksPRParser;
+  friend class ClarisWksPresentationInternal::SubDocument;
 
 public:
   //! constructor
@@ -80,6 +84,8 @@ public:
 
   /** returns the number of pages */
   int numPages() const;
+  /** updates the page span list and returns true if this is possible */
+  bool updatePageSpanList(MWAWPageSpan const &page, std::vector<MWAWPageSpan> &spanList);
 
   //! reads the zone presentation DSET
   shared_ptr<ClarisWksStruct::DSET> readPresentationZone
@@ -88,12 +94,22 @@ public:
   //! update the slide zone types
   void updateSlideTypes() const;
 
+  //! disconnect the master zone to the content zones
+  void disconnectMasterFromContents() const;
+
 protected:
+  //! sends the master zone (ie. the background zone)
+  bool sendMaster();
   //! sends the zone data to the listener (if it exists )
   bool sendZone(int number);
 
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
+
+  // interface with main parser
+
+  //! ask the main parser to send a zone
+  void askToSend(int number);
 
   //
   // Intermediate level

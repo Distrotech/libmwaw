@@ -321,7 +321,7 @@ bool Zip::add(shared_ptr<InputStream> input, char const *base, char const *path)
     if (dir[c]=='\\')
       dir[c]='/';
   }
-  if (!len || path[len-1]!='/')
+  if (!len || (path && path[len-1]!='/'))
     dir += '/';
 
   if (m_nameDirectoryMap.find(dir)==m_nameDirectoryMap.end())

@@ -930,7 +930,7 @@ void FullWrtText::send(shared_ptr<FullWrtTextInternal::Zone> zone, int numChar,
       case 0xe2:
       case 0xe4:
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FullWrtText::send: can not an id for %x!!!!\n", val));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can not an id for %x!!!!\n", (unsigned int)val));
           f << "[#" << std::hex << val << std::dec << "]";
           break;
         }
@@ -1053,7 +1053,7 @@ void FullWrtText::send(shared_ptr<FullWrtTextInternal::Zone> zone, int numChar,
       case 0xda:
       case 0xe5: // contents/index data
         if (actPos+2 > endPos) {
-          MWAW_DEBUG_MSG(("FullWrtText::send: can find id for %x data!!!!\n", val));
+          MWAW_DEBUG_MSG(("FullWrtText::send: can find id for %x data!!!!\n", (unsigned int)val));
           f << "[##" << std::hex << val << std::dec << "]";
           break;
         }

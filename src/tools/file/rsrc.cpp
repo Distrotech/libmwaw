@@ -147,7 +147,7 @@ std::vector<RSRC::MapEntry> RSRC::getMapEntries(std::string type)
     if (lEntry.m_pos >= 0 && lEntry.m_pos+4 < eof)
       res.push_back(lEntry);
     else {
-      MWAW_DEBUG_MSG(("RSRC::getMapEntries: find bad pos %lx\n", lEntry.m_pos));
+      MWAW_DEBUG_MSG(("RSRC::getMapEntries: find bad pos %lx\n", (long unsigned int) lEntry.m_pos));
     }
     m_input.seek(pos+12, InputStream::SK_SET);
   }

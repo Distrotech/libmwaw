@@ -860,7 +860,7 @@ bool MsWksDocument::readGroupHeaderFooter(bool header, int check)
   if (ptr) {
     if (check == 49) return false;
     if (check == 99) {
-      MWAW_DEBUG_MSG(("MsWksDocument::readGroupHeaderFooter: find ptr=0x%lx\n", ptr));
+      MWAW_DEBUG_MSG(("MsWksDocument::readGroupHeaderFooter: find ptr=0x%lx\n", (long unsigned int)ptr));
     }
   }
 
@@ -1027,7 +1027,7 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
   default:
     if (strict) return false;
 
-    MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find unknown version 0x%x\n", vers));
+    MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find unknown version 0x%x\n", (unsigned int) vers));
     // must we stop in this case, or can we continue ?
     if (vers < 0 || vers > 14) {
       MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: version too big, we stop\n"));
@@ -1043,7 +1043,7 @@ bool MsWksDocument::checkHeader3(MWAWHeader *header, bool strict)
   for (int i = 0; i < 3; i++) {
     val = (int)(int) input->readLong(1);
     if (val < -10 || val > 10) {
-      MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find odd val%d=0x%x: not implemented\n", i, val));
+      MWAW_DEBUG_MSG(("MsWksDocument::checkHeader3: find odd val%d=0x%x: not implemented\n", i, (unsigned int)val));
       numError++;
     }
   }
@@ -1288,7 +1288,7 @@ bool MsWksDocument::readFormula(long endPos, MWAWCellContent &content, std::stri
         instr.m_content=listFunc[v/2];
       else {
         f << "###";
-        MWAW_DEBUG_MSG(("MSWksSSParser::readFormula: find unknown function %x\n", v));
+        MWAW_DEBUG_MSG(("MSWksSSParser::readFormula: find unknown function %x\n", (unsigned int)v));
         std::stringstream s;
         s << "Funct" << std::hex << v << std::dec;
         instr.m_content=s.str();

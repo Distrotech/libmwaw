@@ -65,14 +65,14 @@ struct File {
     m_fileVersion(), m_appliVersion(), m_rsrcMissingMessage(""), m_rsrcResult(""),
     m_dataResult(), m_printFileName(false)
   {
-    if (!m_fName.length()) {
+    if (m_fName.empty()) {
       std::cerr << "File::File: call without path\n";
       throw libmwaw_tools::Exception();
     }
 
     // check if it is a regular file
     struct stat status;
-    if (stat(path, &status) == -1) {
+    if (!path || stat(path, &status) == -1) {
       std::cerr << "File::File: the file " << m_fName << " cannot be read\n";
       throw libmwaw_tools::Exception();
     }
@@ -269,6 +269,10 @@ bool File::readFileInformation()
   else if (m_fInfoCreator=="CARO") {
     checkFInfoType("PDF ", "Acrobat PDF");
   }
+  else if (m_fInfoCreator=="C#+A") {
+    checkFInfoType("C#+D","RagTime 5") || checkFInfoType("C#+F","RagTime 5[form]") ||
+    checkFInfoType("RagTime 5");
+  }
   else if (m_fInfoCreator=="CDrw") {
     checkFInfoType("dDraw", "ClarisDraw") || checkFInfoType("ClarisDraw");
   }
@@ -337,7 +341,7 @@ bool File::readFileInformation()
     checkFInfoType("DRWG","MacDraw") || checkFInfoType("MacDraw");
   }
   else if (m_fInfoCreator=="MDPL") {
-    checkFInfoType("DRWG","MacDraw II") || checkFInfoType("MacDraw II");
+    checkFInfoType("DRWG","MacDraw II") || checkFInfoType("STAT","MacDraw II(template)") || checkFInfoType("MacDraw II");
   }
   else if (m_fInfoCreator=="MMBB") {
     checkFInfoType("MBBT","Mariner Write") || checkFInfoType("Mariner Write");
@@ -463,7 +467,7 @@ bool File::readFileInformation()
     checkFInfoType("curs","CursorAnimator") || checkFInfoType("CursorAnimator");
   }
   else if (m_fInfoCreator=="dPro") {
-    checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("MacDraw Pro");
+    checkFInfoType("dDoc","MacDraw Pro") || checkFInfoType("dLib","MacDraw Pro(slide)") || checkFInfoType("MacDraw Pro");
   }
   else if (m_fInfoCreator=="eDcR") {
     checkFInfoType("eDoc","eDOC") || checkFInfoType("eDOC");
@@ -545,6 +549,10 @@ bool File::readDataInformation()
       m_dataResult.push_back("BeagleWorks/WordPerfect Works[Unknown]");
     return true;
   }
+  if (val[0]==0x4323 && val[1]==0x2b44 && val[2]==0xa443 && val[3]==0x4da5 && val[4]==0x4864) {
+    m_dataResult.push_back("RagTime 5-6");
+    return true;
+  }
   if (val[0]==0x5772 && val[1]==0x6974 && val[2]==0x654e && val[3]==0x6f77 && val[4]==2) {
     m_dataResult.push_back("WriteNow 3-4");
     return true;
@@ -580,13 +588,21 @@ bool File::readDataInformation()
       m_dataResult.push_back("MacDraw");
       return true;
     }
-    if (val[2]==0x4432) { // D2
+    if (val[2]==0 || val[2]==0x4432) { // nothing or D2
       m_dataResult.push_back("MacDraw II");
       return true;
     }
   }
+  if (val[0]==0x5354 && val[1]==0x4154 && (val[2]==0||val[2]==0x4432)) { // STATD2
+    m_dataResult.push_back("MacDraw II(template)");
+    return true;
+  }
   if (val[0]==0x6444 && val[1]==0x6f63 && val[2]==0x4432) { // dDocD2
     m_dataResult.push_back("MacDraw Pro");
+    return true;
+  }
+  if (val[0]==0x644c && val[1]==0x6962 && val[2]==0x4432) { // dLibD2
+    m_dataResult.push_back("MacDraw Pro(slide)");
     return true;
   }
   if (val[0]==0x4859 && val[1]==0x4c53 && val[2]==0x0210) {
