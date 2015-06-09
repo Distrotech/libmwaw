@@ -134,38 +134,40 @@ am_libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_OBJECTS =  \
 	ClarisWksBMParser.lo ClarisWksDatabase.lo \
 	ClarisWksDbaseContent.lo ClarisWksDocument.lo \
 	ClarisWksGraph.lo ClarisWksParser.lo ClarisWksPresentation.lo \
-	ClarisWksSpreadsheet.lo ClarisWksSSParser.lo \
-	ClarisWksStruct.lo ClarisWksStyleManager.lo ClarisWksTable.lo \
-	ClarisWksText.lo DocMkrParser.lo DocMkrText.lo EDocParser.lo \
-	FullWrtGraph.lo FullWrtParser.lo FullWrtStruct.lo \
-	FullWrtText.lo GreatWksBMParser.lo GreatWksDBParser.lo \
-	GreatWksDocument.lo GreatWksDRParser.lo GreatWksGraph.lo \
-	GreatWksParser.lo GreatWksSSParser.lo GreatWksText.lo \
-	HanMacWrdJGraph.lo HanMacWrdJParser.lo HanMacWrdJText.lo \
-	HanMacWrdKGraph.lo HanMacWrdKParser.lo HanMacWrdKText.lo \
-	LightWayTxtGraph.lo LightWayTxtParser.lo LightWayTxtText.lo \
-	MacDocParser.lo MacDrawParser.lo MacPaintParser.lo \
-	MacWrtParser.lo MacWrtProParser.lo MacWrtProStructures.lo \
-	MarinerWrtGraph.lo MarinerWrtParser.lo MarinerWrtText.lo \
-	MindWrtParser.lo MoreParser.lo MoreText.lo MsWksDocument.lo \
-	MsWksDBParser.lo MsWksDRParser.lo MsWksGraph.lo MsWksParser.lo \
-	MsWksSSParser.lo MsWksTable.lo MsWks3Text.lo MsWks4Text.lo \
-	MsWks4Zone.lo MsWrd1Parser.lo MsWrdParser.lo MsWrdStruct.lo \
-	MsWrdText.lo MsWrdTextStyles.lo MWAWCell.lo MWAWChart.lo \
-	MWAWDebug.lo MWAWDocument.lo MWAWFont.lo MWAWFontConverter.lo \
-	MWAWFontSJISConverter.lo MWAWGraphicDecoder.lo \
-	MWAWGraphicEncoder.lo MWAWGraphicListener.lo \
-	MWAWGraphicShape.lo MWAWGraphicStyle.lo MWAWHeader.lo \
-	MWAWInputStream.lo MWAWList.lo MWAWOLEParser.lo \
+	ClarisWksPRParser.lo ClarisWksSpreadsheet.lo \
+	ClarisWksSSParser.lo ClarisWksStruct.lo \
+	ClarisWksStyleManager.lo ClarisWksTable.lo ClarisWksText.lo \
+	DocMkrParser.lo DocMkrText.lo EDocParser.lo FullWrtGraph.lo \
+	FullWrtParser.lo FullWrtStruct.lo FullWrtText.lo \
+	GreatWksBMParser.lo GreatWksDBParser.lo GreatWksDocument.lo \
+	GreatWksDRParser.lo GreatWksGraph.lo GreatWksParser.lo \
+	GreatWksSSParser.lo GreatWksText.lo HanMacWrdJGraph.lo \
+	HanMacWrdJParser.lo HanMacWrdJText.lo HanMacWrdKGraph.lo \
+	HanMacWrdKParser.lo HanMacWrdKText.lo LightWayTxtGraph.lo \
+	LightWayTxtParser.lo LightWayTxtText.lo MacDocParser.lo \
+	MacDrawParser.lo MacDrawProParser.lo MacDrawProStyleManager.lo \
+	MacPaintParser.lo MacWrtParser.lo MacWrtProParser.lo \
+	MacWrtProStructures.lo MarinerWrtGraph.lo MarinerWrtParser.lo \
+	MarinerWrtText.lo MindWrtParser.lo MoreParser.lo MoreText.lo \
+	MsWksDocument.lo MsWksDBParser.lo MsWksDRParser.lo \
+	MsWksGraph.lo MsWksParser.lo MsWksSSParser.lo MsWksTable.lo \
+	MsWks3Text.lo MsWks4Text.lo MsWks4Zone.lo MsWrd1Parser.lo \
+	MsWrdParser.lo MsWrdStruct.lo MsWrdText.lo MsWrdTextStyles.lo \
+	MWAWCell.lo MWAWChart.lo MWAWDebug.lo MWAWDocument.lo \
+	MWAWFont.lo MWAWFontConverter.lo MWAWFontSJISConverter.lo \
+	MWAWGraphicDecoder.lo MWAWGraphicEncoder.lo \
+	MWAWGraphicListener.lo MWAWGraphicShape.lo MWAWGraphicStyle.lo \
+	MWAWHeader.lo MWAWInputStream.lo MWAWList.lo MWAWOLEParser.lo \
 	MWAWPageSpan.lo MWAWParagraph.lo MWAWParser.lo \
 	MWAWPictBitmap.lo MWAWPictData.lo MWAWPictMac.lo \
-	MWAWPrinter.lo MWAWPropertyHandler.lo MWAWRSRCParser.lo \
-	MWAWSection.lo MWAWSpreadsheetDecoder.lo \
-	MWAWSpreadsheetEncoder.lo MWAWSpreadsheetListener.lo \
-	MWAWStringStream.lo MWAWSubDocument.lo MWAWTable.lo \
-	MWAWTextListener.lo NisusWrtGraph.lo NisusWrtParser.lo \
-	NisusWrtStruct.lo NisusWrtText.lo RagTimeParser.lo \
-	RagTimeSpreadsheet.lo RagTimeStruct.lo RagTimeText.lo \
+	MWAWPresentationListener.lo MWAWPrinter.lo \
+	MWAWPropertyHandler.lo MWAWRSRCParser.lo MWAWSection.lo \
+	MWAWSpreadsheetDecoder.lo MWAWSpreadsheetEncoder.lo \
+	MWAWSpreadsheetListener.lo MWAWStringStream.lo \
+	MWAWSubDocument.lo MWAWTable.lo MWAWTextListener.lo \
+	NisusWrtGraph.lo NisusWrtParser.lo NisusWrtStruct.lo \
+	NisusWrtText.lo RagTimeParser.lo RagTimeSpreadsheet.lo \
+	RagTimeStruct.lo RagTimeText.lo RagTime5Parser.lo \
 	SuperPaintParser.lo TeachTxtParser.lo WingzParser.lo \
 	WriteNowParser.lo WriteNowText.lo WriterPlsParser.lo \
 	ZWrtParser.lo ZWrtText.lo
@@ -438,6 +440,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	ClarisWksParser.hxx		\
 	ClarisWksPresentation.cxx	\
 	ClarisWksPresentation.hxx	\
+	ClarisWksPRParser.cxx		\
+	ClarisWksPRParser.hxx		\
 	ClarisWksSpreadsheet.cxx	\
 	ClarisWksSpreadsheet.hxx	\
 	ClarisWksSSParser.cxx		\
@@ -502,6 +506,10 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MacDocParser.hxx		\
 	MacDrawParser.cxx		\
 	MacDrawParser.hxx		\
+	MacDrawProParser.cxx		\
+	MacDrawProParser.hxx		\
+	MacDrawProStyleManager.cxx	\
+	MacDrawProStyleManager.hxx	\
 	MacPaintParser.cxx		\
 	MacPaintParser.hxx		\
 	MacWrtParser.cxx		\
@@ -599,6 +607,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	MWAWPictMac.cxx			\
 	MWAWPictMac.hxx			\
 	MWAWPosition.hxx		\
+	MWAWPresentationListener.cxx	\
+	MWAWPresentationListener.hxx	\
 	MWAWPrinter.cxx			\
 	MWAWPrinter.hxx			\
 	MWAWPropertyHandler.cxx		\
@@ -637,6 +647,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTimeStruct.hxx		\
 	RagTimeText.cxx			\
 	RagTimeText.hxx			\
+	RagTime5Parser.cxx		\
+	RagTime5Parser.hxx		\
 	SuperPaintParser.cxx		\
 	SuperPaintParser.hxx		\
 	TeachTxtParser.cxx		\
@@ -758,6 +770,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksDbaseContent.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksDocument.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksGraph.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksPRParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksPresentation.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClarisWksSSParser.Plo@am__quote@
@@ -812,6 +825,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPictBitmap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPictData.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPictMac.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPresentationListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPrinter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWPropertyHandler.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWRSRCParser.Plo@am__quote@
@@ -825,6 +839,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MWAWTextListener.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacDocParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacDrawParser.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacDrawProParser.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacDrawProStyleManager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacPaintParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacWrtParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MacWrtProParser.Plo@am__quote@
@@ -854,6 +870,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NisusWrtParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NisusWrtStruct.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NisusWrtText.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RagTime5Parser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RagTimeParser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RagTimeSpreadsheet.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RagTimeStruct.Plo@am__quote@
