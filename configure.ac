@@ -392,19 +392,20 @@ AM_CONDITIONAL(BUILD_CONVERTISSORS, [test "x$enable_tools" = "xyes"])
 # Documentation
 # =============
 AC_ARG_WITH(docs,
-	[AS_HELP_STRING([--without-docs], [Do not build documentation])],
+	[AS_HELP_STRING([--with-docs=no|api|full], [Do not build documentation, only API/full documentation])],
 	[with_docs="$withval"],
-	[AS_IF([test "x$native_win32" = "xyes"], [with_docs=no], [with_docs=yes])]
+	[AS_IF([test "x$native_win32" = "xyes"], [with_docs=no], [with_docs=full])]
 )
 AS_IF([test "x$with_docs" != "xno"], [
 	AC_PATH_PROG(DOXYGEN, [doxygen])
 	AS_IF([test -z "$DOXYGEN"], [
-		AC_MSG_WARN([*** Could not find doxygen in your PATH.])
+	        AC_MSG_WARN([*** Could not find doxygen in your PATH.])
 		AC_MSG_WARN([*** The documentation will not be built.])
 		build_docs=no
-	], [build_docs=yes])
+		], [ build_docs="$with_docs" ])
 ], [build_docs=no])
 AM_CONDITIONAL([WITH_LIBMWAW_DOCS], [test "x$build_docs" != "xno"])
+AM_CONDITIONAL([WITH_LIBMWAW_API_DOCS], [test "x$build_docs" = "xapi"])
 
 # =====================
 # Prepare all .in files
