@@ -153,7 +153,7 @@ public:
     MWAW_T_WRITERPLUS /** WriterPlus*/,
     MWAW_T_XPRESS /** XPress: TODO*/,
     MWAW_T_ZWRITE /** Z-Write (v1.3)*/,
-    MWAW_T_4DIMENSION /* 4th Dimension: TODO*/,
+    MWAW_T_4DIMENSION /** 4th Dimension: TODO*/,
 
     MWAW_T_RESERVED1 /** Used for ClarisDraw v1 file: see below */,
     MWAW_T_RESERVED2 /** Used for Apple's Pict file: see below */,
@@ -165,8 +165,12 @@ public:
     MWAW_T_RESERVED8 /** Reserved for future use*/,
     MWAW_T_RESERVED9 /** Reserved for future use*/,
 
-    MWAW_T_CLARISDRAW=MWAW_T_RESERVED1, /*Claris Draw: v1.0.1-v1.0.3 */
-    MWAW_T_APPLEPICT=MWAW_T_RESERVED2 /*Apple Pict: v1 or v2*/
+    /**Claris Draw: v1.0.1-v1.0.3.
+       \note same enum as \a MWAW_T_RESERVED1 */
+    MWAW_T_CLARISDRAW=MWAW_T_RESERVED1,
+    /**Apple Pict: v1 or v2.
+       \note same enum as \a MWAW_T_RESERVED2*/
+    MWAW_T_APPLEPICT=MWAW_T_RESERVED2
   };
 
   /** Analyzes the content of an input stream to see if it can be parsed
@@ -200,7 +204,8 @@ public:
      \param documentInterface A RVNGDrawingInterface implementation
      \param password The file password
 
-   \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR. */
+     \note this function appears with MWAW_GRAPHIC_VERSION==2 in libmwaw-0.3
+  */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGDrawingInterface *documentInterface, char const *password=0);
 
   /** Parses the input stream content. It will make callbacks to the functions provided by a
@@ -210,7 +215,7 @@ public:
      \param documentInterface A RVNGPresentationInterface implementation
      \param password The file password
 
-     \note Reserved for future use. Actually, it only returns MWAW_R_UNKNOWN_ERROR.
+     \note this function appeared in libmwaw-0.3.0 ( and returns MWAW_R_UNKNOWN_ERROR ). It was implemented in libmwaw-0.3.3 ( MWAW_PRESENTATION_VERSION==1 )
   */
   static MWAWLIB Result parse(librevenge::RVNGInputStream *input, librevenge::RVNGPresentationInterface *documentInterface, char const *password=0);
 

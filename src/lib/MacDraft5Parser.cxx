@@ -60,7 +60,7 @@ namespace MacDraft5ParserInternal
 //!  Internal and low level: a class used to store layout definition of a MacDraf5Parser
 struct Layout {
   //! constructor
-  Layout() : m_entry(), m_N(0), m_objectId(0), m_name(""), m_extra(""), m_lastPos(-1)
+  Layout() : m_entry(), m_N(0), m_objectId(0), m_name(""), m_extra("")
   {
   }
   //! operator<<
@@ -81,9 +81,67 @@ struct Layout {
   std::string m_name;
   //! extra data
   std::string m_extra;
-  // removeme
-  long m_lastPos;
 };
+
+//! generic class used to store shape in MWAWDraftParser
+struct Shape {
+  //! the different shape
+  enum Type { Basic, Bitmap, Group, Label, Text, Unknown };
+
+  //! constructor
+  Shape() : m_type(Unknown), m_fileType(0), m_box(), m_origin(), m_style(), m_patternId(-1), m_shape(), m_isLine(false), m_id(-1), m_nextId(-1),m_labelId(-1), m_nameId(-1),
+    m_font(), m_paragraph(), m_textEntry(), m_labelWidth(0), m_childList(),
+    m_bitmapIdList(), m_bitmapDimensionList(), m_isSent(false)
+  {
+  }
+
+  //! return the shape bdbox
+  MWAWBox2f getBdBox() const
+  {
+    return m_type==Basic ? m_shape.getBdBox() : m_box;
+  }
+  //! the graphic type
+  Type m_type;
+  //! the file type
+  int m_fileType;
+  //! the shape bdbox
+  MWAWBox2f m_box;
+  //! the shape origin
+  MWAWVec2f m_origin;
+  //! the graphic style
+  MWAWGraphicStyle m_style;
+  //! the pattern id
+  int m_patternId;
+  //! the graphic shape ( for basic geometric form )
+  MWAWGraphicShape m_shape;
+  //! flag to know if the shape is a line
+  bool m_isLine;
+  //! the shape id
+  int m_id;
+  //! the following id (if set)
+  int m_nextId;
+  //! the label id
+  int m_labelId;
+  //! the name id
+  int m_nameId;
+  //! the font ( for a text box)
+  MWAWFont m_font;
+  //! the paragraph ( for a text box)
+  MWAWParagraph m_paragraph;
+  //! the textbox entry (main text)
+  MWAWEntry m_textEntry;
+  //! the 1D label width in point
+  float m_labelWidth;
+  //! the child list id ( for a group )
+  std::vector<int> m_childList;
+  //! the list of bitmap id ( for a bitmap)
+  std::vector<int> m_bitmapIdList;
+  //! the list of bitmap dimension ( for a bitmap)
+  std::vector<MWAWBox2i> m_bitmapDimensionList;
+  //! a flag used to know if the object is sent to the listener or not
+  mutable bool m_isSent;
+};
+
 //!  Internal and low level: a class used to read pack/unpack color pixmap of a MacDraf5Parser
 struct Pixmap {
   Pixmap() : m_rowBytes(0), m_rect(), m_version(-1), m_packType(0),
@@ -350,11 +408,23 @@ struct Pixmap {
 //! Internal: the state of a MacDraft5Parser
 struct State {
   //! constructor
-  State() : m_version(0), m_dataEnd(-1), m_rsrcBegin(-1), m_isLibrary(false), m_layoutList(), m_patternList(),
-    m_posToEntryMap()
+  State() : m_version(0), m_dataEnd(-1), m_rsrcBegin(-1), m_isLibrary(false), m_layoutList(),
+    m_colorList(), m_patternList(), m_posToEntryMap()
   {
   }
-  //! returns a pattern if posible
+  //! returns a color if possible
+  bool getColor(int id, MWAWColor &col)
+  {
+    if (m_colorList.empty()) initColors();
+    if (id<=0 || id>int(m_colorList.size())) {
+      MWAW_DEBUG_MSG(("MacDraft5ParserInternal::getColor: can not find color %d\n", id));
+      return false;
+    }
+    col=m_colorList[size_t(id-1)];
+    return true;
+  }
+
+  //! returns a pattern if possible
   bool getPattern(int id, MWAWGraphicStyle::Pattern &pat)
   {
     if (m_patternList.empty()) initPatterns();
@@ -366,6 +436,8 @@ struct State {
     return true;
   }
 
+  //! init the color list
+  void initColors();
   //! init the patterns list
   void initPatterns();
   //! the file version
@@ -378,11 +450,34 @@ struct State {
   bool m_isLibrary;
   //! the layer list
   std::vector<Layout> m_layoutList;
+  //! the color list
+  std::vector<MWAWColor> m_colorList;
   //! the patterns list
   std::vector<MWAWGraphicStyle::Pattern> m_patternList;
   //! a map file position to entry ( used to stored intermediar zones )
   std::map<long, MWAWEntry> m_posToEntryMap;
 };
+
+void State::initColors()
+{
+  if (!m_colorList.empty()) return;
+  for (int i=0; i<131; ++i) {
+    static uint32_t const(colors[131])= {
+      0xffffff,0x000000,0x7f7f7f,0xdd0806,0x008011,0x0000d4,0x02abea,0xf20884,
+      0xfcf305,0xff1b00,0xff3700,0xff5300,0xff6f00,0xff8b00,0xffa700,0xffc300,
+      0xffdf00,0xfffb00,0xe8ff00,0xccff00,0xb0ff00,0x94ff00,0x79ff00,0x5dff00,
+      0x41ff00,0x25ff00,0x09ff00,0x00ff12,0x00ff2e,0x00ff4a,0x00ff66,0x00ff82,
+      0x00ff9e,0x00ffba,0x00ffd6,0x00fff2,0x00f2ff,0x00d6ff,0x00baff,0x009eff,
+      0x0082ff,0x0066ff,0x004aff,0x002eff,0x0012ff,0x0900ff,0x2500ff,0x4100ff,
+      0x5d00ff,0x7800ff,0x9400ff,0xb000ff,0xcc00ff,0xe800ff,0xff00fb,0xff00df,
+      0xff00c3,0xff00a7,0xff008b,0xff006f,0xff0053,0xff0037,0xff001b,0xff0000,
+      0xc31500,0xc32a00,0xc33f00,0xc35500,0xc36a00,0xc37f00,0xc39500,0x3a3a3a,
+      0x535353,0x6d6d6d,0x868686,0xa0a0a0,0xb9b9b9,0xd2d2d2,0xeaeaea,0xcccccc,
+      0x999999,0x878787,0x00ffff
+    };
+    m_colorList.push_back(colors[i]);
+  }
+}
 
 void State::initPatterns()
 {
@@ -975,19 +1070,11 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
   long fSz=(long) input->readULong(2);
   if (fSz>=0x25 && (fSz%6)==1) {
     input->seek(pos,librevenge::RVNG_SEEK_SET);
-    if (readLabel())
+    if (readLabel()) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unexpected label\n"));
       return true;
-  }
-  input->seek(pos,librevenge::RVNG_SEEK_SET);
-  if (readStringList()) {
-    if (layout.m_lastPos>0) {
-      ascii().addPos(layout.m_lastPos);
-      ascii().addNote("hasString,");
     }
-    return true;
   }
-  else if (fSz<0x2e)
-    return false;
   long endPos=pos+2+fSz;
   if (fSz<0x2e || !input->checkPosition(endPos)) {
     input->seek(pos,librevenge::RVNG_SEEK_SET);
@@ -996,17 +1083,927 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
   input->seek(pos+2,librevenge::RVNG_SEEK_SET);
   libmwaw::DebugStream f;
   f << "Entries(Object):";
-  if (input->tell()!=endPos)
+  MacDraft5ParserInternal::Shape shape;
+  MWAWGraphicStyle &style=shape.m_style;
+  shape.m_id=(int) input->readULong(4);
+  if (shape.m_id<=1) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: id seems bad\n"));
+    f << "###";
+  }
+  f << "id=" << std::hex << shape.m_id << std::dec << ",";
+  int val=(int) input->readULong(1); // 0|80
+  if (val) f << "type[h]=" << std::hex << val << std::dec << ",";
+  shape.m_fileType=(int) input->readULong(1); //[0-6][0-b]
+  switch (shape.m_fileType) {
+  case 1:
+    f << "line[single],";
+    break;
+  case 3:
+    f << "poly1,";
+    break;
+  case 4:
+    f << "poly2,";
+    break;
+  case 0x9: // orig=center
+  case 0xa: // orig=corner
+    f << "rectangle,";
+    break;
+  case 0xb:
+    f << "rectOval,";
+    break;
+  case 0x14:
+    f << "circle,";
+    break;
+  case 0x15:
+    f << "arc1,";
+    break;
+  case 0x16:
+    f << "arc2,";
+    break;
+  case 0x17: // checkme
+    f << "arc3,";
+    break;
+  case 0x18:
+    f << "circle[cent&rad],";
+    break;
+  case 0x1e:
+    f << "spline1,";
+    break;
+  case 0x1f:
+    f << "spline2,";
+    break;
+  case 0x28:
+    f << "textbox,";
+    break;
+  case 0x30:
+    f << "bitmap,";
+    break;
+  case 0x33:
+    f << "group1,";
+    break;
+  case 0x35:
+    f << "group2,";
+    break;
+  case 0x51:
+    f << "quotation[h],";
+    break;
+  case 0x52:
+    f << "quotation[v],";
+    break;
+  case 0x53:
+    f << "quotation[d],";
+    break;
+  case 0x54:
+    f << "quotation[para],";
+    break;
+  case 0x55: // circle center
+    f << "quotation[circleC],";
+    break;
+  case 0x56: // circle diameter
+    f << "quotation[circleD],";
+    break;
+  case 0x57: // axis
+    f << "quotation[axis],";
+    break;
+  case 0x58: // angle
+    f << "quotation[angle],";
+    break;
+  case 0x64:
+    f << "line[para],";
+    break;
+  case 0x65:
+    f << "poly[para],";
+    break;
+  default:
+    f << "type=" << std::hex << shape.m_fileType << std::dec << ",";
+  }
+  val=(int) input->readULong(4);
+  if (val)
+    f << "id2=" << std::hex << val << std::dec << ",";
+  int rotation=(int) input->readLong(2);
+  if (rotation) f << "rotate=" << rotation << ",";
+  val=(int) input->readLong(2); // 0|2|13b3|2222
+  if (val) f << "f0=" << val << ",";
+  shape.m_labelId=(int) input->readULong(4);
+  if (shape.m_labelId)
+    f << "label[id]=" << std::hex << shape.m_labelId << std::dec << ",";
+  val=(int) input->readULong(1);
+  if (val) // alway 0?
+    f << "f1=" << val << ",";
+  val=(int) input->readULong(1);
+  if (val!=1) {
+    f << "width[line]=" << val << ",";
+    style.m_lineWidth=val;
+  }
+  val=(int) input->readULong(1);
+  if (val!=2) // alway 2?
+    f << "f2=" << val << ",";
+  int lineType=(int) input->readULong(1);
+  switch (lineType) {
+  case 0:
+    f << "no[line],";
+    style.m_lineWidth=0;
+    break;
+  case 1: // use color
+    break;
+  case 3: // use pattern
+    f << "usePattern[line],";
+    break;
+  default:
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown line type\n"));
+    f << "#line[type]=" << lineType << ",";
+    break;
+  }
+  // FIXME: storeme...
+  int dashId=(int) input->readULong(1);
+  if (dashId&0xf)
+    f << "dash[id]=" << (dashId&0xf) << ",";
+  if (dashId&0x80) {
+    switch ((dashId>>4)&0x7) {
+    case 0:
+      f << "hairline,";
+      style.m_lineWidth=0.;
+      break;
+    case 1:
+      f << "width[line]=" << 0.5 << ",";
+      style.m_lineWidth=0.5;
+      break;
+    case 2:
+      f << "width[line]=" << 0.75 << ",";
+      style.m_lineWidth=0.75;
+      break;
+    default:
+      f <<"###width[line]=" << ((dashId>>4)&0x7) << ",";
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown line width\n"));
+      break;
+    }
+  }
+  else if (dashId&0xf0) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown dash[high]\n"));
+    f << "##dash[high]=" << (dashId>>6) << ",";
+  }
+  val=(int) input->readULong(1); // low|end
+  if (val) f << "arrow=" << std::hex << val << std::dec << ",";
+
+  int colId=(int) input->readULong(2); // 0-78
+  if (colId==0) {
+    style.m_lineWidth=0;
+    f << "no[line],";
+  }
+  else if (lineType==3)
+    f << "patId=" << colId << ",";
+  else if (!m_state->getColor(colId, style.m_lineColor))
+    f << "##colId=" << colId << ",";
+  else if (!style.m_lineColor.isBlack())
+    f << "col[line]=" << style.m_lineColor << ",";
+
+  float pt[4];
+  for (int i=0; i<2; ++i) pt[i]=float(input->readLong(4))/65536.f;
+  f << "pos=" << MWAWVec2f(pt[1],pt[0]) << ",";
+  val=(int) input->readULong(2); // [02][0134][04][01]
+  if (val&1) f << "selected,";
+  if (val&8) f << "lock,";
+  val &= 0xFFF6;
+  if (val) f << "fl1=" << std::hex << val << std::dec << ",";
+  shape.m_nameId=(int) input->readULong(4);
+  if (shape.m_nameId)
+    f << "id[name]=" << std::hex << shape.m_nameId << std::dec << ",";
+  switch (shape.m_fileType) {
+  case 1: { // line
+    if (fSz!=0x3e && fSz!=0x50) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown line size\n"));
+      f << "##fSz,";
+      break;
+    }
+    val=(int) input->readLong(2);
+    if (val) f << "angle[def]=" << val << ",";
+    MWAWVec2f listPts[2];
+    for (int i=0; i<2; ++i) {
+      val=(int) input->readULong(1);
+      if (val!=1-i) f << "g" << i << "=" << val << ",";
+      val=(int) input->readULong(1);
+      if (val!=0x81) f << "fl" << 2+i << "=" << std::hex << val << std::dec << ",";
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      listPts[i]=MWAWVec2f(pt[1],pt[0]);
+      f << "pt" << i << "=" << listPts[i] << ",";
+    }
+    shape.m_type=MacDraft5ParserInternal::Shape::Basic;
+    shape.m_shape=MWAWGraphicShape::line(listPts[0], listPts[1]);
+    shape.m_isLine=true;
+    if (fSz==0x3e) break;
+    for (int i=0; i<9; ++i) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "g" << i+2 << "=" << val << ",";
+    }
+    break;
+  }
+  case 3:
+  case 4: // poly
+  case 0x9: // rect1
+  case 0xa: // rect2
+  case 0xb: // rectOval : rect + corner
+  case 0x14: // circle
+  case 0x15: // arc1
+  case 0x16: // arc2
+  case 0x17: // arc3
+  case 0x18: // circle[radius,oval]
+  case 0x1e: // spline1
+  case 0x1f: { // spline2
+    int expectedSz=0;
+    size_t nbPts=0;
+    int nodeHeaderSz=0;
+    int expectedNodeType=0;
+    switch (shape.m_fileType) {
+    case 3:
+    case 4:
+      if (fSz<48) {
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown size\n"));
+        f << "##fSz,";
+        break;
+      }
+      expectedSz=-1;
+      nodeHeaderSz=2;
+      expectedNodeType=0x81;
+      break;
+    case 9:
+    case 0xa:
+      expectedSz=0x54;
+      nbPts=4;
+      nodeHeaderSz=2;
+      expectedNodeType=0x81;
+      break;
+    case 0xb:
+      expectedSz=0x60;
+      nbPts=4;
+      nodeHeaderSz=2;
+      expectedNodeType=0x80;
+      break;
+    case 0x14:
+      expectedSz=0x5a;
+      nbPts=3;
+      nodeHeaderSz=2;
+      expectedNodeType=0x81;
+      break;
+    case 0x15:
+    case 0x17:
+      expectedSz=0x62;
+      nbPts=3;
+      nodeHeaderSz=2;
+      expectedNodeType=0x81;
+      break;
+    case 0x16:
+      expectedSz=0x66;
+      nbPts=3;
+      nodeHeaderSz=2;
+      expectedNodeType=0x81;
+      break;
+    case 0x18:
+      expectedSz=0x40;
+      nbPts=2;
+      break;
+    case 0x1e:
+    case 0x1f:
+      if (fSz<58) {
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown size\n"));
+        f << "##fSz,";
+        break;
+      }
+      expectedSz=-1;
+      break;
+    default:
+      break;
+    }
+    if (expectedSz>=0 && fSz!=expectedSz) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown size\n"));
+      f << "##fSz,";
+      break;
+    }
+    shape.m_type=MacDraft5ParserInternal::Shape::Basic;
+    val=(int) input->readULong(1);
+    if (val) // alway 2?
+      f << "f3=" << val << ",";
+    int surfType=(int) input->readULong(1);
+    switch (surfType) {
+    case 0:
+      f << "no[surf],";
+      break;
+    case 1: // use color
+      break;
+    case 2: // use pattern
+      f << "usePattern[surf],";
+      break;
+    case 3: // checkme
+      f << "useGradiant[surf],";
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown surf type\n"));
+      f << "#surf[type]=" << surfType << ",";
+      break;
+    }
+    colId=(int) input->readULong(2); // 0-78
+    MWAWColor color;
+    if (colId==0) // none
+      ;
+    else if (surfType==2)
+      f << "patId[surf]=" << colId << ",";
+    else if (surfType==3)
+      f << "gradId[surf]=" << colId << ",";
+    else if (m_state->getColor(colId, color)) {
+      if (!color.isWhite())
+        f << "col[surf]=" << color << ",";
+      style.setSurfaceColor(color);
+    }
+    else
+      f << "##colId=" << colId << ",";
+    if (shape.m_fileType==3 || shape.m_fileType==4) {
+      val=(int) input->readULong(1);
+      if (val==1) f << "closed,";
+      else if (val) f << "##orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "g0=" << val << ",";
+      nbPts=(size_t) input->readULong(2);
+      if (fSz<48+10*(int) nbPts) {
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: the number of points seems bad\n"));
+        f << "##N=" << nbPts << ",";
+        break;
+      }
+    }
+    else if (shape.m_fileType==0x14) {
+      val=(int) input->readULong(1); // 0-2
+      if (val) f << "orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "g0=" << val << ",";
+      val=(int) input->readULong(2);
+      if (val!=0x181) f << "g1=" << std::hex << val << std::dec << ",";
+      for (int i=0; i<3; ++i) pt[i]=float(input->readLong(4))/65536.f;
+      MWAWVec2f center(pt[1],pt[0]), radius(pt[2],pt[2]);
+      f << "center=" << center << ",radius=" << pt[2] << ",";
+      shape.m_shape=MWAWGraphicShape::circle(MWAWBox2f(center-radius, center+radius));
+    }
+    else if (shape.m_fileType==0x15||shape.m_fileType==0x16||shape.m_fileType==0x17) {
+      val=(int) input->readULong(1); // 0-2
+      if (val) f << "orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "g0=" << val << ",";
+      val=(int) input->readULong(2);
+      if (val!=0x181) f << "g1=" << std::hex << val << std::dec << ",";
+      int numData=shape.m_fileType==0x16 ? 4 : 3;
+      for (int i=0; i<numData; ++i) pt[i]=float(input->readLong(4))/65536.f;
+      MWAWVec2f center(pt[1],pt[0]), radius(pt[2],numData==4 ? pt[3] : pt[2]);
+      f << "center=" << center << ",radius=" << radius << ",";
+      float fileAngle[2];
+      for (int i=0; i<2; ++i) fileAngle[i]=float(input->readLong(4))/65536.f;
+      f << "angle=" << fileAngle[0] << "x" << fileAngle[0]+fileAngle[1] << ",";
+      if (fileAngle[1]<0) {
+        fileAngle[0]+=fileAngle[1];
+        fileAngle[1]*=-1;
+      }
+      float angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
+      if (angle[1]>360) {
+        int numLoop=int(angle[1]/360)-1;
+        angle[0]-=numLoop*360;
+        angle[1]-=numLoop*360;
+        while (angle[1] > 360) {
+          angle[0]-=360;
+          angle[1]-=360;
+        }
+      }
+      if (angle[0] < -360) {
+        int numLoop=int(angle[0]/360)+1;
+        angle[0]-=numLoop*360;
+        angle[1]-=numLoop*360;
+        while (angle[0] < -360) {
+          angle[0]+=360;
+          angle[1]+=360;
+        }
+      }
+      // fixme
+      shape.m_shape=MWAWGraphicShape::pie(MWAWBox2f(center-radius, center+radius),
+                                          MWAWBox2f(center-radius, center+radius),
+                                          MWAWVec2f(angle[0],angle[1]));
+    }
+    else if (shape.m_fileType==0x18) {
+      val=(int) input->readULong(1); // 0-1
+      if (val) f << "orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "g1=" << val << ",";
+      val=(int) input->readULong(2); // always 0
+      if (val) f << "g2=" << val << ",";
+    }
+    else if (shape.m_fileType==0x1e || shape.m_fileType==0x1f) {
+      val=(int) input->readULong(1);
+      if (val==1) f << "closed,";
+      else if (val) f << "##orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "g0=" << val << ",";
+      nbPts=(size_t) input->readULong(2);
+      if (fSz<48+30*(int) nbPts+10) {
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: the number of points seems bad\n"));
+        f << "##N=" << nbPts << ",";
+        break;
+      }
+
+      f << "points=[";
+      std::vector<MWAWGraphicShape::PathData> path;
+      MWAWVec2f prevPoint[2];
+      for (size_t i=0; i<=nbPts; ++i) {
+        MWAWVec2f points[3];
+        int nCoord=(i==nbPts) ? 1 : 3;
+        for (int j=0; j<nCoord; ++j) {
+          libmwaw::DebugStream f2;
+          val=(int) input->readULong(1);
+          if (val!=((i||j)?0:1)) f2 << "h0=" << val << ",";
+          val=(int) input->readULong(1);
+          if (val!=(j==0 ? 0x81 : 0)) f2 << "fl=" << std::hex << val << std::dec << ",";
+          float pPos[2];
+          for (int k=0; k<2; ++k) pPos[k]=float(input->readLong(4))/65536;
+          points[j]=MWAWVec2f(pPos[1],pPos[0]);
+          f << points[j];
+          if (!f2.str().empty()) f << "[" << f2.str() << "]";
+          if (j+1==nCoord) f << ",";
+          else f << ":";
+        }
+        // checkme
+        char pType = i==0 ? 'M' : 'C';
+        path.push_back(MWAWGraphicShape::PathData(pType, points[0], (i==0) ? points[0] : prevPoint[0],
+                       (i==0) ? points[0] : prevPoint[1]));
+        prevPoint[0]=points[1];
+        prevPoint[1]=points[2];
+      }
+      f << "],";
+      shape.m_shape.m_type=MWAWGraphicShape::Path;
+      shape.m_shape.m_path=path;
+      break;
+    }
+    std::vector<MWAWVec2f> listPts;
+    listPts.resize(nbPts);
+    f << "pts=[";
+    for (size_t i=0; i<nbPts; ++i) {
+      libmwaw::DebugStream f2;
+      if (nodeHeaderSz==2) {
+        val=(int) input->readULong(1);
+        if (val!=(i?0:1)) f2 << "h0=" << val << ",";
+        val=(int) input->readULong(1);
+        if (val!=expectedNodeType) f2 << "fl=" << std::hex << val << std::dec << ",";
+      }
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      listPts[i]=MWAWVec2f(pt[1],pt[0]);
+      f << listPts[i];
+      if (!f2.str().empty())
+        f << ":[" << f2.str() << "],";
+      else
+        f << ",";
+    }
+    f << "],";
+    shape.m_type=MacDraft5ParserInternal::Shape::Basic;
+    MWAWVec2f corner(0,0);
+    if (shape.m_fileType==0xb) {
+      val=(int) input->readULong(1); // 1-3
+      if (val!=1) f << "orig[pos]=" << val << ",";
+      val=(int) input->readULong(1); // always 0
+      if (val) f << "h4=" << val << ",";
+      val=(int) input->readULong(2); // always 4
+      if (val!=4) f << "h5=" << val << ",";
+      for (int i=0; i<2; ++i) pt[i]=float(input->readLong(4))/65536.f;
+      corner=MWAWVec2f(pt[1],pt[0]);
+      f << "corner=" << corner << ",";
+    }
+    switch (shape.m_fileType) {
+    case 0x3:
+    case 0x4: {
+      shape.m_shape.m_type = MWAWGraphicShape::Polygon;
+      std::vector<MWAWVec2f> &vertices=shape.m_shape.m_vertices;
+      MWAWBox2f box;
+      for (size_t i=0; i<nbPts; ++i) {
+        vertices.push_back(listPts[i]);
+        if (i==0)
+          box=MWAWBox2f(listPts[i], listPts[i]);
+        else
+          box=box.getUnion(MWAWBox2f(listPts[i], listPts[i]));
+      }
+      shape.m_shape.m_bdBox=shape.m_shape.m_formBox=box;
+      break;
+    }
+    case 0x9:
+    case 0xa:
+    case 0xb:
+      shape.m_shape=MWAWGraphicShape::rectangle(MWAWBox2f(listPts[0], listPts[2]), corner);
+      break;
+    case 0x14: // already done
+    case 0x15:
+    case 0x16:
+    case 0x17:
+      break;
+    case 0x18:
+      listPts[1]=MWAWVec2f(listPts[1][1],listPts[1][0]);
+      shape.m_shape=MWAWGraphicShape::circle(MWAWBox2f(listPts[0]-listPts[1], listPts[0]+listPts[1]));
+      break;
+    default: {
+      static bool first=true;
+      f << "###";
+      if (first) {
+        first=false;
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: oops can not store a shape\n"));
+      }
+      break;
+    }
+    }
+    break;
+  }
+  case 0x28: { // text
+    if (fSz!=0x64) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown text size\n"));
+      f << "##fSz,";
+      break;
+    }
+    for (int i=0; i<2; ++i) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
+    for (int i=0; i<2; ++i) { // g2=Ø|1
+      val=(int) input->readULong(1);
+      if (val) f << "g" << i+2 << "=" << std::hex << val << std::dec << ",";
+    }
+    f << "ids?=["; // two big number, unsure
+    for (int i=0; i<2; ++i) f << std::hex << input->readULong(4) << std::dec << ",";
+    f << "],";
+    val=(int) input->readLong(2);// 0|-1
+    if (val) f << "g4=" << val << ",";
+    for (int i=0; i<4; ++i) { // g5=1|fd, g8=0|1
+      val=(int) input->readULong(1);
+      if (val) f << "g" << i+5 << "=" << std::hex << val << std::dec << ",";
+    }
+    MWAWVec2f listPts[4];
+    f << "pts=[";
+    for (size_t i=0; i<4; ++i) {
+      libmwaw::DebugStream f2;
+      val=(int) input->readULong(1);
+      if (val!=(i?0:1)) f2 << "h0=" << val << ",";
+      val=(int) input->readULong(1);
+      if (val) f2 << "fl=" << std::hex << val << std::dec << ",";
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      listPts[i]=MWAWVec2f(pt[1],pt[0]);
+      f << listPts[i];
+      if (!f2.str().empty())
+        f << ":[" << f2.str() << "],";
+      else
+        f << ",";
+    }
+    f << "],";
+    shape.m_type=MacDraft5ParserInternal::Shape::Text;
+    shape.m_box=MWAWBox2f(listPts[0],listPts[2]);
+    break;
+  }
+  case 0x30: { // bitmap
+    if (fSz!=0x5e) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown bitmap size\n"));
+      f << "##fSz,";
+      break;
+    }
+    for (int i=0; i<2; ++i) { // always 0
+      val=(int) input->readLong(2);
+      if (val) f << "g" << i << "=" << val << ",";
+    }
+    MWAWVec2f listPts[4];
+    f << "pts=[";
+    for (size_t i=0; i<4; ++i) {
+      libmwaw::DebugStream f2;
+      val=(int) input->readULong(1);
+      if (val!=(i?0:1)) f2 << "h0=" << val << ",";
+      val=(int) input->readULong(1);
+      if (val) f2 << "fl=" << std::hex << val << std::dec << ",";
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      listPts[i]=MWAWVec2f(pt[1],pt[0]);
+      f << listPts[i];
+      if (!f2.str().empty())
+        f << ":[" << f2.str() << "],";
+      else
+        f << ",";
+    }
+    f << "],";
+    int dim[4];
+    for (int i=0; i<4; ++i) dim[i]=(int) input->readLong(2);
+    shape.m_bitmapDimensionList.push_back(MWAWBox2i(MWAWVec2i(dim[1],dim[0]),MWAWVec2i(dim[3],dim[2])));
+    f << "dim=" << shape.m_bitmapDimensionList.back() << ",";
+    shape.m_bitmapIdList.push_back((int) input->readULong(2));
+    f << "id[bitmap]=" << shape.m_bitmapIdList.back() << ",";
+    shape.m_type=MacDraft5ParserInternal::Shape::Bitmap;
+    shape.m_box=MWAWBox2f(listPts[0],listPts[2]);
+    break;
+  }
+  case 0x33:
+  case 0x35: { // group
+    int headerSize=shape.m_fileType==0x33 ? 0x2a : 60;
+    if (fSz<headerSize) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown group size\n"));
+      f << "##fSz,";
+      break;
+    }
+    if (shape.m_fileType==0x35) {
+      for (int i=0; i<9; ++i) { // g0=0-2, g1=0-77, g6=0|100, g7=N
+        val=(int) input->readLong(2);
+        if (val) f << "g" << i << "=" << val << ",";
+      }
+    }
+    int nChild=(int) input->readULong(2);
+    if (fSz<headerSize+4*nChild) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown group size\n"));
+      f << "##fSz,";
+      break;
+    }
+    shape.m_type=MacDraft5ParserInternal::Shape::Group;
+    f << "child[id]=[";
+    for (int i=0; i<nChild; ++i) {
+      val=(int) input->readULong(4);
+      shape.m_childList.push_back(val);
+      f << std::hex << val << std::dec << ",";
+    }
+    f << "],";
+    break;
+  }
+  case 0x51:  // quotation
+  case 0x52:
+  case 0x53:
+  case 0x54:
+  case 0x55:
+  case 0x56:
+  case 0x57:
+  case 0x58: {
+    long expectedSize=(shape.m_fileType==0x57) ? 0x106 : (shape.m_fileType==0x58) ? 0x17a : 0x176;
+    if (fSz!=expectedSize) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown quotation size\n"));
+      f << "##fSz,";
+      break;
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+52, librevenge::RVNG_SEEK_SET);
+
+    pos=input->tell();
+    f.str("");
+    f << "Object-A:quotation,";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+82, librevenge::RVNG_SEEK_SET);
+
+    pos=input->tell();
+    f.str("");
+    f << "Object-B:quotation,";
+    f << "unkn=[";
+    for (size_t i=0; i<8; ++i) {
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      f << MWAWVec2f(pt[1],pt[0]) << ",";
+    }
+    f << "],";
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+64, librevenge::RVNG_SEEK_SET);
+
+    pos=input->tell();
+    f.str("");
+    f << "Object-C:quotation,";
+    int sSz=(int) input->readULong(1);
+    if (sSz>31) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown string size\n"));
+      f << "##sSz=" << sSz << ",";
+      break;
+    }
+    std::string text("");
+    for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
+    f << text << ",";
+    input->seek(pos+32, librevenge::RVNG_SEEK_SET);
+    for (int i=0; i<8; ++i) { // always 0
+      val=(int) input->readLong(2);
+      if (val)
+        f << "f" << i << "=" << val << ",";
+    }
+    ascii().addPos(pos);
+    ascii().addNote(f.str().c_str());
+    input->seek(pos+48, librevenge::RVNG_SEEK_SET);
+
+    pos=input->tell();
+    f.str("");
+    f << "Object-D:quotation,";
+    MWAWVec2f listPts[13];
+    f << "pts=[";
+    int numPts=shape.m_fileType==0x57 ? 1 : shape.m_fileType==0x58 ? 11 : 13;
+    for (int i=0; i<numPts; ++i) {
+      libmwaw::DebugStream f2;
+      val=(int) input->readULong(1);
+      if (val!=(i?0:1)) f2 << "h0=" << val << ",";
+      val=(int) input->readULong(1);
+      if (val!=0x81) f2 << "fl=" << std::hex << val << std::dec << ",";
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      listPts[i]=MWAWVec2f(pt[1],pt[0]);
+      f << listPts[i];
+      if (!f2.str().empty())
+        f << ":[" << f2.str() << "],";
+      else
+        f << ",";
+    }
+    f << "],";
+    if (shape.m_fileType==0x57) {
+      for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
+      f << "axis,dim=" << MWAWVec2f(pt[1],pt[0]) << ",";;
+    }
+    else if (shape.m_fileType==0x58) {
+      f << "angle,unkn=[";
+      for (int i=0; i<3; ++i) f << float(input->readLong(4))/65536.f << ",";
+      f << "],";
+      // then 0004002d0000000311050000
+    }
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some quotations, unimplemented\n"));
+      first=false;
+    }
+    break;
+  }
+  case 0x64: { // line para
+    if (fSz!=0x70) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown line[para] size\n"));
+      f << "##fSz,";
+      break;
+    }
+    val=(int) input->readULong(1);
+    if (val) // alway 0?
+      f << "g0=" << val << ",";
+    int surfType=(int) input->readULong(1);
+    switch (surfType) {
+    case 0:
+      f << "no[surf],";
+      break;
+    case 1: // use color
+      break;
+    case 2: // use pattern
+      f << "usePattern[surf],";
+      break;
+    case 3: // checkme
+      f << "useGradiant[surf],";
+      break;
+    default:
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown surf type\n"));
+      f << "#surf[type]=" << surfType << ",";
+      break;
+    }
+    colId=(int) input->readULong(2); // 0-78
+    MWAWColor color;
+    if (colId==0) // none
+      ;
+    else if (surfType==2)
+      f << "patId[surf]=" << colId << ",";
+    else if (surfType==3)
+      f << "gradId[surf]=" << colId << ",";
+    else if (m_state->getColor(colId, color)) {
+      if (!color.isWhite())
+        f << "col[surf]=" << color << ",";
+      style.setSurfaceColor(color);
+    }
+    else
+      f << "##colId=" << colId << ",";
+
+    for (int i=0; i<2; ++i) pt[i]=float(input->readLong(4))/65536.f;
+    f << "dim?=" << MWAWVec2f(pt[1],pt[0]) << ",";
+    f << "points=[";
+    std::vector<MWAWVec2f> listPts;
+    for (size_t i=0; i<2; ++i) {
+      for (int j=0; j<3; ++j) { // checkme: orignal line, line1, line2?
+        libmwaw::DebugStream f2;
+        val=(int) input->readULong(1);
+        if (val!=((i||j)?0:1)) f2 << "h0=" << val << ",";
+        val=(int) input->readULong(1);
+        if (val!=(j==0 ? 0x81 : 0x90)) f2 << "fl=" << std::hex << val << std::dec << ",";
+        float pPos[2];
+        for (int k=0; k<2; ++k) pPos[k]=float(input->readLong(4))/65536;
+        listPts.push_back(MWAWVec2f(pPos[1],pPos[0]));
+        f << listPts.back();
+        if (!f2.str().empty()) f << "[" << f2.str() << "]";
+        if (j+1==3) f << ",";
+        else f << ":";
+      }
+    }
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some line[para], unimplemented\n"));
+      first=false;
+    }
+    break;
+  }
+  case 0x65: { // poly para
+    if (fSz<58) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown poly[para] size\n"));
+      f << "##fSz,";
+      break;
+    }
+    for (int i=0; i<2; ++i) {
+      static char const *(wh[])= {"inter", "surf"};
+      val=(int) input->readULong(1);
+      if (val) // alway 0?
+        f << "g0=" << val << ",";
+      int surfType=(int) input->readULong(1);
+      switch (surfType) {
+      case 0:
+        f << "no[" << wh[i] << "],";
+        break;
+      case 1: // use color
+        break;
+      case 2: // use pattern
+        f << "usePattern[" << wh[i] << "],";
+        break;
+      case 3: // checkme
+        f << "useGradiant[" << wh[i] << "],";
+        break;
+      default:
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown surf type\n"));
+        f << "#" << wh[i] << "[type]=" << surfType << ",";
+        break;
+      }
+      colId=(int) input->readULong(2); // 0-78
+      MWAWColor color;
+      if (colId==0) // none
+        ;
+      else if (surfType==2)
+        f << "patId[" << wh[i] << "]=" << colId << ",";
+      else if (surfType==3)
+        f << "gradId[" << wh[i] << "]=" << colId << ",";
+      else if (m_state->getColor(colId, color)) {
+        if (!color.isWhite())
+          f << "col[" << wh[i] << "]=" << color << ",";
+        if (i==1)
+          style.setSurfaceColor(color);
+      }
+      else
+        f << "##colId=" << colId << ",";
+    }
+
+    for (int i=0; i<3; ++i) { // g0=9,g1=0,g2=2|3|e
+      val=(int) input->readLong(2);
+      if (val)
+        f << "g" << i << "=" << val << ",";
+    }
+    val=(int) input->readLong(1);
+    if (val==1) f << "closed,";
+    else if (val) f << "poly[type]=" << val << ",";
+    val=(int) input->readLong(1); // always 0
+    if (val) f << "g7=" << val << ",";
+    int nbPts=(int) input->readULong(2);
+    if (fSz<58+30*nbPts) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: numbers of points of unknown poly[para] seems bad\n"));
+      f << "##nbPts=" << nbPts << ",";
+      break;
+    }
+    std::vector<MWAWVec2f> listPts;
+    for (int p=0; p<3; ++p) {
+      f << "poly" << p << "=[";
+      for (int j=0; j<nbPts; ++j) {
+        libmwaw::DebugStream f2;
+        val=(int) input->readULong(1);
+        if (val!=((p||j)?0:1)) f2 << "h0=" << val << ",";
+        val=(int) input->readULong(1);
+        if (val!=(p==0 ? 0x81 : 0x90)) f2 << "fl=" << std::hex << val << std::dec << ",";
+        float pPos[2];
+        for (int k=0; k<2; ++k) pPos[k]=float(input->readLong(4))/65536;
+        listPts.push_back(MWAWVec2f(pPos[1],pPos[0]));
+        f << listPts.back();
+        if (!f2.str().empty()) f << "[" << f2.str() << "]";
+        if (j+1==nbPts) f << ",";
+        else f << ":";
+      }
+      f << "],";
+    }
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some poly[para], unimplemented\n"));
+      first=false;
+    }
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some unknown data\n"));
+    f << "#unparsed,";
+  }
+
+  if (input->tell()!=pos && input->tell()!=endPos)
     ascii().addDelimiter(input->tell(),'|');
   ascii().addPos(pos);
   ascii().addNote(f.str().c_str());
-  layout.m_lastPos=pos;
   input->seek(endPos,librevenge::RVNG_SEEK_SET);
   ++layout.m_objectId;
-  if (fSz!=0x64)
+
+  pos=input->tell();
+  if (shape.m_labelId>0 && !readLabel()) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: can not find the label\n"));
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+  }
+
+  pos=input->tell();
+  if (shape.m_nameId && !readStringList()) {
+    MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: can not find name list\n"));
+    input->seek(pos,librevenge::RVNG_SEEK_SET);
+  }
+
+  if (shape.m_fileType!=0x28)
     return true;
-  if (!readLabel())
-    input->seek(endPos,librevenge::RVNG_SEEK_SET);
   pos=input->tell();
   f.str("");
   f << "Entries(Text):";
@@ -1089,11 +2086,8 @@ bool MacDraft5Parser::readLabel()
   }
   for (int i=0; i<N; ++i) {
     f << "unkn" << i << "=[";
-    for (int j=0; j<3; ++j) { // _,_,_ | [1f5|1f6],_,small value
-      val=input->readLong(2);
-      if (val) f << val << ",";
-      else f << "_,";
-    }
+    f << input->readLong(2) << ","; // 0 or small int
+    f << std::hex << input->readULong(4) << std::dec; // id or not
     f << "],";
   }
   val=(int) input->readULong(1); // always 0
@@ -1457,7 +2451,7 @@ bool MacDraft5Parser::readResource(MWAWEntry &entry, bool inRsrc)
     f << "Entries(OPST)[" << entry.id() << "]:";
     entry.setParsed(true);
     if (!input || !entry.valid() || entry.length()!=2) {
-      MWAW_DEBUG_MSG(("MacDraft5Parser::readResoure: unexpected OPST length\n"));
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readResource: unexpected OPST length\n"));
       f << "###";
     }
     else {
@@ -1604,13 +2598,16 @@ bool MacDraft5Parser::readColors(MWAWEntry const &entry, bool inRsrc)
   ascFile.addPos(entry.begin()-(inRsrc ? 4 : 16));
   ascFile.addNote(f.str().c_str());
 
+  m_state->m_colorList.clear();
   for (long i=0; i<N; ++i) {
     long pos=input->tell();
     f.str("");
     f << "Color-" << i << ":";
     uint8_t col[3];
     for (int j=0; j<3; ++j) col[j]=uint8_t(input->readULong(2)>>8);
-    f << MWAWColor(col[0],col[1],col[2]) << ",";
+    MWAWColor color(col[0],col[1],col[2]);
+    f << color << ",";
+    m_state->m_colorList.push_back(color);
     for (int j=0; j<5; ++j) { // f0=0|2, f1=0|5(gray?), f3=id?
       val=(int) input->readLong(2);
       if (val) f << "f" << j << "=" << val << ",";
@@ -1706,15 +2703,9 @@ bool MacDraft5Parser::readPatterns(MWAWEntry const &entry, bool inRsrc)
       for (int j=0; j<8; ++j) f << std::hex << input->readULong(1) << std::dec << ",";
       break;
     }
-    case 1: { // maybe 2 colors, gradType, position
-      static bool first=true;
-      if (first) {
-        MWAW_DEBUG_MSG(("MacDraft5Parser::readPatterns: reading grading is not implemented\n"));
-        first=false;
-      }
-      f << "grad,";
+    case 1:
+      f << "id[pixpat]=" << (int) input->readLong(2) << ",";
       break;
-    }
     default:
       MWAW_DEBUG_MSG(("MacDraft5Parser::readPatterns: find unknown type\n"));
       f << "##type=" << type << ",";
@@ -2172,7 +3163,7 @@ bool MacDraft5Parser::readBitmapList(MWAWEntry const &entry, bool inRsrc)
   val=(int) input->readLong(2); // always c
   if (val!=12) f << "#fSz=" << val << ",";
   long dataSz=input->readLong(4);
-  if (dataSz!=12*N) {
+  if ((dataSz%12) || dataSz>12*N) {
     MWAW_DEBUG_MSG(("MacDraft5Parser::readBitmapList:dataSize seems bad\n"));
     f << "##dataSz=" << dataSz << ",";
   }
