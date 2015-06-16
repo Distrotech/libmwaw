@@ -311,6 +311,10 @@ SOURCE=..\..\src\lib\MacDraft5Parser.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\MacDraft5StyleManager.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\MacDrawParser.cxx
 # End Source File
 # Begin Source File
@@ -876,6 +880,10 @@ SOURCE=..\..\src\lib\MacDraftParser.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\MacDraft5Parser.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\MacDraft5StyleManager.hxx
 # End Source File
 # Begin Source File
 

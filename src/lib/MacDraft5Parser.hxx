@@ -53,11 +53,13 @@ struct State;
 class SubDocument;
 }
 
+class MacDraft5StyleManager;
 /** \brief the main class to read a MacDraft5 v4-v5 file
  *
  */
 class MacDraft5Parser : public MWAWGraphicParser
 {
+  friend class MacDraft5StyleManager;
   friend class MacDraft5ParserInternal::SubDocument;
 public:
   //! constructor
@@ -106,59 +108,30 @@ protected:
   //! try to read a list of strings
   bool readStringList();
 
-  //! try to a bitmap
-  bool readBitmap(MWAWEntry const &entry);
   //! try to read the layout zone
   bool readLayout(MacDraft5ParserInternal::Layout &layout);
-  //! try to read the last zones: end file(v4) or the zone before the rsrc part (v5)
-  bool readLastZones();
 
   //
   // read resource
   //
 
-  //! try to read the resource block: either the resource fork(v4) or last file's part (v5)
-  bool readResources();
-
-  //! try to read a resource
-  bool readResource(MWAWEntry &entry, bool inRsrc);
-
-  //! try to read a list of colors : pltt 128
-  bool readColors(MWAWEntry const &entry, bool inRsrc);
-  //! try to read a list of dashs : DASH 128
-  bool readDashes(MWAWEntry const &entry, bool inRsrc);
-  //! try to read FNUS:1 resource
-  bool readFonts(MWAWEntry const &entry, bool inRsrc);
   //! try to read a LAYI:0 resource
   bool readLayoutDefinitions(MWAWEntry const &entry, bool inRsrc);
   //! try to read Link:128 resource
   bool readLinks(MWAWEntry const &entry, bool inRsrc);
-  //! try to read a list of patterns/gradient? : PLDT 128
-  bool readPatterns(MWAWEntry const &entry, bool inRsrc);
   //! try to read a PICT entry (in data fork)
   bool readPICT(MWAWEntry const &entry, librevenge::RVNGBinaryData &pict);
   //! try to read the PICT unknown entry: pnot:0
   bool readPICTList(MWAWEntry const &entry, bool inRsrc);
-  //! try to read a ppat resource
-  bool readPixPat(MWAWEntry const &entry, bool inRsrc);
-  //! try to read a version (in data fork)
-  bool readVersion(MWAWEntry &entry);
   //! try to read a list of views : VIEW:1
   bool readViews(MWAWEntry const &entry, bool inRsrc);
-
-  //! try to read a resource list: PATL:128 or Opac:128+xxx
-  bool readRSRCList(MWAWEntry const &entry, bool inRsrc);
-
-  //! try to read BITList:0 resource
-  bool readBitmapList(MWAWEntry const &entry, bool inRsrc);
-  //! try to read Opcd:131 resource (unknown)
-  bool readOpcd(MWAWEntry const &entry, bool inRsrc);
-  //! try to read OPST:[123] resource (unknown)
-  bool readOPST(MWAWEntry const &entry, bool inRsrc);
 
   //
   // data
   //
+
+  //! the style manager
+  shared_ptr<MacDraft5StyleManager> m_styleManager;
   //! the state
   shared_ptr<MacDraft5ParserInternal::State> m_state;
 };

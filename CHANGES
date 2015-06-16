@@ -1,5 +1,10 @@
 CHANGES:
 
+14/06/2015:
+- allow to build doc only for the api classes, using --with-docs=no|api|full
+  to create no documentation, only API classes' documentations, all classes'
+  documentations
+  
 5/28/2015:
 - add a minimal parser for ApplePict v1.v2,
   ie. no clipping, do not take in account the copy mode: srcCopy, srcOr, ...
