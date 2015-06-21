@@ -226,14 +226,15 @@ public:
     return m_surfaceOpacity > 0;
   }
   //! set the pattern
-  void setPattern(Pattern const &pat)
+  void setPattern(Pattern const &pat, float opacity = 1)
   {
     m_pattern=pat;
+    m_surfaceOpacity = opacity;
   }
   //! returns true if the pattern is defined
   bool hasPattern() const
   {
-    return !m_pattern.empty();
+    return !m_pattern.empty() && m_surfaceOpacity > 0;
   }
   //! returns true if the gradient is defined
   bool hasGradient(bool complex=false) const

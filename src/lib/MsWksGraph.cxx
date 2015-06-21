@@ -1056,9 +1056,9 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
       if (i==0)
         style.m_lineColor=MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor);
       else if (m_state->getPattern(pattern, pId)) {
-        style.m_pattern=pattern;
-        style.m_pattern.m_colors[0] = style.m_baseSurfaceColor;
-        style.m_pattern.m_colors[1] = style.m_baseLineColor;
+        pattern.m_colors[0] = style.m_baseSurfaceColor;
+        pattern.m_colors[1] = style.m_baseLineColor;
+        style.setPattern(pattern);
       }
       else
         style.setSurfaceColor(MWAWColor::barycenter(percent, style.m_baseLineColor, 1.f-percent, style.m_baseSurfaceColor));
@@ -1119,9 +1119,9 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
         else if (m_state->getPattern(pattern, patId, rsid)) {
           percent = m_state->getPatternPercent(patId, rsid);
           if (i) {
-            style.m_pattern=pattern;
-            style.m_pattern.m_colors[0] = style.m_baseSurfaceColor;
-            style.m_pattern.m_colors[1] = style.m_baseLineColor;
+            pattern.m_colors[0] = style.m_baseSurfaceColor;
+            pattern.m_colors[1] = style.m_baseLineColor;
+            style.setPattern(pattern);
             done = true;
           }
         }

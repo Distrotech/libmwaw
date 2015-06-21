@@ -1224,7 +1224,7 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
     MWAWColor color;
     if (!pattern.getUniqueColor(color)) {
       pattern.getAverageColor(color);
-      if (j==1) style.m_pattern = pattern;
+      if (j==1) style.setPattern(pattern);
     }
     if (j==0)
       style.m_lineColor=color;

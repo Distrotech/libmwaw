@@ -1012,7 +1012,7 @@ bool BeagleWksDRParser::readStyle(BeagleWksDRParserInternal::Shape &shape)
     else if (pattern.getUniqueColor(color))
       shape.m_style.setSurfaceColor(color);
     else
-      shape.m_style.m_pattern=pattern;
+      shape.m_style.setPattern(pattern);
   }
   shape.m_style.m_rotate=(float)-input->readLong(2);
   int dim[2];

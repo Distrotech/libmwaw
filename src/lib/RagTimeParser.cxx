@@ -976,12 +976,12 @@ bool RagTimeParser::readDataZoneHeader(int id, long endPos)
         pat.m_colors[0]=colors[1];
         pat.m_colors[1]=colors[0];
         MWAWColor col;
-        if (style.m_pattern.getUniqueColor(col)) {
+        if (pat.getUniqueColor(col)) {
           if (!col.isWhite())
             style.setBackgroundColor(col);
         }
         else {
-          style.m_pattern=pat;
+          style.setPattern(pat);
           if (style.m_pattern.getAverageColor(col) && !col.isWhite())
             style.setBackgroundColor(col);
         }

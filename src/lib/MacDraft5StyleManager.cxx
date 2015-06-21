@@ -681,14 +681,18 @@ std::string MacDraft5StyleManager::updateSurfaceStyle(int type, int id, MWAWGrap
       f << "###colId=" << id << ",";
     break;
   }
-  case 2: // use pattern
+  case 2: { // use pattern
+    MWAWGraphicStyle::Pattern pattern;
     if (id==0)
       f << "no[pattern],";
-    else if (m_state->getPattern(id, style.m_pattern))
+    else if (m_state->getPattern(id, pattern)) {
+      style.setPattern(pattern);
       f << "usePattern[surf]=" << id << ",";
+    }
     else
       f << "###patId=" << id << ",";
     break;
+  }
   case 3: {
     if (id>=0 && id<255)
       style.m_surfaceOpacity=float(id)/255.f;

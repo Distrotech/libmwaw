@@ -1711,7 +1711,7 @@ bool ClarisWksStyleManager::updateWallPaper(int id, MWAWGraphicStyle &style) con
     return false;
   }
   MWAWGraphicStyle::Pattern const &pat=m_state->m_wallpaperList[size_t(id-1)];
-  style.m_pattern=pat;
+  style.setPattern(pat);
   MWAWColor col;
   if (pat.getAverageColor(col))
     style.setSurfaceColor(col);
@@ -2616,7 +2616,7 @@ bool ClarisWksStyleManager::readGraphStyles(int N, int fSz)
       if (values16[j+2] && getPattern(values16[j+2], pattern, percent)) {
         pattern.m_colors[1]=color;
         if (!pattern.getUniqueColor(color)) {
-          if (j) graph.m_pattern=pattern;
+          if (j) graph.setPattern(pattern);
           pattern.getAverageColor(color);
         }
       }

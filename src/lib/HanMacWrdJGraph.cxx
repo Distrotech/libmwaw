@@ -1167,7 +1167,7 @@ bool HanMacWrdJGraph::readFrames(MWAWEntry const &entry)
         pat.m_colors[1]=col;
         if (!pat.getUniqueColor(col)) {
           pat.getAverageColor(col);
-          if (j) style.m_pattern=pat;
+          if (j) style.setPattern(pat);
         }
       }
       else

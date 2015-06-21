@@ -1372,7 +1372,7 @@ int MacDrawProParser::readObject()
     if (i==0 && pattern.getAverageColor(color))
       shape.m_style.m_lineColor=color;
     else if (i==1)
-      shape.m_style.m_pattern=pattern;
+      shape.m_style.setPattern(pattern);
   }
   // read the dash
   val=(int) input->readULong(1);
@@ -1543,7 +1543,7 @@ int MacDrawProParser::readObject()
     }
     else if (i==1) {
       pattern.m_colors[1]=color;
-      shape.m_style.m_pattern=pattern;
+      shape.m_style.setPattern(pattern);
     }
   }
 

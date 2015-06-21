@@ -1021,7 +1021,7 @@ bool HanMacWrdKGraph::readFrames(shared_ptr<HanMacWrdKZone> zone)
       pat.m_colors[1]=col;
       if (!pat.getUniqueColor(col)) {
         pat.getAverageColor(col);
-        if (i) style.m_pattern=pat;
+        if (i) style.setPattern(pat);
       }
     }
     else

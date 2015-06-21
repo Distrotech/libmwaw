@@ -1674,7 +1674,7 @@ bool MacDraftParser::send(MacDraftParserInternal::Shape const &shape)
       if (pat.getUniqueColor(col))
         style.setSurfaceColor(col);
       else
-        style.m_pattern=pat;
+        style.setPattern(pat);
     }
     else {
       MWAW_DEBUG_MSG(("MacDraftParser::send: can not find pattern %d\n", shape.m_patternId));

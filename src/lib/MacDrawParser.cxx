@@ -481,7 +481,7 @@ int MacDrawParser::readObject()
         if (pat.getUniqueColor(col))
           shape.m_style.setSurfaceColor(col);
         else
-          shape.m_style.m_pattern=pat;
+          shape.m_style.setPattern(pat);
       }
       else
         f << "###surf[pat],";

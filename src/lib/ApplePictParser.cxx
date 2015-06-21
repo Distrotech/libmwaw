@@ -557,7 +557,7 @@ struct State {
       else if (m_penPattern.getUniqueColor(color))
         style.setSurfaceColor(color);
       else
-        style.m_pattern=m_penPattern;
+        style.setPattern(m_penPattern);
       break;
     case ApplePictParser::D_FILL:
       if (m_fillPattern.empty())
@@ -565,7 +565,7 @@ struct State {
       else if (m_fillPattern.getUniqueColor(color))
         style.setSurfaceColor(color);
       else
-        style.m_pattern=m_fillPattern;
+        style.setPattern(m_fillPattern);
       break;
     case ApplePictParser::D_ERASE:
       if (m_backgroundPattern.empty())
@@ -573,7 +573,7 @@ struct State {
       else if (m_backgroundPattern.getUniqueColor(color))
         style.setSurfaceColor(color);
       else
-        style.m_pattern=m_backgroundPattern;
+        style.setPattern(m_backgroundPattern);
       break;
     case ApplePictParser::D_INVERT:
       break;
