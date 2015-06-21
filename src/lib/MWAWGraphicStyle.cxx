@@ -321,6 +321,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
           list.insert("draw:fill-image-height", m_pattern.m_dim[1], librevenge::RVNG_POINT);
           list.insert("draw:fill-image-ref-point-x",0, librevenge::RVNG_POINT);
           list.insert("draw:fill-image-ref-point-y",0, librevenge::RVNG_POINT);
+          if (surfaceOpacity<1)
+            list.insert("draw:opacity", surfaceOpacity, librevenge::RVNG_PERCENT);
           list.insert("librevenge:mime-type", mimeType.c_str());
           done = true;
         }

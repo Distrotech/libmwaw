@@ -1315,6 +1315,7 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       MWAWVec2f center(pt[1],pt[0]), radius(pt[2],pt[2]);
       f << "center=" << center << ",radius=" << pt[2] << ",";
       shape->m_shape=MWAWGraphicShape::circle(MWAWBox2f(center-radius, center+radius));
+      shape->m_origin=center;
     }
     else if (shape->m_fileType==0x15||shape->m_fileType==0x16||shape->m_fileType==0x17) {
       val=(int) input->readULong(1); // 0-2
@@ -1663,7 +1664,19 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       break;
     }
     if (shape->m_fileType==0x35) {
-      for (int i=0; i<9; ++i) { // g0=0-2, g1=0-77, g6=0|100, g7=N
+      val=(int) input->readULong(1);
+      if (val) // alway 0?
+        f << "f3=" << val << ",";
+      int surfType=(int) input->readULong(1);
+      colId=(int) input->readULong(2); // 0-78
+      f << m_styleManager->updateSurfaceStyle(surfType, colId, style);
+      static bool first=true;
+      if (first && style.hasSurface()) {
+        MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: creating surface from group is not implemented\n"));
+        first=false;
+        f << "#surf[group],";
+      }
+      for (int i=0; i<7; ++i) { // g4=0|100, g5=N
         val=(int) input->readLong(2);
         if (val) f << "g" << i << "=" << val << ",";
       }
