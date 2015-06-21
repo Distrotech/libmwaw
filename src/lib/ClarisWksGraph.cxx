@@ -1191,8 +1191,8 @@ shared_ptr<ClarisWksGraphInternal::Zone> ClarisWksGraph::readGroupDef(MWAWEntry 
   else if (val>>2)
     f << "g0=" << (val>>2) << ",";
   zone.m_zoneType = (int) input->readULong(1);
-  if (zone.m_zoneType & 0x40) style.m_arrows[0]=true;
-  if (zone.m_zoneType & 0x80) style.m_arrows[1]=true;
+  if (zone.m_zoneType & 0x40) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+  if (zone.m_zoneType & 0x80) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
   zone.m_zoneType &= 0x3F;
   val = (int) input->readULong(1);
   if (val) f << "f0=" << val << ",";
@@ -2537,7 +2537,7 @@ bool ClarisWksGraph::sendGroupChild(std::vector<shared_ptr<ClarisWksGraphInterna
         static_cast<ClarisWksGraphInternal::ZoneShape const &>(*child);
       MWAWGraphicStyle style(shape.m_style);
       if (shape.m_shape.m_type!=MWAWGraphicShape::Line)
-        style.m_arrows[0]=style.m_arrows[1]=false;
+        style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow();
       listener->insertPicture(pos, shape.m_shape, style);
     }
     else if (type!=ClarisWksGraphInternal::Zone::T_DataBox) {
@@ -2929,7 +2929,7 @@ bool ClarisWksGraph::sendShape(ClarisWksGraphInternal::ZoneShape &pict, MWAWPosi
 
   MWAWGraphicStyle pStyle(pict.m_style);
   if (pict.m_shape.m_type!=MWAWGraphicShape::Line)
-    pStyle.m_arrows[0]=pStyle.m_arrows[1]=false;
+    pStyle.m_arrows[0]=pStyle.m_arrows[1]=MWAWGraphicStyle::Arrow();
   pos.setOrigin(pos.origin()-MWAWVec2f(2,2));
   pos.setSize(pos.size()+MWAWVec2f(4,4));
   listener->insertPicture(pos, pict.m_shape, pStyle);

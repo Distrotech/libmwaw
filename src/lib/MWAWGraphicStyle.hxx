@@ -54,7 +54,70 @@ public:
   //! an enum used to define the gradient type
   enum GradientType { G_None, G_Axial, G_Linear, G_Radial, G_Rectangular, G_Square, G_Ellipsoid };
 
-  //! a structure used to define the gradient limit
+  //! a structure used to define an arrow
+  struct Arrow {
+    //! constructor ( no arrow)
+    Arrow() : m_type(0)
+    {
+    }
+    //! returns a basic plain arrow
+    static Arrow plain()
+    {
+      Arrow arrow;
+      arrow.m_type=1;
+      return arrow;
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, Arrow const &arrow)
+    {
+      if (arrow.isEmpty()) return o;
+      o << "plain,";
+      return o;
+    }
+    //! operator==
+    bool operator==(Arrow const &arrow) const
+    {
+      return m_type==arrow.m_type;
+    }
+    //! operator!=
+    bool operator!=(Arrow const &arrow) const
+    {
+      return !(*this==arrow);
+    }
+    //! operator<
+    bool operator<(Arrow const &arrow) const
+    {
+      return m_type<arrow.m_type;
+    }
+    //! operator<=
+    bool operator<=(Arrow const &arrow) const
+    {
+      return *this<arrow || *this==arrow;
+    }
+    //! operator>
+    bool operator>(Arrow const &arrow) const
+    {
+      return !(*this<=arrow);
+    }
+    //! operator>=
+    bool operator>=(Arrow const &arrow) const
+    {
+      return !(*this<arrow);
+    }
+    //! returns true if there is no arrow
+    bool isEmpty() const
+    {
+      return m_type==0;
+    }
+    //! add a arrow to the propList knowing the type (start, end)
+    void addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const;
+
+  protected:
+    //! the arrow type
+    int m_type;
+  };
+
+  //! a structure used to define the gradient limit in MWAWGraphicStyle
   struct GradientStop {
     //! constructor
     GradientStop(float offset=0.0, MWAWColor const &col=MWAWColor::black(), float opacity=1.0) :
@@ -195,7 +258,7 @@ public:
     m_backgroundColor(MWAWColor::white()), m_backgroundOpacity(-1), m_bordersList(), m_frameName(""), m_frameNextName(""),
     m_rotate(0), m_extra("")
   {
-    m_arrows[0]=m_arrows[1]=false;
+    m_arrows[0]=m_arrows[1]=Arrow();
     m_flip[0]=m_flip[1]=false;
     m_gradientStopList.push_back(GradientStop(0.0, MWAWColor::white()));
     m_gradientStopList.push_back(GradientStop(1.0, MWAWColor::black()));
@@ -347,8 +410,8 @@ public:
   //! the gradient radius
   float m_gradientRadius;
 
-  //! two bool to indicated if extremity has arrow or not
-  bool m_arrows[2];
+  //! the two arrows corresponding to start and end extremity
+  Arrow m_arrows[2];
 
   //
   // related to the frame

@@ -213,19 +213,19 @@ struct FrameShape : public Frame {
   void updateStyle(MWAWGraphicStyle &style) const
   {
     if (m_shape.m_type!=MWAWGraphicShape::Line) {
-      style.m_arrows[0]=style.m_arrows[1]=false;
+      style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow();
       style.m_lineDashWidth.resize(0);
     }
     else if (m_lineArrow > 1) {
       switch (m_lineArrow) {
       case 2:
-        style.m_arrows[1]=true;
+        style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
         break;
       case 3:
-        style.m_arrows[0]=true;
+        style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
         break;
       case 4:
-        style.m_arrows[0]=style.m_arrows[1]=true;
+        style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
         break;
       default:
         break;
@@ -1067,13 +1067,13 @@ bool GreatWksGraph::readStyle(MWAWGraphicStyle &style)
   case 1: // none
     break;
   case 2:
-    style.m_arrows[1]=true;
+    style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     break;
   case 3:
-    style.m_arrows[0]=true;
+    style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
     break;
   case 4:
-    style.m_arrows[0]=style.m_arrows[1]=true;
+    style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     break;
   default:
     f << "#lineArrows=" << val << ",";

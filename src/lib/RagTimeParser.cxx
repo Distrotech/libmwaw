@@ -2532,8 +2532,8 @@ bool RagTimeParser::sendBasicPicture(int zId, MWAWPosition const &position)
   MWAWGraphicShape shape= MWAWGraphicShape::line(MWAWVec2f(zone.m_dimension[0][0],zone.m_dimension[0][1])-position.origin(),
                           MWAWVec2f(zone.m_dimension[1][0],zone.m_dimension[1][1])-position.origin());
   MWAWGraphicStyle style(zone.m_style);
-  if (zone.m_arrowFlags&1) style.m_arrows[0]=true;
-  if (zone.m_arrowFlags&2) style.m_arrows[1]=true;
+  if (zone.m_arrowFlags&1) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+  if (zone.m_arrowFlags&2) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
   listener->insertPicture(position, shape, style);
   return true;
 }

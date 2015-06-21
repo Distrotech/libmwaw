@@ -599,19 +599,19 @@ bool MacDraftParser::readObject()
   case 0:
     break;
   case 1:
-    shape.m_style.m_arrows[1]=true;
+    shape.m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     f << "->,";
     break;
   case 2:
-    shape.m_style.m_arrows[0]=true;
+    shape.m_style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
     f << "<-,";
     break;
   case 3:
-    shape.m_style.m_arrows[0]=shape.m_style.m_arrows[1]=true;
+    shape.m_style.m_arrows[0]=shape.m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     f << "<->,";
     break;
   case 4:
-    shape.m_style.m_arrows[0]=shape.m_style.m_arrows[1]=true;
+    shape.m_style.m_arrows[0]=shape.m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     f << "<->+length,";
     break;
   default:

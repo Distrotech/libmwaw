@@ -2038,7 +2038,7 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     bool ok=true;
     for (int i=0; i<2; ++i) { // the arrow data
       if ((fl&(i+1))==0) continue;
-      shape.m_style.m_arrows[1-i]=true;
+      shape.m_style.m_arrows[1-i]=MWAWGraphicStyle::Arrow::plain();
       if (input->tell()+24>entry.end()) {
         MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read the line arrow %d\n", i));
         f << "###";

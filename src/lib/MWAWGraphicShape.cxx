@@ -303,7 +303,7 @@ MWAWBox2f MWAWGraphicShape::getBdBox(MWAWGraphicStyle const &style, bool moveToO
     bdBox.extend(style.m_lineWidth/2.f);
   if (m_type==Line) {
     // fixme: add 4pt for each arrows
-    int numArrows=(style.m_arrows[0] ? 1 : 0)+(style.m_arrows[1] ? 1 : 0);
+    int numArrows=(style.m_arrows[0].isEmpty() ? 0 : 1)+(style.m_arrows[1].isEmpty() ? 0 : 1);
     if (numArrows) bdBox.extend(float(2*numArrows));
   }
   return bdBox;
@@ -323,6 +323,7 @@ void MWAWGraphicShape::translate(MWAWVec2f const &decal)
 
 void MWAWGraphicShape::scale(MWAWVec2f const &scaling)
 {
+  // checkme: does not work for symetry if shape is an arc...
   m_bdBox=MWAWBox2f(MWAWVec2f(scaling[0]*m_bdBox.min()[0],scaling[1]*m_bdBox.min()[1]),
                     MWAWVec2f(scaling[0]*m_bdBox.max()[0],scaling[1]*m_bdBox.max()[1]));
   m_formBox=MWAWBox2f(MWAWVec2f(scaling[0]*m_formBox.min()[0],scaling[1]*m_formBox.min()[1]),

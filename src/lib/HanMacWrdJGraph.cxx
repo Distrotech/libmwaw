@@ -1940,8 +1940,8 @@ bool HanMacWrdJGraph::sendShapeGraph(HanMacWrdJGraphInternal::ShapeGraph const &
 
   MWAWGraphicStyle style(format.m_style);;
   if (pict.m_shape.m_type==MWAWGraphicShape::Line) {
-    if (pict.m_arrowsFlag&1) style.m_arrows[0]=true;
-    if (pict.m_arrowsFlag&2) style.m_arrows[1]=true;
+    if (pict.m_arrowsFlag&1) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+    if (pict.m_arrowsFlag&2) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
   }
 
   pos.setOrigin(pos.origin());
@@ -2785,8 +2785,8 @@ void HanMacWrdJGraph::sendGroup(HanMacWrdJGraphInternal::Group const &group, MWA
         static_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(frame);
       MWAWGraphicStyle style(format.m_style);;
       if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
-        if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
-        if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
+        if (shape.m_arrowsFlag&1) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+        if (shape.m_arrowsFlag&2) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
       }
       listener->insertPicture(pictPos, shape.m_shape, style);
       break;
@@ -2890,8 +2890,8 @@ void HanMacWrdJGraph::sendGroupChild(HanMacWrdJGraphInternal::Group const &group
             static_cast<HanMacWrdJGraphInternal::ShapeGraph const &>(child);
           MWAWGraphicStyle style(format.m_style);
           if (shape.m_shape.m_type==MWAWGraphicShape::Line) {
-            if (shape.m_arrowsFlag&1) style.m_arrows[0]=true;
-            if (shape.m_arrowsFlag&2) style.m_arrows[1]=true;
+            if (shape.m_arrowsFlag&1) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+            if (shape.m_arrowsFlag&2) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
           }
           graphicListener->insertPicture(pictPos, shape.m_shape, style);
           break;

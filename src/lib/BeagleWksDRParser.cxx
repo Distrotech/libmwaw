@@ -803,11 +803,11 @@ bool BeagleWksDRParser::readShapeDefinitions()
     if (shape.m_type==3) {
       lineFlags=val;
       if (lineFlags&1) {
-        shape.m_style.m_arrows[1]=true;
+        shape.m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
         f << "arrow[end],";
       }
       if (lineFlags&2) {
-        shape.m_style.m_arrows[0]=true;
+        shape.m_style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
         f << "arrow[start],";
       }
       val &= 0xFFCC;

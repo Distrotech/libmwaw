@@ -51,6 +51,31 @@
 #include "MWAWGraphicStyle.hxx"
 
 ////////////////////////////////////////////////////////////
+// arrow
+////////////////////////////////////////////////////////////
+void MWAWGraphicStyle::Arrow::addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const
+{
+  if (isEmpty())
+    return;
+  if (type!="start" && type!="end") {
+    MWAW_DEBUG_MSG(("MWAWGraphicStyle::Arrow::addTo: oops, find unexpected type\n"));
+    return;
+  }
+  std::stringstream s;
+  s << "draw:marker-" << type << "-path";
+  propList.insert(s.str().c_str(), "m10 0-10 30h20z");
+  s.str("");
+  s << "draw:marker-" << type << "-viewbox";
+  propList.insert(s.str().c_str(), "0 0 20 30");
+  s.str("");
+  s << "draw:marker-" << type << "-center";
+  propList.insert(s.str().c_str(), "false");
+  s.str("");
+  s << "draw:marker-" << type << "-width";
+  propList.insert(s.str().c_str(), "5pt");
+}
+
+////////////////////////////////////////////////////////////
 // pattern
 ////////////////////////////////////////////////////////////
 bool MWAWGraphicStyle::Pattern::getUniqueColor(MWAWColor &col) const
@@ -223,18 +248,8 @@ void MWAWGraphicStyle::addTo(librevenge::RVNGPropertyList &list, bool only1D) co
   default:
     break;
   }
-  if (m_arrows[0]) {
-    list.insert("draw:marker-start-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-start-viewbox", "0 0 20 30");
-    list.insert("draw:marker-start-center", "false");
-    list.insert("draw:marker-start-width", "5pt");
-  }
-  if (m_arrows[1]) {
-    list.insert("draw:marker-end-path", "m10 0-10 30h20z");
-    list.insert("draw:marker-end-viewbox", "0 0 20 30");
-    list.insert("draw:marker-end-center", "false");
-    list.insert("draw:marker-end-width", "5pt");
-  }
+  if (!m_arrows[0].isEmpty()) m_arrows[0].addTo(list,"start");
+  if (!m_arrows[1].isEmpty()) m_arrows[1].addTo(list,"end");
   if (hasShadow()) {
     list.insert("draw:shadow", "visible");
     list.insert("draw:shadow-color", m_shadowColor.str().c_str());
@@ -403,7 +418,7 @@ int MWAWGraphicStyle::cmp(MWAWGraphicStyle const &a) const
   }
   for (int i=0; i<2; ++i) {
     if (m_arrows[i]!=a.m_arrows[i])
-      return m_arrows[i] ? 1 : -1;
+      return m_arrows[i]<a.m_arrows[i] ? -1 : 1;
     if (m_flip[i]!=a.m_flip[i])
       return m_flip[i] ? 1 : -1;
   }
@@ -507,8 +522,8 @@ std::ostream &operator<<(std::ostream &o, MWAWGraphicStyle const &st)
     o << "opacity=" << st.m_lineOpacity << ",";
   if (!st.m_lineColor.isBlack())
     o << "color=" << st.m_lineColor << ",";
-  if (st.m_arrows[0]) o << "arrow[start],";
-  if (st.m_arrows[1]) o << "arrow[end],";
+  if (!st.m_arrows[0].isEmpty()) o << "arrow[start]=[" << st.m_arrows[0] << "],";
+  if (!st.m_arrows[1].isEmpty()) o << "arrow[end]=[" << st.m_arrows[1] << "],";
   o << "],";
   if (st.hasSurfaceColor()) {
     o << "surf=[";

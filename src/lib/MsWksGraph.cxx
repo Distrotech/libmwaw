@@ -337,7 +337,7 @@ struct BasicShape : public Zone {
     float res=m_style.m_lineWidth;
     if (m_shape.m_type==MWAWGraphicShape::Line) {
       for (int i=0; i<2; ++i) {
-        if (m_style.m_arrows[i]) res+=4;
+        if (!m_style.m_arrows[i].isEmpty()) res+=4;
       }
     }
     return 0.5f*res;
@@ -347,7 +347,7 @@ struct BasicShape : public Zone {
   {
     MWAWGraphicStyle style(m_style);
     if (m_subType!=0)
-      style.m_arrows[0] = style.m_arrows[1]=false;
+      style.m_arrows[0] = style.m_arrows[1]=MWAWGraphicStyle::Arrow();
     return style;
   }
 
@@ -1187,9 +1187,9 @@ bool MsWksGraph::readPictHeader(MsWksGraphInternal::Zone &pict)
   int lineFlags = (int) input->readULong(1);
   switch (lineFlags&3) {
   case 2:
-    style.m_arrows[0]=true;
+    style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
   case 1:
-    style.m_arrows[1]=true;
+    style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     break;
   default:
     f << "#arrow=3,";

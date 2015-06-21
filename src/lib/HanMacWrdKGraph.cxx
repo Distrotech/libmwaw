@@ -200,7 +200,7 @@ struct ShapeGraph : public Frame {
   {
     MWAWGraphicStyle style(m_style);
     if (m_shape.m_type!=MWAWGraphicShape::Line)
-      style.m_arrows[0]=style.m_arrows[1]=false;
+      style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow();
     return style;
   }
   //! print local data
@@ -1439,8 +1439,8 @@ shared_ptr<HanMacWrdKGraphInternal::ShapeGraph> HanMacWrdKGraph::readShapeGraph(
     }
     shape.m_type=MWAWGraphicShape::Line;
     int arrowFlags=(int) input->readULong(1);
-    if (arrowFlags&1) graph->m_style.m_arrows[0]=true;
-    if (arrowFlags&2) graph->m_style.m_arrows[1]=true;
+    if (arrowFlags&1) graph->m_style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+    if (arrowFlags&2) graph->m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
     if (arrowFlags&0xFC) f << "#arrowsFl=" << (arrowFlags & 0xFC) << ",";
     for (int i = 0; i < 5; ++i) { // always 0
       val = input->readLong(2);

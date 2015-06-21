@@ -495,11 +495,11 @@ int MacDrawParser::readObject()
   float cornerWidth=0;
   if (type==2 || type==3) {
     if (val&2) {
-      shape.m_style.m_arrows[0]=true;
+      shape.m_style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
       f << "arrow[beg],";
     }
     if (val&1) {
-      shape.m_style.m_arrows[1]=true;
+      shape.m_style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
       f << "arrow[end],";
     }
     val &= 0xFC;

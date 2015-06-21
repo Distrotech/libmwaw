@@ -1174,8 +1174,8 @@ shared_ptr<ClarisDrawGraphInternal::Zone> ClarisDrawGraph::readGroupDef(MWAWEntr
   zone.m_flag = (int) input->readULong(1);
   style.m_wrapping=(zone.m_flag&3);
   zone.m_zoneType = (int) input->readULong(1);
-  if (zone.m_zoneType & 0x40) style.m_arrows[0]=true;
-  if (zone.m_zoneType & 0x80) style.m_arrows[1]=true;
+  if (zone.m_zoneType & 0x40) style.m_arrows[0]=MWAWGraphicStyle::Arrow::plain();
+  if (zone.m_zoneType & 0x80) style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
   zone.m_zoneType &= 0x3F;
   int val = (int) input->readULong(1);
   if (val) f << "f0=" << std::hex << val << std::dec << ",";
@@ -2311,7 +2311,7 @@ bool ClarisDrawGraph::sendShape(ClarisDrawGraphInternal::ZoneShape &pict, MWAWPo
     pos.setSize(pict.getBdBox().size());
   MWAWGraphicStyle pStyle(pict.m_style);
   if (pict.m_shape.m_type!=MWAWGraphicShape::Line)
-    pStyle.m_arrows[0]=pStyle.m_arrows[1]=false;
+    pStyle.m_arrows[0]=pStyle.m_arrows[1]=MWAWGraphicStyle::Arrow();
   listener->insertPicture(pos, pict.m_shape, pStyle);
   if (pict.m_shape.m_type!=MWAWGraphicShape::Line || !pict.m_autosize)
     return true;
