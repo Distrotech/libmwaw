@@ -46,6 +46,7 @@
 
 namespace MacDraft5ParserInternal
 {
+struct Image;
 struct Layout;
 struct Shape;
 struct State;
@@ -80,6 +81,18 @@ protected:
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGDrawingInterface *documentInterface);
 
+  //! try to send all shapes in an image
+  bool send(MacDraft5ParserInternal::Image const &image);
+  //! try to send all shapes in an layout
+  bool send(MacDraft5ParserInternal::Layout const &layout);
+  //! try to send a shape in a layout
+  bool send(MacDraft5ParserInternal::Shape const &shape,
+            MacDraft5ParserInternal::Layout const &layout);
+  //! try to send a bitmap
+  bool sendBitmap(MacDraft5ParserInternal::Shape const &bitmap, MWAWPosition const &position);
+  //! try to send text with given id
+  bool sendText(int layoutId, long shapeId);
+
 protected:
   //! finds the different objects zones
   bool createZones();
@@ -103,8 +116,10 @@ protected:
 
   //! try to read an object
   bool readObject(MacDraft5ParserInternal::Layout &layout);
-  //! try to read a label
-  bool readLabel();
+  //! try to read the text data corresponding to a text shape
+  bool readText(MacDraft5ParserInternal::Shape &shape);
+  //! try to read a modifier
+  bool readModifier(MacDraft5ParserInternal::Shape &shape);
   //! try to read a list of strings
   bool readStringList();
 

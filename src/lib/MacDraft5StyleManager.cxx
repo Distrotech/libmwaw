@@ -370,7 +370,7 @@ struct Pixmap {
 struct State {
   //! constructor
   State() : m_dataEnd(-1), m_rsrcBegin(-1), m_colorList(), m_patternList(), m_dashList(),
-    m_beginToBitmapEntryMap(), m_pixIdToPixmapMap(), m_pixIdToPatternIdMap()
+    m_beginToBitmapEntryMap(), m_bitmapIdToPixmapMap(), m_pixIdToPixmapMap(), m_pixIdToPatternIdMap()
   {
   }
   //! returns a color if possible
@@ -389,14 +389,31 @@ struct State {
   bool getPattern(int id, MWAWGraphicStyle::Pattern &pat)
   {
     if (m_patternList.empty()) initPatterns();
-    if (id<=0 || id>=int(m_patternList.size())) {
+    if (id<=0 || id>int(m_patternList.size())) {
       MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::getPattern: can not find pattern %d\n", id));
       return false;
     }
-    pat=m_patternList[size_t(id)];
+    pat=m_patternList[size_t(id-1)];
     return true;
   }
-
+  //! returns the dash fill percent
+  bool getDashPercent(int id, float &percent)
+  {
+    if (m_dashList.empty()) initDashs();
+    percent=1;
+    if (id<0 || id>=int(m_dashList.size())) {
+      MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::getDash: can not find dash %d\n", id));
+      return false;
+    }
+    std::vector<float> const &dash=m_dashList[size_t(id)];
+    float fill=0, empty=0;
+    for (size_t i=0; i<dash.size(); ++i) {
+      if (i%2) empty+=dash[i];
+      else fill+=dash[i];
+    }
+    if (fill+empty>0 && fill>=0 && empty>=0) percent=fill/(fill+empty);
+    return true;
+  }
   //! init the color list
   void initColors();
   //! init the patterns list
@@ -416,6 +433,8 @@ struct State {
   std::vector< std::vector<float> > m_dashList;
   //! a map file position to entry ( used to stored intermediar zones )
   std::map<long, MWAWEntry> m_beginToBitmapEntryMap;
+  //! a map bitmapId to pixmap map
+  std::map<int, shared_ptr<Pixmap> > m_bitmapIdToPixmapMap;
   //! a map pixmapId to pixmap map
   std::map<int, shared_ptr<Pixmap> > m_pixIdToPixmapMap;
   //! a map pixmapId to patternId map
@@ -581,6 +600,130 @@ long MacDraft5StyleManager::getEndDataPosition() const
 bool MacDraft5StyleManager::getColor(int colId, MWAWColor &color) const
 {
   return m_state->getColor(colId, color);
+}
+
+std::string MacDraft5StyleManager::updateLineStyle(int type, int id, int dashId, MWAWGraphicStyle &style)
+{
+  libmwaw::DebugStream f;
+  switch (type) {
+  case 0:
+    style.m_lineWidth=0;
+    f << "no[line],";
+    break;
+  case 1: { // use color
+    MWAWColor color;
+    if (id==0) {
+      style.m_lineWidth=0;
+      f << "no[color],";
+    }
+    else if (m_state->getColor(id, color)) {
+      if (!color.isBlack())
+        f << "col[line]=" << color << ",";
+      style.m_lineColor=color;
+    }
+    else
+      f << "###colId=" << id << ",";
+    break;
+  }
+  case 2: {
+    f << "opacity[line]=" << float(id)/255 << "%,";
+    style.m_lineOpacity=float(id)/255.f;
+    break;
+  }
+  case 3: { // use pattern
+    MWAWGraphicStyle::Pattern pattern;
+    if (id==0) {
+      style.m_lineWidth=0;
+      f << "no[linePattern],";
+    }
+    else if (m_state->getPattern(id, pattern)) {
+      f << "usePattern[line]=" << id << ",";
+      pattern.getAverageColor(style.m_lineColor);
+    }
+    else
+      f << "###patId=" << id << ",";
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("MacDraft5StyleManager::updateLineStyle: find unknown line type\n"));
+    f << "###line[type]=" << type << ",";
+    break;
+  }
+  float percent;
+  if (m_state->getDashPercent(dashId, percent)) {
+    if (percent<1)
+      style.m_lineColor=MWAWColor::barycenter(percent, style.m_lineColor, 1.f-percent, MWAWColor::white());
+    if (dashId) f << "dash[id]=" << dashId << ",";
+  }
+  else
+    f << "##dash[id]=" << dashId << ",";
+  return f.str();
+
+}
+
+std::string MacDraft5StyleManager::updateSurfaceStyle(int type, int id, MWAWGraphicStyle &style)
+{
+  libmwaw::DebugStream f;
+  switch (type) {
+  case 0:
+    f << "no[surf],";
+    break;
+  case 1: { // use color
+    MWAWColor color;
+    if (id==0)
+      f << "no[color],";
+    else if (m_state->getColor(id, color)) {
+      if (!color.isWhite())
+        f << "col[surf]=" << color << ",";
+      style.setSurfaceColor(color);
+    }
+    else
+      f << "###colId=" << id << ",";
+    break;
+  }
+  case 2: // use pattern
+    if (id==0)
+      f << "no[pattern],";
+    else if (m_state->getPattern(id, style.m_pattern))
+      f << "usePattern[surf]=" << id << ",";
+    else
+      f << "###patId=" << id << ",";
+    break;
+  case 3: {
+    if (id>=0 && id<255)
+      style.m_surfaceOpacity=float(id)/255.f;
+    else {
+      MWAW_DEBUG_MSG(("MacDraft5StyleManager::updateSurfaceStyle:surface opacity seems bads\n"));
+      f << "###";
+    }
+    f << "opacity=" << int(id)/255 << "%,";
+    break;
+  }
+  default:
+    MWAW_DEBUG_MSG(("MacDraft5StyleManager::updateSurfaceStyle: find unknown surf type\n"));
+    f << "###surf[type]=" << type << ",";
+    break;
+  }
+  return f.str();
+}
+
+bool MacDraft5StyleManager::getBitmap(int bId, librevenge::RVNGBinaryData &data, std::string &type) const
+{
+  MWAWVec2i pictSize;
+  MWAWColor avColor;
+  if (m_state->m_bitmapIdToPixmapMap.find(bId)==m_state->m_bitmapIdToPixmapMap.end() ||
+      !m_state->m_bitmapIdToPixmapMap.find(bId)->second ||
+      !m_state->m_bitmapIdToPixmapMap.find(bId)->second->get(data,type,pictSize,avColor)) {
+    MWAW_DEBUG_MSG(("MWAWMacDraft5StyleManager::getBitmap: can not find bitmap %d\n", bId));
+    return false;
+  }
+#ifdef DEBUG_WITH_FILES
+  std::stringstream s;
+  s << "Bitmap" << bId << ".ppm";
+  libmwaw::Debug::dumpFile(data, s.str().c_str());
+#endif
+
+  return true;
 }
 
 bool MacDraft5StyleManager::getPixmap(int pId, librevenge::RVNGBinaryData &data, std::string &type,
@@ -1154,45 +1297,45 @@ bool MacDraft5StyleManager::readBitmap(MWAWEntry const &entry)
     f << "#sz[data]=" << fSz << ",";
   }
   // now the pixmap
-  MacDraft5StyleManagerInternal::Pixmap pixmap;
-  pixmap.m_rowBytes = (int) input->readULong(2);
-  pixmap.m_rowBytes &= 0x3FFF;
+  shared_ptr<MacDraft5StyleManagerInternal::Pixmap> pixmap(new MacDraft5StyleManagerInternal::Pixmap);
+  pixmap->m_rowBytes = (int) input->readULong(2);
+  pixmap->m_rowBytes &= 0x3FFF;
 
   // read the rectangle: bound
   int dim[4];
   for (int d = 0; d < 4; d++) dim[d] = (int) input->readLong(2);
-  pixmap.m_rect = MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
-  if (pixmap.m_rect.size().x() <= 0 || pixmap.m_rect.size().y() <= 0) {
+  pixmap->m_rect = MWAWBox2i(MWAWVec2i(dim[1],dim[0]), MWAWVec2i(dim[3],dim[2]));
+  if (pixmap->m_rect.size().x() <= 0 || pixmap->m_rect.size().y() <= 0) {
     MWAW_DEBUG_MSG(("MacDraft5StyleManager::readBitmap: find odd bound rectangle ... \n"));
     return false;
   }
-  pixmap.m_version = (int) input->readLong(2);
-  pixmap.m_packType = (int) input->readLong(2);
-  pixmap.m_packSize = (int) input->readLong(4);
+  pixmap->m_version = (int) input->readLong(2);
+  pixmap->m_packType = (int) input->readLong(2);
+  pixmap->m_packSize = (int) input->readLong(4);
   for (int c = 0; c < 2; c++) {
-    pixmap.m_resolution[c] = (int) input->readLong(2);
+    pixmap->m_resolution[c] = (int) input->readLong(2);
     input->readLong(2);
   }
-  pixmap.m_pixelType = (int) input->readLong(2);
-  pixmap.m_pixelSize = (int) input->readLong(2);
-  pixmap.m_compCount = (int) input->readLong(2);
-  pixmap.m_compSize = (int) input->readLong(2);
-  pixmap.m_planeBytes = (int) input->readLong(4);
-  f << pixmap;
+  pixmap->m_pixelType = (int) input->readLong(2);
+  pixmap->m_pixelSize = (int) input->readLong(2);
+  pixmap->m_compCount = (int) input->readLong(2);
+  pixmap->m_compSize = (int) input->readLong(2);
+  pixmap->m_planeBytes = (int) input->readLong(4);
+  f << *pixmap;
   input->seek(8, librevenge::RVNG_SEEK_CUR); // color handle, reserved
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
 
   long pos=input->tell();
-  if (pixmap.m_rowBytes*8 < pixmap.m_rect.size().y()) {
-    MWAW_DEBUG_MSG(("MacDraft5StyleManager::readBitmap: row bytes seems to short: %d/%d... \n", pixmap.m_rowBytes*8, pixmap.m_rect.size().y()));
+  if (pixmap->m_rowBytes*8 < pixmap->m_rect.size().y()) {
+    MWAW_DEBUG_MSG(("MacDraft5StyleManager::readBitmap: row bytes seems to short: %d/%d... \n", pixmap->m_rowBytes*8, pixmap->m_rect.size().y()));
     ascFile.addPos(pos);
     ascFile.addNote("Bitmap:###");
     input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
     return true;
   }
 
-  if (!pixmap.readPixmapData(*input)) {
+  if (!pixmap->readPixmapData(*input)) {
     ascFile.addPos(pos);
     ascFile.addNote("Bitmap:###");
     input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
@@ -1204,7 +1347,7 @@ bool MacDraft5StyleManager::readBitmap(MWAWEntry const &entry)
     ascFile.addPos(input->tell());
     ascFile.addNote("Bitmap-A");
   }
-
+  m_state->m_bitmapIdToPixmapMap[entry.id()]=pixmap;
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;
 }
@@ -1297,7 +1440,7 @@ bool MacDraft5StyleManager::readPixPat(MWAWEntry const &entry, bool inRsrc)
     for (int i=0; i<numColor; ++i) {
       int id=(int) input->readULong(2);
       uint8_t col[3];
-      for (int j=0; j<3; ++j) col[j]=(uint8_t)(input->readULong(2)>>2);
+      for (int j=0; j<3; ++j) col[j]=(uint8_t)(input->readULong(2)>>8);
       MWAWColor color(col[0],col[1],col[2]);
       if (id!=i) f << "col" << id << "=" << color;
       else f << color;
@@ -1335,17 +1478,6 @@ bool MacDraft5StyleManager::readPixPat(MWAWEntry const &entry, bool inRsrc)
   }
 
   m_state->m_pixIdToPixmapMap[entry.id()]=pixmap;
-#ifdef DEBUG_WITH_FILES
-  librevenge::RVNGBinaryData data;
-  std::string type;
-  MWAWVec2i pictSize;
-  MWAWColor avColor;
-  if (pixmap->get(data, type, pictSize, avColor)) {
-    f.str("");
-    f << "PixPat" << entry.id() << ".ppm";
-    libmwaw::Debug::dumpFile(data, f.str().c_str());
-  }
-#endif
 
   input->seek(entry.end(), librevenge::RVNG_SEEK_SET);
   return true;

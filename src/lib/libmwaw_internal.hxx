@@ -1086,7 +1086,9 @@ typedef MWAWBox2<long> MWAWBox2l;
 // some geometrical function
 namespace libmwaw
 {
-//! rotate a bdox and returns the final bdbox
+//! rotate a point around center, angle is given in degree
+MWAWVec2f rotatePointAroundCenter(MWAWVec2f const &point, MWAWVec2f const &center, float angle);
+//! rotate a bdox and returns the final bdbox, angle is given in degree
 MWAWBox2f rotateBoxFromCenter(MWAWBox2f const &box, float angle);
 }
 #endif /* LIBMWAW_INTERNAL_H */

@@ -62,6 +62,7 @@ public:
   MacDraft5StyleManager(MacDraft5Parser &parser);
   //! destructor
   virtual ~MacDraft5StyleManager();
+
 protected:
 
   //! try to read the resource block: either the resource fork(v4) or last file's part (v5)
@@ -70,8 +71,14 @@ protected:
   bool readBitmapZones();
   //! returns the end of data position (before the bitmap zones) if known or -1
   long getEndDataPosition() const;
+  //! update the line style ( using line type and col/pat id and the dashId). \return a string which can be use as debug message
+  std::string updateLineStyle(int type, int id, int dashId, MWAWGraphicStyle &style);
+  //! update the surface graphic style ( using surface type and id ). \return a string which can be use as debug message
+  std::string updateSurfaceStyle(int type, int id, MWAWGraphicStyle &style);
   //! tries to return the color corresponding to an id
   bool getColor(int cId, MWAWColor &color) const;
+  //! try to get a bitmap
+  bool getBitmap(int bId, librevenge::RVNGBinaryData &data, std::string &type) const;
 
   //
   // read resource

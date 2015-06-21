@@ -361,16 +361,20 @@ std::ostream &operator<< (std::ostream &o, MWAWBorder const &border)
 // a little geometry
 namespace libmwaw
 {
+MWAWVec2f rotatePointAroundCenter(MWAWVec2f const &point, MWAWVec2f const &center, float angle)
+{
+  float angl=float(M_PI/180.)*angle;
+  MWAWVec2f pt = point-center;
+  return center + MWAWVec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
+                            std::sin(angl)*pt[0]+std::cos(angl)*pt[1]);
+}
+
 MWAWBox2f rotateBoxFromCenter(MWAWBox2f const &box, float angle)
 {
   MWAWVec2f center=box.center();
-  float angl=float(M_PI/180.)*angle;
   MWAWVec2f minPt, maxPt;
   for (int p=0; p<4; ++p) {
-    MWAWVec2f pt(box[p<2?0:1][0],box[(p%2)?0:1][1]);
-    pt -= center;
-    pt = center + MWAWVec2f(std::cos(angl)*pt[0]-std::sin(angl)*pt[1],
-                            std::sin(angl)*pt[0]+std::cos(angl)*pt[1]);
+    MWAWVec2f pt=rotatePointAroundCenter(MWAWVec2f(box[p<2?0:1][0],box[(p%2)?0:1][1]), center, angle);
     if (p==0) {
       minPt=maxPt=pt;
       continue;
