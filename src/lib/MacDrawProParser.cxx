@@ -200,6 +200,9 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
     case MWAWGraphicShape::Line:
       o << "line,";
       break;
+    case MWAWGraphicShape::Measure:
+      o << "measure,";
+      break;
     case MWAWGraphicShape::Rectangle:
       o << "rect,";
       break;

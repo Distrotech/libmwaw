@@ -1995,16 +1995,16 @@ bool ApplePictParser::checkHeader(MWAWHeader *header, bool strict)
       int fileVersion = -int(input->readLong(2));
       int subvers = -int(input->readLong(2));
       float dim2[4];
-      switch (fileVersion)
-      case 1: {
-      f << "pict2[1:" << subvers << "],";
-      for (int i=0; i<4; ++i) dim2[i]=float(input->readLong(4))/65536.f;
-      if (strict && (dim2[0]>dim2[2]||dim2[1]>dim2[3]))
+      switch (fileVersion) {
+      case 1:
+        f << "pict2[1:" << subvers << "],";
+        for (int i=0; i<4; ++i) dim2[i]=float(input->readLong(4))/65536.f;
+        if (strict && (dim2[0]>dim2[2]||dim2[1]>dim2[3]))
+          break;
+        m_state->m_bdBox=MWAWBox2f(MWAWVec2f(dim2[0],dim2[1]),MWAWVec2f(dim2[2],dim2[3]));
+        f << "dim[fixed]=" << m_state->m_bdBox << ",";
+        vers=2;
         break;
-      m_state->m_bdBox=MWAWBox2f(MWAWVec2f(dim2[0],dim2[1]),MWAWVec2f(dim2[2],dim2[3]));
-      f << "dim[fixed]=" << m_state->m_bdBox << ",";
-      vers=2;
-      break;
       case 2:
         f << "pict2[2:" << subvers << "],";
         for (int i=0; i<2; ++i) dim2[i]=float(input->readLong(4))/65536.f;

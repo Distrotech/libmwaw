@@ -1,5 +1,10 @@
 CHANGES:
 
+22/06/2015:
+- add a parser for MacDraft v4-v5 document
+- allow to create pattern's surface with various intensity
+- allow to create simple measure
+
 14/06/2015:
 - allow to build doc only for the api classes, using --with-docs=no|api|full
   to create no documentation, only API classes' documentations, all classes'

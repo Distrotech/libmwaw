@@ -64,7 +64,7 @@ namespace MacDraft5ParserInternal
 //! generic class used to store shape in MWAWDraftParser
 struct Shape {
   //! the different shape
-  enum Type { Basic, Bitmap, Group, Text, Unknown };
+  enum Type { Basic, Bitmap, Group, Text, QuotationSurface, Unknown };
 
   //! constructor
   Shape() : m_type(Unknown), m_fileType(0), m_box(), m_origin(), m_style(), m_shape(), m_otherStyleList(), m_otherShapeList(), m_isLine(false),
@@ -283,7 +283,7 @@ void Layout::updateRelations()
   for (size_t i=0; i<m_rootList.size(); ++i) toCheck.push(m_rootList[i]);
 
   while (true) {
-    size_t posToCheck;
+    size_t posToCheck=0; // to make clang happy
     if (!toCheck.empty()) {
       posToCheck=toCheck.top();
       toCheck.pop();
@@ -294,7 +294,7 @@ void Layout::updateRelations()
       bool ok=false;
       for (size_t i=0; i<m_shapeList.size(); ++i) {
         if (!m_shapeList[i] || seens.find(i)!=seens.end())
-          break;
+          continue;
         MWAW_DEBUG_MSG(("MacDraft5ParserInternal::Layout::updateRelations: find unexpected root %d\n", (int) i));
         posToCheck=i;
         m_rootList.push_back(i);
@@ -646,7 +646,7 @@ bool MacDraft5Parser::checkHeader(MWAWHeader *header, bool strict)
     if (!ok) {
       // normally only ok for v5 file, so v4 library without rsrc file will not be read...
       long pos=input->tell();
-      input->seek(-8, librevenge::RVNG_SEEK_CUR);
+      input->seek(-8, librevenge::RVNG_SEEK_END);
       std::string name("");
       for (int i=0; i<8; ++i) name+=(char) input->readULong(1);
       if (name!="RBALRPH ") return false;
@@ -1778,9 +1778,23 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
         f << ",";
     }
     f << "],";
-    if (shape->m_fileType==0x57) {
+    if (shape->m_fileType==0x57) { // cross quotation, no text
       for (int j=0; j<2; ++j) pt[j]=float(input->readLong(4))/65536.f;
-      f << "axis,dim=" << MWAWVec2f(pt[1],pt[0]) << ",";
+      MWAWVec2f axis(pt[1],pt[0]);
+      f << "axis,dim=" << axis << ",";
+      rotation=0;
+
+      shape->m_type=MacDraft5ParserInternal::Shape::Basic;
+      style=MWAWGraphicStyle();
+      style.m_lineDashWidth.resize(4); // normally, must depend on the axis size
+      style.m_lineDashWidth[0]=3;
+      style.m_lineDashWidth[1]=2;
+      style.m_lineDashWidth[2]=20;
+      style.m_lineDashWidth[3]=0;
+      shape->m_shape=MWAWGraphicShape::line(shape->m_origin-axis,shape->m_origin+axis);
+      shape->m_otherStyleList.push_back(style);
+      shape->m_otherShapeList.push_back(MWAWGraphicShape::line(shape->m_origin-MWAWVec2f(-pt[0],pt[1]),shape->m_origin+MWAWVec2f(-pt[0],pt[1])));
+      break;
     }
     else if (shape->m_fileType==0x58) {
       f << "angle,unkn=[";
@@ -1788,9 +1802,19 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       f << "],";
       // then 0004002d0000000311050000
     }
+    else {
+      shape->m_type=MacDraft5ParserInternal::Shape::Basic;
+      style.m_arrows[0]=style.m_arrows[1]=MWAWGraphicStyle::Arrow::plain();
+      style.m_lineColor=MWAWColor(125,125,125);
+      style.m_lineWidth=1;
+      int const firstPoint=(shape->m_fileType==0x55 || shape->m_fileType==0x56) ? 7 : 0;
+      shape->m_shape=MWAWGraphicShape::measure(listPts[firstPoint],listPts[firstPoint+1]);
+      rotation=0;
+      break;
+    }
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some quotations, unimplemented\n"));
+      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some angle quotations, unimplemented\n"));
       first=false;
     }
     break;
@@ -1819,7 +1843,13 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       f << "##fSz,";
       break;
     }
-    for (int i=0; i<6; ++i) { // g0=1, g1=1, g2=7, g4=c, g5=0: font definition
+    val=(int) input->readULong(1);
+    if (val) // alway 0?
+      f << "f3=" << val << ",";
+    int surfType=(int) input->readULong(1);
+    colId=(int) input->readULong(2); // 0-78
+    f << m_styleManager->updateSurfaceStyle(surfType, colId, style);
+    for (int i=0; i<4; ++i) { // g0=7, g2=c, g3=0: font definition ?
       val=(int) input->readLong(2);
       if (val) f << "g" << i << "=" << val << ",";
     }
@@ -1837,15 +1867,16 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unexpected text size\n"));
       sSz=0;
     }
+    shape->m_type=MacDraft5ParserInternal::Shape::QuotationSurface;
+    style.m_lineWidth=0;
+    style.m_surfaceOpacity=0;
+    shape->m_textEntry.setBegin(input->tell());
+    shape->m_textEntry.setLength(sSz);
     std::string text("");
     for (int i=0; i<sSz; ++i) text+=(char) input->readULong(1);
     f << text << ",";
     input->seek(endPos, librevenge::RVNG_SEEK_SET);
-    static bool first=true;
-    if (first) {
-      MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find some surface quotations, unimplemented\n"));
-      first=false;
-    }
+    rotation=0;
     break;
   }
   case 0x64: { // line para
@@ -2219,9 +2250,8 @@ bool MacDraft5Parser::readStringList()
   }
   libmwaw::DebugStream f;
   f << "Entries(StringLists):";
-  int val;
   for (int i=0; i<2; ++i) { // always 1,1
-    val=(int) input->readLong(2);
+    int val=(int) input->readLong(2);
     if (val==1)
       continue;
     if (fSz>=0x2e) {
@@ -2715,6 +2745,13 @@ bool MacDraft5Parser::send(MacDraft5ParserInternal::Shape const &shape,
     listener->insertTextBox(pos, doc, style);
     break;
   }
+  case MacDraft5ParserInternal::Shape::QuotationSurface: {
+    pos=MWAWPosition(shape.m_origin+m_state->m_origin, MWAWVec2i(-1,-1), librevenge::RVNG_POINT);
+    pos.m_anchorTo = MWAWPosition::Page;
+    shared_ptr<MWAWSubDocument> doc(new MacDraft5ParserInternal::SubDocument(*this, getInput(), layout.m_id, shape.m_id));
+    listener->insertTextBox(pos, doc, style);
+    break;
+  }
   case MacDraft5ParserInternal::Shape::Bitmap:
     sendBitmap(shape, pos);
     break;
@@ -2782,7 +2819,8 @@ bool MacDraft5Parser::sendText(int layoutId, long zId)
 
   listener->setParagraph(shape->m_paragraph);
   listener->setFont(MWAWFont(3,12));
-  if (shape->m_type != MacDraft5ParserInternal::Shape::Text) {
+  if (shape->m_type != MacDraft5ParserInternal::Shape::Text &&
+      shape->m_type != MacDraft5ParserInternal::Shape::QuotationSurface) {
     MWAW_DEBUG_MSG(("MacDraft5Parser::sendText: unexpected shape type\n"));
     return false;
   }
@@ -2820,6 +2858,13 @@ bool MacDraft5Parser::sendText(int layoutId, long zId)
       listener->insertCharacter((unsigned char)c, input, endPos);
       break;
     }
+  }
+  if (shape->m_type == MacDraft5ParserInternal::Shape::QuotationSurface) {
+    // we still need to squared the unit
+    MWAWFont font(3,12);
+    font.set(MWAWFont::Script::super());
+    listener->setFont(font);
+    listener->insertCharacter('2');
   }
   ascii().addPos(shape->m_textEntry.begin());
   ascii().addNote(f.str().c_str());

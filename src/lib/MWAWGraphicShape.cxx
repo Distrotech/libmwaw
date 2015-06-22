@@ -219,12 +219,26 @@ MWAWGraphicShape MWAWGraphicShape::line(MWAWVec2f const &orig, MWAWVec2f const &
   return res;
 }
 
+MWAWGraphicShape MWAWGraphicShape::measure(MWAWVec2f const &orig, MWAWVec2f const &dest)
+{
+  MWAWGraphicShape res=line(orig,dest);
+  res.m_type= MWAWGraphicShape::Measure;
+  return res;
+}
+
 std::ostream &operator<<(std::ostream &o, MWAWGraphicShape const &sh)
 {
   o << "box=" << sh.m_bdBox << ",";
   switch (sh.m_type) {
   case MWAWGraphicShape::Line:
     o << "line,";
+    if (sh.m_vertices.size()!=2)
+      o << "###pts,";
+    else
+      o << "pts=" << sh.m_vertices[0] << "<->" << sh.m_vertices[1] << ",";
+    break;
+  case MWAWGraphicShape::Measure:
+    o << "measure,";
     if (sh.m_vertices.size()!=2)
       o << "###pts,";
     else
@@ -366,7 +380,10 @@ MWAWGraphicShape::Command MWAWGraphicShape::addTo(MWAWVec2f const &orig, bool as
   MWAWVec2f decal=orig-m_bdBox[0];
   switch (m_type) {
   case Line:
+  case Measure:
     if (m_vertices.size()!=2) break;
+    if (m_type==Measure)
+      propList.insert("draw:show-unit", true);
     pt=m_vertices[0]+decal;
     list.insert("svg:x",pt.x(), librevenge::RVNG_POINT);
     list.insert("svg:y",pt.y(), librevenge::RVNG_POINT);
@@ -495,6 +512,9 @@ std::vector<MWAWGraphicShape::PathData> MWAWGraphicShape::getPath() const
 {
   std::vector<MWAWGraphicShape::PathData> res;
   switch (m_type) {
+  case Measure:
+    MWAW_DEBUG_MSG(("MWAWGraphicShape::getPath: called on a measure, transform it in line\n"));
+  // fall through expected
   case Line:
   case Polygon: {
     size_t n=m_vertices.size();

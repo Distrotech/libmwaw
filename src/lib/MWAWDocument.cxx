@@ -506,10 +506,8 @@ shared_ptr<MWAWGraphicParser> getGraphicParserFromHeader(MWAWInputStreamPtr &inp
     case MWAWDocument::MWAW_T_MACDRAFT:
       if (header->getMajorVersion()<=1)
         parser.reset(new MacDraftParser(input, rsrcParser, header));
-#ifdef DEBUG
       else
         parser.reset(new MacDraft5Parser(input, rsrcParser, header));
-#endif
       break;
     case MWAWDocument::MWAW_T_MACDRAW:
       parser.reset(new MacDrawParser(input, rsrcParser, header));

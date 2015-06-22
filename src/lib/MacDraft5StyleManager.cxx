@@ -292,7 +292,7 @@ struct Pixmap {
           }
         }
       }
-      float totalCol[3];
+      float totalCol[3]= {0,0,0};
       long numCols=0;
       for (size_t i=0; i<numColor; ++i) {
         if (!colorByIndices[i]) continue;
@@ -317,7 +317,7 @@ struct Pixmap {
 
       size_t rPos = 0;
       long numCols=0;
-      float totalCol[3];
+      float totalCol[3]= {0,0,0};
       for (int i = 0; i < nRows; i++) {
         for (int x = 0; x < W; x++) {
           MWAWColor col=m_colors[rPos++];
@@ -407,22 +407,15 @@ struct State {
     pat=m_patternList[size_t(id-1)];
     return true;
   }
-  //! returns the dash fill percent
-  bool getDashPercent(int id, float &percent)
+  //! returns the dash
+  bool getDash(int id, std::vector<float> &dash)
   {
     if (m_dashList.empty()) initDashs();
-    percent=1;
     if (id<0 || id>=int(m_dashList.size())) {
       MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::getDash: can not find dash %d\n", id));
       return false;
     }
-    std::vector<float> const &dash=m_dashList[size_t(id)];
-    float fill=0, empty=0;
-    for (size_t i=0; i<dash.size(); ++i) {
-      if (i%2) empty+=dash[i];
-      else fill+=dash[i];
-    }
-    if (fill+empty>0 && fill>=0 && empty>=0) percent=fill/(fill+empty);
+    dash=m_dashList[size_t(id)];
     return true;
   }
   //! init the arrow list
@@ -722,11 +715,8 @@ std::string MacDraft5StyleManager::updateLineStyle(int type, int id, int dashId,
     f << "###line[type]=" << type << ",";
     break;
   }
-  float percent;
-  if (m_state->getDashPercent(dashId, percent)) {
-    if (percent<1)
-      style.m_lineColor=MWAWColor::barycenter(percent, style.m_lineColor, 1.f-percent, MWAWColor::white());
-    if (dashId) f << "dash[id]=" << dashId << ",";
+  if (m_state->getDash(dashId, style.m_lineDashWidth)) {
+    if (style.m_lineDashWidth.size()) f << "dash[id]=" << dashId << ",";
   }
   else
     f << "##dash[id]=" << dashId << ",";
@@ -1442,9 +1432,8 @@ bool MacDraft5StyleManager::readPixPat(MWAWEntry const &entry, bool inRsrc)
   libmwaw::DebugFile &ascFile = inRsrc ? m_parserState->m_rsrcParser->ascii() : m_parserState->m_asciiFile;
   libmwaw::DebugStream f;
   f << "Entries(PixPat)[" << entry.id() << "]:";
-  int val;
   for (int i=0; i<16; ++i) {
-    val=(int) input->readLong(2);
+    int val=(int) input->readLong(2);
     static int const expected[]= {1,0,0x1c,0,0x4e,0,0,-1,0,0,
                                   -21931,-21931,-21931,-21931,0,0
                                  }; // pattern, 0, 0

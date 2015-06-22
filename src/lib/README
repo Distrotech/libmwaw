@@ -202,6 +202,9 @@ MacDocParser : parser of MacDoc document: v1.3
 
 MacDraftParser : parser of MacDraft document: v1
 
+MacDraft5Parser : parser of MacDraft document: v4-v5.5
+-   MacDraft5StyleManager : class which read the styles either in the data fork or in the resource fork
+
 MacDrawParser : parser of MacDraw document: v0-v1
 
 MacDrawProParser : parser of MacDraw II and MacDraw Pro document

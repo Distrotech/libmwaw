@@ -46,7 +46,7 @@ class MWAWGraphicShape
 {
 public:
   //! an enum used to define the shape type
-  enum Type { Arc, Circle, Line, Rectangle, Path, Pie, Polygon, ShapeUnknown };
+  enum Type { Arc, Circle, Line, Measure, Rectangle, Path, Pie, Polygon, ShapeUnknown };
   //! an enum used to define the interface command
   enum Command { C_Ellipse, C_Polyline, C_Rectangle, C_Path, C_Polygon, C_Bad };
   //! a simple path component
@@ -95,6 +95,8 @@ public:
   virtual ~MWAWGraphicShape() { }
   //! static constructor to create a line
   static MWAWGraphicShape line(MWAWVec2f const &orign, MWAWVec2f const &dest);
+  //! static constructor to create a measure
+  static MWAWGraphicShape measure(MWAWVec2f const &orign, MWAWVec2f const &dest);
   //! static constructor to create a rectangle
   static MWAWGraphicShape rectangle(MWAWBox2f const &box, MWAWVec2f const &corners=MWAWVec2f(0,0))
   {
