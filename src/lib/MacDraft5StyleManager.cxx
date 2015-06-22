@@ -369,9 +369,20 @@ struct Pixmap {
 //! Internal: the state of a MacDraft5StyleManager
 struct State {
   //! constructor
-  State() : m_dataEnd(-1), m_rsrcBegin(-1), m_colorList(), m_patternList(), m_dashList(),
+  State() : m_dataEnd(-1), m_rsrcBegin(-1), m_arrowList(), m_colorList(), m_patternList(), m_dashList(),
     m_beginToBitmapEntryMap(), m_bitmapIdToPixmapMap(), m_pixIdToPixmapMap(), m_pixIdToPatternIdMap()
   {
+  }
+  //! returns an arrow if possible
+  bool getArrow(int id, MWAWGraphicStyle::Arrow &arrow)
+  {
+    if (m_arrowList.empty()) initArrows();
+    if (id<=0 || id>int(m_arrowList.size())) {
+      MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::getArrow: can not find arrow %d\n", id));
+      return false;
+    }
+    arrow=m_arrowList[size_t(id-1)];
+    return true;
   }
   //! returns a color if possible
   bool getColor(int id, MWAWColor &col)
@@ -414,6 +425,8 @@ struct State {
     if (fill+empty>0 && fill>=0 && empty>=0) percent=fill/(fill+empty);
     return true;
   }
+  //! init the arrow list
+  void initArrows();
   //! init the color list
   void initColors();
   //! init the patterns list
@@ -425,6 +438,8 @@ struct State {
   long m_dataEnd;
   //! the begin of the rsrc data
   long m_rsrcBegin;
+  //! the arrow list
+  std::vector<MWAWGraphicStyle::Arrow> m_arrowList;
   //! the color list
   std::vector<MWAWColor> m_colorList;
   //! the patterns list
@@ -440,6 +455,41 @@ struct State {
   //! a map pixmapId to patternId map
   std::map<int, size_t> m_pixIdToPatternIdMap;
 };
+
+void State::initArrows()
+{
+  if (!m_arrowList.empty())
+    return;
+  // -- triangle
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(3000,3000)),
+                        "M1500 0l1500 3000h-3000zM1500 447l-1176 2353h2353z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(20,30)), "m10 0l-10 30h20z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(7, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(21590,27940)),
+                        "M 4568,5865 C 5566,5865 6421,6329 6936,7063 L 4568,2063 2200,7063 C 2716,6329 3570,5865 4568,5865 Z M 4529,6665 C 3041,6665 1768,7358 1000,8451 L 4529,1000 8057,8451 C 7289,7358 6016,6665 4529,6665 Z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(1131,1580)),
+                        "M1013 1491l118 89-567-1580-564 1580 114-85 136-68 148-46 161-17 161 13 153 46z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(8, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(3000,3000)),
+                        "M1500 0l1500 3000h-3000zM1500 447l-1176 2353h2353z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(8, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(20,30)), "m10 0l-10 30h20z", false));
+  // -- circle/disk
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(3000,3000)), "M1500 3000c-276 0-511-63-750-201s-411-310-549-549-201-474-201-750 63-511 201-750 310-411 549-549 474-201 750-201 511 63 750 201 411 310 549 549 201 474 201 750-63 511-201 750-310 411-549 549-474 201-750 201zM1500 2800c-239 0-443-55-650-174s-356-269-476-476-174-411-174-650 55-443 174-650 269-356 476-476c207-119 411-174 650-174s443 55 650 174c207 120 356 269 476 476s174 411 174 650-55 443-174 650-269 356-476 476c-207 119-411 174-650 174z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(1131,1131)), "M462 1118l-102-29-102-51-93-72-72-93-51-102-29-102-13-105 13-102 29-106 51-102 72-89 93-72 102-50 102-34 106-9 101 9 106 34 98 50 93 72 72 89 51 102 29 106 13 102-13 105-29 102-51 102-72 93-93 72-98 51-106 29-101 13z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(10, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(3000,3000)), "M1500 3000c-276 0-511-63-750-201s-411-310-549-549-201-474-201-750 63-511 201-750 310-411 549-549 474-201 750-201 511 63 750 201 411 310 549 549 201 474 201 750-63 511-201 750-310 411-549 549-474 201-750 201zM1500 2800c-239 0-443-55-650-174s-356-269-476-476-174-411-174-650 55-443 174-650 269-356 476-476c207-119 411-174 650-174s443 55 650 174c207 120 356 269 476 476s174 411 174 650-55 443-174 650-269 356-476 476c-207 119-411 174-650 174z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(10, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(1131,1131)), "M462 1118l-102-29-102-51-93-72-72-93-51-102-29-102-13-105 13-102 29-106 51-102 72-89 93-72 102-50 102-34 106-9 101 9 106 34 98 50 93 72 72 89 51 102 29 106 13 102-13 105-29 102-51 102-72 93-93 72-98 51-106 29-101 13z", false));
+
+  // -- line
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(1000,1000),MWAWVec2i(8801, 9501)),
+                        "M 1000,1000 L 2000,1000 9800,10499 8588,10500 5900,6900 6000,10400 4900,10400 4800,5700 1000,1000 Z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(10, MWAWBox2i(MWAWVec2i(1000,1000),MWAWVec2i(8801, 9501)),
+                        "M 1000,1000 L 2000,1000 9800,10499 8588,10500 5900,6900 6000,10400 4900,10400 4800,5700 1000,1000 Z", false));
+  // -- cross
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(10, MWAWBox2i(MWAWVec2i(1000, 900),MWAWVec2i(5001,5201)),
+                        "M 6000,5500 L 5600,6100 3900,4500 3900,6000 3000,6000 3000,4500 1400,6100 1000,5500 2900,3551 1000,1500 1600,900 3500,2936 5300,1100 5900,1500 4025,3475 6000,5500 Z", false));
+  // -- triangle
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(3000,3000)),
+                        "M1500 0l1500 3000h-3000zM1500 447l-1176 2353h2353z", false));
+  m_arrowList.push_back(MWAWGraphicStyle::Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(1122,2243)), "M0 2108v17 17l12 42 30 34 38 21 43 4 29-8 30-21 25-26 13-34 343-1532 339 1520 13 42 29 34 39 21 42 4 42-12 34-30 21-42v-39-12l-4 4-440-1998-9-42-25-39-38-25-43-8-42 8-38 25-26 39-8 42z", false));
+}
 
 void State::initColors()
 {
@@ -600,6 +650,29 @@ long MacDraft5StyleManager::getEndDataPosition() const
 bool MacDraft5StyleManager::getColor(int colId, MWAWColor &color) const
 {
   return m_state->getColor(colId, color);
+}
+
+std::string MacDraft5StyleManager::updateArrows(int startId, int endId, MWAWGraphicStyle &style)
+{
+  if (style.m_lineWidth<=0) return "";
+  libmwaw::DebugStream f;
+  if (startId) {
+    if (m_state->getArrow(startId, style.m_arrows[0])) {
+      style.m_arrows[0].m_width *= std::sqrt(style.m_lineWidth);
+      f << "start[arrow]=[" << style.m_arrows[0] << "],";
+    }
+    else
+      f << "##arrow[startId]=" << startId << ",";
+  }
+  if (endId) {
+    if (m_state->getArrow(endId, style.m_arrows[1])) {
+      style.m_arrows[1].m_width *= std::sqrt(style.m_lineWidth);
+      f << "end[arrow]=[" << style.m_arrows[1] << "],";
+    }
+    else
+      f << "##arrow[endId]=" << endId << ",";
+  }
+  return f.str();
 }
 
 std::string MacDraft5StyleManager::updateLineStyle(int type, int id, int dashId, MWAWGraphicStyle &style)

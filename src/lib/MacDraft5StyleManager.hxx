@@ -75,6 +75,8 @@ protected:
   std::string updateLineStyle(int type, int id, int dashId, MWAWGraphicStyle &style);
   //! update the surface graphic style ( using surface type and id ). \return a string which can be use as debug message
   std::string updateSurfaceStyle(int type, int id, MWAWGraphicStyle &style);
+  //! update the arrow style
+  std::string updateArrows(int startId, int endId, MWAWGraphicStyle &style);
   //! tries to return the color corresponding to an id
   bool getColor(int cId, MWAWColor &color) const;
   //! try to get a bitmap

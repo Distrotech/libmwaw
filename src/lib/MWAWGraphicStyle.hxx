@@ -57,27 +57,34 @@ public:
   //! a structure used to define an arrow
   struct Arrow {
     //! constructor ( no arrow)
-    Arrow() : m_type(0)
+    Arrow() : m_width(0), m_viewBox(), m_path(""), m_isCentered(false)
+    {
+    }
+    //! constructor
+    Arrow(float w, MWAWBox2i const &box, std::string path, bool centered=false) :
+      m_width(w), m_viewBox(box), m_path(path), m_isCentered(centered)
     {
     }
     //! returns a basic plain arrow
     static Arrow plain()
     {
-      Arrow arrow;
-      arrow.m_type=1;
-      return arrow;
+      return Arrow(5, MWAWBox2i(MWAWVec2i(0,0),MWAWVec2i(20,30)), "m10 0-10 30h20z", false);
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, Arrow const &arrow)
     {
       if (arrow.isEmpty()) return o;
-      o << "plain,";
+      o << "w=" << arrow.m_width << ",";
+      o << "viewbox=" << arrow.m_viewBox << ",";
+      o << "path=" << arrow.m_path << ",";
+      if (arrow.m_isCentered) o << "centered,";
       return o;
     }
     //! operator==
     bool operator==(Arrow const &arrow) const
     {
-      return m_type==arrow.m_type;
+      return m_width>=arrow.m_width && m_width<=arrow.m_width &&
+             m_viewBox==arrow.m_viewBox && m_path==arrow.m_path && m_isCentered==arrow.m_isCentered;
     }
     //! operator!=
     bool operator!=(Arrow const &arrow) const
@@ -87,7 +94,8 @@ public:
     //! operator<
     bool operator<(Arrow const &arrow) const
     {
-      return m_type<arrow.m_type;
+      if (m_isCentered<arrow.m_isCentered) return m_isCentered ? true : false;
+      return m_width<arrow.m_width && m_viewBox<arrow.m_viewBox && m_path < arrow.m_path;
     }
     //! operator<=
     bool operator<=(Arrow const &arrow) const
@@ -107,14 +115,19 @@ public:
     //! returns true if there is no arrow
     bool isEmpty() const
     {
-      return m_type==0;
+      return m_width<=0 || m_path.empty();
     }
     //! add a arrow to the propList knowing the type (start, end)
     void addTo(librevenge::RVNGPropertyList &propList, std::string const &type) const;
 
-  protected:
-    //! the arrow type
-    int m_type;
+    //! the arrow width in point
+    float m_width;
+    //! the arrow viewbox
+    MWAWBox2i m_viewBox;
+    //! the arrow path
+    std::string m_path;
+    //! flag to know if the arrow is centered
+    bool m_isCentered;
   };
 
   //! a structure used to define the gradient limit in MWAWGraphicStyle

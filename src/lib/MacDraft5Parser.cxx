@@ -1154,8 +1154,7 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
     MWAW_DEBUG_MSG(("MacDraft5Parser::readObject: find unknown dash[high]\n"));
     f << "##dash[high]=" << (dashId>>6) << ",";
   }
-  val=(int) input->readULong(1); // low|end
-  if (val) f << "arrow=" << std::hex << val << std::dec << ",";
+  int arrowId=(int) input->readULong(1); // low|end
 
   int colId=(int) input->readULong(2); // 0-78
   f << m_styleManager->updateLineStyle(lineType, colId, (dashId&0xf), style);
@@ -1192,6 +1191,7 @@ bool MacDraft5Parser::readObject(MacDraft5ParserInternal::Layout &layout)
       listPts[i]=MWAWVec2f(pt[1],pt[0]);
       f << "pt" << i << "=" << listPts[i] << ",";
     }
+    f << m_styleManager->updateArrows(arrowId&0xf, (arrowId>>4)&0xf, style);
     shape->m_type=MacDraft5ParserInternal::Shape::Basic;
     shape->m_shape=MWAWGraphicShape::line(listPts[0], listPts[1]);
     shape->m_isLine=true;

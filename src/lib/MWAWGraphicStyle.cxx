@@ -61,18 +61,19 @@ void MWAWGraphicStyle::Arrow::addTo(librevenge::RVNGPropertyList &propList, std:
     MWAW_DEBUG_MSG(("MWAWGraphicStyle::Arrow::addTo: oops, find unexpected type\n"));
     return;
   }
-  std::stringstream s;
+  std::stringstream s, s2;
   s << "draw:marker-" << type << "-path";
-  propList.insert(s.str().c_str(), "m10 0-10 30h20z");
+  propList.insert(s.str().c_str(), m_path.c_str());
   s.str("");
   s << "draw:marker-" << type << "-viewbox";
-  propList.insert(s.str().c_str(), "0 0 20 30");
+  s2 << m_viewBox[0][0] << " " << m_viewBox[0][1] << " " << m_viewBox[1][0] << " " << m_viewBox[1][1];
+  propList.insert(s.str().c_str(), s2.str().c_str());
   s.str("");
   s << "draw:marker-" << type << "-center";
-  propList.insert(s.str().c_str(), "false");
+  propList.insert(s.str().c_str(), m_isCentered);
   s.str("");
   s << "draw:marker-" << type << "-width";
-  propList.insert(s.str().c_str(), "5pt");
+  propList.insert(s.str().c_str(), m_width, librevenge::RVNG_POINT);
 }
 
 ////////////////////////////////////////////////////////////
