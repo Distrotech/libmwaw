@@ -59,7 +59,11 @@
 /** Internal: the structures of a MacDraft5StyleManager */
 namespace MacDraft5StyleManagerInternal
 {
-//!  Internal and low level: a class used to read pack/unpack color pixmap of a MacDraf5StyleManager
+/**  Internal and low level: a class used to read pack/unpack color pixmap of a MacDraf5StyleManager
+
+     \note parse only unpacked pixmap, if packed pixmap can exist, the code of ApplePictParserInternal::Pixmap
+     must be used
+ */
 struct Pixmap {
   Pixmap() : m_rowBytes(0), m_rect(), m_version(-1), m_packType(0),
     m_packSize(0), m_pixelType(0), m_pixelSize(0), m_compCount(0),
@@ -76,39 +80,6 @@ struct Pixmap {
     return o;
   }
 
-  //! creates the pixmap from the packdata
-  bool unpackedData(unsigned char const *pData, int sz, int byteSz, int nSize, std::vector<unsigned char> &res) const
-  {
-    if (byteSz<1||byteSz>4) {
-      MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::unpackedData: unknown byteSz\n"));
-      return false;
-    }
-    int rPos = 0, wPos = 0, maxW = m_rowBytes+24;
-    while (rPos < sz) {
-      if (rPos+2 > sz) return false;
-      signed char n = (signed char) pData[rPos++];
-      if (n < 0) {
-        int nCount = 1-n;
-        if (rPos+byteSz > sz || wPos+byteSz *nCount >= maxW) return false;
-
-        unsigned char val[4];
-        for (int b = 0; b < byteSz; b++) val[b] = pData[rPos++];
-        for (int i = 0; i < nCount; i++) {
-          if (wPos+byteSz >= maxW) break;
-          for (int b = 0; b < byteSz; b++)res[(size_t)wPos++] = val[b];
-        }
-        continue;
-      }
-      int nCount = 1+n;
-      if (rPos+byteSz *nCount > sz || wPos+byteSz *nCount >= maxW) return false;
-      for (int i = 0; i < nCount; i++) {
-        if (wPos+byteSz >= maxW) break;
-        for (int b = 0; b < byteSz; b++) res[(size_t)wPos++] = pData[rPos++];
-      }
-    }
-    return wPos+8 >= nSize;
-  }
-
   //! parses the pixmap data zone
   bool readPixmapData(MWAWInputStream &input)
   {
@@ -117,13 +88,13 @@ struct Pixmap {
     int szRowSize=1;
     if (m_rowBytes > 250) szRowSize = 2;
 
-    int nPlanes = 1, nBytes = 3, rowBytes = m_rowBytes;
+    int const nPlanes = 1;
+    int nBytes = 3, rowBytes = m_rowBytes;
     int numValuesByInt = 1;
     int maxValues = (1 << m_pixelSize)-1;
     int numColors = (int) m_colorTable.size();
     int maxColorsIndex = -1;
 
-    bool packed = false;// checkme: find no packed data with m_packType==1 !(m_rowBytes < 8 || m_packType == 1);
     switch (m_pixelSize) {
     case 1:
     case 2:
@@ -142,26 +113,11 @@ struct Pixmap {
       }
       break;
     }
-
     case 16:
       nBytes = 2;
       break;
     case 32:
-      if (!packed) {
-        nBytes=4;
-        break;
-      }
-      if (m_packType == 2) {
-        packed = false;
-        break;
-      }
-      if (m_compCount != 3 && m_compCount != 4) {
-        MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: do not known how to read cmpCount=%d\n", m_compCount));
-        return false;
-      }
-      nPlanes=m_compCount;
-      nBytes=1;
-      if (nPlanes == 3) rowBytes = (3*rowBytes)/4;
+      nBytes=4;
       break;
     default:
       MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: do not known how to read pixelsize=%d \n", m_pixelSize));
@@ -172,6 +128,8 @@ struct Pixmap {
     else {
       if (rowBytes != W * nBytes * nPlanes) {
         MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: find W=%d pixelsize=%d, rowSize=%d\n", W, m_pixelSize, m_rowBytes));
+        if (rowBytes < W * nBytes * nPlanes)
+          return false;
       }
       m_colors.resize(size_t(H*W));
     }
@@ -180,33 +138,14 @@ struct Pixmap {
     values.resize(size_t(m_rowBytes+24), (unsigned char)0);
 
     for (int y = 0; y < H; y++) {
-      if (!packed) {
-        unsigned long numR = 0;
-        unsigned char const *data = input.read(size_t(m_rowBytes), numR);
-        if (!data || int(numR) != m_rowBytes) {
-          MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: readColors can not read line %d/%d (%d chars)\n", y, H, m_rowBytes));
-          return false;
-        }
-        for (size_t j = 0; j < size_t(m_rowBytes); j++)
-          values[j]=data[j];
+      unsigned long numR = 0;
+      unsigned char const *data = input.read(size_t(m_rowBytes), numR);
+      if (!data || int(numR) != m_rowBytes) {
+        MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: readColors can not read line %d/%d (%d chars)\n", y, H, m_rowBytes));
+        return false;
       }
-      else {   // ok, packed
-        int numB = (int) input.readULong(szRowSize);
-        if (numB < 0 || numB > 2*m_rowBytes) {
-          MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: odd numB:%d in row: %d/%d\n", numB, y, H));
-          return false;
-        }
-        unsigned long numR = 0;
-        unsigned char const *data = input.read(size_t(numB), numR);
-        if (!data || int(numR) != numB) {
-          MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: can not read line %d/%d (%d chars)\n", y, H, numB));
-          return false;
-        }
-        if (!unpackedData(data,numB, nBytes, rowBytes, values)) {
-          MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: can not unpacked line:%d\n", y));
-          return false;
-        }
-      }
+      for (size_t j = 0; j < size_t(m_rowBytes); j++)
+        values[j]=data[j];
 
       //
       // ok, we can add it in the pictures
@@ -238,6 +177,7 @@ struct Pixmap {
         }
       }
       else {
+        MWAW_DEBUG_MSG(("MacDraft5StyleManagerInternal::Pixmap::readPixmapData: oops find nPlanes != 1\n"));
         for (int x = 0, rPos = (nPlanes==4) ? W:0; x < W; x++) {
           m_colors[(size_t)wPos++]=MWAWColor(values[(size_t)rPos], values[size_t(rPos+W)],  values[size_t(rPos+2*W)]);
           rPos+=1;
