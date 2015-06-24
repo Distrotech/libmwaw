@@ -120,7 +120,7 @@ public:
     MWAW_T_KALEIDAGRAPH /** Kaleida Graph: TODO*/,
     MWAW_T_LIGHTWAYTEXT /** LightWayText (only v4 Mac format)*/,
     MWAW_T_MACDOC /** MacDoc (v1.3)*/,
-    MWAW_T_MACDRAFT /** MacDraft: v1*/,
+    MWAW_T_MACDRAFT /** MacDraft: v1, v4-v5*/,
     MWAW_T_MACDRAW /** MacDraw: v0-v1 */,
     MWAW_T_MACDRAWPRO /** MacDraw II: v1.0-v1.1, MacDraw Pro: v1*/,
     MWAW_T_MACPAINT /** MacPaint: v1-v2 */,

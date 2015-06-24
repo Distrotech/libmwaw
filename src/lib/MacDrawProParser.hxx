@@ -144,8 +144,8 @@ protected:
   bool sendBitmap(MacDrawProParserInternal::Shape const &shape, MWAWPosition const &pos);
   //! tries to send a text zone to the listener
   bool sendText(int zoneId);
-  //! tries to send a line label to the listener
-  bool sendLabel(MWAWEntry const &entry);
+  //! tries to send a line measure to the listener
+  bool sendMeasure(MWAWEntry const &entry);
   //! sends the data which have not yet been sent to the listener
   void flushExtra();
 

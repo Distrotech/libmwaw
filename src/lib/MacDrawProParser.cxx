@@ -108,7 +108,7 @@ struct Shape {
   //! constructor
   Shape() : m_type(Unknown), m_fileType(0), m_box(), m_style(), m_shape(), m_id(-1), m_nextId(-1), m_flags(0),
     m_textZoneId(-1), m_numChars(0), m_fontMap(), m_lineBreakSet(), m_paragraphMap(), m_paragraph(), m_childList(),
-    m_labelBox(), m_labelEntry(),
+    m_measureBox(), m_measureEntry(),
     m_numBytesByRow(0), m_bitmapIsColor(false), m_bitmapDim(), m_bitmapFileDim(), m_bitmapEntry(), m_bitmapClutId(0), m_isSent(false)
   {
   }
@@ -167,10 +167,10 @@ struct Shape {
   std::vector<size_t> m_childList;
 
   // line
-  // the label box ( for a line)
-  MWAWBox2f m_labelBox;
-  // the label message ( for a line )
-  MWAWEntry m_labelEntry;
+  // the measure box ( for a line)
+  MWAWBox2f m_measureBox;
+  // the measure message ( for a line )
+  MWAWEntry m_measureEntry;
 
   // bitmap
 
@@ -318,9 +318,9 @@ class SubDocument : public MWAWSubDocument
 {
 public:
   //! constructor given an zone id
-  SubDocument(MacDrawProParser &pars, MWAWInputStreamPtr input, int zoneId) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_labelEntry() {}
-  //! constructor given a label entry
-  SubDocument(MacDrawProParser &pars, MWAWInputStreamPtr input, MWAWEntry const &labelEntry) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(-1), m_labelEntry(labelEntry) {}
+  SubDocument(MacDrawProParser &pars, MWAWInputStreamPtr input, int zoneId) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(zoneId), m_measureEntry() {}
+  //! constructor given a measure entry
+  SubDocument(MacDrawProParser &pars, MWAWInputStreamPtr input, MWAWEntry const &measureEntry) : MWAWSubDocument(&pars, input, MWAWEntry()), m_id(-1), m_measureEntry(measureEntry) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -332,7 +332,7 @@ public:
     SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
     if (!sDoc) return true;
     if (m_id != sDoc->m_id) return true;
-    if (m_labelEntry != sDoc->m_labelEntry) return true;
+    if (m_measureEntry != sDoc->m_measureEntry) return true;
     return false;
   }
 
@@ -347,8 +347,8 @@ public:
 protected:
   //! the subdocument id
   int m_id;
-  //! the label entry
-  MWAWEntry m_labelEntry;
+  //! the measure entry
+  MWAWEntry m_measureEntry;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -369,7 +369,7 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType)
   if (m_id >= 0)
     parser->sendText(m_id);
   else
-    parser->sendLabel(m_labelEntry);
+    parser->sendMeasure(m_measureEntry);
   m_input->seek(pos, librevenge::RVNG_SEEK_SET);
 }
 
@@ -1682,7 +1682,7 @@ bool MacDrawProParser::updateGeometryShape(MacDrawProParserInternal::Shape &shap
     shape.m_shape=MWAWGraphicShape::circle(shape.m_box);
     break;
   case 6:
-    // we need the arc angle, so to create the form
+    // we need the arc angle, shape will be created when reading data
     break;
   case 7: // polygon
   case 8: // spline
@@ -2063,31 +2063,31 @@ bool MacDrawProParser::readGeometryShapeData(MacDrawProParserInternal::Shape &sh
     }
 
     fl &= 0xF8;
-    long endLabelPos=input->tell()+44;
-    f << "label=[";
-    if (endLabelPos>entry.end()) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read the line label\n"));
+    long endMeasurePos=input->tell()+44;
+    f << "measure=[";
+    if (endMeasurePos>entry.end()) {
+      MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read the line measure\n"));
       f << "###";
       break;
     }
     float dim[4];
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    shape.m_labelBox=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
-    f << "dim=" << shape.m_labelBox << ",";
+    shape.m_measureBox=MWAWBox2f(MWAWVec2f(dim[1],dim[0]), MWAWVec2f(dim[3],dim[2]));
+    f << "dim=" << shape.m_measureBox << ",";
     val=(int) input->readLong(2); // 0 or 4
     if (val) f<< "f0=" << val << ",";
     int sSz=(int) input->readULong(1);
     if (sSz>27) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read the line label size\n"));
+      MWAW_DEBUG_MSG(("MacDrawProParser::readGeometryShapeData: can not read the line measure size\n"));
       f << "###";
       break;
     }
-    shape.m_labelEntry.setBegin(input->tell());
-    shape.m_labelEntry.setLength(sSz);
-    std::string label("");
-    for (int i=0; i<sSz; ++i) label+=(char) input->readULong(1);
-    f << label;
-    input->seek(endLabelPos, librevenge::RVNG_SEEK_SET);
+    shape.m_measureEntry.setBegin(input->tell());
+    shape.m_measureEntry.setLength(sSz);
+    std::string measure("");
+    for (int i=0; i<sSz; ++i) measure+=(char) input->readULong(1);
+    f << measure;
+    input->seek(endMeasurePos, librevenge::RVNG_SEEK_SET);
     break;
   }
   case 3: // rect
@@ -2822,14 +2822,14 @@ bool MacDrawProParser::send(MacDrawProParserInternal::Shape const &shape, MWAWVe
   switch (shape.m_type) {
   case MacDrawProParserInternal::Shape::Basic:
     listener->insertPicture(pos, shape.m_shape, shape.m_style);
-    if (shape.m_shape.m_type==MWAWGraphicShape::Line && shape.m_labelEntry.valid()) {
+    if (shape.m_shape.m_type==MWAWGraphicShape::Line && shape.m_measureEntry.valid()) {
       MWAWGraphicStyle style;
       style.m_lineWidth=0;
       style.setSurfaceColor(MWAWColor::white());
-      shared_ptr<MWAWSubDocument> doc(new MacDrawProParserInternal::SubDocument(*this, getInput(), shape.m_labelEntry));
-      MWAWPosition labelPos(box[0]+shape.m_labelBox[0], shape.m_labelBox.size(), librevenge::RVNG_POINT);
-      labelPos.m_anchorTo = MWAWPosition::Page;
-      listener->insertTextBox(labelPos, doc, style);
+      shared_ptr<MWAWSubDocument> doc(new MacDrawProParserInternal::SubDocument(*this, getInput(), shape.m_measureEntry));
+      MWAWPosition measurePos(box[0]+shape.m_measureBox[0], shape.m_measureBox.size(), librevenge::RVNG_POINT);
+      measurePos.m_anchorTo = MWAWPosition::Page;
+      listener->insertTextBox(measurePos, doc, style);
     }
     break;
   case MacDrawProParserInternal::Shape::Bitmap:
@@ -3102,15 +3102,15 @@ bool MacDrawProParser::sendText(int zId)
   return true;
 }
 
-bool MacDrawProParser::sendLabel(MWAWEntry const &entry)
+bool MacDrawProParser::sendMeasure(MWAWEntry const &entry)
 {
   MWAWGraphicListenerPtr listener=getGraphicListener();
   if (!listener) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::sendLabel: can not find the listener\n"));
+    MWAW_DEBUG_MSG(("MacDrawProParser::sendMeasure: can not find the listener\n"));
     return false;
   }
   if (!entry.valid()) {
-    MWAW_DEBUG_MSG(("MacDrawProParser::sendLabel: can not find the label entry\n"));
+    MWAW_DEBUG_MSG(("MacDrawProParser::sendMeasure: can not find the measure entry\n"));
     return false;
   }
   MWAWInputStreamPtr input=getInput();
@@ -3118,7 +3118,7 @@ bool MacDrawProParser::sendLabel(MWAWEntry const &entry)
   long endPos=entry.end();
   for (long i=0; i<entry.length(); ++i) {
     if (input->isEnd()) {
-      MWAW_DEBUG_MSG(("MacDrawProParser::sendLabel: the zone seems too short\n"));
+      MWAW_DEBUG_MSG(("MacDrawProParser::sendMeasure: the zone seems too short\n"));
       break;
     }
     char c=(char) input->readULong(1);

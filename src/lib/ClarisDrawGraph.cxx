@@ -619,10 +619,10 @@ class SubDocument : public MWAWSubDocument
 public:
   //! constructor for zone
   SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, int zoneId, int subId) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_subId(subId), m_label("") {}
-  //! constructor for label
-  SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, std::string const &label) :
-    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(-1), m_subId(-1), m_label(label) {}
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(zoneId), m_subId(subId), m_measure("") {}
+  //! constructor for measure
+  SubDocument(ClarisDrawGraph &pars, MWAWInputStreamPtr input, std::string const &measure) :
+    MWAWSubDocument(pars.m_mainParser, input, MWAWEntry()), m_graphParser(&pars), m_id(-1), m_subId(-1), m_measure(measure) {}
 
   //! destructor
   virtual ~SubDocument() {}
@@ -636,7 +636,7 @@ public:
     if (m_graphParser != sDoc->m_graphParser) return true;
     if (m_id != sDoc->m_id) return true;
     if (m_subId != sDoc->m_subId) return true;
-    if (m_label != sDoc->m_label) return true;
+    if (m_measure != sDoc->m_measure) return true;
     return false;
   }
 
@@ -655,8 +655,8 @@ protected:
   int m_id;
   //! the subdocument sub id
   int m_subId;
-  //! the label
-  std::string m_label;
+  //! the measure
+  std::string m_measure;
 private:
   SubDocument(SubDocument const &orig);
   SubDocument &operator=(SubDocument const &orig);
@@ -673,15 +673,15 @@ void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type
     return;
   }
   if (m_id<0) {
-    if (m_label.empty()) {
-      MWAW_DEBUG_MSG(("ClarisDrawGraphInternal::SubDocument::parse: can not find the label\n"));
+    if (m_measure.empty()) {
+      MWAW_DEBUG_MSG(("ClarisDrawGraphInternal::SubDocument::parse: can not find the measure\n"));
       return;
     }
     listener->setFont(MWAWFont(3,10));
     MWAWParagraph para;
     para.m_justify = MWAWParagraph::JustificationCenter;
     listener->setParagraph(para);
-    listener->insertUnicodeString(m_label.c_str());
+    listener->insertUnicodeString(m_measure.c_str());
     return;
   }
   long pos = m_input->tell();
@@ -2318,17 +2318,17 @@ bool ClarisDrawGraph::sendShape(ClarisDrawGraphInternal::ZoneShape &pict, MWAWPo
 
   MWAWVec2f lineSz=pos.size();
   MWAWVec2f center=pos.origin() + 0.5*lineSz;
-  MWAWPosition labelPos(pos);
-  labelPos.setOrigin(center-MWAWVec2f(30,6));
-  labelPos.setSize(MWAWVec2f(60,12));
-  labelPos.setOrder(pos.order()+1);
+  MWAWPosition measurePos(pos);
+  measurePos.setOrigin(center-MWAWVec2f(30,6));
+  measurePos.setSize(MWAWVec2f(60,12));
+  measurePos.setOrder(pos.order()+1);
   std::stringstream s;
   s << std::setprecision(0) << std::fixed << std::sqrt(lineSz[0]*lineSz[0]+lineSz[1]*lineSz[1]) << " pt";
   shared_ptr<MWAWSubDocument> doc(new ClarisDrawGraphInternal::SubDocument(*this, m_parserState->m_input, s.str()));
-  MWAWGraphicStyle labelStyle;
-  labelStyle.m_lineWidth=0;
-  labelStyle.setSurfaceColor(MWAWColor::white());
-  listener->insertTextBox(labelPos, doc, labelStyle);
+  MWAWGraphicStyle measureStyle;
+  measureStyle.m_lineWidth=0;
+  measureStyle.setSurfaceColor(MWAWColor::white());
+  listener->insertTextBox(measurePos, doc, measureStyle);
   return true;
 }
 
