@@ -284,8 +284,10 @@ bool MacPaintParser::checkHeader(MWAWHeader *header, bool strict)
 
   int const vers=1;
   if (strict) {
+    // check if we can read the bitmap and if after reading the bitmap
+    // we are at the end of the file (up to 512 char)
     input->seek(512, librevenge::RVNG_SEEK_SET);
-    if (!readBitmap(true))
+    if (!readBitmap(true) || input->checkPosition(input->tell()+512))
       return false;
   }
   setVersion(vers);
