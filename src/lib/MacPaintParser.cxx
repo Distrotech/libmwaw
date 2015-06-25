@@ -224,6 +224,8 @@ bool MacPaintParser::readBitmap(bool onlyCheck)
         int color=(int) input->readULong(1);
         if (onlyCheck) {
           col+=8*(0x101-wh);
+          if (col>72*8)
+            return false;
           continue;
         }
         for (int j=0; j < 0x101-wh; ++j) {
@@ -284,10 +286,14 @@ bool MacPaintParser::checkHeader(MWAWHeader *header, bool strict)
 
   int const vers=1;
   if (strict) {
-    // check if we can read the bitmap and if after reading the bitmap
-    // we are at the end of the file (up to 512 char)
+    /* check :
+       - if we can read the bitmap,
+       - if the data have been packed: ie. if the bitmap size is 720x144
+         the bitmap's creator clearly creates the worst possible data,
+       - and if after reading the bitmap we are at the end of the file
+       (up to 512 char) */
     input->seek(512, librevenge::RVNG_SEEK_SET);
-    if (!readBitmap(true) || input->checkPosition(input->tell()+512))
+    if (!readBitmap(true) || input->tell()==512+720*144 || input->checkPosition(input->tell()+512))
       return false;
   }
   setVersion(vers);
