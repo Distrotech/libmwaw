@@ -380,7 +380,10 @@ void RagTime5Parser::parse(librevenge::RVNGTextInterface *docInterface)
     ok=createZones();
     if (ok) {
       createDocument(docInterface);
-      //sendZones();
+      sendZones();
+#ifdef DEBUG
+      flushExtra();
+#endif
     }
 
     ascii().reset();
@@ -587,15 +590,7 @@ bool RagTime5Parser::createZones()
     m_graphParser->readPictureList(zone);
   }
 
-  for (size_t i=0; i<m_state->m_zonesList.size(); ++i) {
-    if (!m_state->m_zonesList[i])
-      continue;
-    RagTime5Zone &zone=*m_state->m_zonesList[i];
-    if (zone.m_isParsed || !zone.m_entry.valid())
-      continue;
-    readZoneData(zone);
-  }
-  return false;
+  return true;
 }
 
 bool RagTime5Parser::readZoneData(RagTime5Zone &zone)
@@ -2436,6 +2431,17 @@ bool RagTime5Parser::checkHeader(MWAWHeader *header, bool strict)
 // send data to the listener
 ////////////////////////////////////////////////////////////
 
+bool RagTime5Parser::sendZones()
+{
+  MWAWListenerPtr listener=getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTime5Parser::sendZones: can not find the listener\n"));
+    return false;
+  }
+  MWAW_DEBUG_MSG(("RagTime5Parser::sendZones: not implemented\n"));
+  return true;
+}
+
 void RagTime5Parser::flushExtra()
 {
   MWAWListenerPtr listener=getMainListener();
@@ -2443,7 +2449,19 @@ void RagTime5Parser::flushExtra()
     MWAW_DEBUG_MSG(("RagTime5Parser::flushExtra: can not find the listener\n"));
     return;
   }
-  // todo
+  m_graphParser->flushExtra();
+  m_textParser->flushExtra();
+  m_spreadsheetParser->flushExtra();
+
+  // look for unparsed data
+  for (size_t i=0; i<m_state->m_zonesList.size(); ++i) {
+    if (!m_state->m_zonesList[i])
+      continue;
+    RagTime5Zone &zone=*m_state->m_zonesList[i];
+    if (zone.m_isParsed || !zone.m_entry.valid())
+      continue;
+    readZoneData(zone);
+  }
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -1787,7 +1787,7 @@ std::ostream &operator<<(std::ostream &o, RagTime5StructManager::GraphicStyle co
   return o;
 }
 
-bool RagTime5StructManager::TextStyle::read(MWAWInputStreamPtr &/*input*/, RagTime5StructManager::Field const &field)
+bool RagTime5StructManager::TextStyle::read(RagTime5StructManager::Field const &field)
 {
   std::stringstream s;
   if (field.m_type==RagTime5StructManager::Field::T_FieldList) {

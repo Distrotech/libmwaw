@@ -38,6 +38,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <stack>
 
 #include <librevenge/librevenge.h>
 
@@ -59,10 +60,10 @@
 namespace RagTime5TextInternal
 {
 ////////////////////////////////////////
-//! Internal: the helper to read field for a RagTime5Text
-struct FieldParser : public RagTime5StructManager::FieldParser {
+//! Internal: the helper to read style for a RagTime5Text
+struct StyleFieldParser : public RagTime5StructManager::FieldParser {
   //! constructor
-  FieldParser(RagTime5Text &parser) : RagTime5StructManager::FieldParser("TextStyle"), m_mainParser(parser)
+  StyleFieldParser() : RagTime5StructManager::FieldParser("TextStyle"), m_styleList()
   {
   }
   //! return the debug name corresponding to a field
@@ -73,20 +74,27 @@ struct FieldParser : public RagTime5StructManager::FieldParser {
     return s.str();
   }
   //! parse a field
-  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &/*zone*/, int n, libmwaw::DebugStream &f)
   {
-    RagTime5StructManager::TextStyle style;
-    MWAWInputStreamPtr input=zone.getInput();
-    if (style.read(input, field))
-      f << style;
+    if (n<=0) {
+      MWAW_DEBUG_MSG(("RagTime5TextInternal::StyleFieldParser::parseField: n=%d is bad\n", n));
+      n=0;
+    }
+    if (n>=int(m_styleList.size()))
+      m_styleList.resize(size_t(n+1));
+    RagTime5StructManager::TextStyle &style=m_styleList[size_t(n)];
+    if (style.read(field)) {
+      RagTime5StructManager::TextStyle modStyle;
+      modStyle.read(field);
+      f << modStyle;
+    }
     else
       f << "#" << field;
     return true;
   }
 
-protected:
-  //! the main parser
-  RagTime5Text &m_mainParser;
+  //! the list of read style
+  std::vector<RagTime5StructManager::TextStyle> m_styleList;
 };
 
 //! Internal: the helper to read a clustList
@@ -148,13 +156,78 @@ private:
   ClustListParser &operator=(ClustListParser &orig);
 };
 
+//! a PLC of a RagTime5Text
+struct PLC {
+  //! constructor
+  PLC() : m_position(-1), m_fileType(0), m_value(-1)
+  {
+  }
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, PLC const &plc)
+  {
+    if (plc.m_position>=0) o << "pos=" << plc.m_position << ",";
+    switch (plc.m_fileType) {
+    case 0:
+      break;
+    case 0x1001:
+      o << "para,";
+      break;
+    case 0x5001:
+      o << "char,";
+      break;
+    default:
+      if (plc.m_fileType&0xfe) o << "#";
+      o << "type=" << std::hex << plc.m_fileType << std::dec << ",";
+    }
+    if (plc.m_value!=-1) o << "f0=" << plc.m_value << ",";
+    return o;
+  }
+  //! the position in the text
+  int m_position;
+  //! the file type
+  int m_fileType;
+  //! an unknown value
+  int m_value;
+};
+
+//! low level: the text cluster of a RagTime5Text
+struct ClusterText : public RagTime5ClusterManager::Cluster {
+  //! constructor
+  ClusterText() : RagTime5ClusterManager::Cluster(), m_contentLink(), m_positionLink(), m_linkDefList(),
+    m_PLCList(), m_posToStyleIdMap()
+  {
+  }
+  //! destructor
+  virtual ~ClusterText() {}
+  //! the main content
+  RagTime5ClusterManager::Link m_contentLink;
+  //! the position link
+  RagTime5ClusterManager::Link m_positionLink;
+  //! cluster links 0: list of size 10(pipeline?) and 14(graphic?), 1: list of size 12(related to link)
+  RagTime5ClusterManager::Link m_clusterLink[2];
+  //! the list of link zone
+  std::vector<RagTime5ClusterManager::Link> m_linkDefList;
+  //! 0: the PLC definition, 1: PLC to char style, third field size 14, fourst of size 20, 5th of size 12
+  RagTime5ClusterManager::Link m_unknownLink[5];
+
+  // final data
+
+  //! the PLC list
+  std::vector<PLC> m_PLCList;
+  //! position to plc map
+  std::multimap<int, int> m_posToStyleIdMap;
+};
+
+
 ////////////////////////////////////////
 //! Internal: the state of a RagTime5Text
 struct State {
   //! constructor
-  State() : m_numPages(0) { }
+  State() : m_numPages(0), m_idTextMap() { }
   //! the number of pages
   int m_numPages;
+  //! map data id to text zone
+  std::map<int, shared_ptr<ClusterText> > m_idTextMap;
 };
 
 }
@@ -183,6 +256,16 @@ int RagTime5Text::numPages() const
   return 0;
 }
 
+bool RagTime5Text::send(int zoneId)
+{
+  if (m_state->m_idTextMap.find(zoneId)==m_state->m_idTextMap.end() ||
+      !m_state->m_idTextMap.find(zoneId)->second) {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: can not find zone %d\n", zoneId));
+    return false;
+  }
+  return send(*m_state->m_idTextMap.find(zoneId)->second);
+}
+
 ////////////////////////////////////////////////////////////
 //
 // Intermediate level
@@ -194,8 +277,130 @@ int RagTime5Text::numPages() const
 ////////////////////////////////////////////////////////////
 bool RagTime5Text::readTextStyles(RagTime5ClusterManager::Cluster &cluster)
 {
-  RagTime5TextInternal::FieldParser fieldParser(*this);
-  return m_mainParser.readStructZone(cluster, fieldParser, 14);
+  RagTime5TextInternal::StyleFieldParser fieldParser;
+  if (!m_mainParser.readStructZone(cluster, fieldParser, 14))
+    return false;
+
+  if (fieldParser.m_styleList.empty())
+    fieldParser.m_styleList.resize(1);
+
+  // check parent relation, check for loop, ...
+  std::vector<size_t> rootList;
+  std::stack<size_t> toCheck;
+  std::multimap<size_t, size_t> idToChildIpMap;
+  size_t numStyles=size_t(fieldParser.m_styleList.size());
+  for (size_t i=0; i<numStyles; ++i) {
+    RagTime5StructManager::TextStyle &style=fieldParser.m_styleList[i];
+    bool ok=true;
+    for (int j=0; j<2; ++j) {
+      if (style.m_parentId[j]<=0)
+        continue;
+      if (style.m_parentId[j]>=(int) numStyles) {
+        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: find unexpected parent %d for style %d\n",
+                        (int) style.m_parentId[j], (int) i));
+        style.m_parentId[j]=0;
+        continue;
+      }
+      ok=false;
+      idToChildIpMap.insert(std::multimap<size_t, size_t>::value_type(size_t(style.m_parentId[j]),i));
+    }
+    if (!ok) continue;
+    rootList.push_back(i);
+    toCheck.push(i);
+  }
+  std::set<size_t> seens;
+  while (true) {
+    size_t posToCheck=0; // to make clang happy
+    if (!toCheck.empty()) {
+      posToCheck=toCheck.top();
+      toCheck.pop();
+    }
+    else if (seens.size()+1==numStyles)
+      break;
+    else {
+      bool ok=false;
+      for (size_t i=1; i<numStyles; ++i) {
+        if (seens.find(i)!=seens.end())
+          continue;
+        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: find unexpected root %d\n", (int) i));
+        posToCheck=i;
+        rootList.push_back(i);
+
+        RagTime5StructManager::TextStyle &style=fieldParser.m_styleList[i];
+        style.m_parentId[0]=style.m_parentId[1]=0;
+        ok=true;
+        break;
+      }
+      if (!ok)
+        break;
+    }
+    if (seens.find(posToCheck)!=seens.end()) {
+      MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: oops, %d is already seens\n", (int) posToCheck));
+      continue;
+    }
+    seens.insert(posToCheck);
+    std::multimap<size_t, size_t>::const_iterator childIt=idToChildIpMap.lower_bound(posToCheck);
+    while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+      size_t childId=childIt++->second;
+      if (seens.find(childId)!=seens.end()) {
+        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles::updateRelations: find loop for child %d\n", (int)childId));
+        RagTime5StructManager::TextStyle &style=fieldParser.m_styleList[childId];
+        if (style.m_parentId[0]==(int) posToCheck)
+          style.m_parentId[0]=0;
+        if (style.m_parentId[1]==(int) posToCheck)
+          style.m_parentId[1]=0;
+        continue;
+      }
+      toCheck.push(childId);
+    }
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////
+// text separator position
+////////////////////////////////////////////////////////////
+bool RagTime5Text::readTextSeparators(RagTime5Zone &zone, std::vector<int> &separators)
+{
+  if (!zone.m_entry.valid() || zone.getKindLastPart(zone.m_kinds[1].empty())!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextSeparators: can not find the text position zone\n"));
+    return false;
+  }
+
+  zone.m_isParsed=true;
+  MWAWEntry entry=zone.m_entry;
+  MWAWInputStreamPtr input=zone.getInput();
+  libmwaw::DebugFile &ascFile=zone.ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(TextSep)[" << zone << "]:";
+
+  input->seek(zone.m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  separators.resize(size_t(2*entry.length()));
+
+  int lastSeen=0, numSeen=0;
+  for (long i=0; i<entry.length(); ++i) {
+    int c=(int) input->readULong(1);
+    for (int j=0; j<2; ++j) {
+      int v=(j==0 ? (c>>4) : c)&0xf;
+      if (v!=lastSeen) {
+        if (numSeen==1) f << lastSeen << ",";
+        else if (numSeen) f << lastSeen << "x" << numSeen << ",";
+        numSeen=0;
+        lastSeen=v;
+      }
+      ++numSeen;
+      separators[size_t(2*i+j)]=v;
+    }
+  }
+  if (numSeen==1) f << lastSeen << ",";
+  else if (numSeen) f << lastSeen << "x" << numSeen << ",";
+
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -572,60 +777,19 @@ bool RagTime5Text::readLinkZones(RagTime5ClusterManager::Cluster &cluster, RagTi
 
 
 ////////////////////////////////////////////////////////////
-// unknown
+// PLC
 ////////////////////////////////////////////////////////////
-bool RagTime5Text::readTextUnknown0(int typeId)
+bool RagTime5Text::readPLC(RagTime5TextInternal::ClusterText &cluster, int zoneId)
 {
-  if (!typeId)
-    return false;
-
-  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(typeId);
+  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(zoneId);
   if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%6) ||
       zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextUnknown0: the entry of zone %d seems bad\n", typeId));
+    MWAW_DEBUG_MSG(("RagTime5Text::readPLC: the entry of zone %d seems bad\n", zoneId));
     return false;
   }
   MWAWEntry entry=zone->m_entry;
   MWAWInputStreamPtr input=zone->getInput();
-  input->setReadInverted(!zone->m_hiLoEndian);
-  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
-
-  libmwaw::DebugFile &ascFile=zone->ascii();
-  libmwaw::DebugStream f;
-  zone->m_isParsed=true;
-  ascFile.addPos(entry.end());
-  ascFile.addNote("_");
-
-  f << "Entries(TextUnkn0)[" << *zone << "]:";
-  ascFile.addPos(entry.begin());
-  ascFile.addNote(f.str().c_str());
-
-  int N=int(entry.length()/6);
-  for (int i=0; i<N; ++i) {
-    long pos=input->tell();
-    f.str("");
-    f << "TextUnkn0-" << i << ":";
-    f << "offset?=" << input->readULong(4) << ",";
-    f << "TS" << input->readULong(2) << ",";
-    ascFile.addPos(pos);
-    ascFile.addNote(f.str().c_str());
-  }
-
-  input->setReadInverted(false);
-  return true;
-}
-
-bool RagTime5Text::readTextUnknown1(int typeId)
-{
-  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(typeId);
-  if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%6) ||
-      zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextUnknown1: the entry of zone %d seems bad\n", typeId));
-    return false;
-  }
-  MWAWEntry entry=zone->m_entry;
-  MWAWInputStreamPtr input=zone->getInput();
-  bool const hiLo=zone->m_hiLoEndian;
+  bool const hiLo=cluster.m_hiLoEndian;
   input->setReadInverted(!hiLo);
   input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
 
@@ -635,35 +799,103 @@ bool RagTime5Text::readTextUnknown1(int typeId)
   ascFile.addPos(entry.end());
   ascFile.addNote("_");
 
-  f << "Entries(TextUnkn1)[" << *zone << "]:";
+  f << "Entries(TextPLCDef)[" << *zone << "]:";
   ascFile.addPos(entry.begin());
   ascFile.addNote(f.str().c_str());
 
+  size_t N=size_t(entry.length()/6);
+  cluster.m_PLCList.resize(N);
+  for (size_t i=0; i<N; ++i) {
+    long pos=input->tell();
+    f.str("");
+    f << "TextPLCDef-PLC" << i+1 << ":";
+    RagTime5TextInternal::PLC plc;
+    if (hiLo) {
+      plc.m_fileType=(int) input->readULong(2);
+      plc.m_position=(int) input->readULong(2);
+      plc.m_value=(int) input->readLong(2);
+    }
+    else {
+      plc.m_value=(int) input->readLong(2);
+      plc.m_position=(int) input->readULong(2);
+      plc.m_fileType=(int) input->readULong(2);
+    }
+    f << plc;
+    cluster.m_PLCList[i]=plc;
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  input->setReadInverted(false);
+  return true;
+}
+
+bool RagTime5Text::readPLCToCharStyle(RagTime5TextInternal::ClusterText &cluster)
+{
+  if (cluster.m_unknownLink[0].m_ids.empty())
+    return true;
+  int const zoneId=cluster.m_unknownLink[0].m_ids[0];
+  if (!zoneId)
+    return false;
+
+  shared_ptr<RagTime5Zone> zone=m_mainParser.getDataZone(zoneId);
+  if (!zone || !zone->m_entry.valid() || (zone->m_entry.length()%6) ||
+      zone->getKindLastPart(zone->m_kinds[1].empty())!="ItemData") {
+    MWAW_DEBUG_MSG(("RagTime5Text::readPLCToCharStyle: the entry of zone %d seems bad\n", zoneId));
+    return false;
+  }
+  MWAWEntry entry=zone->m_entry;
+  MWAWInputStreamPtr input=zone->getInput();
+  input->setReadInverted(!cluster.m_hiLoEndian); // checkme: can also be zone->m_hiLoEndian
+  input->seek(entry.begin(), librevenge::RVNG_SEEK_SET);
+
+  libmwaw::DebugFile &ascFile=zone->ascii();
+  libmwaw::DebugStream f;
+  zone->m_isParsed=true;
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
+
+  f << "Entries(TextPLCToCStyle)[" << *zone << "]:";
+
   int N=int(entry.length()/6);
+  if (N>cluster.m_unknownLink[0].m_N) // rare but can happens
+    N=cluster.m_unknownLink[0].m_N;
+  else if (N<cluster.m_unknownLink[0].m_N) {
+    MWAW_DEBUG_MSG(("RagTime5Text::readPLCToCharStyle: N value seems too short\n"));
+    f << "##N=" << N << ",";
+  }
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+  size_t numPLC=cluster.m_PLCList.size();
+  long lastFindPos=-1;
   for (int i=0; i<N; ++i) {
     long pos=input->tell();
     f.str("");
-    f << "TextUnkn1-" << i+1 << ":";
-    int fl, id, val;
-    if (hiLo) {
-      fl=(int) input->readULong(2);
-      id=(int) input->readULong(2);
-      val=(int) input->readLong(2);
+    f << "TextPLCToCStyle-" << i << ":";
+    size_t id=(size_t) input->readULong(4);
+    int styleId=(int) input->readULong(2);
+    f << "PLC" << id;
+    if (id==0 || id>numPLC) {
+      MWAW_DEBUG_MSG(("RagTime5Text::readPLCToCharStyle: find bad PLC id\n"));
+      f << "###";
     }
     else {
-      val=(int) input->readLong(2);
-      id=(int) input->readULong(2);
-      fl=(int) input->readULong(2);
+      RagTime5TextInternal::PLC const plc=cluster.m_PLCList[size_t(id-1)];
+      if ((i==0 && plc.m_position!=0) || (i && plc.m_position<lastFindPos)) {
+        MWAW_DEBUG_MSG(("RagTime5Text::readPLCToCharStyle: the PLC position seems bad\n"));
+        f << "###";
+      }
+      else
+        cluster.m_posToStyleIdMap.insert(std::multimap<int, int>::value_type(plc.m_position, styleId));
+      lastFindPos=plc.m_position;
+      f << "[" << plc << "]";
     }
-    if (id)
-      f << "id=" << id << ",";
-    if ((fl&0x7fe))
-      f << "#";
-    if (fl) f << "fl=" << std::hex << fl << std::dec << ",";
-    if (val!=-1)
-      f << "f0=" << val << ",";
+    f << "->TS" << styleId << ",";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
+  }
+  if (input->tell()!=entry.end()) {
+    ascFile.addPos(input->tell());
+    ascFile.addNote("TextPLCToCStyle:#extra");
   }
   input->setReadInverted(false);
   return true;
@@ -681,7 +913,142 @@ bool RagTime5Text::readTextUnknown1(int typeId)
 
 void RagTime5Text::flushExtra()
 {
-  MWAW_DEBUG_MSG(("RagTime5Text::flushExtra: is not implemented\n"));
+  std::map<int, shared_ptr<RagTime5TextInternal::ClusterText> >::iterator it;
+  for (it=m_state->m_idTextMap.begin(); it!=m_state->m_idTextMap.end(); ++it) {
+    if (!it->second || it->second->m_isSent)
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Text::flushExtra: find some unset zone\n"));
+      first=false;
+    }
+    send(*it->second);
+  }
+}
+
+bool RagTime5Text::send(RagTime5TextInternal::ClusterText &cluster)
+{
+  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: can not find the listener\n"));
+    return false;
+  }
+  cluster.m_isSent=true;
+  shared_ptr<RagTime5Zone> dataZone;
+  int cId=!cluster.m_positionLink.m_ids.empty() ? cluster.m_positionLink.m_ids[0] : -1;
+  if (cId>0)
+    dataZone=m_mainParser.getDataZone(cId);
+  std::vector<int> separators;
+  if (!dataZone) {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: can not find the text separator zone %d\n", cId));
+  }
+  else
+    readTextSeparators(*dataZone, separators);
+
+  dataZone.reset();
+  cId=!cluster.m_contentLink.m_ids.empty() ? cluster.m_contentLink.m_ids[0] : -1;
+  if (cId>0)
+    dataZone=m_mainParser.getDataZone(cId);
+  else
+    dataZone.reset();
+  if (!dataZone || !dataZone->m_entry.valid() ||
+      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="Unicode") {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: can not find the text contents zone %d\n", cId));
+    return false;
+  }
+
+  dataZone->m_isParsed=true;
+  if (dataZone->m_entry.length()==0) return true;
+
+  MWAWInputStreamPtr input=dataZone->getInput();
+  libmwaw::DebugFile &ascFile=dataZone->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(TextUnicode)[" << *dataZone << "]:";
+  if (dataZone->m_entry.length()%2) {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: bad length for zone %d\n", cId));
+    f << "###";
+    ascFile.addPos(dataZone->m_entry.begin());
+    ascFile.addNote(f.str().c_str());
+    ascFile.addPos(dataZone->m_entry.end());
+    ascFile.addNote("_");
+    return false;
+  }
+  input->setReadInverted(!cluster.m_hiLoEndian);
+  input->seek(dataZone->m_entry.end()-2, librevenge::RVNG_SEEK_SET);
+  if (input->readULong(2)==0xd00) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Text::send: must change some hiLo\n"));
+      first=false;
+    }
+    f << "###hiLo,";
+    input->setReadInverted(cluster.m_hiLoEndian);
+  }
+  input->seek(dataZone->m_entry.begin(), librevenge::RVNG_SEEK_SET);
+  long pos=input->tell();
+  size_t N=size_t(dataZone->m_entry.length()/2);
+  size_t numSeparators=separators.size();
+  if (N>numSeparators) {
+    MWAW_DEBUG_MSG(("RagTime5Text::send: the separator list seems to short\n"));
+    separators.resize(N,0);
+    numSeparators=N;
+  }
+  for (size_t i=0; i<N; ++i) {
+    std::multimap<int, int>::iterator plcIt=cluster.m_posToStyleIdMap.lower_bound(int(i));
+    while (plcIt!=cluster.m_posToStyleIdMap.end() && plcIt->first==(int) i) {
+      int const styleId=plcIt++->second;
+      f << "[TS" << styleId << "]";
+    }
+
+    switch (separators[i]) {
+    case 0: // none
+    case 2: // sign separator: .,/-(x)
+    case 3: // word separator
+    case 4: // potential hyphenate
+      break;
+    default: // find also 1 and 7:link?, 8, 12
+      f << "[m" << separators[i] << "]";
+    }
+    uint32_t unicode=uint32_t(input->readULong(2));
+    switch (unicode) {
+    case 0:
+      f << "###[0]";
+      break;
+    case 9:
+      listener->insertTab();
+      f << "\t";
+      break;
+    case 0xb:
+    case 0xd:
+      listener->insertEOL(unicode==0xb);
+      ascFile.addPos(pos);
+      ascFile.addNote(f.str().c_str());
+      pos=input->tell();
+      f.str("");
+      f << "TextUnicode:";
+      break;
+    default:
+      if (unicode<=0x1f) {
+        MWAW_DEBUG_MSG(("RagTime5Text::send:  find an odd char %x\n", (unsigned int)unicode));
+        f << "[#" << std::hex << unicode << std::dec << "]";
+        break;
+      }
+      listener->insertUnicode(unicode);
+      if (unicode<0x80)
+        f << char(unicode);
+      else
+        f << "[" << std::hex << unicode << std::dec << "]";
+      break;
+    }
+  }
+  if (pos!=input->tell()) {
+    ascFile.addPos(pos);
+    ascFile.addNote(f.str().c_str());
+  }
+  ascFile.addPos(dataZone->m_entry.end());
+  ascFile.addNote("_");
+  input->setReadInverted(false);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -690,26 +1057,6 @@ void RagTime5Text::flushExtra()
 
 namespace RagTime5TextInternal
 {
-//! low level: the text cluster data
-struct ClusterText : public RagTime5ClusterManager::Cluster {
-  //! constructor
-  ClusterText() : RagTime5ClusterManager::Cluster(), m_contentLink(), m_positionLink(), m_linkDefList()
-  {
-  }
-  //! destructor
-  virtual ~ClusterText() {}
-  //! the main content
-  RagTime5ClusterManager::Link m_contentLink;
-  //! the position link
-  RagTime5ClusterManager::Link m_positionLink;
-  //! cluster links 0: list of size 10(pipeline?) and 14(graphic?), 1: list of size 12(related to link)
-  RagTime5ClusterManager::Link m_clusterLink[2];
-  //! the list of link zone
-  std::vector<RagTime5ClusterManager::Link> m_linkDefList;
-  //! two unknown link of field size 6, third field size 14, fourst of size 20, 5th of size 12
-  RagTime5ClusterManager::Link m_unknownLink[5];
-};
-
 
 //
 //! low level: parser of text cluster
@@ -1003,7 +1350,7 @@ protected:
           MWAW_DEBUG_MSG(("RagTime5TextInternal::TextCParser::parseDataZone: unexpected file type1\n"));
           f << "###type";
         }
-        m_fieldName="textUnkn0";
+        m_fieldName="plcToCStyle";
         m_linkId=3;
       }
       else if ((m_link.m_fileType[1]&0xFFD7)==0x50 && m_link.m_fieldSize==16) { // fSz=39
@@ -1036,7 +1383,7 @@ protected:
       }
       else if (m_link.m_fileType[0]==0 && fSz==52 && m_link.m_fieldSize==6) {
         expectedFileType1=0;
-        m_fieldName=m_link.m_name="textUnkn1";
+        m_fieldName=m_link.m_name="plc";
         m_what=5;
         m_linkId=4;
       }
@@ -1435,47 +1782,23 @@ bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
     return false;
   }
   shared_ptr<RagTime5TextInternal::ClusterText> cluster=parser.getTextCluster();
+  if (m_state->m_idTextMap.find(zone.m_ids[0])!=m_state->m_idTextMap.end()) {
+    MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: oops text zone %d is already stored\n", zone.m_ids[0]));
+  }
+  else
+    m_state->m_idTextMap[zone.m_ids[0]]=cluster;
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
-
 
   if (!cluster->m_dataLink.empty()) {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: oops do not know how to read the dataLink\n"));
   }
-  shared_ptr<RagTime5Zone> dataZone;
-  int cId=!cluster->m_positionLink.m_ids.empty() ? cluster->m_positionLink.m_ids[0] : -1;
-  if (cId>0)
-    dataZone=m_mainParser.getDataZone(cId);
-  if (!dataZone || !dataZone->m_entry.valid() ||
-      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: can not find the text position zone %d\n", cId));
-  }
-  else {
-    dataZone->m_isParsed=true;
-    MWAWEntry entry=dataZone->m_entry;
-    libmwaw::DebugFile &ascFile=dataZone->ascii();
-    libmwaw::DebugStream f;
-    f << "Entries(TextPosition)[" << *dataZone << "]:";
-    ascFile.addPos(entry.end());
-    ascFile.addNote("_");
-    ascFile.addPos(entry.begin());
-    ascFile.addNote(f.str().c_str());
-  }
 
-  cId=!cluster->m_contentLink.m_ids.empty() ? cluster->m_contentLink.m_ids[0] : -1;
-  if (cId>0)
-    dataZone=m_mainParser.getDataZone(cId);
-  else
-    dataZone.reset();
-  if (!dataZone || !dataZone->m_entry.valid() ||
-      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="Unicode") {
-    MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: can not find the text contents zone %d\n", cId));
-  }
-  else
-    m_mainParser.readUnicodeString(*dataZone);
-  if (!cluster->m_unknownLink[0].m_ids.empty())
-    readTextUnknown0(cluster->m_unknownLink[0].m_ids[0]);
+  // the text<->separator zone cluster->m_positionLink.m_ids[0] when we send the cluster
+  // the textzone cluster->m_contentLink.m_ids[0] will be parsed when we send the cluster
+
   if (!cluster->m_unknownLink[1].m_ids.empty())
-    readTextUnknown1(cluster->m_unknownLink[1].m_ids[0]);
+    readPLC(*cluster, cluster->m_unknownLink[1].m_ids[0]);
+  readPLCToCharStyle(*cluster); // use cluster->m_unknownLink[0]
   if (!cluster->m_unknownLink[2].empty())
     m_mainParser.readFixedSizeZone(cluster->m_unknownLink[2], "TextUnkn2");
   if (!cluster->m_unknownLink[3].empty())

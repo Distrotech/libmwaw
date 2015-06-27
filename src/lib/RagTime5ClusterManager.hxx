@@ -209,7 +209,7 @@ public:
   struct Cluster {
     //! constructor
     Cluster() : m_type(C_Unknown), m_zoneId(0), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
-      m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList()
+      m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList(), m_isSent(false)
     {
     }
     //! destructor
@@ -246,6 +246,8 @@ public:
     std::vector<Link> m_linksList;
     //! the cluster ids
     std::vector<int> m_clusterIdsList;
+    //! true if the cluster was send
+    bool m_isSent;
   };
 
   //! the layout cluster ( 4001 zone)

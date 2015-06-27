@@ -55,8 +55,8 @@
 
 namespace RagTime5TextInternal
 {
+struct ClusterText;
 struct State;
-struct FieldParser;
 
 class SubDocument;
 }
@@ -72,7 +72,6 @@ class RagTime5Zone;
  */
 class RagTime5Text
 {
-  friend struct RagTime5TextInternal::FieldParser;
   friend class RagTime5TextInternal::SubDocument;
   friend class RagTime5Parser;
 
@@ -110,10 +109,10 @@ protected:
   //! try to read a main text styles
   bool readTextStyles(RagTime5ClusterManager::Cluster &cluster);
 
-  //! try to read a text style position correspondance ?
-  bool readTextUnknown0(int typeId);
-  //! try to read a list of unknown zone 6 bytes data
-  bool readTextUnknown1(int typeId);
+  //! try to read a list of PLC
+  bool readPLC(RagTime5TextInternal::ClusterText &cluster, int zoneId);
+  //! try to read a plc id to char style correspondance
+  bool readPLCToCharStyle(RagTime5TextInternal::ClusterText &cluster);
 
   //! try to read a list of link/list definition
   bool readLinkZones(RagTime5ClusterManager::Cluster &cluster, RagTime5ClusterManager::Link const &link);
@@ -125,10 +124,17 @@ protected:
   //! try to read a field position
   bool readFieldPosition(RagTime5Zone &zone, long endPos, int n);
 
+  //! try to read the text separators
+  bool readTextSeparators(RagTime5Zone &zone, std::vector<int> &pos);
+
   //
   // low level
   //
 
+  //! try to send the cluster zone
+  bool send(int zoneId);
+  //! try to send the cluster zone
+  bool send(RagTime5TextInternal::ClusterText &cluster);
 
 private:
   RagTime5Text(RagTime5Text const &orig);

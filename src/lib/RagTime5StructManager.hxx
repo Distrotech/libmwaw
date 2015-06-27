@@ -425,7 +425,7 @@ public:
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, TextStyle const &style);
     //! try to read a line style
-    bool read(MWAWInputStreamPtr &input, Field const &field);
+    bool read(Field const &field);
     //! the parent id ( main and style ?)
     int m_parentId[2];
     //! the link id list

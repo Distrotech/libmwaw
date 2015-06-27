@@ -305,6 +305,10 @@ void Layout::updateRelations()
       if (!ok)
         break;
     }
+    if (seens.find(posToCheck)!=seens.end()) {
+      MWAW_DEBUG_MSG(("MacDraft5ParserInternal::Layout::updateRelations: oops, %d is already seens\n", (int) posToCheck));
+      continue;
+    }
     seens.insert(posToCheck);
     if (!m_shapeList[posToCheck]) {
       MWAW_DEBUG_MSG(("MacDraft5ParserInternal::Layout::updateRelations: oops, can not find shape %d\n", (int) posToCheck));
