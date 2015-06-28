@@ -1264,7 +1264,7 @@ bool MacDraftParser::readLabel()
   flag=input->readULong(4);
   switch (flag&3) {
   case 1:
-    flags |= MWAWFont::allCapsBit;
+    flags |= MWAWFont::uppercaseBit;
     break;
   case 2:
     flags |= MWAWFont::lowercaseBit;

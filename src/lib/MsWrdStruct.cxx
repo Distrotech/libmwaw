@@ -100,7 +100,7 @@ void Font::updateFontToFinalState(Font const *styleFont)
   uint32_t res=0;
   uint32_t const fl[NumFlags] = {
     MWAWFont::boldBit, MWAWFont::italicBit, 0, MWAWFont::outlineBit,
-    MWAWFont::shadowBit, MWAWFont::smallCapsBit, MWAWFont::allCapsBit, MWAWFont::hiddenBit, 0
+    MWAWFont::shadowBit, MWAWFont::smallCapsBit, MWAWFont::uppercaseBit, MWAWFont::hiddenBit, 0
   };
   if (m_font.isSet()) res = m_font->flags();
   bool flagsMod = false;

@@ -138,7 +138,7 @@ bool MsWrdTextStyles::readFont(MsWrdStruct::Font &font, MsWrdTextStyles::ZoneTyp
   if (flag&0x10) flags ^= MWAWFont::outlineBit;
   if (flag&0x8) flags ^= MWAWFont::shadowBit;
   if (flag&0x4) flags ^= MWAWFont::smallCapsBit;
-  if (flag&0x2) flags ^= MWAWFont::allCapsBit;
+  if (flag&0x2) flags ^= MWAWFont::uppercaseBit;
   if (flag&0x1) flags ^= MWAWFont::hiddenBit;
 
   int what = 0;

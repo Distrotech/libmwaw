@@ -635,7 +635,7 @@ bool MsWrd1Parser::readFont(long fPos, MsWrd1ParserInternal::Font &font)
     case 0:
       break;
     case 3:
-      flags |= MWAWFont::allCapsBit;
+      flags |= MWAWFont::uppercaseBit;
       break;
     default:
       f << "#capBits=" << int((val&0xc)>>2) << ",";

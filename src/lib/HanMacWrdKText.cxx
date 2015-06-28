@@ -893,7 +893,7 @@ bool HanMacWrdKText::readFont(HanMacWrdKZone const &zone, MWAWFont &font) const
     font.setDeltaLetterSpacing(expand*font.size());
   float xScale = float(input->readLong(4))/65536.f;
   if (xScale < 1.0 || xScale > 1.0)
-    font.setTexteWidthScaling(xScale);
+    font.setWidthStreching(xScale);
 
   int flag =(int) input->readULong(2);
   uint32_t flags=0;

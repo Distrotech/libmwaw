@@ -79,7 +79,7 @@ struct Font {
     if (m_flags&0x10) flags |= MWAWFont::shadowBit;
     if (m_flags&0x100) res.set(MWAWFont::Script::super());
     if (m_flags&0x200) res.set(MWAWFont::Script::sub());
-    if (m_flags&0x400) flags |= MWAWFont::allCapsBit;
+    if (m_flags&0x400) flags |= MWAWFont::uppercaseBit;
     if (m_flags&0x800) flags |= MWAWFont::lowercaseBit;
     res.setFlags(flags);
     switch (m_color) {

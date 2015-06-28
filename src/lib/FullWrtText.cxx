@@ -811,7 +811,7 @@ void FullWrtText::send(shared_ptr<FullWrtTextInternal::Zone> zone, int numChar,
         break;
       case 0x94:
         f << "[" << onString << "allCaps]";
-        fFlags ^= MWAWFont::allCapsBit;
+        fFlags ^= MWAWFont::uppercaseBit;
         font.m_font.setFlags(fFlags);
         fontSet=false;
         break;

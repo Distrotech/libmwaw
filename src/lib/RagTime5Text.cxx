@@ -435,7 +435,7 @@ void RagTime5Text::update(RagTime5StructManager::TextStyle const &style, MWAWFon
     underline.m_word=true;
   switch (style.m_caps) {
   case 1:
-    flags |= MWAWFont::allCapsBit;
+    flags |= MWAWFont::uppercaseBit;
     break;
   case 2:
     flags |= MWAWFont::lowercaseBit;

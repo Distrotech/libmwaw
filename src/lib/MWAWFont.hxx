@@ -182,7 +182,7 @@ public:
   //! the different font bit
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
-                  reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
+                  reverseVideoBit=0x100, smallCapsBit=0x200, uppercaseBit=0x400,
                   lowercaseBit=0x800,
                   initialcaseBit=2*lowercaseBit,
                   boxedBit=2*initialcaseBit,
@@ -194,7 +194,7 @@ public:
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_deltaSpacingUnit(librevenge::RVNG_POINT), m_texteWidthScaling(1.0), m_scriptPosition(),
+  MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_deltaSpacingUnit(librevenge::RVNG_POINT), m_widthStreching(1), m_scriptPosition(),
     m_flags(f), m_overline(Line::None), m_strikeoutline(Line::None), m_underline(Line::None),
     m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_language(""), m_extra("")
   {
@@ -212,7 +212,7 @@ public:
     m_size.insert(ft.m_size);
     m_deltaSpacing.insert(ft.m_deltaSpacing);
     m_deltaSpacingUnit.insert(ft.m_deltaSpacingUnit);
-    m_texteWidthScaling.insert(ft.m_texteWidthScaling);
+    m_widthStreching.insert(ft.m_widthStreching);
     m_scriptPosition.insert(ft.m_scriptPosition);
     if (ft.m_flags.isSet()) {
       if (m_flags.isSet())
@@ -271,15 +271,15 @@ public:
     m_deltaSpacing=d;
     m_deltaSpacingUnit=unit;
   }
-  //! returns the text width scaling
-  float texteWidthScaling() const
+  //! returns the text width streching
+  float widthStreching() const
   {
-    return m_texteWidthScaling.get();
+    return m_widthStreching.get();
   }
-  //! sets the text width scaling
-  void setTexteWidthScaling(float scale=1.0)
+  //! sets the text width streching
+  void setWidthStreching(float scale=1.0)
   {
-    m_texteWidthScaling = scale;
+    m_widthStreching = scale;
   }
   //! returns the script position
   Script const &script() const
@@ -508,8 +508,8 @@ public:
     if (m_deltaSpacing.get() > oth.m_deltaSpacing.get()) return 1;
     if (m_deltaSpacingUnit.get() < oth.m_deltaSpacingUnit.get()) return -1;
     if (m_deltaSpacingUnit.get() > oth.m_deltaSpacingUnit.get()) return 1;
-    if (m_texteWidthScaling.get() < oth.m_texteWidthScaling.get()) return -1;
-    if (m_texteWidthScaling.get() > oth.m_texteWidthScaling.get()) return 1;
+    if (m_widthStreching.get() < oth.m_widthStreching.get()) return -1;
+    if (m_widthStreching.get() > oth.m_widthStreching.get()) return 1;
     diff = script().cmp(oth.script());
     if (diff != 0) return diff;
     diff = m_overline.get().cmp(oth.m_overline.get());
@@ -532,7 +532,7 @@ protected:
   MWAWVariable<float> m_size /** font size */;
   MWAWVariable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl*/;
   MWAWVariable<librevenge::RVNGUnit> m_deltaSpacingUnit /** the delta spacing unit */;
-  MWAWVariable<float> m_texteWidthScaling /** the texte width scaling */;
+  MWAWVariable<float> m_widthStreching /** the width streching in percent */;
   MWAWVariable<Script> m_scriptPosition /** the sub/super script definition */;
   MWAWVariable<uint32_t> m_flags /** font attributes */;
   MWAWVariable<Line> m_overline /** overline attributes */;

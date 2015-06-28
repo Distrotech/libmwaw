@@ -1411,7 +1411,7 @@ bool MarinerWrtText::readFonts(MarinerWrtEntry const &entry, int zoneId)
             font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
             break;
           case 54:
-            fFlags |= MWAWFont::allCapsBit;
+            fFlags |= MWAWFont::uppercaseBit;
             break;
           case 55:
             fFlags |= MWAWFont::lowercaseBit;

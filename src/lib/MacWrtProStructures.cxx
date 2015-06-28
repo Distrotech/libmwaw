@@ -1266,7 +1266,7 @@ bool MacWrtProStructures::readFont(MacWrtProStructuresInternal::Font &font)
   if (flag&0x40) font.m_font.set(MWAWFont::Script(-40,librevenge::RVNG_PERCENT));
   if (flag&0x100) font.m_font.set(MWAWFont::Script::super());
   if (flag&0x200) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
-  if (flag&0x400) flags |= MWAWFont::allCapsBit;
+  if (flag&0x400) flags |= MWAWFont::uppercaseBit;
   if (flag&0x800) flags |= MWAWFont::smallCapsBit;
   if (flag&0x1000) font.m_font.setUnderlineStyle(MWAWFont::Line::Simple);
   if (flag&0x2000) {

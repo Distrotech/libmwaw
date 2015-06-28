@@ -840,7 +840,7 @@ bool NisusWrtText::readFonts(MWAWEntry const &entry)
     if (flag & 0x20) font.m_font.setStrikeOutStyle(MWAWFont::Line::Simple);
     if (flag & 0x40) font.m_font.setOverlineStyle(MWAWFont::Line::Simple);
     if (flag & 0x80) flags |= MWAWFont::smallCapsBit;
-    if (flag & 0x100) flags |= MWAWFont::allCapsBit;
+    if (flag & 0x100) flags |= MWAWFont::uppercaseBit;
     if (flag & 0x200) flags |= MWAWFont::boxedBit;
     if (flag & 0x400) flags |= MWAWFont::hiddenBit;
     if (flag & 0x1000) font.m_font.set(MWAWFont::Script(40,librevenge::RVNG_PERCENT,58));

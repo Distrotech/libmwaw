@@ -190,8 +190,8 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     else if (m_deltaSpacing.get() < 0)
       o << "condensed=" << -m_deltaSpacing.get() << ",";
   }
-  if (m_texteWidthScaling.isSet())
-    o << "scaling[width]=" <<  m_texteWidthScaling.get()*100.f << "%,";
+  if (m_widthStreching.isSet())
+    o << "scaling[width]=" <<  m_widthStreching.get()*100.f << "%,";
   if (m_scriptPosition.isSet() && m_scriptPosition.get().isSet())
     o << "script=" << m_scriptPosition.get().str(size()) << ",";
   if (m_flags.isSet() && m_flags.get()) {
@@ -203,7 +203,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&shadowBit) o << "shadow:";
     if (flag&outlineBit) o << "outline:";
     if (flag&smallCapsBit) o << "smallCaps:";
-    if (flag&allCapsBit) o << "allCaps:";
+    if (flag&uppercaseBit) o << "uppercase:";
     if (flag&lowercaseBit) o << "lowercase:";
     if (flag&initialcaseBit) o << "capitalise:";
     if (flag&hiddenBit) o << "hidden:";
@@ -259,7 +259,7 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
     pList.insert("text:display", "none");
   if (attributeBits & lowercaseBit)
     pList.insert("fo:text-transform", "lowercase");
-  else if (attributeBits & allCapsBit)
+  else if (attributeBits & uppercaseBit)
     pList.insert("fo:text-transform", "uppercase");
   else if (attributeBits & initialcaseBit)
     pList.insert("fo:text-transform", "capitalize");
@@ -301,9 +301,9 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
     else if (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0)
       pList.insert("fo:letter-spacing", m_deltaSpacing.get(), librevenge::RVNG_POINT);
   }
-  if (m_texteWidthScaling.isSet() && m_texteWidthScaling.get() > 0.0 &&
-      (m_texteWidthScaling.get()>1.0||m_texteWidthScaling.get()<1.0))
-    pList.insert("style:text-scale", m_texteWidthScaling.get(), librevenge::RVNG_PERCENT);
+  if (m_widthStreching.isSet() && m_widthStreching.get() > 0.0 &&
+      (m_widthStreching.get()>1.0||m_widthStreching.get()<1.0))
+    pList.insert("style:text-scale", m_widthStreching.get(), librevenge::RVNG_PERCENT);
   if (attributeBits & reverseVideoBit) {
     pList.insert("fo:color", m_backgroundColor->str().c_str());
     pList.insert("fo:background-color", m_color->str().c_str());
