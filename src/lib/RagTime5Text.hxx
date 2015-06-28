@@ -38,6 +38,7 @@
 #ifndef RAGTIME5_TEXT
 #  define RAGTIME5_TEXT
 
+#include <set>
 #include <string>
 #include <map>
 #include <vector>
@@ -129,6 +130,18 @@ protected:
 
   //
   // low level
+  //
+
+  //! update the font and the paragraph properties using a text style
+  void update(RagTime5StructManager::TextStyle const &style, MWAWFont &font, MWAWParagraph &para);
+  //! recursive function use to update the style list
+  void updateTextStyles(size_t id, RagTime5StructManager::TextStyle const &style,
+                        std::vector<RagTime5StructManager::TextStyle> const &listReadStyles,
+                        std::multimap<size_t, size_t> const &idToChildIpMap,
+                        std::set<size_t> &seens);
+
+  //
+  // send data
   //
 
   //! try to send the cluster zone

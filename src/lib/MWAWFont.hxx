@@ -183,15 +183,18 @@ public:
   enum FontBits { boldBit=1, italicBit=2, blinkBit=4, embossBit=8, engraveBit=0x10,
                   hiddenBit=0x20, outlineBit=0x40, shadowBit=0x80,
                   reverseVideoBit=0x100, smallCapsBit=0x200, allCapsBit=0x400,
-                  lowercaseBit=0x800, boxedBit=0x1000, boxedRoundedBit=0x2000,
-                  reverseWritingBit=0x4000
+                  lowercaseBit=0x800,
+                  initialcaseBit=2*lowercaseBit,
+                  boxedBit=2*initialcaseBit,
+                  boxedRoundedBit=2*boxedBit,
+                  reverseWritingBit=2*boxedRoundedBit
                 };
   /** constructor
    *
    * \param newId system id font
    * \param sz the font size
    * \param f the font attributes bold, ... */
-  MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_texteWidthScaling(1.0), m_scriptPosition(),
+  MWAWFont(int newId=-1, float sz=12, uint32_t f = 0) : m_id(newId), m_size(sz), m_deltaSpacing(0), m_deltaSpacingUnit(librevenge::RVNG_POINT), m_texteWidthScaling(1.0), m_scriptPosition(),
     m_flags(f), m_overline(Line::None), m_strikeoutline(Line::None), m_underline(Line::None),
     m_color(MWAWColor::black()), m_backgroundColor(MWAWColor::white()), m_language(""), m_extra("")
   {
@@ -208,6 +211,7 @@ public:
     m_id.insert(ft.m_id);
     m_size.insert(ft.m_size);
     m_deltaSpacing.insert(ft.m_deltaSpacing);
+    m_deltaSpacingUnit.insert(ft.m_deltaSpacingUnit);
     m_texteWidthScaling.insert(ft.m_texteWidthScaling);
     m_scriptPosition.insert(ft.m_scriptPosition);
     if (ft.m_flags.isSet()) {
@@ -256,10 +260,16 @@ public:
   {
     return m_deltaSpacing.get();
   }
+  //! returns the condensed(negative)/extended(positive) unit
+  librevenge::RVNGUnit deltaLetterSpacingUnit() const
+  {
+    return m_deltaSpacingUnit.get();
+  }
   //! sets the letter spacing ( delta value in point )
-  void setDeltaLetterSpacing(float d)
+  void setDeltaLetterSpacing(float d, librevenge::RVNGUnit unit=librevenge::RVNG_POINT)
   {
     m_deltaSpacing=d;
+    m_deltaSpacingUnit=unit;
   }
   //! returns the text width scaling
   float texteWidthScaling() const
@@ -496,6 +506,8 @@ public:
     if (flags() > oth.flags()) return 1;
     if (m_deltaSpacing.get() < oth.m_deltaSpacing.get()) return -1;
     if (m_deltaSpacing.get() > oth.m_deltaSpacing.get()) return 1;
+    if (m_deltaSpacingUnit.get() < oth.m_deltaSpacingUnit.get()) return -1;
+    if (m_deltaSpacingUnit.get() > oth.m_deltaSpacingUnit.get()) return 1;
     if (m_texteWidthScaling.get() < oth.m_texteWidthScaling.get()) return -1;
     if (m_texteWidthScaling.get() > oth.m_texteWidthScaling.get()) return 1;
     diff = script().cmp(oth.script());
@@ -518,7 +530,8 @@ public:
 protected:
   MWAWVariable<int> m_id /** font identificator*/;
   MWAWVariable<float> m_size /** font size */;
-  MWAWVariable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl in point*/;
+  MWAWVariable<float> m_deltaSpacing /** expand(&gt; 0), condensed(&lt; 0) depl*/;
+  MWAWVariable<librevenge::RVNGUnit> m_deltaSpacingUnit /** the delta spacing unit */;
   MWAWVariable<float> m_texteWidthScaling /** the texte width scaling */;
   MWAWVariable<Script> m_scriptPosition /** the sub/super script definition */;
   MWAWVariable<uint32_t> m_flags /** font attributes */;

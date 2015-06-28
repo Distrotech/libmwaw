@@ -179,7 +179,7 @@ public:
   //! a tabulation in RagTime 5/6 structures
   struct TabStop {
     //! constructor
-    TabStop() : m_position(0), m_type(1), m_leader("")
+    TabStop() : m_position(0), m_type(1), m_leaderChar(0)
     {
     }
     //! operator<<
@@ -205,16 +205,16 @@ public:
         o << ":#type=" << tab.m_type;
         break;
       }
-      if (!tab.m_leader.empty())
-        o << ":leader=" << tab.m_leader.cstr();
+      if (tab.m_leaderChar>0)
+        o << ":leader=" << (char) tab.m_leaderChar;
       return o;
     }
     //! the position
     float m_position;
     //! the type
     int m_type;
-    //! the leader char
-    librevenge::RVNGString m_leader;
+    //! the unicode leader char
+    uint16_t m_leaderChar;
   };
   //! a field of RagTime 5/6 structures
   struct Field {
@@ -424,6 +424,8 @@ public:
     }
     //! operator<<
     friend std::ostream &operator<<(std::ostream &o, TextStyle const &style);
+    //! update the current style
+    void insert(TextStyle const &childStyle);
     //! try to read a line style
     bool read(Field const &field);
     //! the parent id ( main and style ?)
@@ -459,7 +461,7 @@ public:
     //! the font name
     librevenge::RVNGString m_fontName;
     //! the font id
-    long m_fontId;
+    int m_fontId;
     //! the font size
     float m_fontSize;
     //! the font flags (add and remove )

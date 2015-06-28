@@ -183,10 +183,12 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
   }
   if (size() > 0) o << "sz=" << size() << ",";
   if (m_deltaSpacing.isSet()) {
-    if (m_deltaSpacing.get() > 0)
-      o << "extended=" << m_deltaSpacing.get() << "pt,";
+    if (m_deltaSpacingUnit.get()==librevenge::RVNG_PERCENT)
+      o << "extend/condensed=" << m_deltaSpacing.get() << "%,";
+    else if (m_deltaSpacing.get() > 0)
+      o << "extended=" << m_deltaSpacing.get() << ",";
     else if (m_deltaSpacing.get() < 0)
-      o << "condensed=" << -m_deltaSpacing.get() << "pt,";
+      o << "condensed=" << -m_deltaSpacing.get() << ",";
   }
   if (m_texteWidthScaling.isSet())
     o << "scaling[width]=" <<  m_texteWidthScaling.get()*100.f << "%,";
@@ -203,6 +205,7 @@ std::string MWAWFont::getDebugString(shared_ptr<MWAWFontConverter> &converter) c
     if (flag&smallCapsBit) o << "smallCaps:";
     if (flag&allCapsBit) o << "allCaps:";
     if (flag&lowercaseBit) o << "lowercase:";
+    if (flag&initialcaseBit) o << "capitalise:";
     if (flag&hiddenBit) o << "hidden:";
     if (flag&reverseVideoBit) o << "reverseVideo:";
     if (flag&blinkBit) o << "blink:";
@@ -256,8 +259,10 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
     pList.insert("text:display", "none");
   if (attributeBits & lowercaseBit)
     pList.insert("fo:text-transform", "lowercase");
-  if (attributeBits & allCapsBit)
+  else if (attributeBits & allCapsBit)
     pList.insert("fo:text-transform", "uppercase");
+  else if (attributeBits & initialcaseBit)
+    pList.insert("fo:text-transform", "capitalize");
   if (attributeBits & smallCapsBit)
     pList.insert("fo:font-variant", "small-caps");
   if (attributeBits & embossBit)
@@ -285,8 +290,17 @@ void MWAWFont::addTo(librevenge::RVNGPropertyList &pList, shared_ptr<MWAWFontCon
     if (!m_underline.isSet() || !m_underline->isSet())
       simple.addTo(pList, "underline");
   }
-  if (m_deltaSpacing.isSet() && (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0))
-    pList.insert("fo:letter-spacing", m_deltaSpacing.get(), librevenge::RVNG_POINT);
+  if (m_deltaSpacing.isSet()) {
+    if (m_deltaSpacingUnit.get()==librevenge::RVNG_PERCENT) {
+      if (m_deltaSpacing.get() < 1 || m_deltaSpacing.get()>1) {
+        std::stringstream s;
+        s << m_deltaSpacing.get() << "em";
+        pList.insert("fo:letter-spacing", s.str().c_str());
+      }
+    }
+    else if (m_deltaSpacing.get() < 0 || m_deltaSpacing.get()>0)
+      pList.insert("fo:letter-spacing", m_deltaSpacing.get(), librevenge::RVNG_POINT);
+  }
   if (m_texteWidthScaling.isSet() && m_texteWidthScaling.get() > 0.0 &&
       (m_texteWidthScaling.get()>1.0||m_texteWidthScaling.get()<1.0))
     pList.insert("style:text-scale", m_texteWidthScaling.get(), librevenge::RVNG_PERCENT);

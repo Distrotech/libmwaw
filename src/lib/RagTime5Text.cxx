@@ -43,6 +43,7 @@
 #include <librevenge/librevenge.h>
 
 #include "MWAWFont.hxx"
+#include "MWAWFontConverter.hxx"
 #include "MWAWListener.hxx"
 #include "MWAWParagraph.hxx"
 #include "MWAWPosition.hxx"
@@ -223,9 +224,11 @@ struct ClusterText : public RagTime5ClusterManager::Cluster {
 //! Internal: the state of a RagTime5Text
 struct State {
   //! constructor
-  State() : m_numPages(0), m_idTextMap() { }
+  State() : m_numPages(0), m_styleList(), m_idTextMap() { }
   //! the number of pages
   int m_numPages;
+  //! the list of styles
+  std::vector<RagTime5StructManager::TextStyle> m_styleList;
   //! map data id to text zone
   std::map<int, shared_ptr<ClusterText> > m_idTextMap;
 };
@@ -284,13 +287,17 @@ bool RagTime5Text::readTextStyles(RagTime5ClusterManager::Cluster &cluster)
   if (fieldParser.m_styleList.empty())
     fieldParser.m_styleList.resize(1);
 
+  //
   // check parent relation, check for loop, ...
+  //
   std::vector<size_t> rootList;
   std::stack<size_t> toCheck;
   std::multimap<size_t, size_t> idToChildIpMap;
   size_t numStyles=size_t(fieldParser.m_styleList.size());
   for (size_t i=0; i<numStyles; ++i) {
     RagTime5StructManager::TextStyle &style=fieldParser.m_styleList[i];
+    if (!style.m_fontName.empty()) // update the font it
+      style.m_fontId=m_parserState->m_fontConverter->getId(style.m_fontName.cstr());
     bool ok=true;
     for (int j=0; j<2; ++j) {
       if (style.m_parentId[j]<=0)
@@ -339,23 +346,193 @@ bool RagTime5Text::readTextStyles(RagTime5ClusterManager::Cluster &cluster)
       continue;
     }
     seens.insert(posToCheck);
-    std::multimap<size_t, size_t>::const_iterator childIt=idToChildIpMap.lower_bound(posToCheck);
+    std::multimap<size_t, size_t>::iterator childIt=idToChildIpMap.lower_bound(posToCheck);
+    std::vector<size_t> badChildList;
     while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
       size_t childId=childIt++->second;
       if (seens.find(childId)!=seens.end()) {
-        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles::updateRelations: find loop for child %d\n", (int)childId));
+        MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: find loop for child %d\n", (int)childId));
         RagTime5StructManager::TextStyle &style=fieldParser.m_styleList[childId];
         if (style.m_parentId[0]==(int) posToCheck)
           style.m_parentId[0]=0;
         if (style.m_parentId[1]==(int) posToCheck)
           style.m_parentId[1]=0;
+        badChildList.push_back(childId);
         continue;
       }
       toCheck.push(childId);
     }
+    for (size_t i=0; i<badChildList.size(); ++i) {
+      childIt=idToChildIpMap.lower_bound(posToCheck);
+      while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+        if (childIt->second==badChildList[i]) {
+          idToChildIpMap.erase(childIt);
+          break;
+        }
+        ++childIt;
+      }
+    }
   }
-
+  // now let generate the final style
+  m_state->m_styleList.resize(numStyles);
+  seens.clear();
+  for (size_t i=0; i<rootList.size(); ++i) {
+    size_t id=rootList[i];
+    if (id>=numStyles) {
+      MWAW_DEBUG_MSG(("RagTime5Text::readTextStyles: find loop for id=%d\n", (int)id));
+      continue;
+    }
+    updateTextStyles(id, fieldParser.m_styleList[id], fieldParser.m_styleList, idToChildIpMap, seens);
+  }
   return true;
+}
+
+void RagTime5Text::updateTextStyles
+(size_t id, RagTime5StructManager::TextStyle const &style, std::vector<RagTime5StructManager::TextStyle> const &listReadStyles,
+ std::multimap<size_t, size_t> const &idToChildIpMap, std::set<size_t> &seens)
+{
+  if (id>=m_state->m_styleList.size() || seens.find(id)!=seens.end()) {
+    MWAW_DEBUG_MSG(("RagTime5Text::updateTextStyles: problem with style with id=%d\n", (int)id));
+    return;
+  }
+  seens.insert(id);
+  RagTime5StructManager::TextStyle styl=style;
+  styl.m_fontFlags[0]&=(~style.m_fontFlags[1]);
+  m_state->m_styleList[id]=styl;
+
+  std::multimap<size_t, size_t>::const_iterator childIt=idToChildIpMap.lower_bound(id);
+  while (childIt!=idToChildIpMap.end() && childIt->first==id) {
+    size_t childId=childIt++->second;
+    if (childId>=listReadStyles.size()) {
+      MWAW_DEBUG_MSG(("RagTime5Text::updateTextStyles: problem with style with childId=%d\n", (int)childId));
+      continue;
+    }
+    RagTime5StructManager::TextStyle childStyle=styl;
+    childStyle.insert(listReadStyles[childId]);
+    updateTextStyles(childId, childStyle, listReadStyles, idToChildIpMap, seens);
+  }
+}
+
+void RagTime5Text::update(RagTime5StructManager::TextStyle const &style, MWAWFont &font, MWAWParagraph &para)
+{
+  font=MWAWFont();
+  if (style.m_fontId>0) font.setId(style.m_fontId);
+  if (style.m_fontSize>0) font.setSize((float) style.m_fontSize);
+
+  MWAWFont::Line underline(MWAWFont::Line::None);
+  uint32_t flag=style.m_fontFlags[0];
+  uint32_t flags=0;
+  if (flag&0x1) flags |= MWAWFont::boldBit;
+  if (flag&0x2) flags |= MWAWFont::italicBit;
+  if (flag&0x4) font.setUnderlineStyle(MWAWFont::Line::Simple); // checkme
+  if (flag&0x8) flags |= MWAWFont::embossBit;
+  if (flag&0x10) flags |= MWAWFont::shadowBit;
+
+  if (flag&0x200) font.setStrikeOutStyle(MWAWFont::Line::Simple);
+  if (flag&0x400) flags |= MWAWFont::smallCapsBit;
+  // flag&0x800: kumorarya
+  if (flag&0x2000)
+    underline.m_word=true;
+  switch (style.m_caps) {
+  case 1:
+    flags |= MWAWFont::allCapsBit;
+    break;
+  case 2:
+    flags |= MWAWFont::lowercaseBit;
+    break;
+  case 3:
+    flags |= MWAWFont::initialcaseBit;
+    break;
+  default:
+    break;
+  }
+  switch (style.m_underline) {
+  case 1:
+    underline.m_style=MWAWFont::Line::Simple;
+    font.setUnderline(underline);
+    break;
+  case 2:
+    underline.m_style=MWAWFont::Line::Simple;
+    underline.m_type=MWAWFont::Line::Double;
+    font.setUnderline(underline);
+    break;
+  default:
+    break;
+  }
+  if (style.m_letterSpacings[0]>0)
+    font.setDeltaLetterSpacing(float(style.m_letterSpacings[0]-1.)*12);
+  if (style.m_scriptPosition.isSet() || style.m_fontScaling>=0) {
+    float scaling=style.m_fontScaling>0 ? style.m_fontScaling : 1;
+    font.set(MWAWFont::Script(*style.m_scriptPosition*100,librevenge::RVNG_PERCENT,int(scaling*100)));
+  }
+  font.setFlags(flags);
+
+  para=MWAWParagraph();
+  if (style.m_keepWithNext.isSet() && *style.m_keepWithNext)
+    para.m_breakStatus = para.m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
+  switch (style.m_justify) {
+  case 0:
+    break;
+  case 1:
+    para.m_justify = MWAWParagraph::JustificationCenter;
+    break;
+  case 2:
+    para.m_justify = MWAWParagraph::JustificationRight ;
+    break;
+  case 3:
+    para.m_justify = MWAWParagraph::JustificationFull;
+    break;
+  case 4:
+    para.m_justify = MWAWParagraph::JustificationFullAllLines;
+    break;
+  default:
+    break;
+  }
+  // TODO: use style.m_breakMethod
+  para.m_marginsUnit=librevenge::RVNG_POINT;
+  for (int i=0; i<3; ++i) {
+    if (style.m_margins[i]<0) continue;
+    if (i==2)
+      para.m_margins[0]=style.m_margins[2]-*para.m_margins[1];
+    else
+      para.m_margins[i+1] = style.m_margins[i];
+  }
+  if (style.m_spacings[0]>0) {
+    if (style.m_spacingUnits[0]==0)
+      para.setInterline(style.m_spacings[0], librevenge::RVNG_PERCENT);
+    else if (style.m_spacingUnits[0]==1)
+      para.setInterline(style.m_spacings[0], librevenge::RVNG_POINT);
+  }
+  for (int i=1; i<3; ++i) {
+    if (style.m_spacings[i]<0) continue;
+    if (style.m_spacingUnits[i]==0)
+      para.m_spacings[i]=style.m_spacings[i]*12./72.;
+    else if (style.m_spacingUnits[0]==1)
+      para.m_spacings[i]=style.m_spacings[i]/72.;
+  }
+  // tabs stop
+  for (size_t i=0; i<style.m_tabList.size(); ++i) {
+    RagTime5StructManager::TabStop const &tab=style.m_tabList[i];
+    MWAWTabStop newTab;
+    newTab.m_position = tab.m_position/72.;
+    switch (tab.m_type) {
+    case 2:
+    case 5: // kintou waritsuke
+      newTab.m_alignment = MWAWTabStop::CENTER;
+      break;
+    case 3:
+      newTab.m_alignment = MWAWTabStop::RIGHT;
+      break;
+    case 4:
+      newTab.m_alignment = MWAWTabStop::DECIMAL;
+      break;
+    case 1: // left
+    default:
+      break;
+    }
+    newTab.m_leaderCharacter=tab.m_leaderChar;
+    para.m_tabs->push_back(newTab);
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -991,13 +1168,25 @@ bool RagTime5Text::send(RagTime5TextInternal::ClusterText &cluster)
   if (N>numSeparators) {
     MWAW_DEBUG_MSG(("RagTime5Text::send: the separator list seems to short\n"));
     separators.resize(N,0);
-    numSeparators=N;
+    N=numSeparators;
   }
   for (size_t i=0; i<N; ++i) {
     std::multimap<int, int>::iterator plcIt=cluster.m_posToStyleIdMap.lower_bound(int(i));
     while (plcIt!=cluster.m_posToStyleIdMap.end() && plcIt->first==(int) i) {
       int const styleId=plcIt++->second;
       f << "[TS" << styleId << "]";
+      if (styleId<=0 || styleId>=(int) m_state->m_styleList.size()) {
+        MWAW_DEBUG_MSG(("RagTime5Text::send: the style seems bad\n"));
+        f << "###";
+      }
+      else {
+        RagTime5StructManager::TextStyle const &style=m_state->m_styleList[size_t(styleId)];
+        MWAWFont font;
+        MWAWParagraph para;
+        update(style, font, para);
+        listener->setParagraph(para);
+        listener->setFont(font);
+      }
     }
 
     switch (separators[i]) {

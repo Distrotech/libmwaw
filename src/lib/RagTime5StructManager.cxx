@@ -529,9 +529,7 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
       TabStop tab;
       tab.m_position=float(input->readLong(4))/65536.f;
       tab.m_type=(int) input->readLong(2);
-      int val=(int) input->readULong(2);
-      if (val)
-        libmwaw::appendUnicode((uint32_t) val, tab.m_leader);
+      tab.m_leaderChar=(uint16_t) input->readULong(2);
       field.m_tabList.push_back(tab);
     }
     return true;
@@ -2082,7 +2080,7 @@ bool RagTime5StructManager::TextStyle::read(RagTime5StructManager::Field const &
         if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x3b880) {
           switch (field.m_fileType) {
           case 0xa7077:
-            m_fontId=child.m_longValue[0];
+            m_fontId=(int) child.m_longValue[0];
             break;
           case 0x147407a:
             s << "hyph[minSyl]=" << child.m_longValue[0] << ",";
@@ -2305,6 +2303,49 @@ bool RagTime5StructManager::TextStyle::read(RagTime5StructManager::Field const &
   }
   return false;
 }
+
+void RagTime5StructManager::TextStyle::insert(RagTime5StructManager::TextStyle const &child)
+{
+  if (!child.m_linkIdList.empty()) m_linkIdList=child.m_linkIdList; // usefull?
+  if (child.m_graphStyleId>=0) m_graphStyleId=child.m_graphStyleId;
+  if (child.m_graphLineStyleId>=0) m_graphLineStyleId=child.m_graphLineStyleId;
+  if (child.m_dateStyleId>=0) m_dateStyleId=child.m_dateStyleId;
+  if (child.m_keepWithNext.isSet()) m_keepWithNext=child.m_keepWithNext;
+  if (child.m_justify>=0) m_justify=child.m_justify;
+  if (child.m_breakMethod>=0) m_breakMethod=child.m_breakMethod;
+  for (int i=0; i<3; ++i) {
+    if (child.m_margins[i]>=0) m_margins[i]=child.m_margins[i];
+  }
+  for (int i=0; i<3; ++i) {
+    if (child.m_spacings[i]<0) continue;
+    m_spacings[i]=child.m_spacings[i];
+    m_spacingUnits[i]=child.m_spacingUnits[i];
+  }
+  if (!child.m_tabList.empty()) m_tabList=child.m_tabList; // append ?
+  // char
+  if (!child.m_fontName.empty()) m_fontName=child.m_fontName;
+  if (child.m_fontId>=0) m_fontId=child.m_fontId;
+  if (child.m_fontSize>=0) m_fontSize=child.m_fontSize;
+  for (int i=0; i<2; ++i) {
+    uint32_t fl=child.m_fontFlags[i];
+    if (!fl) continue;
+    if (i==0) m_fontFlags[0]|=fl;
+    else m_fontFlags[0]&=(~fl);
+  }
+  if (child.m_caps>=0) m_caps=child.m_caps;
+  if (child.m_underline>=0) m_underline=child.m_underline;
+  if (child.m_scriptPosition.isSet()) m_scriptPosition=child.m_scriptPosition;
+  if (child.m_fontScaling>=0) m_fontScaling=child.m_fontScaling;
+
+  for (int i=0; i<3; ++i) {
+    if (child.m_letterSpacings[i]>=0) m_letterSpacings[i]=child.m_letterSpacings[i];
+  }
+  if (child.m_language>=0) m_language=child.m_language;
+  // column
+  if (child.m_numColumns>=0) m_numColumns=child.m_numColumns;
+  if (child.m_columnGap>=0) m_columnGap=child.m_columnGap;
+}
+
 std::ostream &operator<<(std::ostream &o, RagTime5StructManager::TextStyle const &style)
 {
   if (style.m_parentId[0]>=0) o << "parent=TS" << style.m_parentId[0] << ",";

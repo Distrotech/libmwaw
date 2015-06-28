@@ -85,9 +85,6 @@ struct Pixmap {
   {
     int W = m_rect.size().x(), H = m_rect.size().y();
 
-    int szRowSize=1;
-    if (m_rowBytes > 250) szRowSize = 2;
-
     int const nPlanes = 1;
     int nBytes = 3, rowBytes = m_rowBytes;
     int numValuesByInt = 1;
