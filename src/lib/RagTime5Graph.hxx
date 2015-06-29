@@ -56,13 +56,14 @@
 namespace RagTime5GraphInternal
 {
 struct State;
-struct FieldParser;
+struct StyleFieldParser;
 
 class SubDocument;
 }
 
 class RagTime5Parser;
 class RagTime5StructManager;
+class RagTime5StyleManager;
 class RagTime5Zone;
 
 class MWAWGraphicStyle;
@@ -74,7 +75,6 @@ class MWAWGraphicStyle;
  */
 class RagTime5Graph
 {
-  friend struct RagTime5GraphInternal::FieldParser;
   friend class RagTime5GraphInternal::SubDocument;
   friend class RagTime5Parser;
 
@@ -120,12 +120,6 @@ protected:
   //! try to read a main graphic types
   bool readGraphicTypes(RagTime5ClusterManager::Link const &link);
 
-  //! try to read a main graphic styles
-  bool readGraphicStyles(RagTime5ClusterManager::Cluster &cluster);
-
-  //! try to read a graphic color zone
-  bool readGraphicColors(RagTime5ClusterManager::Cluster &cluster);
-
   //! try to read a zone of color and pattern
   bool readColorPatternZone(RagTime5ClusterManager::Cluster &cluster);
 
@@ -160,6 +154,8 @@ protected:
 
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
+  //! the style manager
+  shared_ptr<RagTime5StyleManager> m_styleManager;
   //! the parser state
   MWAWParserStatePtr m_parserState;
 

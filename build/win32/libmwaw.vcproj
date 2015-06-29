@@ -700,6 +700,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\lib\RagTime5StyleManager.cxx"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\lib\RagTime5Text.cxx"
 				>
 			</File>
@@ -1286,6 +1290,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\lib\RagTime5StructManager.hxx"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\lib\RagTime5StyleManager.hxx"
 				>
 			</File>
 			<File

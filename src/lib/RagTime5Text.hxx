@@ -64,6 +64,7 @@ class SubDocument;
 
 class RagTime5Parser;
 class RagTime5StructManager;
+class RagTime5StyleManager;
 class RagTime5Zone;
 
 /** \brief the main class to read the text part of RagTime 56 file
@@ -107,9 +108,6 @@ protected:
   // basic text
   //
 
-  //! try to read a main text styles
-  bool readTextStyles(RagTime5ClusterManager::Cluster &cluster);
-
   //! try to read a list of PLC
   bool readPLC(RagTime5TextInternal::ClusterText &cluster, int zoneId);
   //! try to read a plc id to char style correspondance
@@ -131,14 +129,6 @@ protected:
   //
   // low level
   //
-
-  //! update the font and the paragraph properties using a text style
-  void update(RagTime5StructManager::TextStyle const &style, MWAWFont &font, MWAWParagraph &para);
-  //! recursive function use to update the style list
-  void updateTextStyles(size_t id, RagTime5StructManager::TextStyle const &style,
-                        std::vector<RagTime5StructManager::TextStyle> const &listReadStyles,
-                        std::multimap<size_t, size_t> const &idToChildIpMap,
-                        std::set<size_t> &seens);
 
   //
   // send data
@@ -162,6 +152,8 @@ protected:
 
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
+  //! the style manager
+  shared_ptr<RagTime5StyleManager> m_styleManager;
   //! the parser state
   MWAWParserStatePtr m_parserState;
 

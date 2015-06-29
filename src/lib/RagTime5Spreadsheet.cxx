@@ -367,7 +367,7 @@ struct State {
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 RagTime5Spreadsheet::RagTime5Spreadsheet(RagTime5Parser &parser) :
-  m_mainParser(parser), m_structManager(m_mainParser.getStructManager()), m_parserState(parser.getParserState()),
+  m_mainParser(parser), m_structManager(m_mainParser.getStructManager()), m_styleManager(m_mainParser.getStyleManager()), m_parserState(parser.getParserState()),
   m_state(new RagTime5SpreadsheetInternal::State)
 {
 }

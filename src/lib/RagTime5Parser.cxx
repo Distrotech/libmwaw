@@ -54,11 +54,12 @@
 #include "MWAWStringStream.hxx"
 #include "MWAWSubDocument.hxx"
 
+#include "RagTime5ClusterManager.hxx"
 #include "RagTime5Graph.hxx"
 #include "RagTime5StructManager.hxx"
+#include "RagTime5StyleManager.hxx"
 #include "RagTime5Spreadsheet.hxx"
 #include "RagTime5Text.hxx"
-#include "RagTime5ClusterManager.hxx"
 
 #include "RagTime5Parser.hxx"
 
@@ -282,7 +283,7 @@ bool SubDocument::operator!=(MWAWSubDocument const &doc) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 RagTime5Parser::RagTime5Parser(MWAWInputStreamPtr input, MWAWRSRCParserPtr rsrcParser, MWAWHeader *header) :
-  MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_spreadsheetParser(), m_textParser(), m_structManager(), m_clusterManager()
+  MWAWTextParser(input, rsrcParser, header), m_state(), m_graphParser(), m_spreadsheetParser(), m_textParser(), m_clusterManager(), m_structManager(), m_styleManager()
 {
   init();
 }
@@ -295,6 +296,8 @@ void RagTime5Parser::init()
 {
   m_structManager.reset(new RagTime5StructManager);
   m_clusterManager.reset(new RagTime5ClusterManager(*this));
+  m_styleManager.reset(new RagTime5StyleManager(*this));
+
   m_graphParser.reset(new RagTime5Graph(*this));
   m_spreadsheetParser.reset(new RagTime5Spreadsheet(*this));
   m_textParser.reset(new RagTime5Text(*this));
@@ -315,6 +318,11 @@ shared_ptr<RagTime5ClusterManager> RagTime5Parser::getClusterManager()
 shared_ptr<RagTime5StructManager> RagTime5Parser::getStructManager()
 {
   return m_structManager;
+}
+
+shared_ptr<RagTime5StyleManager> RagTime5Parser::getStyleManager()
+{
+  return m_styleManager;
 }
 
 bool RagTime5Parser::readChartCluster(RagTime5Zone &zone, int zoneType)
@@ -1041,12 +1049,11 @@ bool RagTime5Parser::readClusterZone(RagTime5Zone &zone, int zoneType)
   else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_FormatStyles)
     return readFormats(*cluster);
   else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_ColorStyles)
-    return m_graphParser->readGraphicColors(*cluster);
-  else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_GraphicStyles) {
-    return m_graphParser->readGraphicStyles(*cluster);
-  }
+    return m_styleManager->readGraphicColors(*cluster);
+  else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_GraphicStyles)
+    return m_styleManager->readGraphicStyles(*cluster);
   else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_TextStyles)
-    return m_textParser->readTextStyles(*cluster);
+    return m_styleManager->readTextStyles(*cluster);
   else if (cluster->m_type==RagTime5ClusterManager::Cluster::C_UnitStyles) {
     RagTime5StructManager::FieldParser defaultParser("Units");
     return readStructZone(*cluster, defaultParser, 14);

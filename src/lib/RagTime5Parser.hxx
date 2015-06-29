@@ -57,6 +57,7 @@ class SubDocument;
 class RagTime5Graph;
 class RagTime5Spreadsheet;
 class RagTime5StructManager;
+class RagTime5StyleManager;
 class RagTime5Text;
 class RagTime5Zone;
 class RagTime5ClusterManager;
@@ -73,6 +74,7 @@ class RagTime5Parser : public MWAWTextParser
   friend class RagTime5Text;
   friend class RagTime5ClusterManager;
   friend struct RagTime5ParserInternal::DocInfoFieldParser;
+  friend class RagTime5StyleManager;
   friend class RagTime5ParserInternal::SubDocument;
 
 public:
@@ -99,6 +101,8 @@ protected:
   shared_ptr<RagTime5ClusterManager> getClusterManager();
   //! returns the structure manager
   shared_ptr<RagTime5StructManager> getStructManager();
+  //! returns the style manager
+  shared_ptr<RagTime5StyleManager> getStyleManager();
 
   //! try to read a chart cluster (via the spreadsheet manager)
   bool readChartCluster(RagTime5Zone &zone, int zoneType);
@@ -215,10 +219,13 @@ protected:
   shared_ptr<RagTime5Spreadsheet> m_spreadsheetParser;
   //! the text manager
   shared_ptr<RagTime5Text> m_textParser;
-  //! the structure manager
-  shared_ptr<RagTime5StructManager> m_structManager;
+
   //! the cluster manager
   shared_ptr<RagTime5ClusterManager> m_clusterManager;
+  //! the structure manager
+  shared_ptr<RagTime5StructManager> m_structManager;
+  //! the style manager
+  shared_ptr<RagTime5StyleManager> m_styleManager;
 };
 #endif
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

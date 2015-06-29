@@ -626,6 +626,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\src\lib\RagTime5StyleManager.cxx">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\src\lib\RagTime5Text.cxx">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -804,6 +808,7 @@
     <ClInclude Include="..\..\src\lib\RagTime5Parser.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5Spreadsheet.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5StructManager.hxx" />
+    <ClInclude Include="..\..\src\lib\RagTime5StyleManager.hxx" />
     <ClInclude Include="..\..\src\lib\RagTime5Text.hxx" />
     <ClInclude Include="..\..\src\lib\SuperPaintParser.hxx" />
     <ClInclude Include="..\..\src\lib\TeachTxtParser.hxx" />

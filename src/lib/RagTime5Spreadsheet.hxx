@@ -63,6 +63,7 @@ class SubDocument;
 
 class RagTime5Parser;
 class RagTime5StructManager;
+class RagTime5StyleManager;
 class RagTime5Zone;
 
 /** \brief the main class to read the spreadsheet part of RagTime 56 file
@@ -135,6 +136,8 @@ protected:
 
   //! the structure manager
   shared_ptr<RagTime5StructManager> m_structManager;
+  //! the style manager
+  shared_ptr<RagTime5StyleManager> m_styleManager;
   //! the parser state
   MWAWParserStatePtr m_parserState;
 

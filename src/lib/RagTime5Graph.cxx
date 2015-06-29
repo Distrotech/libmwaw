@@ -175,48 +175,6 @@ struct IntListParser : public RagTime5StructManager::DataParser {
   IntListParser &operator=(IntListParser &orig);
 };
 
-////////////////////////////////////////
-//! Internal: the helper to read field for a RagTime5Graph
-struct FieldParser : public RagTime5StructManager::FieldParser {
-  //! enum used to define the zone type
-  enum Type { Z_Styles, Z_Colors };
-
-  //! constructor
-  FieldParser(RagTime5Graph &parser, Type type) :
-    RagTime5StructManager::FieldParser(type==Z_Styles ? "GraphStyle" : "GraphColor"), m_type(type), m_mainParser(parser)
-  {
-    m_regroupFields=(m_type==Z_Styles);
-  }
-  //! return the debug name corresponding to a field
-  std::string getZoneName(int n) const
-  {
-    std::stringstream s;
-    s << (m_type==Z_Styles ? "GraphStyle-GS" : "GraphColor-GC") << n;
-    return s.str();
-  }
-  //! parse a field
-  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int /*n*/, libmwaw::DebugStream &f)
-  {
-    if (m_type==Z_Styles) {
-      RagTime5StructManager::GraphicStyle style;
-      MWAWInputStreamPtr input=zone.getInput();
-      if (style.read(input, field))
-        f << style;
-      else
-        f << "##" << field;
-    }
-    else
-      f << field;
-    return true;
-  }
-
-protected:
-  //! the zone type
-  Type m_type;
-  //! the main parser
-  RagTime5Graph &m_mainParser;
-};
-
 //! Internal: the helper to read a int16 float
 struct FloatParser : public RagTime5StructManager::DataParser {
   //! constructor
@@ -312,7 +270,7 @@ Shape::Type State::getShapeType(int id) const
 // constructor/destructor, ...
 ////////////////////////////////////////////////////////////
 RagTime5Graph::RagTime5Graph(RagTime5Parser &parser) :
-  m_mainParser(parser), m_structManager(m_mainParser.getStructManager()), m_parserState(parser.getParserState()),
+  m_mainParser(parser), m_structManager(m_mainParser.getStructManager()), m_styleManager(m_mainParser.getStyleManager()), m_parserState(parser.getParserState()),
   m_state(new RagTime5GraphInternal::State)
 {
 }
@@ -431,12 +389,6 @@ bool RagTime5Graph::readGraphicTypes(RagTime5ClusterManager::Link const &link)
 ////////////////////////////////////////////////////////////
 // colors
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicColors(RagTime5ClusterManager::Cluster &cluster)
-{
-  RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Colors);
-  return m_mainParser.readStructZone(cluster, fieldParser, 14);
-}
-
 bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluster)
 {
   for (size_t i=0; i<cluster.m_linksList.size(); ++i) {
@@ -519,14 +471,8 @@ bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluste
 }
 
 ////////////////////////////////////////////////////////////
-// style
+// graphic zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicStyles(RagTime5ClusterManager::Cluster &cluster)
-{
-  RagTime5GraphInternal::FieldParser fieldParser(*this, RagTime5GraphInternal::FieldParser::Z_Styles);
-  return m_mainParser.readStructZone(cluster, fieldParser, 14);
-}
-
 bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, librevenge::RVNGString const &dataName)
 {
   MWAWInputStreamPtr input=zone.getInput();

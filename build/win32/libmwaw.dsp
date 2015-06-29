@@ -615,6 +615,10 @@ SOURCE=..\..\src\lib\RagTime5StructManager.cxx
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\src\lib\RagTime5StyleManager.cxx
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\lib\RagTime5Text.cxx
 # End Source File
 # Begin Source File
@@ -1200,6 +1204,10 @@ SOURCE=..\..\src\lib\RagTime5Spreadsheet.hxx
 # Begin Source File
 
 SOURCE=..\..\src\lib\RagTime5StructManager.hxx
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\lib\RagTime5StyleManager.hxx
 # End Source File
 # Begin Source File
 

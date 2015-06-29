@@ -283,6 +283,8 @@ libmwaw_@MWAW_MAJOR_VERSION@_@MWAW_MINOR_VERSION@_la_SOURCES = \
 	RagTime5Spreadsheet.hxx		\
 	RagTime5StructManager.cxx	\
 	RagTime5StructManager.hxx	\
+	RagTime5StyleManager.cxx	\
+	RagTime5StyleManager.hxx	\
 	RagTime5Text.cxx		\
 	RagTime5Text.hxx		\
 	SuperPaintParser.cxx		\
