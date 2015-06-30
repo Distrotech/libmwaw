@@ -281,6 +281,12 @@ public:
       s << m_name << "-" << n;
       return s.str();
     }
+    //! parse a header field
+    virtual bool parseHeaderField(Field &field, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
+    {
+      f << field;
+      return true;
+    }
     //! parse a field
     virtual bool parseField(Field &field, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
     {

@@ -55,6 +55,8 @@
 
 namespace RagTime5GraphInternal
 {
+struct ClusterGraphic;
+
 struct State;
 struct StyleFieldParser;
 
@@ -137,8 +139,13 @@ protected:
   bool readPictureCluster(RagTime5Zone &zone, int zoneType);
 
   //
-  // low level
+  // send data
   //
+
+  //! try to send the cluster zone
+  bool send(int zoneId);
+  //! try to send the cluster zone
+  bool send(RagTime5GraphInternal::ClusterGraphic &cluster);
 
 
 private:

@@ -199,6 +199,35 @@ struct Shape {
   //! the different shape
   enum Type { S_Line, S_Rect, S_RectOval, S_Circle, S_Pie, S_Arc, S_Polygon, S_Spline, S_RegularPoly, S_TextBox, S_Group, S_Unknown };
 };
+
+//! the shape cluster
+struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
+  //! constructor
+  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks(), m_dimensionLinks()
+  {
+  }
+  //! destructor
+  virtual ~ClusterGraphic() {}
+  //! the list of  transformation's link
+  std::vector<RagTime5ClusterManager::Link> m_transformationLinks;
+  //! the list of dimension's link
+  std::vector<RagTime5ClusterManager::Link> m_dimensionLinks;
+  //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10), fixedSize=8
+  RagTime5ClusterManager::Link m_clusterLinks[3];
+};
+
+//! the picture cluster
+struct ClusterPicture : public RagTime5ClusterManager::Cluster {
+  //! constructor
+  ClusterPicture() : RagTime5ClusterManager::Cluster(), m_auxilliarLink(), m_clusterLink()
+  {
+  }
+  //! the first auxilliar data
+  RagTime5ClusterManager::Link m_auxilliarLink;
+  //! cluster links list of size 28
+  RagTime5ClusterManager::Link m_clusterLink;
+};
+
 ////////////////////////////////////////
 //! Internal: the state of a RagTime5Graph
 struct State {
@@ -206,7 +235,7 @@ struct State {
   enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
 
   //! constructor
-  State() : m_numPages(0), m_shapeTypeIdVector() { }
+  State() : m_numPages(0), m_shapeTypeIdVector(), m_idGraphicMap() { }
   //! the number of pages
   int m_numPages;
   //! try to return a set type
@@ -226,6 +255,8 @@ struct State {
 
   //! the vector of shape type id
   std::vector<int> m_shapeTypeIdVector;
+  //! map data id to graphic zone
+  std::map<int, shared_ptr<ClusterGraphic> > m_idGraphicMap;
 };
 
 Shape::Type State::getShapeType(int id) const
@@ -289,6 +320,18 @@ int RagTime5Graph::numPages() const
   MWAW_DEBUG_MSG(("RagTime5Graph::numPages: is not implemented\n"));
   return 0;
 }
+
+bool RagTime5Graph::send(int zoneId)
+{
+  // CHANGEME: check also the picture list
+  if (m_state->m_idGraphicMap.find(zoneId)==m_state->m_idGraphicMap.end() ||
+      !m_state->m_idGraphicMap.find(zoneId)->second) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find zone %d\n", zoneId));
+    return false;
+  }
+  return send(*m_state->m_idGraphicMap.find(zoneId)->second);
+}
+
 
 ////////////////////////////////////////////////////////////
 //
@@ -1122,10 +1165,29 @@ bool RagTime5Graph::readPictureMatch(RagTime5Zone &zone, bool color)
 ////////////////////////////////////////////////////////////
 // interface send function
 ////////////////////////////////////////////////////////////
-
 void RagTime5Graph::flushExtra()
 {
-  MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: is not implemented\n"));
+  std::map<int, shared_ptr<RagTime5GraphInternal::ClusterGraphic> >::iterator it;
+  for (it=m_state->m_idGraphicMap.begin(); it!=m_state->m_idGraphicMap.end(); ++it) {
+    if (!it->second || it->second->m_isSent)
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: find some unseen zones\n"));
+      first=false;
+    }
+    send(*it->second);
+  }
+}
+
+bool RagTime5Graph::send(RagTime5GraphInternal::ClusterGraphic &/*cluster*/)
+{
+  static bool first=true;
+  if (first) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::send: sorry sending a graphic cluster zone is not implemented\n"));
+    first=false;
+  }
+  return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -1136,18 +1198,6 @@ void RagTime5Graph::flushExtra()
 
 namespace RagTime5GraphInternal
 {
-//! the picture cluster
-struct ClusterPicture : public RagTime5ClusterManager::Cluster {
-  //! constructor
-  ClusterPicture() : RagTime5ClusterManager::Cluster(), m_auxilliarLink(), m_clusterLink()
-  {
-  }
-  //! the first auxilliar data
-  RagTime5ClusterManager::Link m_auxilliarLink;
-  //! cluster links list of size 28
-  RagTime5ClusterManager::Link m_clusterLink;
-};
-
 //
 //! low level: parser of picture cluster
 //
@@ -1441,22 +1491,6 @@ private:
   PictCParser(PictCParser const &orig);
   //! copy operator (not implemented)
   PictCParser &operator=(PictCParser const &orig);
-};
-
-//! the shape cluster
-struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
-  //! constructor
-  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks(), m_dimensionLinks()
-  {
-  }
-  //! destructor
-  virtual ~ClusterGraphic() {}
-  //! the list of  transformation's link
-  std::vector<RagTime5ClusterManager::Link> m_transformationLinks;
-  //! the list of dimension's link
-  std::vector<RagTime5ClusterManager::Link> m_dimensionLinks;
-  //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10), fixedSize=8
-  RagTime5ClusterManager::Link m_clusterLinks[3];
 };
 
 //
@@ -2072,6 +2106,11 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
   }
 
   shared_ptr<RagTime5GraphInternal::ClusterGraphic> cluster=parser.getGraphicCluster();
+  if (m_state->m_idGraphicMap.find(zone.m_ids[0])!=m_state->m_idGraphicMap.end()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops graphic zone %d is already stored\n", zone.m_ids[0]));
+  }
+  else
+    m_state->m_idGraphicMap[zone.m_ids[0]]=cluster;
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
 
   RagTime5ClusterManager::Link const &link= cluster->m_dataLink;

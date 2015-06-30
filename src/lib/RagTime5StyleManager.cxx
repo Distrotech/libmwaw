@@ -50,43 +50,83 @@
 namespace RagTime5StyleManagerInternal
 {
 ////////////////////////////////////////
-//! Internal: the helper to read field graphic field for a RagTime5StyleManager
-struct GraphicFieldParser : public RagTime5StructManager::FieldParser {
-  //! enum used to define the zone type
-  enum Type { Z_Styles, Z_Colors };
+//! Internal: the helper to read field color field for a RagTime5StyleManager
+struct ColorFieldParser : public RagTime5StructManager::FieldParser {
 
   //! constructor
-  GraphicFieldParser(Type type) :
-    RagTime5StructManager::FieldParser(type==Z_Styles ? "GraphStyle" : "GraphColor"), m_type(type)
+  ColorFieldParser() :  RagTime5StructManager::FieldParser("GraphColor")
   {
-    m_regroupFields=(m_type==Z_Styles);
+    m_regroupFields=false;
   }
   //! return the debug name corresponding to a field
   std::string getZoneName(int n) const
   {
     std::stringstream s;
-    s << (m_type==Z_Styles ? "GraphStyle-GS" : "GraphColor-GC") << n;
+    s << "GraphColor-GC" << n;
     return s.str();
   }
   //! parse a field
-  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int /*n*/, libmwaw::DebugStream &f)
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &/*zone*/, int /*n*/, libmwaw::DebugStream &f)
   {
-    if (m_type==Z_Styles) {
-      RagTime5StyleManager::GraphicStyle style;
-      MWAWInputStreamPtr input=zone.getInput();
-      if (style.read(input, field))
-        f << style;
-      else
-        f << "##" << field;
+    f << field;
+    return true;
+  }
+};
+
+////////////////////////////////////////
+//! Internal: the helper to read field graphic field for a RagTime5StyleManager
+struct GraphicFieldParser : public RagTime5StructManager::FieldParser {
+  //! constructor
+  GraphicFieldParser() : RagTime5StructManager::FieldParser("GraphStyle"), m_styleList()
+  {
+    m_regroupFields=true;
+  }
+  //! return the debug name corresponding to a field
+  std::string getZoneName(int n) const
+  {
+    // we need to resize here (if the style does not contains any field)
+    if (n>=int(m_styleList.size()))
+      const_cast<GraphicFieldParser *>(this)->m_styleList.resize(size_t(n+1));
+    std::stringstream s;
+    s << "GraphStyle-GS" << n;
+    return s.str();
+  }
+  //! parse a header field
+  virtual bool parseHeaderField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int n, libmwaw::DebugStream &f)
+  {
+    if (n>=int(m_styleList.size()))
+      m_styleList.resize(size_t(n+1));
+    RagTime5StyleManager::GraphicStyle &style=m_styleList[size_t(n)];
+    MWAWInputStreamPtr input=zone.getInput();
+    if (style.read(input, field))
+      f << style;
+    else
+      f << "###" << field;
+    return true;
+  }
+  //! parse a field
+  virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &zone, int n, libmwaw::DebugStream &f)
+  {
+    if (n<=0) {
+      MWAW_DEBUG_MSG(("RagTime5StyleManagerInternal::GraphicFieldParser::parseField: n=%d is bad\n", n));
+      n=0;
+    }
+    if (n>=int(m_styleList.size()))
+      m_styleList.resize(size_t(n+1));
+    RagTime5StyleManager::GraphicStyle &style=m_styleList[size_t(n)];
+    MWAWInputStreamPtr input=zone.getInput();
+    if (style.read(input, field)) {
+      RagTime5StyleManager::GraphicStyle modStyle;
+      modStyle.read(input, field);
+      f << modStyle;
     }
     else
-      f << field;
+      f << "##" << field;
     return true;
   }
 
-protected:
-  //! the zone type
-  Type m_type;
+  //! the list of graphic style
+  std::vector<RagTime5StyleManager::GraphicStyle> m_styleList;
 };
 
 ////////////////////////////////////////
@@ -103,11 +143,23 @@ struct TextFieldParser : public RagTime5StructManager::FieldParser {
     s << "TextStyle-TS" << n;
     return s.str();
   }
+  //! parse a header field
+  virtual bool parseHeaderField(RagTime5StructManager::Field &field, RagTime5Zone &/*zone*/, int n, libmwaw::DebugStream &f)
+  {
+    if (n>=int(m_styleList.size()))
+      m_styleList.resize(size_t(n+1));
+    RagTime5StyleManager::TextStyle &style=m_styleList[size_t(n)];
+    if (style.read(field))
+      f << style;
+    else
+      f << "###" << field;
+    return true;
+  }
   //! parse a field
   virtual bool parseField(RagTime5StructManager::Field &field, RagTime5Zone &/*zone*/, int n, libmwaw::DebugStream &f)
   {
     if (n<=0) {
-      MWAW_DEBUG_MSG(("RagTime5TextInternal::TextFieldParser::parseField: n=%d is bad\n", n));
+      MWAW_DEBUG_MSG(("RagTime5StyleManagerInternal::TextFieldParser::parseField: n=%d is bad\n", n));
       n=0;
     }
     if (n>=int(m_styleList.size()))
@@ -130,7 +182,9 @@ struct TextFieldParser : public RagTime5StructManager::FieldParser {
 //! Internal: the state of a RagTime5Style
 struct State {
   //! constructor
-  State() : m_textStyleList() { }
+  State() : m_graphicStyleList(), m_textStyleList() { }
+  //! the list of graphic styles
+  std::vector<RagTime5StyleManager::GraphicStyle> m_graphicStyleList;
   //! the list of text styles
   std::vector<RagTime5StyleManager::TextStyle> m_textStyleList;
 };
@@ -153,15 +207,150 @@ RagTime5StyleManager::~RagTime5StyleManager()
 ////////////////////////////////////////////////////////////
 bool RagTime5StyleManager::readGraphicColors(RagTime5ClusterManager::Cluster &cluster)
 {
-  RagTime5StyleManagerInternal::GraphicFieldParser fieldParser(RagTime5StyleManagerInternal::GraphicFieldParser::Z_Colors);
+  RagTime5StyleManagerInternal::ColorFieldParser fieldParser;
   return m_mainParser.readStructZone(cluster, fieldParser, 14);
 }
 
 bool RagTime5StyleManager::readGraphicStyles(RagTime5ClusterManager::Cluster &cluster)
 {
-  RagTime5StyleManagerInternal::GraphicFieldParser fieldParser
-  (RagTime5StyleManagerInternal::GraphicFieldParser::Z_Styles);
-  return m_mainParser.readStructZone(cluster, fieldParser, 14);
+  RagTime5StyleManagerInternal::GraphicFieldParser fieldParser;
+  if (!m_mainParser.readStructZone(cluster, fieldParser, 14))
+    return false;
+  if (fieldParser.m_styleList.empty())
+    fieldParser.m_styleList.resize(1);
+
+  //
+  // check parent relation, check for loop, ...
+  //
+  std::vector<size_t> rootList;
+  std::stack<size_t> toCheck;
+  std::multimap<size_t, size_t> idToChildIpMap;
+  size_t numStyles=size_t(fieldParser.m_styleList.size());
+  for (size_t i=0; i<numStyles; ++i) {
+    RagTime5StyleManager::GraphicStyle &style=fieldParser.m_styleList[i];
+    if (style.m_parentId>=0 && style.m_parentId>=(int) numStyles) {
+      MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: find unexpected parent %d for style %d\n",
+                      (int) style.m_parentId, (int) i));
+      style.m_parentId=0;
+      continue;
+    }
+    else if (style.m_parentId>=0) {
+      idToChildIpMap.insert(std::multimap<size_t, size_t>::value_type(size_t(style.m_parentId),i));
+      continue;
+    }
+    rootList.push_back(i);
+    toCheck.push(i);
+  }
+  std::set<size_t> seens;
+  while (true) {
+    size_t posToCheck=0; // to make clang happy
+    if (!toCheck.empty()) {
+      posToCheck=toCheck.top();
+      toCheck.pop();
+    }
+    else if (seens.size()+1==numStyles)
+      break;
+    else {
+      bool ok=false;
+      for (size_t i=1; i<numStyles; ++i) {
+        if (seens.find(i)!=seens.end())
+          continue;
+        MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: find unexpected root %d\n", (int) i));
+        posToCheck=i;
+        rootList.push_back(i);
+
+        RagTime5StyleManager::GraphicStyle &style=fieldParser.m_styleList[i];
+        style.m_parentId=0;
+        ok=true;
+        break;
+      }
+      if (!ok)
+        break;
+    }
+    if (seens.find(posToCheck)!=seens.end()) {
+      MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: oops, %d is already seens\n", (int) posToCheck));
+      continue;
+    }
+    seens.insert(posToCheck);
+    std::multimap<size_t, size_t>::iterator childIt=idToChildIpMap.lower_bound(posToCheck);
+    std::vector<size_t> badChildList;
+    while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+      size_t childId=childIt++->second;
+      if (seens.find(childId)!=seens.end()) {
+        MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: find loop for child %d\n", (int)childId));
+        RagTime5StyleManager::GraphicStyle &style=fieldParser.m_styleList[childId];
+        style.m_parentId=0;
+        badChildList.push_back(childId);
+        continue;
+      }
+      toCheck.push(childId);
+    }
+    for (size_t i=0; i<badChildList.size(); ++i) {
+      childIt=idToChildIpMap.lower_bound(posToCheck);
+      while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+        if (childIt->second==badChildList[i]) {
+          idToChildIpMap.erase(childIt);
+          break;
+        }
+        ++childIt;
+      }
+    }
+  }
+
+  if (!m_state->m_graphicStyleList.empty()) {
+    MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: Ooops, we already set some graphicStyles\n"));
+  }
+
+  // now let generate the final style
+  m_state->m_graphicStyleList.resize(numStyles);
+  seens.clear();
+  for (size_t i=0; i<rootList.size(); ++i) {
+    size_t id=rootList[i];
+    if (id>=numStyles) {
+      MWAW_DEBUG_MSG(("RagTime5StyleManager::readGraphicStyles: find loop for id=%d\n", (int)id));
+      continue;
+    }
+    updateGraphicStyles(id, fieldParser.m_styleList[id], fieldParser.m_styleList, idToChildIpMap, seens);
+  }
+  return true;
+}
+
+void RagTime5StyleManager::updateGraphicStyles
+(size_t id, RagTime5StyleManager::GraphicStyle const &style, std::vector<RagTime5StyleManager::GraphicStyle> const &listReadStyles,
+ std::multimap<size_t, size_t> const &idToChildIpMap, std::set<size_t> &seens)
+{
+  if (id>=m_state->m_graphicStyleList.size() || seens.find(id)!=seens.end()) {
+    MWAW_DEBUG_MSG(("RagTime5StyleManager::updateGraphicStyles: problem with style with id=%d\n", (int)id));
+    return;
+  }
+  seens.insert(id);
+  m_state->m_graphicStyleList[id]=style;
+
+  std::multimap<size_t, size_t>::const_iterator childIt=idToChildIpMap.lower_bound(id);
+  while (childIt!=idToChildIpMap.end() && childIt->first==id) {
+    size_t childId=childIt++->second;
+    if (childId>=listReadStyles.size()) {
+      MWAW_DEBUG_MSG(("RagTime5StyleManager::updateGraphicStyles: problem with style with childId=%d\n", (int)childId));
+      continue;
+    }
+    RagTime5StyleManager::GraphicStyle childStyle=style;
+    childStyle.insert(listReadStyles[childId]);
+    updateGraphicStyles(childId, childStyle, listReadStyles, idToChildIpMap, seens);
+  }
+}
+
+bool RagTime5StyleManager::getLineColor(int gId, MWAWColor &color)
+{
+  if (gId<=0 || gId>=(int) m_state->m_graphicStyleList.size()) {
+    MWAW_DEBUG_MSG(("RagTime5StyleManager::update: can not find graphic style %d\n", gId));
+    return false;
+  }
+  RagTime5StyleManager::GraphicStyle const &style=m_state->m_graphicStyleList[size_t(gId)];
+  color=style.m_colors[0].get();
+  if (style.m_colorsAlpha[0]>=0 && style.m_colorsAlpha[0]<1)
+    color=MWAWColor::barycenter(style.m_colorsAlpha[0],color,1-style.m_colorsAlpha[0],MWAWColor::white());
+
+  return true;
 }
 
 bool RagTime5StyleManager::readTextStyles(RagTime5ClusterManager::Cluster &cluster)
@@ -310,7 +499,7 @@ bool RagTime5StyleManager::update(int tId, MWAWFont &font, MWAWParagraph &para)
   para=MWAWParagraph();
 
   if (tId<=0 || tId>=(int) m_state->m_textStyleList.size()) {
-    MWAW_DEBUG_MSG(("RagTime5StyleManager::update:l can not find text style %d\n", tId));
+    MWAW_DEBUG_MSG(("RagTime5StyleManager::update: can not find text style %d\n", tId));
     return false;
   }
   RagTime5StyleManager::TextStyle const &style=m_state->m_textStyleList[size_t(tId)];
@@ -371,7 +560,13 @@ bool RagTime5StyleManager::update(int tId, MWAWFont &font, MWAWParagraph &para)
       font.setLanguage(lang);
   }
   font.setFlags(flags);
+  MWAWColor color;
+  if (style.m_graphStyleId>0 && getLineColor(style.m_graphStyleId, color))
+    font.setColor(color);
 
+  //
+  // para
+  //
   if (style.m_keepWithNext.isSet() && *style.m_keepWithNext)
     para.m_breakStatus = para.m_breakStatus.get()|MWAWParagraph::NoBreakWithNextBit;
   switch (style.m_justify) {
@@ -450,7 +645,25 @@ bool RagTime5StyleManager::update(int tId, MWAWFont &font, MWAWParagraph &para)
 bool RagTime5StyleManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTime5StructManager::Field const &field)
 {
   std::stringstream s;
-  if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
+  if (field.m_type==RagTime5StructManager::Field::T_Long) { // header
+    switch (field.m_fileType) {
+    case 0x1460042: // -3-23
+    case 0x148c042: // -2<->8
+      if (field.m_longValue[0])
+        s << "H" << std::hex << field.m_fileType << std::dec << "=" << field.m_longValue[0] << ",";
+      else
+        s << "H" << std::hex << field.m_fileType << std::dec << ",";
+      m_extra+=s.str();
+      return true;
+    case 0x145e042: // -2<->24 : CHECKME related to parent id?
+    case 0x1489842: // -2<->19
+      m_parentId=(int) field.m_longValue[0];
+      return true;
+    default:
+      return false;
+    }
+  }
+  else if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
     switch (field.m_fileType) {
     case 0x7d02a:
     case 0x145e05a: {
@@ -486,6 +699,10 @@ bool RagTime5StyleManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTime
       for (size_t i=0; i<field.m_fieldList.size(); ++i) {
         RagTime5StructManager::Field const &child=field.m_fieldList[i];
         if (child.m_type==RagTime5StructManager::Field::T_Long && child.m_fileType==0x147c080) {
+          if (m_parentId>-1000) {
+            MWAW_DEBUG_MSG(("RagTime5StyleManager::GraphicStyle::read: parent id is already set\n"));
+            s << "###newParentId,";
+          }
           m_parentId=(int) child.m_longValue[0];
           continue;
         }
@@ -713,25 +930,56 @@ bool RagTime5StyleManager::GraphicStyle::read(MWAWInputStreamPtr &input, RagTime
   return false;
 }
 
+void RagTime5StyleManager::GraphicStyle::insert(RagTime5StyleManager::GraphicStyle const &childStyle)
+{
+  if (childStyle.m_width>=0) m_width=childStyle.m_width;
+  if (childStyle.m_colors[0].isSet()) m_colors[0]=*childStyle.m_colors[0];
+  if (childStyle.m_colors[1].isSet()) m_colors[1]=*childStyle.m_colors[1];
+  for (int i=0; i<2; ++i) {
+    if (childStyle.m_colorsAlpha[i]>=0)
+      m_colorsAlpha[i]=childStyle.m_colorsAlpha[i];
+  }
+  if (childStyle.m_dash.isSet()) m_dash=childStyle.m_dash;
+  if (childStyle.m_pattern) m_pattern=childStyle.m_pattern;
+  if (childStyle.m_gradient>=0) m_gradient=childStyle.m_gradient;
+  if (childStyle.m_gradientRotation>-1000) m_gradientRotation=childStyle.m_gradientRotation;
+  if (childStyle.m_gradientCenter.isSet()) m_gradientCenter=childStyle.m_gradientCenter;
+  if (childStyle.m_position>=0) m_position=childStyle.m_position;
+  if (childStyle.m_cap>=0) m_cap=childStyle.m_cap;
+  if (childStyle.m_mitter>=0) m_mitter=childStyle.m_mitter;
+  if (childStyle.m_limitPercent>=0) m_limitPercent=childStyle.m_limitPercent;
+  if (childStyle.m_hidden.isSet()) m_hidden=childStyle.m_hidden;
+  m_extra+=childStyle.m_extra;
+}
+
 std::ostream &operator<<(std::ostream &o, RagTime5StyleManager::GraphicStyle const &style)
 {
-  if (style.m_parentId>=0) o << "parent=GS" << style.m_parentId << ",";
+  if (style.m_parentId>-1000) {
+    if (style.m_parentId==-3)
+      o << "parent=def3,";
+    else if (style.m_parentId==-2)
+      o << "parent=def2,";
+    else
+      o << "parent=GS" << style.m_parentId << ",";
+  }
   if (style.m_width>=0) o << "w=" << style.m_width << ",";
-  if (!style.m_colors[0].isBlack()) o << "color0=" << style.m_colors[0] << ",";
-  if (!style.m_colors[1].isWhite()) o << "color1=" << style.m_colors[1] << ",";
+  if (style.m_colors[0].isSet()) o << "color0=" << *style.m_colors[0] << ",";
+  if (style.m_colors[1].isSet()) o << "color1=" << *style.m_colors[1] << ",";
   for (int i=0; i<2; ++i) {
-    if (style.m_colorsAlpha[i]<1)
+    if (style.m_colorsAlpha[i]>=0)
       o << "color" << i << "[alpha]=" << style.m_colorsAlpha[i] << ",";
   }
-  if (!style.m_dash.empty()) {
+  if (style.m_dash.isSet()) {
     o << "dash=";
-    for (size_t i=0; i<style.m_dash.size(); ++i)
-      o << style.m_dash[i] << ":";
+    for (size_t i=0; i<style.m_dash->size(); ++i)
+      o << (*style.m_dash)[i] << ":";
     o << ",";
   }
   if (style.m_pattern)
     o << "pattern=[" << *style.m_pattern << "],";
   switch (style.m_gradient) {
+  case -1:
+    break;
   case 0:
     break;
   case 1:
@@ -744,11 +992,13 @@ std::ostream &operator<<(std::ostream &o, RagTime5StyleManager::GraphicStyle con
     o<< "##gradient=" << style.m_gradient;
     break;
   }
-  if (style.m_gradientRotation<0 || style.m_gradientRotation>0)
+  if (style.m_gradientRotation>-1000 && (style.m_gradientRotation<0 || style.m_gradientRotation>0))
     o << "rot[grad]=" << style.m_gradientRotation << ",";
-  if (style.m_gradientCenter!=MWAWVec2f(0.5f,0.5f))
-    o << "center[grad]=" << style.m_gradientCenter << ",";
+  if (style.m_gradientCenter.isSet())
+    o << "center[grad]=" << *style.m_gradientCenter << ",";
   switch (style.m_position) {
+  case -1:
+    break;
   case 1:
     o << "pos[inside],";
     break;
@@ -765,6 +1015,8 @@ std::ostream &operator<<(std::ostream &o, RagTime5StyleManager::GraphicStyle con
     break;
   }
   switch (style.m_cap) {
+  case -1:
+    break;
   case 1: // triangle
     break;
   case 2:
@@ -778,6 +1030,8 @@ std::ostream &operator<<(std::ostream &o, RagTime5StyleManager::GraphicStyle con
     break;
   }
   switch (style.m_mitter) {
+  case -1:
+    break;
   case 1: // no add
     break;
   case 2:
@@ -790,9 +1044,9 @@ std::ostream &operator<<(std::ostream &o, RagTime5StyleManager::GraphicStyle con
     o << "#mitter=" << style.m_mitter << ",";
     break;
   }
-  if (style.m_limitPercent<1||style.m_limitPercent>1)
+  if (style.m_limitPercent>=0 && style.m_limitPercent<1)
     o << "limit=" << 100*style.m_limitPercent << "%";
-  if (style.m_hidden)
+  if (style.m_hidden.get())
     o << "hidden,";
   o << style.m_extra;
   return o;
@@ -857,7 +1111,28 @@ std::string RagTime5StyleManager::TextStyle::getLanguageLocale(int id)
 bool RagTime5StyleManager::TextStyle::read(RagTime5StructManager::Field const &field)
 {
   std::stringstream s;
-  if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
+  if (field.m_type==RagTime5StructManager::Field::T_Long) { // header
+    switch (field.m_fileType) {
+    case 0: // one time with 0
+      return true;
+    case 0x1475042: // -3<->32 : ?
+    case 0x147e842: // always 0?
+    case 0x14b2042: // always 0?
+      if (field.m_longValue[0])
+        s << "H" << std::hex << field.m_fileType << std::dec << "=" << field.m_longValue[0] << ",";
+      else
+        s << "H" << std::hex << field.m_fileType << std::dec << ",";
+      m_extra+=s.str();
+      return true;
+    case 0x1474042: // -1<->39 : CHECKME related to parent id?
+      s << "parent[id]?=" << field.m_longValue[0] << ",";
+      m_extra+=s.str();
+      return true;
+    default:
+      return false;
+    }
+  }
+  else if (field.m_type==RagTime5StructManager::Field::T_FieldList) {
     switch (field.m_fileType) {
     case 0x7a0aa: // style parent id?
     case 0x1474042: { // main parent id?

@@ -1875,6 +1875,7 @@ bool RagTime5Parser::readStructData(RagTime5Zone &zone, long endPos, int n, int 
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
   std::string const zoneName=parser.getZoneName(n);
+  int m=0;
   if (headerSz) {
     f << zoneName << "[A]:";
     if (!dataName.empty()) f << dataName.cstr() << ",";
@@ -1885,9 +1886,12 @@ bool RagTime5Parser::readStructData(RagTime5Zone &zone, long endPos, int n, int 
       f << "f1=" << std::hex << input->readULong(2) << std::dec << ",";
       val=(int) input->readLong(2); // sometimes form an increasing sequence but not always
       if (val!=n) f << "id=" << val << ",";
-      f << "type=" << std::hex << input->readULong(4) << std::dec << ","; // 0 or 0x14[5-b][0-f][08]42 or 17d5042
-      val=(int) input->readLong(2); // small number
-      if (val) f << "f3=" << val << ",";
+
+      RagTime5StructManager::Field field;
+      field.m_fileType=(long) input->readULong(4);
+      field.m_type=RagTime5StructManager::Field::T_Long;
+      field.m_longValue[0]=input->readLong(2);
+      parser.parseHeaderField(field, zone, n, f);
     }
     else if (headerSz==8) {
       val=(int) input->readLong(2);
@@ -1917,7 +1921,6 @@ bool RagTime5Parser::readStructData(RagTime5Zone &zone, long endPos, int n, int 
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
   }
-  int m=0;
   pos=input->tell();
   if (parser.m_regroupFields) {
     f.str("");
