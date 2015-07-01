@@ -1828,9 +1828,11 @@ bool RagTime5Parser::readStructMainZone(RagTime5Zone &zone)
     long pos=input->tell();
     RagTime5StructManager::Field field;
     long type=(long) input->readULong(4);
-    if (n==0 && type==0x5a610600) {
+    if (n==0 && type==0x5a610600) { // rare, 3 can be good in one file and 1 bad, so...
       MWAW_DEBUG_MSG(("RagTime5Parser::readStructMainZone: endian seems bad, reverts it\n"));
       input->setReadInverted(zone.m_hiLoEndian);
+      ascFile.addPos(pos);
+      ascFile.addNote("###badEndian,");
       type=0x6615a;
     }
     int fSz=(int) input->readULong(1);

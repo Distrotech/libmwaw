@@ -183,8 +183,12 @@ public:
                              MWAWGraphicStyle const &frameStyle=MWAWGraphicStyle::emptyStyle()) = 0;
   /** low level: tries to open a frame */
   virtual bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle()) = 0;
-  /** low level: tries to close the last open frame */
+  /** low level: tries to close the last opened frame */
   virtual void closeFrame() = 0;
+  /** low level: tries to open a group */
+  virtual bool openGroup(MWAWPosition const &pos) = 0;
+  /** low level: tries to close the last opened group */
+  virtual void closeGroup() = 0;
   /** low level: function called to add a subdocument */
   virtual void handleSubDocument(MWAWSubDocumentPtr subDocument, libmwaw::SubDocumentType subDocumentType) = 0;
   /** returns true if a subdocument is open  */

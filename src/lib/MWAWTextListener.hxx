@@ -93,6 +93,10 @@ public:
   bool openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style=MWAWGraphicStyle::emptyStyle());
   /** tries to close the last open frame */
   void closeFrame();
+  /** open a group */
+  bool openGroup(MWAWPosition const &pos);
+  /** close a group */
+  void closeGroup();
 
   /** returns true if we can add text data */
   bool canWriteText() const

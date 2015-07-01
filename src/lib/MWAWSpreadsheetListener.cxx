@@ -1163,6 +1163,16 @@ void MWAWSpreadsheetListener::insertPicture
 ///////////////////
 // frame
 ///////////////////
+bool MWAWSpreadsheetListener::openGroup(MWAWPosition const &/*pos*/)
+{
+  MWAW_DEBUG_MSG(("MWAWSpreadsheetListener::openGroup is not implemented\n"));
+  return false;
+}
+
+void MWAWSpreadsheetListener::closeGroup()
+{
+}
+
 bool MWAWSpreadsheetListener::openFrame(MWAWPosition const &pos, MWAWGraphicStyle const &style)
 {
   if (!m_ds->m_isSheetOpened || m_ds->m_isSheetRowOpened) {

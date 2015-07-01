@@ -57,8 +57,8 @@ namespace RagTime5GraphInternal
 {
 struct ClusterGraphic;
 
+struct Shape;
 struct State;
-struct StyleFieldParser;
 
 class SubDocument;
 }
@@ -130,7 +130,7 @@ protected:
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
   //! try to read a graphic
-  bool readGraphic(RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
+  bool readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
 
   //! try to read a graphic transformations zone
   bool readGraphicTransformations(RagTime5ClusterManager::Link const &link);
@@ -144,8 +144,10 @@ protected:
 
   //! try to send the cluster zone
   bool send(int zoneId);
-  //! try to send the cluster zone
+  //! try to send the shapes of cluster zone
   bool send(RagTime5GraphInternal::ClusterGraphic &cluster);
+  //! try to send a shape of cluster zone
+  bool send(RagTime5GraphInternal::Shape const &shape, RagTime5GraphInternal::ClusterGraphic const &cluster);
 
 
 private:

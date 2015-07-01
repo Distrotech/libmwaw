@@ -130,6 +130,8 @@ struct State {
   bool m_isFrameOpened;
   bool m_isPageSpanBreakDeferred;
   bool m_isHeaderFooterWithoutParagraph;
+  //! a flag to know if openGroup was called
+  bool m_isGroupOpened;
 
   bool m_isSpanOpened;
   bool m_isParagraphOpened;
@@ -175,6 +177,7 @@ State::State() :
   m_isPageSpanOpened(false), m_isSectionOpened(false), m_isFrameOpened(false),
   m_isPageSpanBreakDeferred(false),
   m_isHeaderFooterWithoutParagraph(false),
+  m_isGroupOpened(false),
 
   m_isSpanOpened(false), m_isParagraphOpened(false), m_isListElementOpened(false),
 
@@ -1323,6 +1326,65 @@ void MWAWTextListener::closeFrame()
   }
   m_documentInterface->closeFrame();
   m_ps->m_isFrameOpened = false;
+}
+
+bool MWAWTextListener::openGroup(MWAWPosition const &pos)
+{
+  if (!m_ds->m_isDocumentStarted) {
+    MWAW_DEBUG_MSG(("MWAWTextListener::openGroup: the document is not started\n"));
+    return false;
+  }
+  if (m_ps->m_isTableOpened) {
+    MWAW_DEBUG_MSG(("MWAWTextListener::openGroup: called in table or in a text zone\n"));
+    return false;
+  }
+
+  // now check that the anchor is coherent with the actual state
+  switch (pos.m_anchorTo) {
+  case MWAWPosition::Page:
+    break;
+  case MWAWPosition::Paragraph:
+    if (m_ps->m_isParagraphOpened)
+      _flushText();
+    else
+      _openParagraph();
+    break;
+  case MWAWPosition::Unknown:
+  default:
+    MWAW_DEBUG_MSG(("MWAWTextListener::openGroup: UNKNOWN position, insert as char position\n"));
+  // fallthrough intended
+  case MWAWPosition::CharBaseLine:
+  case MWAWPosition::Char:
+    if (m_ps->m_isSpanOpened)
+      _flushText();
+    else
+      _openSpan();
+    break;
+  case MWAWPosition::Frame:
+    break;
+  }
+
+  librevenge::RVNGPropertyList propList;
+  _handleFrameParameters(propList, pos);
+
+  _pushParsingState();
+  _startSubDocument();
+  m_ps->m_isGroupOpened = true;
+
+  m_documentInterface->openGroup(propList);
+
+  return true;
+}
+
+void  MWAWTextListener::closeGroup()
+{
+  if (!m_ps->m_isGroupOpened) {
+    MWAW_DEBUG_MSG(("MWAWTextListener::closeGroup: called but no group is already opened\n"));
+    return;
+  }
+  m_documentInterface->closeGroup();
+  _endSubDocument();
+  _popParsingState();
 }
 
 void MWAWTextListener::_handleFrameParameters

@@ -37,6 +37,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <stack>
 #include <sstream>
 
 #include <librevenge/librevenge.h>
@@ -198,12 +199,120 @@ struct FloatParser : public RagTime5StructManager::DataParser {
 struct Shape {
   //! the different shape
   enum Type { S_Line, S_Rect, S_RectOval, S_Circle, S_Pie, S_Arc, S_Polygon, S_Spline, S_RegularPoly, S_TextBox, S_Group, S_Unknown };
+  //! constructor
+  Shape() : m_id(0), m_parentId(0), m_type(S_Unknown), m_dimension(), m_shape(), m_childIdList(),
+    m_flags(0), m_borderId(0), m_graphicId(0), m_transformId(0), m_extra("")
+  {
+  }
+  //! return the shape bdbox
+  MWAWBox2f getBdBox() const
+  {
+    return (m_type==S_TextBox || m_type==S_Group || m_type==S_Unknown) ? m_dimension : m_shape.getBdBox();
+  }
+
+  //! operator<<
+  friend std::ostream &operator<<(std::ostream &o, Shape const &shape);
+  //! the shape id
+  int m_id;
+  //! the shape parent id
+  int m_parentId;
+  //! the shape type
+  Type m_type;
+  //! the dimension
+  MWAWBox2f m_dimension;
+  //! the graphic shape
+  MWAWGraphicShape m_shape;
+  //! the child list (for group)
+  std::vector<int> m_childIdList;
+  //! the shape flag
+  uint32_t m_flags;
+  //! the border id
+  int m_borderId;
+  //! the graphic id
+  int m_graphicId;
+  //! the transformation id
+  int m_transformId;
+  //! extra data
+  std::string m_extra;
 };
 
+std::ostream &operator<<(std::ostream &o, Shape const &shape)
+{
+  if (shape.m_id) o << "id=" << shape.m_id << ",";
+  if (shape.m_parentId) o << "id[parent]=" << shape.m_parentId << ",";
+  if (!shape.m_childIdList.empty()) {
+    o << "child[id]=[";
+    for (size_t i=0; i<shape.m_childIdList.size(); ++i)
+      o << shape.m_childIdList[i] << ",";
+    o << "],";
+  }
+  switch (shape.m_type) {
+  case Shape::S_Rect:
+    o << "rect,";
+    break;
+  case Shape::S_RectOval:
+    o << "rectoval,";
+    break;
+  case Shape::S_Circle:
+    o << "circle,";
+    break;
+  case Shape::S_Pie:
+    o << "pie,";
+    break;
+  case Shape::S_Arc:
+    o << "arc,";
+    break;
+  case Shape::S_Group:
+    o << "group,";
+    break;
+  case Shape::S_Line:
+    o << "line,";
+    break;
+  case Shape::S_Polygon:
+    o << "poly,";
+    break;
+  case Shape::S_Spline:
+    o << "spline,";
+    break;
+  case Shape::S_TextBox:
+    o << "textbox,";
+    break;
+  case Shape::S_RegularPoly:
+    o << "poly[regular],";
+    break;
+  // also b and c
+  case Shape::S_Unknown:
+  default:
+    break;
+  }
+  o << "dim=" << shape.m_dimension << ",";
+  uint32_t fl=shape.m_flags;
+  if (fl&1) o << "arrow[beg],";
+  if (fl&2) o << "arrow[end],";
+  if (fl&0x8) o << "hasTransf,";
+  if (fl&0x40) o << "text[flowArround],";
+  if (fl&0x200) o << "fixed,";
+  if (fl&0x400) o << "hasName,";
+  if (fl&0x800) o << "hasDist[bordTB],";
+  if (fl&0x1000) o << "hasDist[flowTB],";
+  if ((fl&0x4000)==0) o << "noPrint,";
+  if (fl&0x8000) o << "hasDist[bordLR],";
+  if (fl&0x10000) o << "hasDist[flowLR],";
+  if (fl&0x40000) o << "protected,";
+  if (fl&0x100000) o << "hasBorder,"; // checkme, maybe related to link data
+  fl &= 0xFFEA21B4;
+  if (fl) o << "flags=" << std::hex << fl << std::dec << ",";
+  if (shape.m_borderId) o << "border[id]=GS" << shape.m_borderId << ",";
+  if (shape.m_graphicId) o << "GS" << shape.m_graphicId << ",";
+  if (shape.m_transformId) o << "GT" << shape.m_transformId << ",";
+  o << shape.m_extra;
+  return o;
+}
 //! the shape cluster
 struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks(), m_dimensionLinks()
+  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks(), m_dimensionLinks(),
+    m_idToShapeMap(), m_rootIdList()
   {
   }
   //! destructor
@@ -214,6 +323,10 @@ struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
   std::vector<RagTime5ClusterManager::Link> m_dimensionLinks;
   //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10), fixedSize=8
   RagTime5ClusterManager::Link m_clusterLinks[3];
+  //! the shape list
+  std::map<int, shared_ptr<Shape> > m_idToShapeMap;
+  //! the root id list
+  std::vector<int> m_rootIdList;
 };
 
 //! the picture cluster
@@ -227,6 +340,8 @@ struct ClusterPicture : public RagTime5ClusterManager::Cluster {
   //! cluster links list of size 28
   RagTime5ClusterManager::Link m_clusterLink;
 };
+
+
 
 ////////////////////////////////////////
 //! Internal: the state of a RagTime5Graph
@@ -516,7 +631,8 @@ bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluste
 ////////////////////////////////////////////////////////////
 // graphic zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, librevenge::RVNGString const &dataName)
+bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &zone,
+                                long endPos, int n, librevenge::RVNGString const &dataName)
 {
   MWAWInputStreamPtr input=zone.getInput();
   long pos=input->tell();
@@ -532,79 +648,51 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     ascFile.addNote(f.str().c_str());
     return false;
   }
-  unsigned int fl=(unsigned int) input->readULong(4);
-  if (fl&1) f << "arrow[beg],";
-  if (fl&2) f << "arrow[end],";
-  if (fl&0x8)
-    f << "hasTransf,";
-  if (fl&0x40)
-    f << "text[flowArround],";
-  if (fl&0x200) f << "fixed,";
-  if (fl&0x400) f << "hasName,";
-  if (fl&0x800) f << "hasDist[bordTB],";
-  if (fl&0x1000) f << "hasDist[flowTB],";
-  if ((fl&0x4000)==0) f << "noPrint,";
-  if (fl&0x8000) f << "hasDist[bordLR],";
-  if (fl&0x10000) f << "hasDist[flowLR],";
-  if (fl&0x40000) f << "protected,";
-  if (fl&0x100000) f << "hasBorder,"; // checkme, maybe related to link data
-  fl &= 0xFFEA21B4;
-  if (fl) f << "fl1=" << std::hex << fl << std::dec << ",";
+  shared_ptr<RagTime5GraphInternal::Shape> shape(new RagTime5GraphInternal::Shape);
+  shape->m_flags=(uint32_t) input->readULong(4);
+  f.str("");
   int val;
   for (int i=0; i<7; ++i) { // f1[order?]=0..5c, f3=0..16, f5=0..45, f6=0..58
     val=(int) input->readLong(2);
     if (!val) continue;
     if (i==1)
-      f << "order?=" << val << ",";
+      shape->m_id=val;
+    else if (i==5)
+      shape->m_parentId=val;
     else if (i==6)
       f << "linkTo=" << val << ",";
-    else
-      f << "f" << i << "=" << val << ",";
   }
   val=(int) input->readLong(2);
-  RagTime5GraphInternal::Shape::Type type=m_state->getShapeType(val);
+  shape->m_type=m_state->getShapeType(val);
   int typeFieldSize=8;
-  switch (type) {
+  switch (shape->m_type) {
+  case RagTime5GraphInternal::Shape::S_Line:
   case RagTime5GraphInternal::Shape::S_Rect:
-    f << "rect,";
+  case RagTime5GraphInternal::Shape::S_Circle:
     break;
   case RagTime5GraphInternal::Shape::S_RectOval:
     typeFieldSize+=8;
-    f << "rectoval,";
-    break;
-  case RagTime5GraphInternal::Shape::S_Circle:
-    f << "circle,";
     break;
   case RagTime5GraphInternal::Shape::S_Pie:
     typeFieldSize+=10;
-    f << "pie,";
     break;
   case RagTime5GraphInternal::Shape::S_Arc:
     typeFieldSize+=10;
-    f << "arc,";
     break;
   case RagTime5GraphInternal::Shape::S_Group:
     typeFieldSize=6;
-    f << "group,";
-    break;
-  case RagTime5GraphInternal::Shape::S_Line:
-    f << "line,";
     break;
   case RagTime5GraphInternal::Shape::S_Polygon:
     typeFieldSize=10;
-    f << "poly,";
     break;
   case RagTime5GraphInternal::Shape::S_Spline:
     typeFieldSize=18;
-    f << "spline,";
     break;
   case RagTime5GraphInternal::Shape::S_TextBox:
     typeFieldSize+=4;
-    f << "textbox,";
     break;
   case RagTime5GraphInternal::Shape::S_RegularPoly:
     typeFieldSize=16;
-    f << "poly[regular],";
     break;
   // also b and c
   case RagTime5GraphInternal::Shape::S_Unknown:
@@ -615,54 +703,98 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     else
       f << "type=" << std::hex << m_state->m_shapeTypeIdVector[size_t(val-1)] << std::dec << ",";
   }
-  val=(int) input->readLong(2);
-  if (val)
-    f << "trans[id]=GT" << val << ",";
-  val=(int) input->readLong(2);
-  if (val)
-    f << "surf[id]=GS" << val << ",";
+  shape->m_transformId=(int) input->readLong(2);
+  shape->m_graphicId=(int) input->readLong(2);
+  if (!dataName.empty())
+    f << "\"" << dataName.cstr() << "\",";
   float dim[4];
   for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-  f << "dim=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
+  shape->m_dimension=MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
   long dataPos=input->tell();
-  if (fl&0xFF) {
-    val=(int) input->readLong(2);
-    if (val)
-      f << "border[id]=GS" << val << ",";
-  }
+  if (shape->m_flags&0xB4)
+    shape->m_borderId=(int) input->readLong(2);
+
   if (input->tell()+typeFieldSize>endPos) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: the data size seems too short\n"));
     f << "###sz,";
+
+    shape->m_extra=f.str();
+    f.str("");
+    f << "GraphData-" << n << ":";
+    f << *shape;
     input->seek(dataPos, librevenge::RVNG_SEEK_SET);
     ascFile.addDelimiter(input->tell(),'|');
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
     return false;
   }
+
   bool ok=true;
-  if (type!=RagTime5GraphInternal::Shape::S_Polygon && type!=RagTime5GraphInternal::Shape::S_RegularPoly
-      && type!=RagTime5GraphInternal::Shape::S_Spline && type!=RagTime5GraphInternal::Shape::S_Group) {
+  MWAWBox2f box2;
+  if (shape->m_type!=RagTime5GraphInternal::Shape::S_Polygon && shape->m_type!=RagTime5GraphInternal::Shape::S_RegularPoly
+      && shape->m_type!=RagTime5GraphInternal::Shape::S_Spline && shape->m_type!=RagTime5GraphInternal::Shape::S_Group) {
     for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-    if ((dim[2]<=dim[0] || dim[3]<=dim[1]) && type != RagTime5GraphInternal::Shape::S_Line) {
+    if ((dim[2]<=dim[0] || dim[3]<=dim[1]) && shape->m_type != RagTime5GraphInternal::Shape::S_Line) {
       f << "###";
       ok=false;
     }
-    f << "dim2=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
+    box2=MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3]));
+    f << "box2=" << box2 << ",";
   }
-  switch (type) {
+  switch (shape->m_type) {
   case RagTime5GraphInternal::Shape::S_Rect:
+    shape->m_shape=MWAWGraphicShape::rectangle(box2);
+    break;
   case RagTime5GraphInternal::Shape::S_Circle:
+    shape->m_shape=MWAWGraphicShape::circle(box2);
+    break;
   case RagTime5GraphInternal::Shape::S_Line:
+    shape->m_shape=MWAWGraphicShape::line(box2[0], box2[1]);
     break;
-  case RagTime5GraphInternal::Shape::S_RectOval:
-    f << "round=" << float(input->readLong(4))/65536.f << "x" << float(input->readLong(4))/65536.f << ",";
+  case RagTime5GraphInternal::Shape::S_RectOval: {
+    for (int i=0; i<2; ++i) dim[i]=float(input->readLong(4))/65536.f;
+    MWAWVec2f corner=MWAWVec2f(dim[1],dim[0]);
+    f << "round=" << corner << ",";
+    shape->m_shape=MWAWGraphicShape::rectangle(box2, corner);
     break;
+  }
   case RagTime5GraphInternal::Shape::S_Arc:
-  case RagTime5GraphInternal::Shape::S_Pie:
-    f << "angle=" << 360.f *float(input->readLong(4))/65536.f << "x" << 360.f *float(input->readLong(4))/65536.f << ",";
+  case RagTime5GraphInternal::Shape::S_Pie: {
+    float fileAngle[2];
+    for (int i=0; i<2; ++i) fileAngle[i]=360.f *float(input->readLong(4))/65536.f;
+    f << "angle=" << fileAngle[0] << "x" << fileAngle[0]+fileAngle[1] << ",";
+    if (fileAngle[1]<0) {
+      fileAngle[0]+=fileAngle[1];
+      fileAngle[1]*=-1;
+    }
+    float angle[2] = { 90-fileAngle[0]-fileAngle[1], 90-fileAngle[0] };
+    if (angle[1]>360) {
+      int numLoop=int(angle[1]/360)-1;
+      angle[0]-=float(numLoop*360);
+      angle[1]-=float(numLoop*360);
+      while (angle[1] > 360) {
+        angle[0]-=360;
+        angle[1]-=360;
+      }
+    }
+    if (angle[0] < -360) {
+      int numLoop=int(angle[0]/360)+1;
+      angle[0]-=float(numLoop*360);
+      angle[1]-=float(numLoop*360);
+      while (angle[0] < -360) {
+        angle[0]+=360;
+        angle[1]+=360;
+      }
+    }
+    if (shape->m_type==RagTime5GraphInternal::Shape::S_Arc)
+      shape->m_shape=MWAWGraphicShape::arc(shape->m_dimension, box2, MWAWVec2f(angle[0],angle[1]));
+    else
+      shape->m_shape=MWAWGraphicShape::pie(shape->m_dimension, box2, MWAWVec2f(angle[0],angle[1]));
+
     val=(int) input->readLong(2);
     if (val) f << "h1=" << val << ",";
     break;
+  }
   case RagTime5GraphInternal::Shape::S_TextBox:
     val=(int) input->readLong(2);
     if (val!=0x400) // always 400?
@@ -674,7 +806,7 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
   case RagTime5GraphInternal::Shape::S_RegularPoly:
   case RagTime5GraphInternal::Shape::S_Spline: {
     long actPos=input->tell();
-    bool isSpline=type==RagTime5GraphInternal::Shape::S_Spline;
+    bool isSpline=shape->m_type==RagTime5GraphInternal::Shape::S_Spline;
     if (actPos+10+(isSpline ? 8 : 0)>endPos) {
       MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: can not read the polygon data\n"));
       break;
@@ -683,11 +815,12 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     if (val) f << "h1=" << val << ",";
     if (isSpline) {
       for (int i=0; i<4; ++i) dim[i]=float(input->readLong(4))/65536.f;
-      if ((dim[2]<=dim[0] || dim[3]<=dim[1]) && type != RagTime5GraphInternal::Shape::S_Line) {
+      if ((dim[2]<=dim[0] || dim[3]<=dim[1]) && shape->m_type != RagTime5GraphInternal::Shape::S_Line) {
         f << "###";
         ok=false;
       }
       f << "dim2=" << MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) << ",";
+      shape->m_shape.m_bdBox=ok ? MWAWBox2f(MWAWVec2f(dim[0],dim[1]), MWAWVec2f(dim[2],dim[3])) : shape->m_dimension;
     }
     for (int i=0; i<2; ++i) { // h2=0|1
       val=(int) input->readLong(2);
@@ -695,17 +828,55 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     }
     int N=(int) input->readULong(4);
     actPos=input->tell();
-    if (actPos+N*8+(type==RagTime5GraphInternal::Shape::S_RegularPoly ? 6 : 0)>endPos) {
+    if (actPos+N*8+(shape->m_type==RagTime5GraphInternal::Shape::S_RegularPoly ? 6 : 0)>endPos) {
       MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: can not read the polygon number of points\n"));
       f << "#N=" << N << ",";
       ok=false;
       break;
     }
-    f << "pts=[";
-    for (int i=0; i<N; ++i)
-      f << float(input->readLong(4))/65536.f << "x" << float(input->readLong(4))/65536.f << ",";
-    f << "],";
-    if (type!=RagTime5GraphInternal::Shape::S_RegularPoly)
+
+    if (shape->m_type!=RagTime5GraphInternal::Shape::S_Spline) {
+      shape->m_shape.m_type = MWAWGraphicShape::Polygon;
+      std::vector<MWAWVec2f> &vertices=shape->m_shape.m_vertices;
+      f << "pts=[";
+      MWAWBox2f box;
+      for (int i=0; i<N; ++i) {
+        float coord[2];
+        for (int j=0; j<2; ++j) coord[j]= float(input->readLong(4))/65536.f;
+        MWAWVec2f pt(coord[0],coord[1]);
+        if (i==0)
+          box=MWAWBox2f(pt, pt);
+        else
+          box=box.getUnion(MWAWBox2f(pt,pt));
+        vertices.push_back(pt);
+        f << pt << ",";
+      }
+      shape->m_shape.m_bdBox=box;
+      f << "],";
+    }
+    else {
+      f << "pts=[";
+      std::vector<MWAWVec2f> points;
+      for (int i=0; i<N; ++i) {
+        float coord[2];
+        for (int j=0; j<2; ++j) coord[j]= float(input->readLong(4))/65536.f;
+        MWAWVec2f pt(coord[0],coord[1]);
+        points.push_back(pt);
+        f << pt << ",";
+      }
+      f << "],";
+      if (N%3!=1) {
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: the number of points seems odd\n"));
+        f << "#N=" << N << ",";
+        break;
+      }
+      shape->m_shape.m_type=MWAWGraphicShape::Path;
+      std::vector<MWAWGraphicShape::PathData> &path=shape->m_shape.m_path;
+      path.push_back(MWAWGraphicShape::PathData('M', points[0],  points[0], points[0]));
+      for (size_t i=0; i<size_t(N/3); ++i)
+        path.push_back(MWAWGraphicShape::PathData('C', points[3*i+3], points[3*i+1], points[3*i+2]));
+    }
+    if (shape->m_type!=RagTime5GraphInternal::Shape::S_RegularPoly)
       break;
     // the number of points with define a regular polygon
     f << "N=" << input->readLong(2) << ",";
@@ -726,10 +897,8 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
       ok=false;
       break;
     }
-    f << "child=[";
     for (int i=0; i<N; ++i)
-      f << input->readLong(4) << ",";
-    f << "],";
+      shape->m_childIdList.push_back((int) input->readLong(4));
     break;
   }
   case RagTime5GraphInternal::Shape::S_Unknown:
@@ -737,6 +906,26 @@ bool RagTime5Graph::readGraphic(RagTime5Zone &zone, long endPos, int n, libreven
     ok=false;
     break;
   }
+
+  shape->m_extra=f.str();
+  f.str("");
+  f << "GraphData-" << n << ":";
+  f << *shape;
+
+  if (shape->m_id==0) {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: checkme: find some shape with no id\n"));
+      first=false;
+    }
+    f << "#noId,";
+  }
+  else if (cluster.m_idToShapeMap.find(shape->m_id)!=cluster.m_idToShapeMap.end()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: shape %d already exist\n", shape->m_id));
+    f << "###duplicatedId,";
+  }
+  else
+    cluster.m_idToShapeMap[shape->m_id]=shape;
   ascFile.addPos(pos);
   ascFile.addNote(f.str().c_str());
   return ok;
@@ -1167,6 +1356,11 @@ bool RagTime5Graph::readPictureMatch(RagTime5Zone &zone, bool color)
 ////////////////////////////////////////////////////////////
 void RagTime5Graph::flushExtra()
 {
+  if (!m_parserState->getMainListener()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: can not find the listener\n"));
+    return;
+  }
+
   std::map<int, shared_ptr<RagTime5GraphInternal::ClusterGraphic> >::iterator it;
   for (it=m_state->m_idGraphicMap.begin(); it!=m_state->m_idGraphicMap.end(); ++it) {
     if (!it->second || it->second->m_isSent)
@@ -1180,12 +1374,67 @@ void RagTime5Graph::flushExtra()
   }
 }
 
-bool RagTime5Graph::send(RagTime5GraphInternal::ClusterGraphic &/*cluster*/)
+bool RagTime5Graph::send(RagTime5GraphInternal::Shape const &shape, RagTime5GraphInternal::ClusterGraphic const &cluster)
 {
-  static bool first=true;
-  if (first) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::send: sorry sending a graphic cluster zone is not implemented\n"));
-    first=false;
+  MWAWListenerPtr listener=m_parserState->getMainListener();
+  if (!listener) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find the listener\n"));
+    return false;
+  }
+
+  MWAWBox2f bdbox=shape.getBdBox();
+  MWAWPosition pos(bdbox[0],bdbox.size(), librevenge::RVNG_POINT);
+  pos.m_anchorTo= MWAWPosition::Page;
+  switch (shape.m_type) {
+  case RagTime5GraphInternal::Shape::S_Arc:
+  case RagTime5GraphInternal::Shape::S_Circle:
+  case RagTime5GraphInternal::Shape::S_Line:
+  case RagTime5GraphInternal::Shape::S_Pie:
+  case RagTime5GraphInternal::Shape::S_Polygon:
+  case RagTime5GraphInternal::Shape::S_Rect:
+  case RagTime5GraphInternal::Shape::S_RectOval:
+  case RagTime5GraphInternal::Shape::S_RegularPoly:
+  case RagTime5GraphInternal::Shape::S_Spline:
+    listener->insertPicture(pos, shape.m_shape, MWAWGraphicStyle());
+    break;
+  case RagTime5GraphInternal::Shape::S_Group: {
+    bool openGroup=listener->openGroup(pos);
+    for (size_t i=0; i<shape.m_childIdList.size(); ++i) {
+      int childId=shape.m_childIdList[i];
+      if (cluster.m_idToShapeMap.find(childId)!=cluster.m_idToShapeMap.end() &&
+          cluster.m_idToShapeMap.find(childId)->second)
+        send(*cluster.m_idToShapeMap.find(childId)->second, cluster);
+    }
+    if (openGroup)
+      listener->closeGroup();
+    break;
+  }
+  case RagTime5GraphInternal::Shape::S_TextBox:
+  case RagTime5GraphInternal::Shape::S_Unknown:
+  default: {
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::send: sorry sending some shape is not implemented\n"));
+      first=false;
+    }
+    break;
+  }
+  }
+  return true;
+}
+
+bool RagTime5Graph::send(RagTime5GraphInternal::ClusterGraphic &cluster)
+{
+  cluster.m_isSent=true;
+  if (!m_parserState->getMainListener()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find the listener\n"));
+    return false;
+  }
+  for (size_t i=0; i<cluster.m_rootIdList.size(); ++i) {
+    int shapeId=cluster.m_rootIdList[i];
+    if (cluster.m_idToShapeMap.find(shapeId)!=cluster.m_idToShapeMap.end() &&
+        cluster.m_idToShapeMap.find(shapeId)->second)
+      send(*cluster.m_idToShapeMap.find(shapeId)->second, cluster);
   }
   return true;
 }
@@ -2156,7 +2405,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
 
   int N=int(decal.size());
   MWAWInputStreamPtr input=dataZone->getInput();
-  input->setReadInverted(!dataZone->m_hiLoEndian);
+  input->setReadInverted(!cluster->m_hiLoEndian); // checkme: can be !zone.m_hiLoEndian
   long debPos=entry.begin();
   long endPos=entry.end();
   if (N==0) {
@@ -2169,7 +2418,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       librevenge::RVNGString name("");
       if (idToNameMap.find(id)!=idToNameMap.end())
         name=idToNameMap.find(id)->second;
-      if (!readGraphic(*dataZone, endPos, id, name)) {
+      if (!readGraphic(*cluster, *dataZone, endPos, id, name)) {
         input->seek(pos, librevenge::RVNG_SEEK_SET);
         break;
       }
@@ -2196,7 +2445,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       librevenge::RVNGString name("");
       if (idToNameMap.find(i+1)!=idToNameMap.end())
         name=idToNameMap.find(i+1)->second;
-      readGraphic(*dataZone, debPos+nextPos, i+1, name);
+      readGraphic(*cluster, *dataZone, debPos+nextPos, i+1, name);
       if (input->tell()!=debPos+nextPos) {
         static bool first=true;
         if (first) {
@@ -2234,7 +2483,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
     m_mainParser.readFixedSizeZone(cluster->m_clusterLinks[2], clustParser);
   }
 
-  // can have some condition formula
+  // can have some condition formula ?
   for (int wh=0; wh<2; ++wh) {
     std::vector<RagTime5ClusterManager::Link> const &list=wh==0 ? cluster->m_conditionFormulaLinks : cluster->m_settingLinks;
     for (size_t i=0; i<list.size(); ++i) {
@@ -2259,6 +2508,121 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       std::stringstream s;
       s << "Graph_Data" << lnk.m_fieldSize;
       m_mainParser.readFixedSizeZone(lnk, s.str());
+    }
+  }
+
+  // time to check that all is valid and update root list
+  std::vector<int> &rootList=cluster->m_rootIdList;
+  std::stack<int> toCheck;
+  std::multimap<int, int> idToChildIpMap;
+  std::map<int, shared_ptr<RagTime5GraphInternal::Shape::Shape> >::iterator sIt;
+  for (sIt=cluster->m_idToShapeMap.begin(); sIt!=cluster->m_idToShapeMap.end(); ++sIt) {
+    if (!sIt->second)
+      continue;
+    RagTime5GraphInternal::Shape &shape=*sIt->second;
+    if (shape.m_parentId>0 && cluster->m_idToShapeMap.find(shape.m_parentId)==cluster->m_idToShapeMap.end()) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find unexpected parent %d for shape %d\n",
+                      shape.m_parentId, sIt->first));
+      shape.m_parentId=0;
+      continue;
+    }
+    else if (shape.m_parentId>0) {
+      idToChildIpMap.insert(std::multimap<int, int>::value_type(shape.m_parentId,sIt->first));
+      continue;
+    }
+    rootList.push_back(sIt->first);
+    toCheck.push(sIt->first);
+  }
+
+  std::set<int> seens;
+  while (true) {
+    int posToCheck=0; // to make clang happy
+    if (!toCheck.empty()) {
+      posToCheck=toCheck.top();
+      toCheck.pop();
+    }
+    else if (seens.size()==cluster->m_idToShapeMap.size())
+      break;
+    else {
+      bool ok=false;
+      for (sIt=cluster->m_idToShapeMap.begin(); sIt!=cluster->m_idToShapeMap.end(); ++sIt) {
+        if (!sIt->second || seens.find(sIt->first)!=seens.end())
+          continue;
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find unexpected root %d\n", sIt->first));
+        posToCheck=sIt->first;
+        rootList.push_back(sIt->first);
+
+        RagTime5GraphInternal::Shape &shape=*sIt->second;
+        shape.m_parentId=0;
+        ok=true;
+        break;
+      }
+      if (!ok)
+        break;
+    }
+    if (seens.find(posToCheck)!=seens.end()) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops, %d is already seens\n", posToCheck));
+      continue;
+    }
+
+    seens.insert(posToCheck);
+    std::multimap<int, int>::iterator childIt=idToChildIpMap.lower_bound(posToCheck);
+    std::vector<int> badChildList, goodChildList;
+
+    RagTime5GraphInternal::Shape *group=0;
+    if (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+      if (cluster->m_idToShapeMap.find(posToCheck)!=cluster->m_idToShapeMap.end() &&
+          cluster->m_idToShapeMap.find(posToCheck)->second)
+        group=cluster->m_idToShapeMap.find(posToCheck)->second.get();
+      if (group && group->m_type!=RagTime5GraphInternal::Shape::S_Group)
+        group=0;
+      if (!group) {
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops, %d is not a group\n", posToCheck));
+      }
+    }
+    while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+      int childId=childIt++->second;
+      bool ok=group!=0;
+      if (ok && seens.find(childId)!=seens.end()) {
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find loop for child %d\n", childId));
+        ok=false;
+      }
+      if (ok) {
+        ok=false;
+        for (size_t i=0; i<group->m_childIdList.size(); ++i) {
+          if (group->m_childIdList[i]!=childId)
+            continue;
+          ok=true;
+          break;
+        }
+        if (!ok) {
+          MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not find child %d in group %d\n", childId, posToCheck));
+        }
+      }
+      if (!ok) {
+        if (cluster->m_idToShapeMap.find(childId)!=cluster->m_idToShapeMap.end() &&
+            cluster->m_idToShapeMap.find(childId)->second)
+          cluster->m_idToShapeMap.find(childId)->second->m_parentId=0;
+        badChildList.push_back(childId);
+        continue;
+      }
+      goodChildList.push_back(childId);
+      toCheck.push(childId);
+    }
+    if (group && group->m_childIdList.size()!=goodChildList.size()) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: need to update the child list of group %d: %d child->%d new child\n",
+                      posToCheck, int(group->m_childIdList.size()), (int) goodChildList.size()));
+      group->m_childIdList=goodChildList;
+    }
+    for (size_t i=0; i<badChildList.size(); ++i) {
+      childIt=idToChildIpMap.lower_bound(posToCheck);
+      while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
+        if (childIt->second==badChildList[i]) {
+          idToChildIpMap.erase(childIt);
+          break;
+        }
+        ++childIt;
+      }
     }
   }
   return true;
