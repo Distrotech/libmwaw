@@ -96,10 +96,10 @@ protected:
   // interface with main parser
 
   //! try to read a spreadsheet cluster
-  bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
 
   //! try to read a chart cluster
-  bool readChartCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readChartCluster(RagTime5Zone &zone, int zoneType);
 
   //
   // Intermediate level

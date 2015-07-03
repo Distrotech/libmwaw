@@ -637,7 +637,7 @@ namespace RagTime5SpreadsheetInternal
 //! low level: the spreadsheet cluster data
 struct ClusterSpreadsheet : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterSpreadsheet() : RagTime5ClusterManager::Cluster(), m_contentLink(), m_listLink()
+  ClusterSpreadsheet() : RagTime5ClusterManager::Cluster(C_SpreadsheetZone), m_contentLink(), m_listLink()
   {
   }
   //! destructor
@@ -1166,7 +1166,7 @@ private:
 //! low level: the chart cluster data
 struct ClusterChart : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterChart() : RagTime5ClusterManager::Cluster(), m_clusterLink(), m_fixedPositionLink()
+  ClusterChart() : RagTime5ClusterManager::Cluster(C_ChartZone), m_clusterLink(), m_fixedPositionLink()
   {
   }
   //! destructor
@@ -2079,17 +2079,17 @@ private:
 
 }
 
-bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneType)
 {
   shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
   if (!clusterManager) {
     MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readSpreadsheetCluster: oops can not find the cluster manager\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   RagTime5SpreadsheetInternal::SpreadsheetCParser parser(*clusterManager, zoneType);
   if (!clusterManager->readCluster(zone, parser) || !parser.getSpreadsheetCluster()) {
     MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readSpreadsheetCluster: oops can not find the cluster\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   shared_ptr<RagTime5SpreadsheetInternal::ClusterSpreadsheet> cluster=parser.getSpreadsheetCluster();
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
@@ -2111,8 +2111,10 @@ bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneTyp
       MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readSpreadsheetCluster: the data zone %d seems bad\n",
                       cluster->m_clusterLink[0].m_ids[0]));
     }
-    else
-      m_mainParser.readClusterLinkList(*dataZone, cluster->m_clusterLink[0]);
+    else {
+      std::vector<RagTime5StructManager::ZoneLink> listLinks;
+      m_mainParser.readClusterLinkList(*dataZone, cluster->m_clusterLink[0], listLinks);
+    }
   }
   if (!cluster->m_clusterLink[1].empty()) {
     RagTime5SpreadsheetInternal::ClustListParser linkParser(*clusterManager, 24, "SheetClustLst2");
@@ -2163,20 +2165,20 @@ bool RagTime5Spreadsheet::readSpreadsheetCluster(RagTime5Zone &zone, int zoneTyp
     m_mainParser.readFixedSizeZone(lnk, defaultParser);
   }
 
-  return true;
+  return cluster;
 }
 
-bool RagTime5Spreadsheet::readChartCluster(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Spreadsheet::readChartCluster(RagTime5Zone &zone, int zoneType)
 {
   shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
   if (!clusterManager) {
     MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readChartCluster: oops can not find the cluster manager\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   RagTime5SpreadsheetInternal::ChartCParser parser(*clusterManager, zoneType);
   if (!clusterManager->readCluster(zone, parser) || !parser.getChartCluster()) {
     MWAW_DEBUG_MSG(("RagTime5Spreadsheet::readChartCluster: oops can not find the cluster\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   shared_ptr<RagTime5SpreadsheetInternal::ClusterChart> cluster=parser.getChartCluster();
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
@@ -2217,7 +2219,7 @@ bool RagTime5Spreadsheet::readChartCluster(RagTime5Zone &zone, int zoneType)
     std::vector<RagTime5ClusterManager::Link> const &list=wh==0 ? cluster->m_conditionFormulaLinks : cluster->m_settingLinks;
     for (size_t i=0; i<list.size(); ++i) {
       if (list[i].empty()) continue;
-      RagTime5ClusterManager::Cluster unknCluster;
+      RagTime5ClusterManager::Cluster unknCluster(RagTime5ClusterManager::Cluster::C_Unknown);
       unknCluster.m_dataLink=list[i];
       RagTime5StructManager::FieldParser defaultParser(wh==0 ? "CondFormula" : "Settings");
       m_mainParser.readStructZone(unknCluster, defaultParser, 0);
@@ -2241,6 +2243,6 @@ bool RagTime5Spreadsheet::readChartCluster(RagTime5Zone &zone, int zoneType)
     m_mainParser.readFixedSizeZone(lnk, defaultParser);
   }
 
-  return true;
+  return cluster;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

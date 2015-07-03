@@ -263,6 +263,32 @@ public:
     //! extra data
     std::string m_extra;
   };
+  //! a zone link in RagTime 5/6 structures
+  struct ZoneLink {
+    //! constructor
+    ZoneLink() : m_dataId(0), m_valuesList(), m_extra("")
+    {
+    }
+    //! operator<<
+    friend std::ostream &operator<<(std::ostream &o, ZoneLink const &link)
+    {
+      if (link.m_dataId) o << "data" << link.m_dataId << "A,";
+      for (size_t i=0; i<link.m_valuesList.size(); ++i) {
+        if (!link.m_valuesList[i]) continue;
+        if (link.m_valuesList[i]<0||(link.m_valuesList[i]&0xc0000000)==0)
+          o << "f" << i << "=" << link.m_valuesList[i] << ",";
+        else
+          o << "f" << i << "=" << (link.m_valuesList[i]&0x3fffffff) << "[" << (link.m_valuesList[i]>>30) << "],";
+      }
+      return o;
+    }
+    //! the data id (or 0)
+    int m_dataId;
+    //! list of potential values
+    std::vector<long> m_valuesList;
+    //! extra data
+    std::string m_extra;
+  };
   //! virtual class use to parse the field data
   struct FieldParser {
     //! constructor

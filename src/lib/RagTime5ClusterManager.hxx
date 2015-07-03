@@ -207,18 +207,13 @@ public:
 
   //! the cluster data
   struct Cluster {
-    //! constructor
-    Cluster() : m_type(C_Unknown), m_zoneId(0), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
-      m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList(), m_isSent(false)
-    {
-    }
-    //! destructor
-    virtual ~Cluster() {}
     //! the cluster type
     enum Type {
       C_ColorPattern, C_Fields, C_Layout, C_Pipeline,
       C_Root, C_Script,
 
+      // the main zones
+      C_ChartZone, C_GraphicZone, C_PictureZone, C_SpreadsheetZone, C_TextZone,
       // the styles
       C_ColorStyles, C_FormatStyles, C_GraphicStyles, C_TextStyles, C_UnitStyles,
       // unknown clusters
@@ -226,6 +221,13 @@ public:
 
       C_Unknown
     };
+    //! constructor
+    Cluster(Type type) : m_type(type), m_zoneId(0), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
+      m_conditionFormulaLinks(), m_settingLinks(), m_linksList(), m_clusterIdsList(), m_isSent(false)
+    {
+    }
+    //! destructor
+    virtual ~Cluster() {}
     //! the cluster type
     Type m_type;
     //! the zone id
@@ -253,7 +255,7 @@ public:
   //! the layout cluster ( 4001 zone)
   struct ClusterLayout : public Cluster {
     //! constructor
-    ClusterLayout() : Cluster(), m_zoneDimensions(), m_pipelineLink(), m_listItemLink()
+    ClusterLayout() : Cluster(C_Layout), m_zoneDimensions(), m_pipelineLink(), m_listItemLink()
     {
     }
     //! destructor
@@ -269,7 +271,7 @@ public:
   //! the cluster for root
   struct ClusterRoot : public Cluster {
     //! constructor
-    ClusterRoot() : Cluster(), m_graphicTypeLink(), m_docInfoLink(),
+    ClusterRoot() : Cluster(C_Root), m_graphicTypeLink(), m_docInfoLink(),
       m_listClusterId(0), m_listClusterName(), m_linkUnknown(), m_fileName("")
     {
       for (int i=0; i<8; ++i) m_styleClusterIds[i]=0;
@@ -306,7 +308,7 @@ public:
   //! the cluster script ( 2/a/4002/400a zone)
   struct ClusterScript : public Cluster {
     //! constructor
-    ClusterScript() : Cluster(), m_scriptComment(), m_scriptName("")
+    ClusterScript() : Cluster(C_Script), m_scriptComment(), m_scriptName("")
     {
     }
     //! destructor

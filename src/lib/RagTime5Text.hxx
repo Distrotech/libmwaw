@@ -98,7 +98,7 @@ protected:
   // interface with main parser
 
   //! try to read a spreadsheet cluster
-  bool readTextCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readTextCluster(RagTime5Zone &zone, int zoneType);
 
   //
   // Intermediate level

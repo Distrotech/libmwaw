@@ -126,17 +126,26 @@ protected:
   bool readColorPatternZone(RagTime5ClusterManager::Cluster &cluster);
 
   //! try to read a graphic zone
-  bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readGraphicCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a graphic unknown zone in data
   bool readGraphicUnknown(int typeId);
+  //! try to read the graphic shapes of a cluster
+  bool readGraphicShapes(RagTime5GraphInternal::ClusterGraphic &cluster);
   //! try to read a graphic
-  bool readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
+  bool readGraphicShape(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &dataZone, long endPos, int n, librevenge::RVNGString const &dataName);
 
   //! try to read a graphic transformations zone
   bool readGraphicTransformations(RagTime5ClusterManager::Link const &link);
 
   //! try to read a picture zone
-  bool readPictureCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readPictureCluster(RagTime5Zone &zone, int zoneType);
+
+  //
+  // low level
+  //
+
+  //! check the graphic cluster data: check if there is no loop, ...
+  void checkGraphicCluster(RagTime5GraphInternal::ClusterGraphic &cluster);
 
   //
   // send data

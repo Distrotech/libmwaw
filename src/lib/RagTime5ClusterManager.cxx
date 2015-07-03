@@ -66,6 +66,7 @@ struct ClusterInformation {
     case 0x2:
       o << "script,";
       break;
+    // case 0xe: mainTextZone? either a graphic zone or a text zone
     case 0x42:
       o << "colPat,";
       break;
@@ -129,11 +130,13 @@ struct ClusterInformation {
 //! Internal: the state of a RagTime5ClusterManager
 struct State {
   //! constructor
-  State() : m_idToClusterInfoMap()
+  State() : m_idToClusterInfoMap(), m_idToClusterMap()
   {
   }
   //! map id to cluster information map
   std::map<int, ClusterInformation> m_idToClusterInfoMap;
+  //! map id to cluster map
+  std::map<int, Cluster> m_idToClusterMap;
 };
 }
 
@@ -533,9 +536,9 @@ namespace RagTime5ClusterManagerInternal
 //
 struct ColPatCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
-  ColPatCParser(RagTime5ClusterManager &parser) : ClusterParser(parser, 0x8042, "ClustColPat"), m_cluster(new RagTime5ClusterManager::Cluster)
+  ColPatCParser(RagTime5ClusterManager &parser) : ClusterParser(parser, 0x8042, "ClustColPat"),
+    m_cluster(new RagTime5ClusterManager::Cluster(RagTime5ClusterManager::Cluster::C_ColorPattern))
   {
-    m_cluster->m_type=RagTime5ClusterManager::Cluster::C_ColorPattern;
   }
   //! return the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
@@ -679,7 +682,6 @@ struct LayoutCParser : public RagTime5ClusterManager::ClusterParser {
   LayoutCParser(RagTime5ClusterManager &parser) : ClusterParser(parser, 0x4001, "ClustLayout"), m_cluster(new RagTime5ClusterManager::ClusterLayout),
     m_actualZone(0), m_numZones(0), m_what(-1), m_linkId(-1), m_fieldName("")
   {
-    m_cluster->m_type=RagTime5ClusterManager::Cluster::C_Layout;
   }
   //! return the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
@@ -1171,9 +1173,9 @@ protected:
 //
 struct PipelineCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
-  PipelineCParser(RagTime5ClusterManager &parser, int type) : ClusterParser(parser, type, "ClustPipeline"), m_cluster(new RagTime5ClusterManager::Cluster)
+  PipelineCParser(RagTime5ClusterManager &parser, int type) : ClusterParser(parser, type, "ClustPipeline"),
+    m_cluster(new RagTime5ClusterManager::Cluster(RagTime5ClusterManager::Cluster::C_Pipeline))
   {
-    m_cluster->m_type=RagTime5ClusterManager::Cluster::C_Pipeline;
   }
   //! return the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
@@ -1303,7 +1305,6 @@ struct RootCParser : public RagTime5ClusterManager::ClusterParser {
   RootCParser(RagTime5ClusterManager &parser) : ClusterParser(parser, 0, "ClustRoot"), m_cluster(new RagTime5ClusterManager::ClusterRoot),
     m_what(-1), m_expectedId(-1), m_linkId(-1), m_fieldName("")
   {
-    m_cluster->m_type=RagTime5ClusterManager::Cluster::C_Root;
   }
   //! return the current cluster
   shared_ptr<RagTime5ClusterManager::Cluster> getCluster()
@@ -1911,7 +1912,8 @@ protected:
 //
 struct RootChildCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
-  RootChildCParser(RagTime5ClusterManager &parser, int type) : ClusterParser(parser, type, "ClustCRoot_BAD"), m_cluster(new RagTime5ClusterManager::Cluster)
+  RootChildCParser(RagTime5ClusterManager &parser, int type) : ClusterParser(parser, type, "ClustCRoot_BAD"),
+    m_cluster(new RagTime5ClusterManager::Cluster(RagTime5ClusterManager::Cluster::C_Unknown))
   {
     switch (type) {
     case 0x10000:
@@ -2308,7 +2310,8 @@ protected:
 //
 struct StyleCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
-  StyleCParser(RagTime5ClusterManager &parser) : ClusterParser(parser, 0x480, "ClustStyle"), m_cluster(new RagTime5ClusterManager::Cluster), m_what(-1), m_fieldName("")
+  StyleCParser(RagTime5ClusterManager &parser) :
+    ClusterParser(parser, 0x480, "ClustStyle"), m_cluster(new RagTime5ClusterManager::Cluster(RagTime5ClusterManager::Cluster::C_Unknown)), m_what(-1), m_fieldName("")
   {
   }
   //! return the current cluster
@@ -2588,7 +2591,7 @@ protected:
 struct UnknownCParser : public RagTime5ClusterManager::ClusterParser {
   //! constructor
   UnknownCParser(RagTime5ClusterManager &parser, int type) :
-    ClusterParser(parser, type, "ClustUnknown"), m_cluster(new RagTime5ClusterManager::Cluster)
+    ClusterParser(parser, type, "ClustUnknown"), m_cluster(new RagTime5ClusterManager::Cluster(RagTime5ClusterManager::Cluster::C_Unknown))
   {
     if (type==-1)
       return;
@@ -2749,6 +2752,7 @@ int RagTime5ClusterManager::getClusterFileType(RagTime5Zone &zone)
 
 bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, shared_ptr<RagTime5ClusterManager::Cluster> &cluster, int zoneType)
 {
+  cluster.reset();
   int zType=-1;
   if (m_state->m_idToClusterInfoMap.find(zone.m_ids[0])!=m_state->m_idToClusterInfoMap.end()) {
     RagTime5ClusterManagerInternal::ClusterInformation const &info=
@@ -2791,28 +2795,41 @@ bool RagTime5ClusterManager::readCluster(RagTime5Zone &zone, shared_ptr<RagTime5
     parser.reset(new RagTime5ClusterManagerInternal::RootChildCParser(*this, zType));
     break;
   case 0x40000:
-    return m_mainParser.readPictureCluster(zone, zoneType);
+    cluster=m_mainParser.readPictureCluster(zone, zoneType);
+    break;
   case 0x40001:
-    return m_mainParser.readGraphicCluster(zone, zoneType);
+    cluster=m_mainParser.readGraphicCluster(zone, zoneType);
+    break;
   case 0x40002:
-    return m_mainParser.readSpreadsheetCluster(zone, zoneType);
+    cluster=m_mainParser.readSpreadsheetCluster(zone, zoneType);
+    break;
   case 0x40003:
-    return m_mainParser.readTextCluster(zone, zoneType);
+    cluster=m_mainParser.readTextCluster(zone, zoneType);
+    break;
   case 0x40004:
-    return m_mainParser.readChartCluster(zone, zoneType);
+    cluster=m_mainParser.readChartCluster(zone, zoneType);
+    break;
   default:
     MWAW_DEBUG_MSG(("RagTime5ClusterManager::readCluster: can not find cluster type, use default parser\n"));
     parser.reset(new RagTime5ClusterManagerInternal::UnknownCParser(*this, zoneType));
     break;
   }
-  if (parser) {
-    bool ok=readCluster(zone, *parser);
+  bool ok=cluster.get() != 0;
+  if (!ok && parser) {
+    bool ok=readCluster(zone, *parser) && parser->getCluster();
     cluster=parser->getCluster();
-    return ok;
   }
-
-  MWAW_DEBUG_MSG(("RagTime5ClusterManager::readCluster: can not find any parser\n"));
-  return false;
+  else if (!ok) {
+    MWAW_DEBUG_MSG(("RagTime5ClusterManager::readCluster: can not find any parser\n"));
+  }
+  if (!ok)
+    return false;
+  if (m_state->m_idToClusterMap.find(zone.m_ids[0])!=m_state->m_idToClusterMap.end()) {
+    MWAW_DEBUG_MSG(("RagTime5ClusterManager::readCluster: a cluster for zone %d already exists\n", zone.m_ids[0]));
+  }
+  else
+    m_state->m_idToClusterMap[zone.m_ids[0]]=zone.m_ids[0];
+  return true;
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

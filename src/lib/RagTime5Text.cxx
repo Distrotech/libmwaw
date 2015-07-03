@@ -157,7 +157,7 @@ struct PLC {
 //! low level: the text cluster of a RagTime5Text
 struct ClusterText : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterText() : RagTime5ClusterManager::Cluster(), m_contentLink(), m_positionLink(), m_linkDefList(),
+  ClusterText() : RagTime5ClusterManager::Cluster(C_TextZone), m_contentLink(), m_separatorLink(), m_linkDefList(),
     m_PLCList(), m_posToStyleIdMap()
   {
   }
@@ -166,7 +166,7 @@ struct ClusterText : public RagTime5ClusterManager::Cluster {
   //! the main content
   RagTime5ClusterManager::Link m_contentLink;
   //! the position link
-  RagTime5ClusterManager::Link m_positionLink;
+  RagTime5ClusterManager::Link m_separatorLink;
   //! cluster links 0: list of size 10(pipeline?) and 14(graphic?), 1: list of size 12(related to link)
   RagTime5ClusterManager::Link m_clusterLink[2];
   //! the list of link zone
@@ -813,7 +813,7 @@ bool RagTime5Text::send(RagTime5TextInternal::ClusterText &cluster)
   }
   cluster.m_isSent=true;
   shared_ptr<RagTime5Zone> dataZone;
-  int cId=!cluster.m_positionLink.m_ids.empty() ? cluster.m_positionLink.m_ids[0] : -1;
+  int cId=!cluster.m_separatorLink.m_ids.empty() ? cluster.m_separatorLink.m_ids[0] : -1;
   if (cId>0)
     dataZone=m_mainParser.getDataZone(cId);
   std::vector<int> separators;
@@ -1186,16 +1186,16 @@ protected:
       if (val!=15) f << "f2=" << val << ",";
       std::vector<int> listIds;
       if (RagTime5StructManager::readDataIdList(input, 1, listIds) && listIds[0]) {
-        if (!m_cluster->m_positionLink.m_ids.empty()) {
-          MWAW_DEBUG_MSG(("RagTime5TextInternal::TextCParser::parseDataZone: oops the text position is already set\n"));
+        if (!m_cluster->m_separatorLink.m_ids.empty()) {
+          MWAW_DEBUG_MSG(("RagTime5TextInternal::TextCParser::parseDataZone: oops the text separator is already set\n"));
           f << "###";
         }
-        m_cluster->m_positionLink.m_ids.push_back((int) listIds[0]);
-        f << "textPos=data" << listIds[0] << "A,";
+        m_cluster->m_separatorLink.m_ids.push_back((int) listIds[0]);
+        f << "textSep=data" << listIds[0] << "A,";
       }
       else {
-        MWAW_DEBUG_MSG(("RagTime5TextInternal::TextCParser::parseDataZone: can not read the text position\n"));
-        f << "##textPosition,";
+        MWAW_DEBUG_MSG(("RagTime5TextInternal::TextCParser::parseDataZone: can not read the text separator\n"));
+        f << "##textSeparator,";
       }
       m_link.m_N=(int) input->readULong(4);
       val=(int) input->readLong(1); // always 0?
@@ -1292,8 +1292,8 @@ protected:
           if (val!=1) f << "g0=" << val << ",";
         }
         else { // 36
-          for (int i=0; i<2; ++i) { // small value betwwen 3e and 74
-            val=(int) input->readLong(4);
+          for (int i=0; i<2; ++i) { // small value between 3e and 74
+            val=(int) input->readLong(2);
             if (val) f << "g" << i << "=" << val << ",";
           }
         }
@@ -1657,17 +1657,17 @@ private:
 
 }
 
-bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
 {
   shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
   if (!clusterManager) {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: oops can not find the cluster manager\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   RagTime5TextInternal::TextCParser parser(*clusterManager, zoneType, zone.ascii());
   if (!clusterManager->readCluster(zone, parser) || !parser.getTextCluster()) {
     MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: oops can not find the cluster\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   shared_ptr<RagTime5TextInternal::ClusterText> cluster=parser.getTextCluster();
   if (m_state->m_idTextMap.find(zone.m_ids[0])!=m_state->m_idTextMap.end()) {
@@ -1681,7 +1681,7 @@ bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
     MWAW_DEBUG_MSG(("RagTime5Text::readTextCluster: oops do not know how to read the dataLink\n"));
   }
 
-  // the text<->separator zone cluster->m_positionLink.m_ids[0] when we send the cluster
+  // the text<->separator zone cluster->m_separatorLink.m_ids[0] when we send the cluster
   // the textzone cluster->m_contentLink.m_ids[0] will be parsed when we send the cluster
 
   if (!cluster->m_unknownLink[1].m_ids.empty())
@@ -1726,6 +1726,6 @@ bool RagTime5Text::readTextCluster(RagTime5Zone &zone, int zoneType)
     RagTime5StructManager::DataParser defaultParser(link.m_name.empty() ? s.str() : link.m_name);
     m_mainParser.readFixedSizeZone(link, defaultParser);
   }
-  return true;
+  return cluster;
 }
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

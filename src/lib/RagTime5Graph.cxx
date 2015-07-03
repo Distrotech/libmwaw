@@ -200,7 +200,7 @@ struct Shape {
   //! the different shape
   enum Type { S_Line, S_Rect, S_RectOval, S_Circle, S_Pie, S_Arc, S_Polygon, S_Spline, S_RegularPoly, S_TextBox, S_Group, S_Unknown };
   //! constructor
-  Shape() : m_id(0), m_parentId(0), m_type(S_Unknown), m_dimension(), m_shape(), m_childIdList(),
+  Shape() : m_id(0), m_parentId(0), m_linkId(0), m_type(S_Unknown), m_dimension(), m_shape(), m_childIdList(),
     m_flags(0), m_borderId(0), m_graphicId(0), m_transformId(0), m_extra("")
   {
   }
@@ -216,6 +216,8 @@ struct Shape {
   int m_id;
   //! the shape parent id
   int m_parentId;
+  //! the link to a zone id
+  int m_linkId;
   //! the shape type
   Type m_type;
   //! the dimension
@@ -240,6 +242,7 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 {
   if (shape.m_id) o << "id=" << shape.m_id << ",";
   if (shape.m_parentId) o << "id[parent]=" << shape.m_parentId << ",";
+  if (shape.m_linkId) o << "id[link]=" << shape.m_linkId << ",";
   if (!shape.m_childIdList.empty()) {
     o << "child[id]=[";
     for (size_t i=0; i<shape.m_childIdList.size(); ++i)
@@ -311,28 +314,33 @@ std::ostream &operator<<(std::ostream &o, Shape const &shape)
 //! the shape cluster
 struct ClusterGraphic : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterGraphic() : RagTime5ClusterManager::Cluster(), m_transformationLinks(), m_dimensionLinks(),
-    m_idToShapeMap(), m_rootIdList()
+  ClusterGraphic() : RagTime5ClusterManager::Cluster(C_GraphicZone), m_unknownZoneId(0), m_transformationLinks(), m_dimensionLinks(),
+    m_idToShapeMap(), m_rootIdList(), m_linkList()
   {
   }
   //! destructor
   virtual ~ClusterGraphic() {}
+  //! the graphic unknown zone id
+  int m_unknownZoneId;
   //! the list of  transformation's link
   std::vector<RagTime5ClusterManager::Link> m_transformationLinks;
   //! the list of dimension's link
   std::vector<RagTime5ClusterManager::Link> m_dimensionLinks;
   //! two cluster links: list of pipeline: fixedSize=12, second list with field size 10), fixedSize=8
   RagTime5ClusterManager::Link m_clusterLinks[3];
+
   //! the shape list
   std::map<int, shared_ptr<Shape> > m_idToShapeMap;
   //! the root id list
   std::vector<int> m_rootIdList;
+  //! list of link to other zone
+  std::vector<RagTime5StructManager::ZoneLink> m_linkList;
 };
 
 //! the picture cluster
 struct ClusterPicture : public RagTime5ClusterManager::Cluster {
   //! constructor
-  ClusterPicture() : RagTime5ClusterManager::Cluster(), m_auxilliarLink(), m_clusterLink()
+  ClusterPicture() : RagTime5ClusterManager::Cluster(C_PictureZone), m_auxilliarLink(), m_clusterLink()
   {
   }
   //! the first auxilliar data
@@ -631,18 +639,114 @@ bool RagTime5Graph::readColorPatternZone(RagTime5ClusterManager::Cluster &cluste
 ////////////////////////////////////////////////////////////
 // graphic zone
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &zone,
-                                long endPos, int n, librevenge::RVNGString const &dataName)
+bool RagTime5Graph::readGraphicShapes(RagTime5GraphInternal::ClusterGraphic &cluster)
+{
+  RagTime5ClusterManager::Link const &link= cluster.m_dataLink;
+  if (link.m_ids.size()<2 || !link.m_ids[1]) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: can not find main data\n"));
+    return true;
+  }
+
+  std::map<int, librevenge::RVNGString> idToNameMap;
+  if (!cluster.m_nameLink.empty()) {
+    m_mainParser.readUnicodeStringList(cluster.m_nameLink, idToNameMap);
+    cluster.m_nameLink=RagTime5ClusterManager::Link();
+  }
+  std::vector<long> decal;
+  if (link.m_ids[0])
+    m_mainParser.readPositions(link.m_ids[0], decal);
+  if (decal.empty())
+    decal=link.m_longList;
+  int const dataId=link.m_ids[1];
+  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
+  if (!dataZone || !dataZone->m_entry.valid() ||
+      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
+    if (decal.size()==1) {
+      // a graphic zone with 0 zone is ok...
+      dataZone->m_isParsed=true;
+      return true;
+    }
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: the data zone %d seems bad\n", dataId));
+    return false;
+  }
+  dataZone->m_isParsed=true;
+  MWAWEntry entry=dataZone->m_entry;
+  libmwaw::DebugFile &ascFile=dataZone->ascii();
+  libmwaw::DebugStream f;
+  f << "Entries(GraphShape)[" << *dataZone << "]:";
+  ascFile.addPos(entry.end());
+  ascFile.addNote("_");
+  ascFile.addPos(entry.begin());
+  ascFile.addNote(f.str().c_str());
+
+  int N=int(decal.size());
+  MWAWInputStreamPtr input=dataZone->getInput();
+  input->setReadInverted(!cluster.m_hiLoEndian); // checkme: can be !zone.m_hiLoEndian
+  long debPos=entry.begin();
+  long endPos=entry.end();
+  if (N==0) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: can not find decal list for zone %d, let try to continue\n", dataId));
+    input->seek(debPos, librevenge::RVNG_SEEK_SET);
+    int n=0;
+    while (input->tell()+8 < endPos) {
+      long pos=input->tell();
+      int id=++n;
+      librevenge::RVNGString name("");
+      if (idToNameMap.find(id)!=idToNameMap.end())
+        name=idToNameMap.find(id)->second;
+      if (!readGraphicShape(cluster, *dataZone, endPos, id, name)) {
+        input->seek(pos, librevenge::RVNG_SEEK_SET);
+        break;
+      }
+    }
+    if (input->tell()!=endPos) {
+      static bool first=true;
+      if (first) {
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: can not read some block\n"));
+        first=false;
+      }
+      ascFile.addPos(debPos);
+      ascFile.addNote("###");
+    }
+  }
+  else {
+    for (int i=0; i<N-1; ++i) {
+      long pos=decal[size_t(i)];
+      long nextPos=decal[size_t(i+1)];
+      if (pos<0 || debPos+pos>endPos) {
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: can not read the data zone %d-%d seems bad\n", dataId, i));
+        continue;
+      }
+      input->seek(debPos+pos, librevenge::RVNG_SEEK_SET);
+      librevenge::RVNGString name("");
+      if (idToNameMap.find(i+1)!=idToNameMap.end())
+        name=idToNameMap.find(i+1)->second;
+      readGraphicShape(cluster, *dataZone, debPos+nextPos, i+1, name);
+      if (input->tell()!=debPos+nextPos) {
+        static bool first=true;
+        if (first) {
+          MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShapes: can not read some block\n"));
+          first=false;
+        }
+        ascFile.addPos(debPos+pos);
+        ascFile.addNote("###");
+      }
+    }
+  }
+  return true;
+}
+bool RagTime5Graph::readGraphicShape(RagTime5GraphInternal::ClusterGraphic &cluster, RagTime5Zone &zone,
+                                     long endPos, int n, librevenge::RVNGString const &dataName)
 {
   MWAWInputStreamPtr input=zone.getInput();
   long pos=input->tell();
   libmwaw::DebugFile &ascFile=zone.ascii();
   libmwaw::DebugStream f;
-  f << "GraphData-" << n << ":";
+  f << "GraphShape-" << n << ":";
   if (!dataName.empty())
     f << "\"" << dataName.cstr() << "\",";
   if (pos+42>endPos) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: a graphic seems bad\n"));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: a graphic seems bad\n"));
     f<<"###";
     ascFile.addPos(pos);
     ascFile.addNote(f.str().c_str());
@@ -652,15 +756,24 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
   shape->m_flags=(uint32_t) input->readULong(4);
   f.str("");
   int val;
-  for (int i=0; i<7; ++i) { // f1[order?]=0..5c, f3=0..16, f5=0..45, f6=0..58
+  for (int i=0; i<7; ++i) { //  f1=0..16
     val=(int) input->readLong(2);
     if (!val) continue;
-    if (i==1)
+    if (i==0)
+      shape->m_id=val;
+    else if (i==1 && shape->m_id) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: main id is already set\n"));
+      f << "#shape[id]=" << shape->m_id << ",";
+      shape->m_id=val;
+    }
+    else if (i==1)
       shape->m_id=val;
     else if (i==5)
       shape->m_parentId=val;
     else if (i==6)
-      f << "linkTo=" << val << ",";
+      shape->m_linkId=val;
+    else
+      f << "f" << i << "=" << val << ",";
   }
   val=(int) input->readLong(2);
   shape->m_type=m_state->getShapeType(val);
@@ -715,12 +828,12 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
     shape->m_borderId=(int) input->readLong(2);
 
   if (input->tell()+typeFieldSize>endPos) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: the data size seems too short\n"));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: the data size seems too short\n"));
     f << "###sz,";
 
     shape->m_extra=f.str();
     f.str("");
-    f << "GraphData-" << n << ":";
+    f << "GraphShape-" << n << ":";
     f << *shape;
     input->seek(dataPos, librevenge::RVNG_SEEK_SET);
     ascFile.addDelimiter(input->tell(),'|');
@@ -808,7 +921,7 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
     long actPos=input->tell();
     bool isSpline=shape->m_type==RagTime5GraphInternal::Shape::S_Spline;
     if (actPos+10+(isSpline ? 8 : 0)>endPos) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: can not read the polygon data\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: can not read the polygon data\n"));
       break;
     }
     val=(int) input->readLong(2);
@@ -829,7 +942,7 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
     int N=(int) input->readULong(4);
     actPos=input->tell();
     if (actPos+N*8+(shape->m_type==RagTime5GraphInternal::Shape::S_RegularPoly ? 6 : 0)>endPos) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: can not read the polygon number of points\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: can not read the polygon number of points\n"));
       f << "#N=" << N << ",";
       ok=false;
       break;
@@ -866,7 +979,7 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
       }
       f << "],";
       if (N%3!=1) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: the number of points seems odd\n"));
+        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: the number of points seems odd\n"));
         f << "#N=" << N << ",";
         break;
       }
@@ -892,7 +1005,7 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
     int N=(int) input->readULong(2);
     long actPos=input->tell();
     if (actPos+N*4>endPos) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: can not read the group number of points\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: can not read the group number of points\n"));
       f << "#N=" << N << ",";
       ok=false;
       break;
@@ -909,19 +1022,19 @@ bool RagTime5Graph::readGraphic(RagTime5GraphInternal::ClusterGraphic &cluster, 
 
   shape->m_extra=f.str();
   f.str("");
-  f << "GraphData-" << n << ":";
+  f << "GraphShape-" << n << ":";
   f << *shape;
 
   if (shape->m_id==0) {
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: checkme: find some shape with no id\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: checkme: find some shape with no id\n"));
       first=false;
     }
     f << "#noId,";
   }
   else if (cluster.m_idToShapeMap.find(shape->m_id)!=cluster.m_idToShapeMap.end()) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphic: shape %d already exist\n", shape->m_id));
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicShape: shape %d already exist\n", shape->m_id));
     f << "###duplicatedId,";
   }
   else
@@ -958,21 +1071,21 @@ bool RagTime5Graph::readGraphicUnknown(int typeId)
   ascFile.addNote(f.str().c_str());
 
   int N=int(entry.length()/10);
-  for (int i=0; i<N; ++i) {
+  for (int i=1; i<=N; ++i) {
     long pos=input->tell();
     f.str("");
     f << "GraphUnknown-" << i << ":";
 
     int type=(int) input->readLong(4);
-    int id=(int) input->readLong(4);
-    if (id==0) {
+    int val=(int) input->readLong(4);
+    if (val==0) {
       ascFile.addPos(pos);
       ascFile.addNote("_");
       input->seek(pos+10, librevenge::RVNG_SEEK_SET);
       continue;
     }
 
-    f << "id=" << id << ",unknown=" << type << ",";
+    f << "f0=" << val << ",unknown=" << type << ",";
     int fl=(int) input->readLong(2);
     if (fl) f << "fl=" << std::hex << fl << std::dec << ",";
     ascFile.addPos(pos);
@@ -2036,8 +2149,8 @@ protected:
       else if (fSz==30 && m_link.m_fieldSize==12) {
         m_what=2;
         m_linkId=2;
-        m_link.m_name="GraphClustLst1";
-        m_fieldName="clustLink";
+        m_link.m_name="GraphLinkLst";
+        m_fieldName="graphLink";
         m_link.m_type=RagTime5ClusterManager::Link::L_ClusterLink;
         expectedFileType1=0xd0;
       }
@@ -2259,7 +2372,10 @@ protected:
         // fixme store unknLink instead of updating the main link
         std::vector<int> listIds;
         if (RagTime5StructManager::readDataIdList(input, 3, listIds)) {
-          m_link.m_ids.push_back(listIds[0]);
+          if (listIds[0]) {
+            m_cluster->m_unknownZoneId=listIds[0];
+            f << "graphUnknown=data"  << listIds[0] << "A,";
+          }
           for (size_t i=1; i<3; ++i) {
             if (!listIds[i]) continue;
             m_cluster->m_clusterIdsList.push_back(listIds[i]);
@@ -2299,17 +2415,17 @@ private:
 ////////////////////////////////////////////////////////////
 // picture
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readPictureCluster(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Graph::readPictureCluster(RagTime5Zone &zone, int zoneType)
 {
   shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
   if (!clusterManager) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readPictureCluster: oops can not find the cluster manager\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   RagTime5GraphInternal::PictCParser parser(*clusterManager, zoneType);
   if (!clusterManager->readCluster(zone, parser) || !parser.getPictureCluster()) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readPictureCluster: oops can not find the cluster\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
 
   shared_ptr<RagTime5GraphInternal::ClusterPicture> cluster=parser.getPictureCluster();
@@ -2335,23 +2451,23 @@ bool RagTime5Graph::readPictureCluster(RagTime5Zone &zone, int zoneType)
     m_mainParser.readFixedSizeZone(lnk, defaultParser);
   }
 
-  return true;
+  return cluster;
 }
 
 ////////////////////////////////////////////////////////////
 // shape
 ////////////////////////////////////////////////////////////
-bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
+shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
 {
   shared_ptr<RagTime5ClusterManager> clusterManager=m_mainParser.getClusterManager();
   if (!clusterManager) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops can not find the cluster manager\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
   RagTime5GraphInternal::GraphicCParser parser(*clusterManager, zoneType);
   if (!clusterManager->readCluster(zone, parser) || !parser.getGraphicCluster()) {
     MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops can not find the cluster\n"));
-    return false;
+    return shared_ptr<RagTime5ClusterManager::Cluster>();
   }
 
   shared_ptr<RagTime5GraphInternal::ClusterGraphic> cluster=parser.getGraphicCluster();
@@ -2362,101 +2478,10 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
     m_state->m_idGraphicMap[zone.m_ids[0]]=cluster;
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
 
-  RagTime5ClusterManager::Link const &link= cluster->m_dataLink;
-  if (link.m_ids.size()<2 || !link.m_ids[1]) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not find main data\n"));
-    return true;
-  }
-  if (link.m_ids.size()>=3 && link.m_ids[2] && !readGraphicUnknown(link.m_ids[2])) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: the zone id=%d seems bad\n", link.m_ids[2]));
-  }
-  std::map<int, librevenge::RVNGString> idToNameMap;
-  if (!cluster->m_nameLink.empty()) {
-    m_mainParser.readUnicodeStringList(cluster->m_nameLink, idToNameMap);
-    cluster->m_nameLink=RagTime5ClusterManager::Link();
+  if (cluster->m_unknownZoneId && !readGraphicUnknown(cluster->m_unknownZoneId)) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: the zone id=%d seems bad\n", cluster->m_unknownZoneId));
   }
 
-  std::vector<long> decal;
-  if (link.m_ids[0])
-    m_mainParser.readPositions(link.m_ids[0], decal);
-  if (decal.empty())
-    decal=link.m_longList;
-  int const dataId=link.m_ids[1];
-  shared_ptr<RagTime5Zone> dataZone=m_mainParser.getDataZone(dataId);
-  if (!dataZone || !dataZone->m_entry.valid() ||
-      dataZone->getKindLastPart(dataZone->m_kinds[1].empty())!="ItemData") {
-    if (decal.size()==1) {
-      // a graphic zone with 0 zone is ok...
-      dataZone->m_isParsed=true;
-      return true;
-    }
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: the data zone %d seems bad\n", dataId));
-    return false;
-  }
-  dataZone->m_isParsed=true;
-  MWAWEntry entry=dataZone->m_entry;
-  libmwaw::DebugFile &ascFile=dataZone->ascii();
-  libmwaw::DebugStream f;
-  f << "Entries(GraphData)[" << *dataZone << "]:";
-  ascFile.addPos(entry.end());
-  ascFile.addNote("_");
-  ascFile.addPos(entry.begin());
-  ascFile.addNote(f.str().c_str());
-
-  int N=int(decal.size());
-  MWAWInputStreamPtr input=dataZone->getInput();
-  input->setReadInverted(!cluster->m_hiLoEndian); // checkme: can be !zone.m_hiLoEndian
-  long debPos=entry.begin();
-  long endPos=entry.end();
-  if (N==0) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not find decal list for zone %d, let try to continue\n", dataId));
-    input->seek(debPos, librevenge::RVNG_SEEK_SET);
-    int n=0;
-    while (input->tell()+8 < endPos) {
-      long pos=input->tell();
-      int id=++n;
-      librevenge::RVNGString name("");
-      if (idToNameMap.find(id)!=idToNameMap.end())
-        name=idToNameMap.find(id)->second;
-      if (!readGraphic(*cluster, *dataZone, endPos, id, name)) {
-        input->seek(pos, librevenge::RVNG_SEEK_SET);
-        break;
-      }
-    }
-    if (input->tell()!=endPos) {
-      static bool first=true;
-      if (first) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not read some block\n"));
-        first=false;
-      }
-      ascFile.addPos(debPos);
-      ascFile.addNote("###");
-    }
-  }
-  else {
-    for (int i=0; i<N-1; ++i) {
-      long pos=decal[size_t(i)];
-      long nextPos=decal[size_t(i+1)];
-      if (pos<0 || debPos+pos>endPos) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not read the data zone %d-%d seems bad\n", dataId, i));
-        continue;
-      }
-      input->seek(debPos+pos, librevenge::RVNG_SEEK_SET);
-      librevenge::RVNGString name("");
-      if (idToNameMap.find(i+1)!=idToNameMap.end())
-        name=idToNameMap.find(i+1)->second;
-      readGraphic(*cluster, *dataZone, debPos+nextPos, i+1, name);
-      if (input->tell()!=debPos+nextPos) {
-        static bool first=true;
-        if (first) {
-          MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not read some block\n"));
-          first=false;
-        }
-        ascFile.addPos(debPos+pos);
-        ascFile.addNote("###");
-      }
-    }
-  }
   for (size_t i=0; i<cluster->m_transformationLinks.size(); ++i)
     readGraphicTransformations(cluster->m_transformationLinks[i]);
   for (size_t i=0; i<cluster->m_dimensionLinks.size(); ++i) {
@@ -2471,24 +2496,25 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
     }
     else {
       data->m_hiLoEndian=cluster->m_hiLoEndian;
-      m_mainParser.readClusterLinkList(*data, cluster->m_clusterLinks[0]);
+      m_mainParser.readClusterLinkList(*data, cluster->m_clusterLinks[0], cluster->m_linkList);
     }
   }
   if (!cluster->m_clusterLinks[1].empty()) {
-    std::vector<int> list;
+    std::vector<RagTime5StructManager::ZoneLink> list;
     m_mainParser.readClusterLinkList(cluster->m_clusterLinks[1], RagTime5ClusterManager::Link(), list, "GraphClustLst2");
   }
   if (!cluster->m_clusterLinks[2].empty()) {
     RagTime5GraphInternal::ClustListParser clustParser(*clusterManager, "GraphClustLst3");
     m_mainParser.readFixedSizeZone(cluster->m_clusterLinks[2], clustParser);
   }
+  readGraphicShapes(*cluster);
 
   // can have some condition formula ?
   for (int wh=0; wh<2; ++wh) {
     std::vector<RagTime5ClusterManager::Link> const &list=wh==0 ? cluster->m_conditionFormulaLinks : cluster->m_settingLinks;
     for (size_t i=0; i<list.size(); ++i) {
       if (list[i].empty()) continue;
-      RagTime5ClusterManager::Cluster unknCluster;
+      RagTime5ClusterManager::Cluster unknCluster(RagTime5ClusterManager::Cluster::C_Unknown);
       unknCluster.m_dataLink=list[i];
       RagTime5StructManager::FieldParser defaultParser(wh==0 ? "CondFormula" : "Settings");
       m_mainParser.readStructZone(unknCluster, defaultParser, 0);
@@ -2511,17 +2537,23 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
     }
   }
 
+  checkGraphicCluster(*cluster);
+  return cluster;
+}
+
+void RagTime5Graph::checkGraphicCluster(RagTime5GraphInternal::ClusterGraphic &cluster)
+{
   // time to check that all is valid and update root list
-  std::vector<int> &rootList=cluster->m_rootIdList;
+  std::vector<int> &rootList=cluster.m_rootIdList;
   std::stack<int> toCheck;
   std::multimap<int, int> idToChildIpMap;
   std::map<int, shared_ptr<RagTime5GraphInternal::Shape::Shape> >::iterator sIt;
-  for (sIt=cluster->m_idToShapeMap.begin(); sIt!=cluster->m_idToShapeMap.end(); ++sIt) {
+  for (sIt=cluster.m_idToShapeMap.begin(); sIt!=cluster.m_idToShapeMap.end(); ++sIt) {
     if (!sIt->second)
       continue;
     RagTime5GraphInternal::Shape &shape=*sIt->second;
-    if (shape.m_parentId>0 && cluster->m_idToShapeMap.find(shape.m_parentId)==cluster->m_idToShapeMap.end()) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find unexpected parent %d for shape %d\n",
+    if (shape.m_parentId>0 && cluster.m_idToShapeMap.find(shape.m_parentId)==cluster.m_idToShapeMap.end()) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: find unexpected parent %d for shape %d\n",
                       shape.m_parentId, sIt->first));
       shape.m_parentId=0;
       continue;
@@ -2541,14 +2573,14 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       posToCheck=toCheck.top();
       toCheck.pop();
     }
-    else if (seens.size()==cluster->m_idToShapeMap.size())
+    else if (seens.size()==cluster.m_idToShapeMap.size())
       break;
     else {
       bool ok=false;
-      for (sIt=cluster->m_idToShapeMap.begin(); sIt!=cluster->m_idToShapeMap.end(); ++sIt) {
+      for (sIt=cluster.m_idToShapeMap.begin(); sIt!=cluster.m_idToShapeMap.end(); ++sIt) {
         if (!sIt->second || seens.find(sIt->first)!=seens.end())
           continue;
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find unexpected root %d\n", sIt->first));
+        MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: find unexpected root %d\n", sIt->first));
         posToCheck=sIt->first;
         rootList.push_back(sIt->first);
 
@@ -2561,7 +2593,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
         break;
     }
     if (seens.find(posToCheck)!=seens.end()) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops, %d is already seens\n", posToCheck));
+      MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: oops, %d is already seens\n", posToCheck));
       continue;
     }
 
@@ -2571,20 +2603,20 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
 
     RagTime5GraphInternal::Shape *group=0;
     if (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
-      if (cluster->m_idToShapeMap.find(posToCheck)!=cluster->m_idToShapeMap.end() &&
-          cluster->m_idToShapeMap.find(posToCheck)->second)
-        group=cluster->m_idToShapeMap.find(posToCheck)->second.get();
+      if (cluster.m_idToShapeMap.find(posToCheck)!=cluster.m_idToShapeMap.end() &&
+          cluster.m_idToShapeMap.find(posToCheck)->second)
+        group=cluster.m_idToShapeMap.find(posToCheck)->second.get();
       if (group && group->m_type!=RagTime5GraphInternal::Shape::S_Group)
         group=0;
       if (!group) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: oops, %d is not a group\n", posToCheck));
+        MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: oops, %d is not a group\n", posToCheck));
       }
     }
     while (childIt!=idToChildIpMap.end() && childIt->first==posToCheck) {
       int childId=childIt++->second;
       bool ok=group!=0;
       if (ok && seens.find(childId)!=seens.end()) {
-        MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: find loop for child %d\n", childId));
+        MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: find loop for child %d\n", childId));
         ok=false;
       }
       if (ok) {
@@ -2596,13 +2628,13 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
           break;
         }
         if (!ok) {
-          MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: can not find child %d in group %d\n", childId, posToCheck));
+          MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: can not find child %d in group %d\n", childId, posToCheck));
         }
       }
       if (!ok) {
-        if (cluster->m_idToShapeMap.find(childId)!=cluster->m_idToShapeMap.end() &&
-            cluster->m_idToShapeMap.find(childId)->second)
-          cluster->m_idToShapeMap.find(childId)->second->m_parentId=0;
+        if (cluster.m_idToShapeMap.find(childId)!=cluster.m_idToShapeMap.end() &&
+            cluster.m_idToShapeMap.find(childId)->second)
+          cluster.m_idToShapeMap.find(childId)->second->m_parentId=0;
         badChildList.push_back(childId);
         continue;
       }
@@ -2610,7 +2642,7 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       toCheck.push(childId);
     }
     if (group && group->m_childIdList.size()!=goodChildList.size()) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::readGraphicCluster: need to update the child list of group %d: %d child->%d new child\n",
+      MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: need to update the child list of group %d: %d child->%d new child\n",
                       posToCheck, int(group->m_childIdList.size()), (int) goodChildList.size()));
       group->m_childIdList=goodChildList;
     }
@@ -2625,7 +2657,26 @@ bool RagTime5Graph::readGraphicCluster(RagTime5Zone &zone, int zoneType)
       }
     }
   }
-  return true;
+  // check that all linkId are valid
+  for (sIt=cluster.m_idToShapeMap.begin(); sIt!=cluster.m_idToShapeMap.end(); ++sIt) {
+    if (!sIt->second)
+      continue;
+    RagTime5GraphInternal::Shape &shape=*sIt->second;
+    if (!shape.m_linkId)
+      continue;
+    if (shape.m_linkId<1 || shape.m_linkId>=(int) cluster.m_linkList.size()) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: can not find link %d\n", shape.m_linkId));
+      shape.m_linkId=0;
+      continue;
+    }
+    RagTime5StructManager::ZoneLink const &link=cluster.m_linkList[size_t(shape.m_linkId)];
+    if (!link.m_dataId || link.m_valuesList.size()!=2 || link.m_valuesList[1]!=shape.m_id) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::checkGraphicCluster: link %d seems bad\n", shape.m_linkId));
+      shape.m_linkId=0;
+      continue;
+    }
+    shape.m_linkId=link.m_dataId;
+  }
 }
 
 // vim: set filetype=cpp tabstop=2 shiftwidth=2 cindent autoindent smartindent noexpandtab:

@@ -105,15 +105,15 @@ protected:
   shared_ptr<RagTime5StyleManager> getStyleManager();
 
   //! try to read a chart cluster (via the spreadsheet manager)
-  bool readChartCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readChartCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a graphic cluster (via the graphic manager)
-  bool readGraphicCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readGraphicCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a picture cluster (via the graphic manager)
-  bool readPictureCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readPictureCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a spreadsheet cluster (via the spreadsheet manager)
-  bool readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readSpreadsheetCluster(RagTime5Zone &zone, int zoneType);
   //! try to read a text cluster (via the text manager)
-  bool readTextCluster(RagTime5Zone &zone, int zoneType);
+  shared_ptr<RagTime5ClusterManager::Cluster> readTextCluster(RagTime5Zone &zone, int zoneType);
 
   //! creates the listener which will be associated to the document
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
@@ -144,11 +144,12 @@ protected:
   bool readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read a cluster link zone
   bool readClusterLinkList(RagTime5Zone &zone,
-                           RagTime5ClusterManager::Link const &link);
+                           RagTime5ClusterManager::Link const &link,
+                           std::vector<RagTime5StructManager::ZoneLink> &listLinks);
   //! try to read a cluster list link zone
   bool readClusterLinkList(RagTime5ClusterManager::Link const &link,
                            RagTime5ClusterManager::Link const &nameLink,
-                           std::vector<int> &list, std::string const &name="");
+                           std::vector<RagTime5StructManager::ZoneLink> &list, std::string const &name="");
 
   //! try to read a string zone ( zone with id1=21,id2=23:24)
   bool readString(RagTime5Zone &zone, std::string &string);
@@ -201,6 +202,8 @@ protected:
   //! try to read a fixed size zone
   bool readFixedSizeZone(RagTime5ClusterManager::Link const &link, RagTime5StructManager::DataParser &parser);
 
+  //! check a cluster list
+  bool checkClusterList(std::vector<RagTime5StructManager::ZoneLink> const &list);
   //! check a cluster list
   bool checkClusterList(std::vector<int> const &list);
   //! flush unsent zone (debugging function)
