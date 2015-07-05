@@ -1290,6 +1290,9 @@ bool RagTime5StructManager::readField(MWAWInputStreamPtr input, long endPos, lib
   case 0x15e0825:
     field.m_name="3unknList";
     break;
+  case 0x1715815: // with type=ce842
+    field.m_name="unknLstPict";
+    break;
   default:
     // find also 16c1825 with 00042040000000000001001400000006404003000008 : a list of 42040 ?
     MWAW_DEBUG_MSG(("RagTime5StructManager::readField: unexpected list type=%lx\n", (unsigned long) type));
@@ -1451,72 +1454,33 @@ void RagTime5Zone::createAsciiFile()
 
 std::string RagTime5Zone::getZoneName() const
 {
-  switch (m_ids[0]) {
-  case 0:
-    if (m_fileType==F_Data)
+  if (m_level==1) {
+    if (m_ids[0]==0 && m_idsFlag[0]==1)
       return "FileHeader";
-    break;
-  case 1: // with g4=1, gd=[1, lastDataZones]
-    if (m_fileType==F_Main)
+    else if (m_ids[0]==1 && m_idsFlag[0]==0)
       return "ZoneInfo";
-    break;
-  case 3: // with no value or gd=[1,_] (if multiple)
-    if (m_fileType==F_Main)
-      return "Main3A";
-    break;
-  case 4:
-    if (m_fileType==F_Main)
-      return "ZoneLimits,";
-    break;
-  case 5:
-    if (m_fileType==F_Main)
-      return "FileLimits";
-    break;
-  case 6: // gd=[_,_]
-    if (m_fileType==F_Main)
-      return "Main6A";
-    break;
-  case 8: // type=UseCount, gd=[0,num>1], can be multiple
-    if (m_fileType==F_Main)
-      return "UnknCounter8";
-    break;
-  case 10: // type=SingleRef, gd=[1,id], Data id is a list types
-    if (m_fileType==F_Main)
-      return "Types";
-    break;
-  case 11: // type=SingleRef, gd=[1,id]
-    if (m_fileType==F_Main)
-      return "Cluster";
-    break;
-  default:
-    break;
   }
   std::stringstream s;
-  switch (m_fileType) {
-  case F_Main:
-    s << "Main" << m_ids[0] << "A";
-    break;
-  case F_Data:
+  if (m_level==1)
     s << "Data" << m_ids[0] << "A";
-    break;
-  case F_Empty:
-    s << "unused" << m_ids[0];
-    break;
-  case F_Unknown:
-  default:
-    s << "##zone" << m_subType << ":" << m_ids[0] << "";
-    break;
-  }
+  else if (m_level<0 || m_level>3)
+    s << "###unknLevel" << m_level << "-" << m_ids[0];
+  else if (!m_parentName.empty())
+    s << m_parentName << "-" << m_ids[0] << char('A'+m_level-1);
+  else
+    s << "###unknChild" << m_ids[0] << char('A'+m_level-1) ;
   return s.str();
 }
 
 std::ostream &operator<<(std::ostream &o, RagTime5Zone const &z)
 {
   o << z.getZoneName();
-  if (z.m_idsFlag[0])
-    o << "[" << z.m_idsFlag[0] << "],";
-  else
+  if (z.m_idsFlag[0]==0)
+    o << "[head],";
+  else if (z.m_idsFlag[0]==1)
     o << ",";
+  else
+    o << "[" << z.m_idsFlag[0] << "],";
   for (int i=1; i<3; ++i) {
     if (!z.m_kinds[i-1].empty()) {
       o << z.m_kinds[i-1] << ",";

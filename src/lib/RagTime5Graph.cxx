@@ -349,8 +349,6 @@ struct ClusterPicture : public RagTime5ClusterManager::Cluster {
   RagTime5ClusterManager::Link m_clusterLink;
 };
 
-
-
 ////////////////////////////////////////
 //! Internal: the state of a RagTime5Graph
 struct State {
@@ -358,7 +356,7 @@ struct State {
   enum PictureType { P_Pict, P_Tiff, P_Epsf, P_Jpeg, P_PNG, P_ScreenRep, P_WMF, P_Unknown };
 
   //! constructor
-  State() : m_numPages(0), m_shapeTypeIdVector(), m_idGraphicMap() { }
+  State() : m_numPages(0), m_shapeTypeIdVector(), m_idGraphicMap(), m_idPictureMap() { }
   //! the number of pages
   int m_numPages;
   //! try to return a set type
@@ -380,6 +378,8 @@ struct State {
   std::vector<int> m_shapeTypeIdVector;
   //! map data id to graphic zone
   std::map<int, shared_ptr<ClusterGraphic> > m_idGraphicMap;
+  //! map data id to picture zone
+  std::map<int, shared_ptr<ClusterPicture> > m_idPictureMap;
 };
 
 Shape::Type State::getShapeType(int id) const
@@ -418,6 +418,57 @@ Shape::Type State::getShapeType(int id) const
   MWAW_DEBUG_MSG(("RagTime5GraphInternal::::State::getShapeType: find some unknown type %x\n", (unsigned int) type));
   return Shape::S_Unknown;
 }
+
+//! Internal: the subdocument of a RagTime5Graph
+class SubDocument : public MWAWSubDocument
+{
+public:
+  // constructor
+  SubDocument(RagTime5Graph &parser, MWAWInputStreamPtr input, int zoneId) :
+    MWAWSubDocument(&parser.m_mainParser, input, MWAWEntry()), m_parser(parser), m_id(zoneId) {}
+
+  //! destructor
+  virtual ~SubDocument() {}
+
+  //! operator!=
+  virtual bool operator!=(MWAWSubDocument const &doc) const;
+  //! operator!==
+  virtual bool operator==(MWAWSubDocument const &doc) const
+  {
+    return !operator!=(doc);
+  }
+
+  //! the parser function
+  void parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType type);
+
+protected:
+  //! the main parser
+  RagTime5Graph &m_parser;
+  //! the zone id
+  int m_id;
+};
+
+void SubDocument::parse(MWAWListenerPtr &listener, libmwaw::SubDocumentType /*type*/)
+{
+  if (!listener.get()) {
+    MWAW_DEBUG_MSG(("RagTime5graphInternal::SubDocument::parse: no listener\n"));
+    return;
+  }
+
+  long pos = m_input->tell();
+  m_parser.sendTextZone(m_id);
+  m_input->seek(pos, librevenge::RVNG_SEEK_SET);
+}
+
+bool SubDocument::operator!=(MWAWSubDocument const &doc) const
+{
+  if (MWAWSubDocument::operator!=(doc)) return true;
+  SubDocument const *sDoc = dynamic_cast<SubDocument const *>(&doc);
+  if (!sDoc) return true;
+  if (m_id != sDoc->m_id) return true;
+  return false;
+}
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -446,15 +497,24 @@ int RagTime5Graph::numPages() const
 
 bool RagTime5Graph::send(int zoneId)
 {
-  // CHANGEME: check also the picture list
-  if (m_state->m_idGraphicMap.find(zoneId)==m_state->m_idGraphicMap.end() ||
-      !m_state->m_idGraphicMap.find(zoneId)->second) {
-    MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find zone %d\n", zoneId));
-    return false;
+  if (m_state->m_idGraphicMap.find(zoneId)!=m_state->m_idGraphicMap.end() &&
+      m_state->m_idGraphicMap.find(zoneId)->second)
+    return send(*m_state->m_idGraphicMap.find(zoneId)->second);
+  if (m_state->m_idPictureMap.find(zoneId)!=m_state->m_idPictureMap.end() &&
+      m_state->m_idPictureMap.find(zoneId)->second) {
+    // CHANGEME
+    MWAWPosition position(MWAWVec2f(0,0), MWAWVec2f(100,100), librevenge::RVNG_POINT);
+    position.m_anchorTo=MWAWPosition::Char;
+    return send(*m_state->m_idPictureMap.find(zoneId)->second, position);
   }
-  return send(*m_state->m_idGraphicMap.find(zoneId)->second);
+  MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find zone %d\n", zoneId));
+  return false;
 }
 
+bool RagTime5Graph::sendTextZone(int zId)
+{
+  return m_mainParser.send(zId);
+}
 
 ////////////////////////////////////////////////////////////
 //
@@ -1474,16 +1534,29 @@ void RagTime5Graph::flushExtra()
     return;
   }
 
-  std::map<int, shared_ptr<RagTime5GraphInternal::ClusterGraphic> >::iterator it;
-  for (it=m_state->m_idGraphicMap.begin(); it!=m_state->m_idGraphicMap.end(); ++it) {
-    if (!it->second || it->second->m_isSent)
+  std::map<int, shared_ptr<RagTime5GraphInternal::ClusterGraphic> >::iterator gIt;
+  for (gIt=m_state->m_idGraphicMap.begin(); gIt!=m_state->m_idGraphicMap.end(); ++gIt) {
+    if (!gIt->second || gIt->second->m_isSent)
       continue;
     static bool first=true;
     if (first) {
-      MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: find some unseen zones\n"));
+      MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: find some unsent graphic zones\n"));
       first=false;
     }
-    send(*it->second);
+    send(*gIt->second);
+  }
+  std::map<int, shared_ptr<RagTime5GraphInternal::ClusterPicture> >::iterator pIt;
+  MWAWPosition position(MWAWVec2f(0,0), MWAWVec2f(100,100), librevenge::RVNG_POINT);
+  position.m_anchorTo=MWAWPosition::Char;
+  for (pIt=m_state->m_idPictureMap.begin(); pIt!=m_state->m_idPictureMap.end(); ++pIt) {
+    if (!pIt->second || pIt->second->m_isSent)
+      continue;
+    static bool first=true;
+    if (first) {
+      MWAW_DEBUG_MSG(("RagTime5Graph::flushExtra: find some unsent picture zones\n"));
+      first=false;
+    }
+    send(*pIt->second, position);
   }
 }
 
@@ -1497,7 +1570,7 @@ bool RagTime5Graph::send(RagTime5GraphInternal::Shape const &shape, RagTime5Grap
 
   MWAWBox2f bdbox=shape.getBdBox();
   MWAWPosition pos(bdbox[0],bdbox.size(), librevenge::RVNG_POINT);
-  pos.m_anchorTo= MWAWPosition::Page;
+  pos.m_anchorTo=MWAWPosition::Page;
   switch (shape.m_type) {
   case RagTime5GraphInternal::Shape::S_Arc:
   case RagTime5GraphInternal::Shape::S_Circle:
@@ -1533,6 +1606,15 @@ bool RagTime5Graph::send(RagTime5GraphInternal::Shape const &shape, RagTime5Grap
     break;
   }
   }
+  RagTime5ClusterManager::Cluster::Type type=
+    shape.m_linkId ? m_mainParser.getClusterType(shape.m_linkId) : RagTime5ClusterManager::Cluster::C_Unknown;
+  if (type==RagTime5ClusterManager::Cluster::C_TextZone) {
+    shared_ptr<MWAWSubDocument> doc(new RagTime5GraphInternal::SubDocument(*this, m_parserState->m_input, shape.m_linkId));
+    listener->insertTextBox(pos, doc);
+  }
+  else if (type==RagTime5ClusterManager::Cluster::C_PictureZone &&
+           m_state->m_idPictureMap.find(shape.m_linkId)!=m_state->m_idPictureMap.end() && m_state->m_idPictureMap.find(shape.m_linkId)->second)
+    send(*m_state->m_idPictureMap.find(shape.m_linkId)->second, pos);
   return true;
 }
 
@@ -1548,6 +1630,21 @@ bool RagTime5Graph::send(RagTime5GraphInternal::ClusterGraphic &cluster)
     if (cluster.m_idToShapeMap.find(shapeId)!=cluster.m_idToShapeMap.end() &&
         cluster.m_idToShapeMap.find(shapeId)->second)
       send(*cluster.m_idToShapeMap.find(shapeId)->second, cluster);
+  }
+  return true;
+}
+
+bool RagTime5Graph::send(RagTime5GraphInternal::ClusterPicture &cluster, MWAWPosition const &/*position*/)
+{
+  cluster.m_isSent=true;
+  if (!m_parserState->getMainListener()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::send: can not find the listener\n"));
+    return false;
+  }
+  static bool first=true;
+  if (first) {
+    first=false;
+    MWAW_DEBUG_MSG(("RagTime5Graph::send[picture]: not implemented\n"));
   }
   return true;
 }
@@ -1634,6 +1731,11 @@ struct PictCParser : public RagTime5ClusterManager::ClusterParser {
         m_link.m_longList=field.m_longList;
         break;
       }
+      else if (field.m_type==RagTime5StructManager::Field::T_Long && field.m_fileType==0x3c057) {
+        // rare, find one time with 4
+        f << "unkn0=" << field.m_longValue[0] << ",";
+        break;
+      }
       MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseField: find unexpected header field\n"));
       f << "###" << field << ",";
       break;
@@ -1651,7 +1753,38 @@ struct PictCParser : public RagTime5ClusterManager::ClusterParser {
         f << "unkn="<<field.m_extra << ",";
         break;
       }
+      // only with long2 list and with unk=[4]
+      if (field.m_type==RagTime5StructManager::Field::T_LongList && field.m_fileType==0xcf042) {
+        f << "unkn=[";
+        for (size_t j=0; j<field.m_longList.size(); ++j) {
+          if (field.m_longList[j]==0)
+            f << "_,";
+          else
+            f << field.m_longList[j] << ",";
+        }
+        break;
+      }
       MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseField: find unexpected list link field\n"));
+      f << "###" << field << ",";
+      break;
+    case 2:
+      if (field.m_type==RagTime5StructManager::Field::T_FieldList && field.m_fileType==0x1715815) {
+        f << "unkn0=[";
+        for (size_t i=0; i<field.m_fieldList.size(); ++i) {
+          RagTime5StructManager::Field const &child=field.m_fieldList[i];
+          if (child.m_type==RagTime5StructManager::Field::T_LongList && child.m_fileType==0xce842) {
+            for (size_t j=0; j<child.m_longList.size(); ++j)
+              f << child.m_longList[j] << ",";
+            m_link.m_longList=child.m_longList;
+            continue;
+          }
+          MWAW_DEBUG_MSG(("RagTime5GraphInternal::GraphicCParser::parseField: find unexpected z38 child[graph]\n"));
+          f << "##[" << child << "],";
+        }
+        f << "],";
+        break;
+      }
+      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseField: find unexpected z58 field\n"));
       f << "###" << field << ",";
       break;
     default:
@@ -1668,12 +1801,13 @@ protected:
     f << "fl=" << std::hex << flag << std::dec << ",";
     long pos=input->tell();
     m_link.m_N=N;
+    long linkValues[4];
+    std::string mess;
     switch (fSz) {
     case 28:
+    case 29:
     case 32:
     case 36: {
-      long linkValues[4];
-      std::string mess;
       if (!readLinkHeader(input, fSz, m_link, linkValues, mess)) {
         if (fSz==36 && linkValues[0]==0x17d4842) {
           input->seek(pos, librevenge::RVNG_SEEK_SET);
@@ -1719,6 +1853,15 @@ protected:
         m_link.m_name="pict_ClustList";
         m_fieldName="clustList";
       }
+      else if (m_link.m_fileType[0]==0x3c052) {
+        if (linkValues[0]!=0x1454877) {
+          MWAW_DEBUG_MSG(("RagTime5GraphInternal::PictCParser::parseDataZone: find unexpected linkValue[0]\n"));
+          f << "#lValues0,";
+        }
+        // with linkValues[2]=4
+        m_fieldName="zone:longs2";
+        expectedFileType1=0x50;
+      }
       else {
         f << "###fType=" << std::hex << m_link.m_fileType[0] << std::dec << ",";
         MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseZone: the field fSz28... type seems bad\n"));
@@ -1731,8 +1874,34 @@ protected:
       f << m_link << "," << mess;
       break;
     }
+    case 58: {
+      m_fieldName="zone58";
+      m_what=2;
+      f << "N1=" << N << ",";
+      int val;
+      for (int i=0; i<6; ++i) { // f3=1
+        val=(int) input->readLong(2);
+        if (val) f << "f" << i << "=" << val << ",";
+      }
+      val=(int) input->readULong(4);
+      if (val!=0x170d842)
+        f << "#type0=" << std::hex << val << std::dec << ",";
+      // checkme: maybe a link here
+      for (int i=0; i<7; ++i) { // g0=1,g4=16,g6=1
+        val=(int) input->readLong(2);
+        if (val) f << "g" << i << "=" << val << ",";
+      }
+      val=(int) input->readULong(4);
+      if (val!=0x34800)
+        f << "#type1=" << std::hex << val << std::dec << ",";
+      for (int i=0; i<9; ++i) { // h6=32
+        val=(int) input->readLong(2);
+        if (val) f << "h" << i << "=" << val << ",";
+      }
+      break;
+    }
     default:
-      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseZone: find unexpected fieldSze\n"));
+      MWAW_DEBUG_MSG(("RagTime5ClusterManagerInternal::PictCParser::parseZone: find unexpected fieldSize\n"));
       f << "##fSz=" << fSz << ",";
       break;
     }
@@ -1842,7 +2011,7 @@ protected:
 
   //! the current cluster
   shared_ptr<ClusterPicture> m_cluster;
-  //! a index to know which field is parsed :  0: main, 1: list
+  //! a index to know which field is parsed :  0: main, 1: list, 2: unkn zone58
   int m_what;
   //! the link id: 0: fieldSz=8 ?, data2: dataId+?
   int m_linkId;
@@ -2429,6 +2598,11 @@ shared_ptr<RagTime5ClusterManager::Cluster> RagTime5Graph::readPictureCluster(Ra
   }
 
   shared_ptr<RagTime5GraphInternal::ClusterPicture> cluster=parser.getPictureCluster();
+  if (m_state->m_idPictureMap.find(zone.m_ids[0])!=m_state->m_idPictureMap.end()) {
+    MWAW_DEBUG_MSG(("RagTime5Graph::readPictureCluster: oops picture zone %d is already stored\n", zone.m_ids[0]));
+  }
+  else
+    m_state->m_idPictureMap[zone.m_ids[0]]=cluster;
   m_mainParser.checkClusterList(cluster->m_clusterIdsList);
 
   if (!cluster->m_auxilliarLink.empty()) { // list of increasing int sequence....
@@ -2547,7 +2721,7 @@ void RagTime5Graph::checkGraphicCluster(RagTime5GraphInternal::ClusterGraphic &c
   std::vector<int> &rootList=cluster.m_rootIdList;
   std::stack<int> toCheck;
   std::multimap<int, int> idToChildIpMap;
-  std::map<int, shared_ptr<RagTime5GraphInternal::Shape::Shape> >::iterator sIt;
+  std::map<int, shared_ptr<RagTime5GraphInternal::Shape> >::iterator sIt;
   for (sIt=cluster.m_idToShapeMap.begin(); sIt!=cluster.m_idToShapeMap.end(); ++sIt) {
     if (!sIt->second)
       continue;

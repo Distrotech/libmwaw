@@ -34,6 +34,7 @@
 #ifndef RAG_TIME_5_STRUCT_MANAGER
 #  define RAG_TIME_5_STRUCT_MANAGER
 
+#include <map>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -47,12 +48,10 @@
 class RagTime5Zone
 {
 public:
-  //! the zone file type
-  enum FileType { F_Main, F_Data, F_Empty, F_Unknown };
   //! constructor
   RagTime5Zone(MWAWInputStreamPtr input, libmwaw::DebugFile &asc):
-    m_fileType(F_Unknown), m_subType(0), m_defPosition(0), m_entry(), m_name(""), m_hiLoEndian(true),
-    m_entriesList(), m_extra(""), m_isParsed(false),
+    m_level(-1), m_parentName(""), m_defPosition(0), m_entry(), m_name(""), m_hiLoEndian(true),
+    m_entriesList(), m_childIdToZoneMap(), m_isParsed(false), m_extra(""),
     m_input(input), m_defaultInput(true), m_asciiName(""), m_asciiFile(&asc), m_localAsciiFile()
   {
     for (int i=0; i<3; ++i) m_ids[i]=m_idsFlag[i]=0;
@@ -63,12 +62,6 @@ public:
   virtual ~RagTime5Zone() {}
   //! returns the zone name
   std::string getZoneName() const;
-  //! returns true if the zone is a header zone(header, list zone, ...)
-  bool isHeaderZone() const
-  {
-    return (m_fileType==F_Data && m_ids[0]==0) ||
-           (m_fileType==F_Main && (m_ids[0]==1 || m_ids[0]==4 || m_ids[0]==5));
-  }
   //! returns the main type
   std::string getKindLastPart(bool main=true) const
   {
@@ -111,10 +104,10 @@ public:
   //! creates the ascii file
   void createAsciiFile();
 
-  //! the zone file type
-  FileType m_fileType;
-  //! the zone sub type
-  int m_subType;
+  //! the zone level
+  int m_level;
+  //! the parent name
+  std::string m_parentName;
   //! the position of the definition in the main zones
   long m_defPosition;
   //! the zone types: normal and packing
@@ -131,12 +124,14 @@ public:
   int m_idsFlag[3];
   //! the list of original entries
   std::vector<MWAWEntry> m_entriesList;
-  //! extra data
-  std::string m_extra;
+  //! the child zones
+  std::map<int,shared_ptr<RagTime5Zone> > m_childIdToZoneMap;
   //! the content of the zone D if it exists
   int m_variableD[2];
   //! a flag to know if the zone is parsed
   bool m_isParsed;
+  //! extra data
+  std::string m_extra;
 protected:
   //! the main input
   MWAWInputStreamPtr m_input;

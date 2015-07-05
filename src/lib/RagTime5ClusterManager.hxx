@@ -78,6 +78,8 @@ public:
   //! try to read the cluster root list (in general Data14)
   bool readClusterMainList(ClusterRoot &root, std::vector<int> &list, std::vector<int> const &clusterIdList);
 
+  //! try to read a level 2 child of a cluster
+  bool readClusterChildZone(RagTime5Zone &zone);
   //! try to read some field cluster
   bool readFieldClusters(Link const &link);
   //! try to read some unknown cluster
@@ -219,7 +221,7 @@ public:
       // unknown clusters
       C_ClusterB, C_ClusterC,
 
-      C_Unknown
+      C_Empty, C_Unknown
     };
     //! constructor
     Cluster(Type type) : m_type(type), m_zoneId(0), m_hiLoEndian(true), m_dataLink(), m_nameLink(), m_fieldClusterLink(),
@@ -251,6 +253,9 @@ public:
     //! true if the cluster was send
     bool m_isSent;
   };
+
+  /** returns the cluster type corresponding to zone id or C_Unknown (if the zone is not a cluster or was not parsed)  */
+  Cluster::Type getClusterType(int zId) const;
 
   //! the layout cluster ( 4001 zone)
   struct ClusterLayout : public Cluster {

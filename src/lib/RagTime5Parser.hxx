@@ -97,6 +97,11 @@ protected:
   // interface
   //
 
+  //! returns the zone corresponding to a data id (or 0)
+  shared_ptr<RagTime5Zone> getDataZone(int dataId) const;
+  /** returns the cluster type corresponding to zone id or C_Unknown (if the zone is not a cluster or was not parsed)  */
+  RagTime5ClusterManager::Cluster::Type getClusterType(int zId) const;
+
   //! returns the cluster manager
   shared_ptr<RagTime5ClusterManager> getClusterManager();
   //! returns the structure manager
@@ -119,6 +124,8 @@ protected:
   void createDocument(librevenge::RVNGTextInterface *documentInterface);
   //! try to send the different zones
   bool sendZones();
+  //! try to send a cluster zone (mainly unimplemented)
+  bool send(int zoneId);
 
   //! adds a new page
   void newPage(int number);
@@ -127,8 +134,6 @@ protected:
   bool createZones();
   //! try to create the main data zones list
   bool findDataZones(MWAWEntry const &entry);
-  //! returns the zone corresponding to a data id (or 0)
-  shared_ptr<RagTime5Zone> getDataZone(int dataId) const;
   //! try to update a zone: create a new input if the zone is stored in different positions, ...
   bool update(RagTime5Zone &zone);
   //! try to read the zone data
@@ -138,8 +143,8 @@ protected:
   //! try to unpack a zone
   bool unpackZone(RagTime5Zone &zone);
 
-  //! try to read the different cluster zones
-  bool readClusterZones();
+  //! try to read the main zone info zone and the main cluster(and child)
+  bool readZoneInfo();
   //! try to read a cluster zone
   bool readClusterZone(RagTime5Zone &zone, int type=-1);
   //! try to read a cluster link zone
@@ -190,8 +195,6 @@ protected:
   //! try to read a data in a structured zone
   bool readStructData(RagTime5Zone &zone, long endPos, int n, int headerSz,
                       RagTime5StructManager::FieldParser &parser, librevenge::RVNGString const &dataName);
-  //! try to read a main structured zone (unknown content)
-  bool readStructMainZone(RagTime5Zone &zone);
 
   //! try to read a list zone
   bool readListZone(RagTime5ClusterManager::Link const &link);

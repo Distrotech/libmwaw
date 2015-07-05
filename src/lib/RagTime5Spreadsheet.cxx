@@ -933,7 +933,7 @@ protected:
       break;
     }
     case 58: {
-      f << "N1=" << N << "n";
+      f << "N1=" << N << ",";
       val=(int) input->readLong(2); // always 1
       if (val!=1) f << "g0=" << val << ",";
       m_link.m_N=(int) input->readLong(4); // can be big

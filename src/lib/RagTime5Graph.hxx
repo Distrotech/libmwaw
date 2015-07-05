@@ -56,6 +56,7 @@
 namespace RagTime5GraphInternal
 {
 struct ClusterGraphic;
+struct ClusterPicture;
 
 struct Shape;
 struct State;
@@ -99,6 +100,8 @@ protected:
 
   // interface with main parser
 
+  //! ask to send a text zone
+  bool sendTextZone(int zId);
 
   //
   // Intermediate level
@@ -153,11 +156,14 @@ protected:
 
   //! try to send the cluster zone
   bool send(int zoneId);
+
   //! try to send the shapes of cluster zone
   bool send(RagTime5GraphInternal::ClusterGraphic &cluster);
   //! try to send a shape of cluster zone
   bool send(RagTime5GraphInternal::Shape const &shape, RagTime5GraphInternal::ClusterGraphic const &cluster);
 
+  //! try to send the picture of cluster zone
+  bool send(RagTime5GraphInternal::ClusterPicture &cluster, MWAWPosition const &position);
 
 private:
   RagTime5Graph(RagTime5Graph const &orig);
